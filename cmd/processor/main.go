@@ -17,11 +17,18 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"net"
+	"net/http"
 	"os"
 	"strings"
 	"time"
 
 	"agones.dev/agones/pkg"
+	allocationpb "agones.dev/agones/pkg/allocation/go"
+	"agones.dev/agones/pkg/client/clientset/versioned"
+	"agones.dev/agones/pkg/metrics"
 	"agones.dev/agones/pkg/util/httpserver"
 	"agones.dev/agones/pkg/util/runtime"
 	"agones.dev/agones/pkg/util/signals"
@@ -31,6 +38,10 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	grpchealth "google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -39,12 +50,24 @@ import (
 )
 
 const (
-	logLevelFlag       = "log-level"
-	leaderElectionFlag = "leader-election"
-	podNamespace       = "pod-namespace"
-	leaseDurationFlag  = "lease-duration"
-	renewDeadlineFlag  = "renew-deadline"
-	retryPeriodFlag    = "retry-period"
+	allocationBatchWaitTime          = "allocation-batch-wait-time"
+	apiServerBurstQPSFlag            = "api-server-qps-burst"
+	apiServerSustainedQPSFlag        = "api-server-qps"
+	enablePrometheusMetricsFlag      = "prometheus-exporter"
+	enableStackdriverMetricsFlag     = "stackdriver-exporter"
+	grpcPortFlag                     = "grpc-port"
+	httpUnallocatedStatusCode        = "http-unallocated-status-code"
+	leaderElectionFlag               = "leader-election"
+	leaseDurationFlag                = "lease-duration"
+	logLevelFlag                     = "log-level"
+	podNamespace                     = "pod-namespace"
+	projectIDFlag                    = "gcp-project-id"
+	pullIntervalFlag                 = "pull-interval"
+	remoteAllocationTimeoutFlag      = "remote-allocation-timeout"
+	renewDeadlineFlag                = "renew-deadline"
+	retryPeriodFlag                  = "retry-period"
+	stackdriverLabels                = "stackdriver-labels"
+	totalRemoteAllocationTimeoutFlag = "total-remote-allocation-timeout"
 )
 
 var (
@@ -52,41 +75,108 @@ var (
 )
 
 type processorConfig struct {
-	LogLevel       string
-	LeaderElection bool
-	PodNamespace   string
-	LeaseDuration  time.Duration
-	RenewDeadline  time.Duration
-	RetryPeriod    time.Duration
+	GCPProjectID                 string
+	LogLevel                     string
+	PodNamespace                 string
+	StackdriverLabels            string
+	APIServerBurstQPS            int
+	APIServerSustainedQPS        int
+	GRPCPort                     int
+	HTTPUnallocatedStatusCode    int
+	LeaderElection               bool
+	PrometheusMetrics            bool
+	Stackdriver                  bool
+	AllocationBatchWaitTime      time.Duration
+	LeaseDuration                time.Duration
+	PullInterval                 time.Duration
+	RenewDeadline                time.Duration
+	RemoteAllocationTimeout      time.Duration
+	RetryPeriod                  time.Duration
+	TotalRemoteAllocationTimeout time.Duration
 }
 
 func parseEnvFlags() processorConfig {
-	viper.SetDefault(logLevelFlag, "Info")
+	viper.SetDefault(allocationBatchWaitTime, 50*time.Millisecond)
+	viper.SetDefault(apiServerBurstQPSFlag, 500)
+	viper.SetDefault(apiServerSustainedQPSFlag, 400)
+	viper.SetDefault(enablePrometheusMetricsFlag, true)
+	viper.SetDefault(enableStackdriverMetricsFlag, false)
+	viper.SetDefault(grpcPortFlag, 9090)
+	viper.SetDefault(httpUnallocatedStatusCode, http.StatusTooManyRequests)
 	viper.SetDefault(leaderElectionFlag, false)
-	viper.SetDefault(podNamespace, "")
 	viper.SetDefault(leaseDurationFlag, 15*time.Second)
+	viper.SetDefault(logLevelFlag, "Info")
+	viper.SetDefault(podNamespace, "")
+	viper.SetDefault(projectIDFlag, "")
+	viper.SetDefault(pullIntervalFlag, 200*time.Millisecond)
+	viper.SetDefault(remoteAllocationTimeoutFlag, 10*time.Second)
 	viper.SetDefault(renewDeadlineFlag, 10*time.Second)
 	viper.SetDefault(retryPeriodFlag, 2*time.Second)
+	viper.SetDefault(stackdriverLabels, "")
+	viper.SetDefault(totalRemoteAllocationTimeoutFlag, 30*time.Second)
 
-	pflag.String(logLevelFlag, viper.GetString(logLevelFlag), "Log level")
+	pflag.Duration(allocationBatchWaitTime, viper.GetDuration(allocationBatchWaitTime), "Flag to configure the waiting period between allocations batches")
+	pflag.Int32(apiServerBurstQPSFlag, viper.GetInt32(apiServerBurstQPSFlag), "Maximum burst queries per second to send to the API server")
+	pflag.Int32(apiServerSustainedQPSFlag, viper.GetInt32(apiServerSustainedQPSFlag), "Maximum sustained queries per second to send to the API server")
+	pflag.Bool(enablePrometheusMetricsFlag, viper.GetBool(enablePrometheusMetricsFlag), "Flag to activate metrics of Agones. Can also use PROMETHEUS_EXPORTER env variable.")
+	pflag.Bool(enableStackdriverMetricsFlag, viper.GetBool(enableStackdriverMetricsFlag), "Flag to activate stackdriver monitoring metrics for Agones. Can also use STACKDRIVER_EXPORTER env variable.")
+	pflag.Int32(grpcPortFlag, viper.GetInt32(grpcPortFlag), "Port to listen on for gRPC requests")
+	pflag.Int32(httpUnallocatedStatusCode, viper.GetInt32(httpUnallocatedStatusCode), "HTTP status code to return when no GameServer is available")
 	pflag.Bool(leaderElectionFlag, viper.GetBool(leaderElectionFlag), "Enable leader election")
-	pflag.String(podNamespace, viper.GetString(podNamespace), "Pod namespace")
 	pflag.Duration(leaseDurationFlag, viper.GetDuration(leaseDurationFlag), "Leader election lease duration")
+	pflag.String(logLevelFlag, viper.GetString(logLevelFlag), "Log level")
+	pflag.String(podNamespace, viper.GetString(podNamespace), "Pod namespace")
+	pflag.String(projectIDFlag, viper.GetString(projectIDFlag), "GCP ProjectID used for Stackdriver, if not specified ProjectID from Application Default Credentials would be used. Can also use GCP_PROJECT_ID env variable.")
+	pflag.Duration(pullIntervalFlag, viper.GetDuration(pullIntervalFlag), "Interval between pull requests sent to processor clients")
+	pflag.Duration(remoteAllocationTimeoutFlag, viper.GetDuration(remoteAllocationTimeoutFlag), "Flag to set remote allocation call timeout.")
 	pflag.Duration(renewDeadlineFlag, viper.GetDuration(renewDeadlineFlag), "Leader election renew deadline")
 	pflag.Duration(retryPeriodFlag, viper.GetDuration(retryPeriodFlag), "Leader election retry period")
+	pflag.String(stackdriverLabels, viper.GetString(stackdriverLabels), "A set of default labels to add to all stackdriver metrics generated. By default metadata are automatically added using Kubernetes API and GCP metadata enpoint.")
+	pflag.Duration(totalRemoteAllocationTimeoutFlag, viper.GetDuration(totalRemoteAllocationTimeoutFlag), "Flag to set total remote allocation timeout including retries.")
 	pflag.Parse()
 
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
-	viper.AutomaticEnv()
-	_ = viper.BindPFlags(pflag.CommandLine)
+	runtime.Must(viper.BindEnv(allocationBatchWaitTime))
+	runtime.Must(viper.BindEnv(apiServerBurstQPSFlag))
+	runtime.Must(viper.BindEnv(apiServerSustainedQPSFlag))
+	runtime.Must(viper.BindEnv(enablePrometheusMetricsFlag))
+	runtime.Must(viper.BindEnv(enableStackdriverMetricsFlag))
+	runtime.Must(viper.BindEnv(grpcPortFlag))
+	runtime.Must(viper.BindEnv(httpUnallocatedStatusCode))
+	runtime.Must(viper.BindEnv(leaderElectionFlag))
+	runtime.Must(viper.BindEnv(leaseDurationFlag))
+	runtime.Must(viper.BindEnv(logLevelFlag))
+	runtime.Must(viper.BindEnv(podNamespace))
+	runtime.Must(viper.BindEnv(projectIDFlag))
+	runtime.Must(viper.BindEnv(pullIntervalFlag))
+	runtime.Must(viper.BindEnv(remoteAllocationTimeoutFlag))
+	runtime.Must(viper.BindEnv(renewDeadlineFlag))
+	runtime.Must(viper.BindEnv(retryPeriodFlag))
+	runtime.Must(viper.BindEnv(stackdriverLabels))
+	runtime.Must(viper.BindEnv(totalRemoteAllocationTimeoutFlag))
+	runtime.Must(runtime.FeaturesBindEnv())
+
+	runtime.Must(runtime.ParseFeaturesFromEnv())
 
 	return processorConfig{
-		LogLevel:       viper.GetString(logLevelFlag),
-		LeaderElection: viper.GetBool(leaderElectionFlag),
-		PodNamespace:   viper.GetString(podNamespace),
-		LeaseDuration:  viper.GetDuration(leaseDurationFlag),
-		RenewDeadline:  viper.GetDuration(renewDeadlineFlag),
-		RetryPeriod:    viper.GetDuration(retryPeriodFlag),
+		AllocationBatchWaitTime:      viper.GetDuration(allocationBatchWaitTime),
+		APIServerBurstQPS:            int(viper.GetInt32(apiServerBurstQPSFlag)),
+		APIServerSustainedQPS:        int(viper.GetInt32(apiServerSustainedQPSFlag)),
+		GCPProjectID:                 viper.GetString(projectIDFlag),
+		GRPCPort:                     int(viper.GetInt32(grpcPortFlag)),
+		HTTPUnallocatedStatusCode:    int(viper.GetInt32(httpUnallocatedStatusCode)),
+		LeaderElection:               viper.GetBool(leaderElectionFlag),
+		LeaseDuration:                viper.GetDuration(leaseDurationFlag),
+		LogLevel:                     viper.GetString(logLevelFlag),
+		PodNamespace:                 viper.GetString(podNamespace),
+		PrometheusMetrics:            viper.GetBool(enablePrometheusMetricsFlag),
+		PullInterval:                 viper.GetDuration(pullIntervalFlag),
+		RenewDeadline:                viper.GetDuration(renewDeadlineFlag),
+		RemoteAllocationTimeout:      viper.GetDuration(remoteAllocationTimeoutFlag),
+		RetryPeriod:                  viper.GetDuration(retryPeriodFlag),
+		Stackdriver:                  viper.GetBool(enableStackdriverMetricsFlag),
+		StackdriverLabels:            viper.GetString(stackdriverLabels),
+		TotalRemoteAllocationTimeout: viper.GetDuration(totalRemoteAllocationTimeoutFlag),
 	}
 }
 
@@ -110,47 +200,46 @@ func main() {
 	}
 
 	healthserver := &httpserver.Server{Logger: logger}
-	health := healthcheck.NewHandler()
+	var health healthcheck.Handler
 
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		logger.WithError(err).Fatal("Failed to create in-cluster config")
-		panic("Failed to create in-cluster config: " + err.Error())
+	metricsConf := metrics.Config{
+		Stackdriver:       conf.Stackdriver,
+		PrometheusMetrics: conf.PrometheusMetrics,
+		GCPProjectID:      conf.GCPProjectID,
+		StackdriverLabels: conf.StackdriverLabels,
 	}
-	kubeClient, err := kubernetes.NewForConfig(config)
+	health, closer := metrics.SetupMetrics(metricsConf, healthserver)
+	defer closer()
+
+	metrics.SetReportingPeriod(conf.PrometheusMetrics, conf.Stackdriver)
+
+	kubeClient, agonesClient, err := getClients(conf)
 	if err != nil {
-		logger.WithError(err).Fatal("Failed to create Kubernetes client")
-		panic("Failed to create Kubernetes client: " + err.Error())
+		logger.WithError(err).Fatal("Could not create clients")
 	}
+
+	grpcUnallocatedStatusCode := grpcCodeFromHTTPStatus(conf.HTTPUnallocatedStatusCode)
+	processorService := newServiceHandler(ctx, kubeClient, agonesClient, health, conf, grpcUnallocatedStatusCode)
+
+	grpcHealth := grpchealth.NewServer()
+	grpcHealth.SetServingStatus("processor", grpc_health_v1.HealthCheckResponse_NOT_SERVING)
+	runGRPC(ctx, processorService, grpcHealth, conf.GRPCPort)
 
 	go func() {
 		healthserver.Handle("/", health)
-		_ = healthserver.Run(context.Background(), 0)
+		_ = healthserver.Run(ctx, 0)
 	}()
 
 	signals.NewSigTermHandler(func() {
 		logger.Info("Pod shutdown has been requested, failing readiness check")
+		grpcHealth.Shutdown()
 		cancelCtx()
-		os.Exit(0)
 	})
 
-	whenLeader(ctx, cancelCtx, logger, conf, kubeClient, func(ctx context.Context) {
+	whenLeader(ctx, cancelCtx, logger, conf, kubeClient, func(_ context.Context) {
 		logger.Info("Starting processor work as leader")
-
-		// Simulate processor work (to ensure the leader is working)
-		// TODO: implement processor work
-		ticker := time.NewTicker(5 * time.Second)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ctx.Done():
-				logger.Info("Processor work completed")
-				return
-			case <-ticker.C:
-				logger.Info("Processor is active as leader")
-			}
-		}
+		grpcHealth.SetServingStatus("processor", grpc_health_v1.HealthCheckResponse_SERVING)
+		processorService.StartPullRequestTicker()
 	})
 
 	logger.Info("Processor exited gracefully.")
@@ -158,13 +247,16 @@ func main() {
 
 func whenLeader(ctx context.Context, cancel context.CancelFunc, logger *logrus.Entry,
 	conf processorConfig, kubeClient *kubernetes.Clientset, start func(_ context.Context)) {
+	logger.WithField("leaderElectionEnabled", conf.LeaderElection).Info("Leader election configuration")
+
 	if !conf.LeaderElection {
 		start(ctx)
+		<-ctx.Done()
+
 		return
 	}
 
 	id := uuid.New().String()
-
 	lock := &resourcelock.LeaseLock{
 		LeaseMeta: metav1.ObjectMeta{
 			Name:      "agones-processor-lock",
@@ -205,4 +297,93 @@ func whenLeader(ctx context.Context, cancel context.CancelFunc, logger *logrus.E
 			},
 		},
 	})
+}
+
+func runGRPC(ctx context.Context, h *processorHandler, grpcHealth *grpchealth.Server, grpcPort int) {
+	logger.WithField("port", grpcPort).Info("Running the grpc handler on port")
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", grpcPort))
+	if err != nil {
+		logger.WithError(err).Fatalf("Failed to listen on TCP port %d", grpcPort)
+		os.Exit(1)
+	}
+
+	grpcServer := grpc.NewServer(h.getGRPCServerOptions()...)
+	allocationpb.RegisterProcessorServer(grpcServer, h)
+	grpc_health_v1.RegisterHealthServer(grpcServer, grpcHealth)
+
+	go func() {
+		go func() {
+			<-ctx.Done()
+			grpcServer.GracefulStop()
+		}()
+
+		err := grpcServer.Serve(listener)
+		if err != nil {
+			logger.WithError(err).Fatal("Allocation service crashed")
+			os.Exit(1)
+		}
+		logger.Info("Allocation server closed")
+		os.Exit(0)
+
+	}()
+}
+
+// Set up our client which we will use to call the API
+func getClients(ctlConfig processorConfig) (*kubernetes.Clientset, *versioned.Clientset, error) {
+	// Create the in-cluster config
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		return nil, nil, errors.New("Could not create in cluster config")
+	}
+
+	config.QPS = float32(ctlConfig.APIServerSustainedQPS)
+	config.Burst = ctlConfig.APIServerBurstQPS
+
+	// Access to the Agones resources through the Agones Clientset
+	kubeClient, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, nil, errors.New("Could not create the kubernetes api clientset")
+	}
+
+	// Access to the Agones resources through the Agones Clientset
+	agonesClient, err := versioned.NewForConfig(config)
+	if err != nil {
+		return nil, nil, errors.New("Could not create the agones api clientset")
+	}
+	return kubeClient, agonesClient, nil
+}
+
+// grpcCodeFromHTTPStatus converts an HTTP status code to the corresponding gRPC status code.
+func grpcCodeFromHTTPStatus(httpUnallocatedStatusCode int) codes.Code {
+	switch httpUnallocatedStatusCode {
+	case http.StatusOK:
+		return codes.OK
+	case 499:
+		return codes.Canceled
+	case http.StatusInternalServerError:
+		return codes.Internal
+	case http.StatusBadRequest:
+		return codes.InvalidArgument
+	case http.StatusGatewayTimeout:
+		return codes.DeadlineExceeded
+	case http.StatusNotFound:
+		return codes.NotFound
+	case http.StatusConflict:
+		return codes.AlreadyExists
+	case http.StatusForbidden:
+		return codes.PermissionDenied
+	case http.StatusUnauthorized:
+		return codes.Unauthenticated
+	case http.StatusTooManyRequests:
+		return codes.ResourceExhausted
+	case http.StatusNotImplemented:
+		return codes.Unimplemented
+	case http.StatusUnprocessableEntity:
+		return codes.InvalidArgument
+	case http.StatusServiceUnavailable:
+		return codes.Unavailable
+	default:
+		logger.WithField("httpStatusCode", httpUnallocatedStatusCode).Warnf("Received unknown http status code, defaulting to codes.ResourceExhausted / 429")
+		return codes.ResourceExhausted
+	}
 }

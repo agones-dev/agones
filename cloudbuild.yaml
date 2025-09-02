@@ -322,7 +322,7 @@ steps:
 
         # Keep in sync with the inverse of 'alpha' and 'beta' features in
         # pkg/util/runtime/features.go:featureDefaults
-        featureWithGate="PlayerAllocationFilter=true&FleetAutoscaleRequestMetaData=false&PlayerTracking=true&CountsAndLists=false&RollingUpdateFix=false&PortRanges=false&PortPolicyNone=false&ScheduledAutoscaler=false&GKEAutopilotExtendedDurationPods=false&SidecarContainers=false&WasmAutoscaler=true&Example=true"
+        featureWithGate="PlayerAllocationFilter=true&FleetAutoscaleRequestMetaData=false&PlayerTracking=true&CountsAndLists=false&RollingUpdateFix=false&PortRanges=false&PortPolicyNone=false&ScheduledAutoscaler=false&GKEAutopilotExtendedDurationPods=false&SidecarContainers=false&WasmAutoscaler=true&Example=true&ProcessorAllocator=true"
         featureWithoutGate=""
 
         # Use this if specific feature gates can only be supported on specific Kubernetes versions.

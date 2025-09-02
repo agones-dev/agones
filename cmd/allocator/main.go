@@ -737,9 +737,7 @@ func (h *serviceHandler) Allocate(ctx context.Context, in *pb.AllocationRequest)
 	gsa.ApplyDefaults()
 
 	if runtime.FeatureEnabled(runtime.FeatureProcessorAllocator) {
-		req := converters.ConvertGSAToAllocationRequest(gsa)
-
-		resp, err := h.processorClient.Allocate(ctx, req)
+		resp, err := h.processorClient.Allocate(ctx, in)
 		if err != nil {
 			logger.WithField("gsa", gsa).WithError(err).Error("allocation failed")
 			return nil, err

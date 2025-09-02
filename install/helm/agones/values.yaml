@@ -296,6 +296,8 @@ agones:
     processor:
       replicas: 2
       maxBatchSize: 100
+      pullInterval: 200ms
+      allocationBatchWaitTime: 50ms
       resources: {}
       nodeSelector: {}
       annotations: {}
