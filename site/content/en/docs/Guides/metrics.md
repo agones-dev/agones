@@ -195,7 +195,7 @@ Now we can install the
 [Grafana Community Kubernetes Helm Charts](https://grafana-community.github.io/helm-charts) from their repository. (Replace `<your-admin-password>` with the admin password of your choice)
 
 ```bash
-helm repo add grafana https://grafana-community.github.io/helm-charts
+helm repo add grafana-community https://grafana-community.github.io/helm-charts
 helm repo update
 
 helm upgrade --install --wait grafana grafana-community/grafana --namespace metrics \
