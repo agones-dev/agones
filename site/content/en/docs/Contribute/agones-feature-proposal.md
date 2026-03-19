@@ -42,7 +42,7 @@ The AFP process follows a series of stages to ensure that the proposal is well-d
 
 ### How to Submit an AFP
 
-To submit a new AFP, follow the instructions provided in the official AFP template. This template outlines the required sections and metadata, such as the title, authors, reviewers, and approval statuses. AFPs are stored in the project's **[docs/proposals](https://github.com/googleforgames/agones/blob/main/docs/proposals)** directory, with each folder named following the format `00x-feature-name`, where "00x" represents an incremental AFP number. For example, you can refer to the [NNNN-afp-template](https://github.com/googleforgames/agones/blob/main/docs/proposals/NNNN-afp-template) folder for a detailed proposal template. The folder name is also used in the corresponding pull request (PR) title, which follows the format "AFP-00x" to match the folder naming convention. The document undergoes iterative updates, with changes tracked via version control.
+To submit a new AFP, follow the instructions provided in the official AFP template. This template outlines the required sections and metadata, such as the title, authors, reviewers, and approval statuses. AFPs are stored in the project's **[docs/proposals](https://github.com/agones-dev/agones/blob/main/docs/proposals)** directory, with each folder named following the format `00x-feature-name`, where "00x" represents an incremental AFP number. For example, you can refer to the [NNNN-afp-template](https://github.com/agones-dev/agones/blob/main/docs/proposals/NNNN-afp-template) folder for a detailed proposal template. The folder name is also used in the corresponding pull request (PR) title, which follows the format "AFP-00x" to match the folder naming convention. The document undergoes iterative updates, with changes tracked via version control.
 
 ### Why AFPs Are Important
 
@@ -64,9 +64,9 @@ It is particularly beneficial for tracking:
 
 To get started with contributing to the AFP process, check out the following resources:
 
-- **[AFP Template](https://github.com/googleforgames/agones/blob/main/docs/proposals/NNNN-afp-template/README.md)**: A detailed template for creating an AFP.
-- **[AFP Metadata](https://github.com/googleforgames/agones/blob/main/docs/proposals/README.md#afp-metadata)**: Information on the metadata required for each AFP.
-- **[How to Propose a Feature](https://github.com/googleforgames/agones/issues/new?template=feature_request.md)**: Step-by-step instructions on how to submit a new AFP.
+- **[AFP Template](https://github.com/agones-dev/agones/blob/main/docs/proposals/NNNN-afp-template/README.md)**: A detailed template for creating an AFP.
+- **[AFP Metadata](https://github.com/agones-dev/agones/blob/main/docs/proposals/README.md#afp-metadata)**: Information on the metadata required for each AFP.
+- **[How to Propose a Feature](https://github.com/agones-dev/agones/issues/new?template=feature_request.md)**: Step-by-step instructions on how to submit a new AFP.
 
 <!-- ### Examples of AFPs
 

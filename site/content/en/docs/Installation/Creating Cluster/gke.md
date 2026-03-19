@@ -301,7 +301,7 @@ game servers. Note that GKE Autopilot does not support Windows nodes.
 
 {{% alert title="Warning" color="warning" %}}
 Running `GameServers` on Windows nodes is currently Alpha. Feel free to file feedback
-through [Github issues](https://github.com/googleforgames/agones/issues).
+through [Github issues](https://github.com/agones-dev/agones/issues).
 {{% /alert %}}
 
 ```bash

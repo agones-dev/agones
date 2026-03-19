@@ -39,7 +39,7 @@ The command deploys Agones on the Kubernetes cluster with the default configurat
 
 The Agones chart uses a [Helm Schema](https://helm.sh/docs/topics/charts/#schema-files) to validate
 fields set by the user. In the event this validation schema marks a valid edge case as invalid,
-please [file a bug](https://github.com/googleforgames/agones/issues), and you can still attempt a
+please [file a bug](https://github.com/agones-dev/agones/issues), and you can still attempt a
 Helm install or Helm upgrade with the Helm flag `--skip-schema-validation`.
 
 {{% alert title="Tip" color="info" %}}

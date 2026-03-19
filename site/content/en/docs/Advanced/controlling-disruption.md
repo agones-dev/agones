@@ -92,4 +92,4 @@ As a quick reference:
 
 ## Further Reading
 
-* [`eviction` design](https://github.com/googleforgames/agones/issues/2794)
+* [`eviction` design](https://github.com/agones-dev/agones/issues/2794)

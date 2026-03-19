@@ -578,7 +578,7 @@ func (gss *GameServerSpec) Validate(apiHooks APIHooks, devAddress string, fldPat
 
 	// make sure the container value points to a valid container
 	if !gss.HasContainer(gss.Container, false) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("container"), gss.Container, "Could not find a container named " + gss.Container))
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("container"), gss.Container, "Could not find a container named "+gss.Container))
 	}
 
 	// no host port when using dynamic PortPolicy

@@ -55,13 +55,13 @@ It can also be imported into your project via the Unity Package Manager (UPM). T
 ```
 {
   "dependencies": {
-        "com.googleforgames.agones": "https://github.com/googleforgames/agones.git?path=/sdks/unity",
+        "com.googleforgames.agones": "https://github.com/agones-dev/agones.git?path=/sdks/unity",
 ...
 ```
 
 If you want a specific release, the dependency can be pinned to that version. For example: 
 
-`"com.googleforgames.agones": "https://github.com/googleforgames/agones.git?path=/sdks/unity#v{{< release-version >}}",`
+`"com.googleforgames.agones": "https://github.com/agones-dev/agones.git?path=/sdks/unity#v{{< release-version >}}",`
 
 ## Download
 

@@ -29,7 +29,7 @@ steps:
       - clone
       - --depth=1
       - --branch=${_BRANCH_NAME}
-      - https://github.com/googleforgames/agones.git
+      - https://github.com/agones-dev/agones.git
       - .
 
   #

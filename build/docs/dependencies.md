@@ -4,7 +4,7 @@ This guide covers dependency management for Agones development.
 
 ## Dependencies
 
-This project uses the [go modules](https://github.com/golang/go/wiki/Modules) as its manager. You can see the list of dependencies [here](https://github.com/googleforgames/agones/blob/main/go.mod).
+This project uses the [go modules](https://github.com/golang/go/wiki/Modules) as its manager. You can see the list of dependencies [here](https://github.com/agones-dev/agones/blob/main/go.mod).
 
 ### Vendoring
 
@@ -25,7 +25,7 @@ Here is an example for getting third_party from grpc-ecosystem/grpc-gateway v1.5
 
 Note the version in the pathname. Go may eliminate the need to do this in future versions.
 
-We also use vendor to hold code patches while waiting for the project to release the fixes in their own code. An example is in [k8s.io/apimachinery](https://github.com/googleforgames/agones/issues/414) where a fix will be released later this year, but we updated our own vendored version in order to fix the issue sooner.
+We also use vendor to hold code patches while waiting for the project to release the fixes in their own code. An example is in [k8s.io/apimachinery](https://github.com/agones-dev/agones/issues/414) where a fix will be released later this year, but we updated our own vendored version in order to fix the issue sooner.
 
 ## Next Steps
 

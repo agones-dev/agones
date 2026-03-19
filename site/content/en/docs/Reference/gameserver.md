@@ -90,7 +90,7 @@ spec:
   counters: # counters are int64 counters that can be incremented and decremented by set amounts. Keys must be declared at GameServer creation time.
     rooms: # arbitrary key.
       count: 1 # initial value can be set.
-      capacity: 100 # (Optional) Defaults to 1000 and setting capacity to max(int64) may lead to issues and is not recommended. See GitHub issue https://github.com/googleforgames/agones/issues/3636 for more details.
+      capacity: 100 # (Optional) Defaults to 1000 and setting capacity to max(int64) may lead to issues and is not recommended. See GitHub issue https://github.com/agones-dev/agones/issues/3636 for more details.
   lists: # lists are lists of values stored against this GameServer that can be added and deleted from. Keys must be declared at GameServer creation time.
     players: # an empty list, with a capacity set to 10.
       capacity: 10 # capacity value, defaults to 1000.
@@ -224,5 +224,5 @@ to evaluate all `addresses` and pick the addresses that best suits your needs.
 
 [addresses]: {{% k8s-api-version href="#nodeaddress-v1-core" %}}
 [podIPs]: {{% k8s-api-version href="#podip-v1-core" %}}
-[addressFunc]: https://github.com/googleforgames/agones/blob/a59c5394c7f5bac66e530d21446302581c10c225/pkg/gameservers/gameservers.go#L37-L71
+[addressFunc]: https://github.com/agones-dev/agones/blob/a59c5394c7f5bac66e530d21446302581c10c225/pkg/gameservers/gameservers.go#L37-L71
 [gss]: {{% ref "/docs/Reference/agones_crd_api_reference.html#agones.dev/v1.GameServerStatus"  %}}

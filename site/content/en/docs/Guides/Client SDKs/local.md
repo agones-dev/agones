@@ -207,13 +207,13 @@ docker-compose up --build
 ## Running from source code instead of prebuilt binary
 
 If you wish to run from source rather than pre-built binaries, that is an available alternative.
-You will need [Go installed](https://go.dev/doc/install) and will need to clone the [Agones GitHub repo](https://github.com/googleforgames/agones).
+You will need [Go installed](https://go.dev/doc/install) and will need to clone the [Agones GitHub repo](https://github.com/agones-dev/agones).
 
-**Disclaimer:** Agones is run and tested with the version of Go specified by the `GO_VERSION` variable in the project's [build Dockerfile](https://github.com/googleforgames/agones/blob/main/build/build-image/Dockerfile). Other versions are not supported, but may still work.
+**Disclaimer:** Agones is run and tested with the version of Go specified by the `GO_VERSION` variable in the project's [build Dockerfile](https://github.com/agones-dev/agones/blob/main/build/build-image/Dockerfile). Other versions are not supported, but may still work.
 
 Your cloned repository is best switched to the latest specific release's branch/tag. For example:
 ```bash
-git clone https://github.com/googleforgames/agones.git
+git clone https://github.com/agones-dev/agones.git
 cd agones
 git checkout release-{{< release-version >}}
 ```

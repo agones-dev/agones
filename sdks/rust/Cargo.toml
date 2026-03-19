@@ -18,7 +18,7 @@ version = "1.57.0-dev"
 edition = "2021"
 description = "The Rust SDK for Agones."
 license = "Apache-2.0"
-repository = "https://github.com/googleforgames/agones"
+repository = "https://github.com/agones-dev/agones"
 documentation = "https://docs.rs/agones"
 homepage = "https://agones.dev/site/"
 

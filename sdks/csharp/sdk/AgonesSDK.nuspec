@@ -10,7 +10,7 @@
     <projectUrl>https://agones.dev/</projectUrl>
     <description>Game Server SDK for Agones, the open source project for hosting dedicated game servers on Kubernetes</description>
     <tags>agones, googleforgames, kubernetes, multiplayer, gameservers</tags>
-    <repository url="https://github.com/googleforgames/agones" />
+    <repository url="https://github.com/agones-dev/agones" />
     <dependencies>
       <group targetFramework=".NETStandard2.0">
         <dependency id="Google.Api.CommonProtos" version="2.0.0" exclude="Build,Analyzers" />

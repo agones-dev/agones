@@ -55,7 +55,7 @@ for the period of your upgrade, as there will be a short period in which Agones 
 
 
 {{% alert color="warning" title="Warning" %}}
-Work is ongoing for [In-Place Agones Upgrades](https://github.com/googleforgames/agones/issues/3766),
+Work is ongoing for [In-Place Agones Upgrades](https://github.com/agones-dev/agones/issues/3766),
 and the feature is currently in `Beta`. Please continue to use the multi-cluster strategy for
 production critical upgrades. Feedback on this `Beta` feature is welcome and appreciated.
 

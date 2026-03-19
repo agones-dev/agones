@@ -49,6 +49,6 @@ These are all examples of simple game server implementations, that integrate the
 
 ## Integrations with other projects
 
-* [googleforgames/space-agon](https://github.com/googleforgames/space-agon) - Space Agon is a demo of Agones and 
+* [googleforgames/space-agon](https://github.com/agones-dev/space-agon) - Space Agon is a demo of Agones and 
   Open Match with a browser based game.
-* [googleforgames/global-multiplayer-demo](https://github.com/googleforgames/global-multiplayer-demo) - A demo of a global scale multiplayer game using Agones, Open Match, Unreal Engine 5 and multiple Google Cloud products.
+* [googleforgames/global-multiplayer-demo](https://github.com/agones-dev/global-multiplayer-demo) - A demo of a global scale multiplayer game using Agones, Open Match, Unreal Engine 5 and multiple Google Cloud products.

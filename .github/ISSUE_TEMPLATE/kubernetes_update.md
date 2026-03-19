@@ -34,7 +34,7 @@ List of items to do for upgrading to {version_1} {version_2} {version_3}
         since minikube supports the latest Kubernetes release)
   - [ ] Kind in `build/includes/kind.mk` (Confirm {version_2} is supported and get the patch version
         [here](https://github.com/kubernetes-sigs/kind/releases))
-- [ ] Update the k8s image used in the helm [pre-delete-hook](https://github.com/googleforgames/agones/blob/main/install/helm/agones/templates/hooks/pre_delete_hook.yaml)
+- [ ] Update the k8s image used in the helm [pre-delete-hook](https://github.com/agones-dev/agones/blob/main/install/helm/agones/templates/hooks/pre_delete_hook.yaml)
       to {version_2} (Get the patch version [here](https://hub.docker.com/r/alpine/kubectl))
 - [ ] Update client-go in `go.mod` to {version_2} by running `go get k8s.io/client-go@{CORRESPONDING_VERSION}`
       and `go get k8s.io/apiextensions-apiserver@{CORRESPONDING_VERSION}`, then re-run `go mod tidy`
@@ -59,12 +59,12 @@ List of items to do for upgrading to {version_1} {version_2} {version_3}
           {version_1} {version_2} {version_3}
     - [ ] `dev_minikube_example_cluster_version`, which is {version_2} with the supported patch version
 - [ ] If client-go pulled in a new version of gRPC, then also
-  - [ ] Update the `grpc_release_tag` in the SDK [base image grpc version](https://github.com/googleforgames/agones/blob/main/build/includes/sdk.mk).
-  - [ ] Update the gRPC version number in C++ gRPC Dependency documentation [here](https://github.com/googleforgames/agones/blob/main/site/content/en/docs/Guides/Client%20SDKs/cpp.md).
-  - [ ] Update the gRPC version ([Dockerfile](https://github.com/googleforgames/agones/blob/main/examples/cpp-simple/Dockerfile))
-  - [ ] Regenerate all client sdks: [make gen-all-sdk-grpc](https://github.com/googleforgames/agones/blob/main/build/README.md#make-gen-all-sdk-grpc)
+  - [ ] Update the `grpc_release_tag` in the SDK [base image grpc version](https://github.com/agones-dev/agones/blob/main/build/includes/sdk.mk).
+  - [ ] Update the gRPC version number in C++ gRPC Dependency documentation [here](https://github.com/agones-dev/agones/blob/main/site/content/en/docs/Guides/Client%20SDKs/cpp.md).
+  - [ ] Update the gRPC version ([Dockerfile](https://github.com/agones-dev/agones/blob/main/examples/cpp-simple/Dockerfile))
+  - [ ] Regenerate all client sdks: [make gen-all-sdk-grpc](https://github.com/agones-dev/agones/blob/main/build/README.md#make-gen-all-sdk-grpc)
         This can take 20 minutes or so, as the above changes force a rebuild. Plan your day accordingly 😃.
-  - [ ] Regenerate allocated API endpoints: [make gen-allocation-grpc](https://github.com/googleforgames/agones/blob/main/build/README.md#make-gen-allocation-grpc)
+  - [ ] Regenerate allocated API endpoints: [make gen-allocation-grpc](https://github.com/agones-dev/agones/blob/main/build/README.md#make-gen-allocation-grpc)
   - [ ] Update the C++ `cpp-simple` image.
     - [ ] Update the `cpp-simple` example images tag. At `build` directory, run:
       - [ ] `make bump-image IMAGENAME=cpp-simple-server VERSION=<current-image-version>`

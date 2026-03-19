@@ -37,7 +37,7 @@ import (
 
 var (
 	// Reference:
-	// https://github.com/googleforgames/agones/blob/main/vendor/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go
+	// https://github.com/agones-dev/agones/blob/main/vendor/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go
 	// These are public as they may be needed by CRDHandler implementations (usually for returning Status values)
 
 	// Scheme scheme for unversioned types - such as APIResourceList, and Status

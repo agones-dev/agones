@@ -40,7 +40,7 @@ Check the [Client SDK Documentation]({{< relref "_index.md" >}}) for more detail
 
 ### Download
 
-Download the source from the [Releases Page](https://github.com/googleforgames/agones/releases) or {{< ghlink href="sdks/cpp" >}}directly from GitHub{{< /ghlink >}}.
+Download the source from the [Releases Page](https://github.com/agones-dev/agones/releases) or {{< ghlink href="sdks/cpp" >}}directly from GitHub{{< /ghlink >}}.
 
 ### Building the Libraries from source
 CMake is used to build SDK for all supported platforms (Linux/Window/macOS).

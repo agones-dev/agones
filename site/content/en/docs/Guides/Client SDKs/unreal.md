@@ -55,7 +55,7 @@ Both of the above are automatically kicked off in the `BeginPlay` of the compone
 
 ## Download
 
-Download the source from the [Releases Page](https://github.com/googleforgames/agones/releases)
+Download the source from the [Releases Page](https://github.com/agones-dev/agones/releases)
 or {{< ghlink href="sdks/unreal" >}}directly from GitHub{{< /ghlink >}}.
 
 ## Resources

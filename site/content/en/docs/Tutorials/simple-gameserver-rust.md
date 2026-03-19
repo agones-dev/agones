@@ -17,7 +17,7 @@ description: >
 1. [Docker](https://www.docker.com/get-started/)
 2. Agones installed on GKE
 3. kubectl properly configured
-4. A local copy of the [Agones repository](https://github.com/googleforgames/agones/tree/{{< release-branch >}})
+4. A local copy of the [Agones repository](https://github.com/agones-dev/agones/tree/{{< release-branch >}})
 5. A repository for Docker images, such as [Docker Hub](https://hub.docker.com/) or [GC Container Registry](https://cloud.google.com/container-registry/)
 
 To install on GKE, follow the install instructions (if you haven't already) at

@@ -23,9 +23,9 @@ Participation in this project comes under the [Contributor Covenant Code of Cond
 
 If you're new to the project and want to help, but don't know where to start, look for issues labeled with:
 
-- **[good first issue](https://github.com/googleforgames/agones/labels/good%20first%20issue)** - These are great for
+- **[good first issue](https://github.com/agones-dev/agones/labels/good%20first%20issue)** - These are great for
   people who are new to the project. They are typically smaller in scope and easier to tackle.
-- **[help wanted](https://github.com/googleforgames/agones/labels/help%20wanted)** - These issues are ready for
+- **[help wanted](https://github.com/agones-dev/agones/labels/help%20wanted)** - These issues are ready for
   contributions and often include good first issues, but may also involve more complex work for those who want to dig a
   little deeper.
 

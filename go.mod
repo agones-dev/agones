@@ -3,7 +3,7 @@ module agones.dev/agones
 go 1.25.0
 
 // Hotfix to address websocket connection issues with github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.2 and above.
-// See: https://github.com/grpc-ecosystem/grpc-gateway/issues/5326, https://github.com/googleforgames/agones/issues/4248
+// See: https://github.com/grpc-ecosystem/grpc-gateway/issues/5326, https://github.com/agones-dev/agones/issues/4248
 replace github.com/tmc/grpc-websocket-proxy v0.0.0-20220101234140-673ab2c3ae75 => github.com/swermin/grpc-websocket-proxy v0.1.0
 
 require (

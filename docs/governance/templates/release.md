@@ -4,13 +4,13 @@ This is the {version} release of Agones.
 
 { write description of release }
 
-Check the <a href="https://github.com/googleforgames/agones/tree/release-{version}" data-proofer-ignore>README</a> for details on features, installation and usage.
+Check the <a href="https://github.com/agones-dev/agones/tree/release-{version}" data-proofer-ignore>README</a> for details on features, installation and usage.
 
 **Implemented enhancements:**
 
 { insert enhancements from the changelog and/or security and breaking changes }
 
-See <a href="https://github.com/googleforgames/agones/blob/release-{version}/CHANGELOG.md" data-proofer-ignore>CHANGELOG</a> for more details on changes.
+See <a href="https://github.com/agones-dev/agones/blob/release-{version}/CHANGELOG.md" data-proofer-ignore>CHANGELOG</a> for more details on changes.
 
 Images available with this release:
 

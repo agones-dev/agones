@@ -1230,7 +1230,7 @@ func TestCounterAutoscalerAllocated(t *testing.T) {
 	}
 }
 
-// Related to the issue about the fleet autoscaler policy not namespaced: https://github.com/googleforgames/agones/issues/3954
+// Related to the issue about the fleet autoscaler policy not namespaced: https://github.com/agones-dev/agones/issues/3954
 func TestCounterAutoscalerAllocatedMultipleNamespaces(t *testing.T) {
 	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
 		t.SkipNow()
