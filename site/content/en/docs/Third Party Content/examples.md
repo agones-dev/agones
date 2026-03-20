@@ -26,7 +26,7 @@ You will need to download the Minetest client separately to play.
 ## Quilkin
 
 * [Quilkin](https://github.com/EmbarkStudios/quilkin) is a non-transparent UDP proxy specifically designed for use with large scale multiplayer dedicated game server deployments, to ensure security, access control, telemetry data, metrics and more.
-* [Quilkin with Agones](https://github.com/agones-dev/quilkin/tree/main/examples) is an example of running [Xonotic](https://xonotic.org/) with Quilkin on an Agones cluster, utilising either [the sidecar integration pattern](https://github.com/agones-dev/quilkin/tree/main/examples/agones-xonotic-sidecar) or via the the [Quilkin xDS Agones provider](https://github.com/agones-dev/quilkin/tree/main/examples/agones-xonotic-xds) with a TokenRouter to provide routing and access control to the allocated GameServer instance.
+* [Quilkin with Agones](https://github.com/EmbarkStudios/quilkin/tree/main/examples) is an example of running [Xonotic](https://xonotic.org/) with Quilkin on an Agones cluster, utilising either [the sidecar integration pattern](https://github.com/EmbarkStudios/quilkin/tree/main/examples/agones-xonotic-sidecar) or via the the [Quilkin xDS Agones provider](https://github.com/EmbarkStudios/quilkin/tree/main/examples/agones-xonotic-xds) with a TokenRouter to provide routing and access control to the allocated GameServer instance.
 
 You will need to download the Xonotic client to interact with the demo.
 

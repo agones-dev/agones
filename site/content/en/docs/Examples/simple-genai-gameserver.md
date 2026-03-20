@@ -10,7 +10,7 @@ description: >
 ## Setting up the GenAI Inference Server
 
 You will need a separate GenAI inference server. This example uses the
-[Google for Games GenAI](https://github.com/agones-dev/GenAI-quickstart) as its inference server.
+[Google for Games GenAI](https://github.com/googleforgames/GenAI-quickstart) as its inference server.
 This particular inference server has the request structure for the /chat endpoint:
 
 ```
@@ -53,7 +53,7 @@ are empty strings. The conversation starts with a `PROMPT` that is sent to the G
 `NUM_CHATS` determines how many times messages are sent back and forth, with a default value of 1. 
 It's important to note that the chat between two clients is a rolling conversation, meaning that after completing a conversation of length set by `NUM_CHATS`, a new conversation starts. This cycle continues until the game server is deleted using the `kubectl delete` command.
 
-If you want to set up the chat with the npc-chat-api from the [Google for Games GenAI](https://github.com/agones-dev/GenAI-quickstart/tree/main/genai/api/npc_chat_api), 
+If you want to set up the chat with the npc-chat-api from the [Google for Games GenAI](https://github.com/googleforgames/GenAI-quickstart/tree/main/genai/api/npc_chat_api), 
 update the [gameserver_npcchat.yaml](https://github.com/agones-dev/agones/blob/main/examples/simple-genai-server/gameserver_npcchat.yaml) file.
 Choose between `GEN_AI_ENDPOINT` or `SIM_ENDPOINT` and set it to `http://genai-api.genai.svc/genai/npc_chat` for the NPC service. 
 Mark either `GEN_AI_NPC` or `SIM_NPC` as "true" to indicate it's connected to the NPC service. The `NPCRequest` to the NPC endpoint only sends 

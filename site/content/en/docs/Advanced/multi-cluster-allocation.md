@@ -19,7 +19,7 @@ expect that they will be something that you will likely be installing in your mu
 
 Further documentation on setting up Agones with a Service Mesh is incoming, but to see an example utilising
 [Google Cloud Service Mesh](https://cloud.google.com/service-mesh), which is backed by Istio, see the 
-[Global Scale Game](https://github.com/agones-dev/global-multiplayer-demo) demo project.
+[Global Scale Game](https://github.com/googleforgames/global-multiplayer-demo) demo project.
 {{% /pageinfo %}}
 
 There may be different types of clusters, such as on-premise, and Google Kubernetes Engine (GKE), used by a game to help with the cost-saving and availability.
