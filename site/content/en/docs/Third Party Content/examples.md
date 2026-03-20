@@ -19,14 +19,14 @@ weight: 80
 * [Minetest](https://www.minetest.net/) is a free and open-source sandbox video game available for Linux, FreeBSD, 
 Microsoft Windows, MacOS, and Android. Minetest game play is very similar to that of Minecraft. Players explore a blocky 3D world, discover and extract raw materials, craft tools and items, and build structures and landscapes. 
 * [Minetest server for Agones](https://github.com/paulhkim80/agones-example-minetest) is an example of the Minetest 
-  server hosted on Kubernetes using Agones. It wraps the Minetest server with a [Go](https://golang.org) binary, and introspects stdout to provide the event hooks for the SDK integration. The wrapper is from [Xonotic Example](https://github.com/googleforgames/agones/blob/main/examples/xonotic/main.go) with a few changes to look for the Minetest ready output message.  
+  server hosted on Kubernetes using Agones. It wraps the Minetest server with a [Go](https://golang.org) binary, and introspects stdout to provide the event hooks for the SDK integration. The wrapper is from [Xonotic Example](https://github.com/agones-dev/agones/blob/main/examples/xonotic/main.go) with a few changes to look for the Minetest ready output message.  
 
 You will need to download the Minetest client separately to play.
 
 ## Quilkin
 
 * [Quilkin](https://github.com/EmbarkStudios/quilkin) is a non-transparent UDP proxy specifically designed for use with large scale multiplayer dedicated game server deployments, to ensure security, access control, telemetry data, metrics and more.
-* [Quilkin with Agones](https://github.com/googleforgames/quilkin/tree/main/examples) is an example of running [Xonotic](https://xonotic.org/) with Quilkin on an Agones cluster, utilising either [the sidecar integration pattern](https://github.com/googleforgames/quilkin/tree/main/examples/agones-xonotic-sidecar) or via the the [Quilkin xDS Agones provider](https://github.com/googleforgames/quilkin/tree/main/examples/agones-xonotic-xds) with a TokenRouter to provide routing and access control to the allocated GameServer instance.
+* [Quilkin with Agones](https://github.com/EmbarkStudios/quilkin/tree/main/examples) is an example of running [Xonotic](https://xonotic.org/) with Quilkin on an Agones cluster, utilising either [the sidecar integration pattern](https://github.com/EmbarkStudios/quilkin/tree/main/examples/agones-xonotic-sidecar) or via the the [Quilkin xDS Agones provider](https://github.com/EmbarkStudios/quilkin/tree/main/examples/agones-xonotic-xds) with a TokenRouter to provide routing and access control to the allocated GameServer instance.
 
 You will need to download the Xonotic client to interact with the demo.
 

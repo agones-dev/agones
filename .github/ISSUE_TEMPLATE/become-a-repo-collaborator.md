@@ -19,6 +19,6 @@ Give us a few days to review and you should receive an invitation to join. Once 
 ### Requirements
 
 - [ ] I have at least one merged Pull Request
-- [ ] I have reviewed the [contribution guidelines](https://github.com/googleforgames/agones/blob/main/CONTRIBUTING.md)
+- [ ] I have reviewed the [contribution guidelines](https://github.com/agones-dev/agones/blob/main/CONTRIBUTING.md)
 - [ ] I have enabled [2FA on my GitHub account](https://github.com/settings/security)
 - [ ] I have joined the [Agones Slack workspace](https://join.slack.com/t/agones/shared_invite/zt-2mg1j7ddw-0QYA9IAvFFRKw51ZBK6mkQ)

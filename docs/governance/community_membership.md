@@ -32,7 +32,7 @@ below.
 For regular contributors that wish to have issues assigned to them, we have the collaborator role.
 
 To become a collaborator, create an issue using the 
-[become a repo collaborator issue template](https://github.com/googleforgames/agones/issues/new?assignees=thisisnotapril&labels=area%2Fcommunity&projects=&template=become-a-repo-collaborator.md&title=Collaborator+Request)
+[become a repo collaborator issue template](https://github.com/agones-dev/agones/issues/new?assignees=thisisnotapril&labels=area%2Fcommunity&projects=&template=become-a-repo-collaborator.md&title=Collaborator+Request)
 and we will review it as a team.
 
 **Defined by:** Read access to the Agones repository.
@@ -40,7 +40,7 @@ and we will review it as a team.
 ### Requirements
 
 - Have at least one merged Pull Request.
-- Have reviewed the [contribution guidelines](https://github.com/googleforgames/agones/blob/main/CONTRIBUTING.md)
+- Have reviewed the [contribution guidelines](https://github.com/agones-dev/agones/blob/main/CONTRIBUTING.md)
 - Have enabled [2FA on my GitHub account](https://github.com/settings/security)
 - Have joined the [Agones Slack workspace](https://join.slack.com/t/agones/shared_invite/zt-2mg1j7ddw-0QYA9IAvFFRKw51ZBK6mkQ)
 

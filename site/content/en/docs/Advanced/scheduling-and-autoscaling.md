@@ -111,6 +111,12 @@ how to choose the `.eviction` setting appropriate for your `GameServer` or `Flee
 Under the "Packed" strategy, allocation will prioritise allocating `GameServers` to nodes that are running on
 Nodes that already have allocated `GameServers` running on them.
 
+##### Counter and List Priorities
+
+{{< beta title="Counters And Lists" gate="CountsAndLists" >}}
+
+When `priorities` are configured on a `GameServerAllocation`, they act as a tie-breaker for `GameServers` on Nodes with equal utilisation. `Ascending` order (the default) prioritises `GameServers` with less available `Counter` or `List` capacity, and `Descending` order prioritises those with greater available capacity. See the [GameServerAllocation]({{< relref "../Reference/gameserverallocation.md" >}}) reference for configuration details.
+
 #### Pod Scheduling Strategy
 
 Under the "Packed" strategy, Pods will be scheduled using the [`PodAffinity`](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#inter-pod-affinity-and-anti-affinity-beta-feature)
@@ -126,6 +132,12 @@ The default Kubernetes scheduler doesn't do a perfect job of packing, but it's a
 
 With the "Packed" strategy, Fleets will remove `Ready` `GameServers` from Nodes with the _least_ number of `Ready` and
 `Allocated` `GameServers` on them. Attempting to empty Nodes so that they can be safely removed.
+
+##### Counter and List Priorities
+
+{{< beta title="Counters And Lists" gate="CountsAndLists" >}}
+
+When `priorities` are configured on the `Fleet`, they act as a tie-breaker for `GameServers` on the same `Node` with equal total counts. `Ascending` order (the default) removes `GameServers` with less available `Counter` or `List` capacity first, and `Descending` order removes those with greater available capacity first. See the [Fleet]({{< relref "../Reference/fleet.md" >}}) reference for configuration details.
 
 ### Distributed
 
@@ -175,6 +187,12 @@ Since this strategy is not aimed at clusters that autoscale, this strategy does 
 Under the "Distributed" strategy, allocation will prioritise allocating `GameServers` to nodes that have the least
 number of allocated `GameServers` on them.
 
+##### Counter and List Priorities
+
+{{< beta title="Counters And Lists" gate="CountsAndLists" >}}
+
+When `priorities` are configured on a `GameServerAllocation`, instead of random `GameServer` selection, `GameServers` are sorted and selected in priority order. `Ascending` order (the default) prioritises `GameServers` with less available `Counter` or `List` capacity, and `Descending` order prioritises those with greater available capacity. See the [GameServerAllocation]({{< relref "../Reference/gameserverallocation.md" >}}) reference for configuration details.
+
 #### Pod Scheduling Strategy
 
 Under the "Distributed" strategy, `Pod` scheduling is provided by the default Kubernetes scheduler, which will attempt
@@ -184,3 +202,9 @@ to distribute the `GameServer` `Pods` across as many nodes as possible.
 
 With the "Distributed" strategy, Fleets will remove `Ready` `GameServers` from Nodes with at random, to ensure
 a distributed load is maintained.
+
+##### Counter and List Priorities
+
+{{< beta title="Counters And Lists" gate="CountsAndLists" >}}
+
+When `priorities` are configured on the `Fleet`, instead of random removal, `GameServers` are removed in priority order (with creation timestamp as a tie-breaker, newest first). `Ascending` order (the default) removes `GameServers` with less available `Counter` or `List` capacity first, and `Descending` order removes those with greater available capacity first. See the [Fleet]({{< relref "../Reference/fleet.md" >}}) reference for configuration details.

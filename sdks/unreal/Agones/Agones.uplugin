@@ -18,7 +18,7 @@
       "Type": "Runtime"
     }
   ],
-  "SupportURL": "https://github.com/googleforgames/agones",
+  "SupportURL": "https://github.com/agones-dev/agones",
   "Version": 2,
   "VersionName": "2.0.0"
 }

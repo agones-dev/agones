@@ -2,4 +2,4 @@
 host: agones.dev
 paths:
   /agones:
-    repo: https://github.com/googleforgames/agones
+    repo: https://github.com/agones-dev/agones

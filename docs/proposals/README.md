@@ -242,4 +242,4 @@ find the issue where the current state of the AFP is being updated.
 
 The AFP process is still evolving!
 If something is missing or not answered here feel free to reach out to [Slack](https://join.slack.com/t/agones/shared_invite/zt-2mg1j7ddw-0QYA9IAvFFRKw51ZBK6mkQ).
-If you want to propose a change to the AFP process you can open a PR on [AFP-NNNN](https://github.com/googleforgames/agones/issues/new?template=feature_request.md) with your proposal.
+If you want to propose a change to the AFP process you can open a PR on [AFP-NNNN](https://github.com/agones-dev/agones/issues/new?template=feature_request.md) with your proposal.

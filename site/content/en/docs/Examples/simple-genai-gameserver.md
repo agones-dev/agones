@@ -23,8 +23,8 @@ type GenAIRequest struct {
 ### (Optional) Modify the GenAIRequest Structure
 
 If you need a different request structure for your GenAI endpoint, you will need to clone or fork the Agones repository and
-modify the above `GenAIRequest struct` in [main.go](https://github.com/googleforgames/agones/blob/main/examples/simple-genai-server/main.go). Update `REPOSITORY` in the
-[agones/examples/simple-genai-server/Makefile](https://github.com/googleforgames/agones/blob/main/examples/simple-genai-server/Makefile)
+modify the above `GenAIRequest struct` in [main.go](https://github.com/agones-dev/agones/blob/main/examples/simple-genai-server/main.go). Update `REPOSITORY` in the
+[agones/examples/simple-genai-server/Makefile](https://github.com/agones-dev/agones/blob/main/examples/simple-genai-server/Makefile)
 to your own container registry and run `make build && make push` from within the
 `agones/examples/simple-genai-server` path. Then modify the `gameserver_*.yaml` to pull the image from
 your container registry. If you are making a series of changes you may also want to add
@@ -41,11 +41,11 @@ on that cluster, otherwise install Agones into your GenAI inference server clust
 ## Setting up the Game Server
 
 To manually interact with `GenAiEndpoint` via netcat, change the `GEN_AI_ENDPOINT` value in the 
-[gameserver_manualchat.yaml](https://github.com/googleforgames/agones/blob/main/examples/simple-genai-server/gameserver_manualchat.yaml) file 
+[gameserver_manualchat.yaml](https://github.com/agones-dev/agones/blob/main/examples/simple-genai-server/gameserver_manualchat.yaml) file 
 to your inference server’s endpoint. Optionally, include the `GEN_AI_CONTEXT` in the same file that will include the context with 
 each chat (post request) that you make to the GenAI endpoint.
 
-To make two clients "chat" to each other, change the `GEN_AI_ENDPOINT` and `SIM_ENDPOINT` values in the [gameserver_autochat.yaml](https://github.com/googleforgames/agones/blob/main/examples/simple-genai-server/gameserver_autochat.yaml) file 
+To make two clients "chat" to each other, change the `GEN_AI_ENDPOINT` and `SIM_ENDPOINT` values in the [gameserver_autochat.yaml](https://github.com/agones-dev/agones/blob/main/examples/simple-genai-server/gameserver_autochat.yaml) file 
 to your inference server's address. You could also create a basic http server that receives requests in the structure noted in the above section,
 and returns a predetermined set of responses for the chat. When sending requests, `GEN_AI_CONTEXT` is sent to the `GEN_AI_ENDPOINT`
 and `SIM_CONTEXT` is sent to the `SIM_ENDPOINT` as part of the GenAIRequest structure. The default values for `GEN_AI_CONTEXT` and `SIM_CONTEXT` 
@@ -54,7 +54,7 @@ are empty strings. The conversation starts with a `PROMPT` that is sent to the G
 It's important to note that the chat between two clients is a rolling conversation, meaning that after completing a conversation of length set by `NUM_CHATS`, a new conversation starts. This cycle continues until the game server is deleted using the `kubectl delete` command.
 
 If you want to set up the chat with the npc-chat-api from the [Google for Games GenAI](https://github.com/googleforgames/GenAI-quickstart/tree/main/genai/api/npc_chat_api), 
-update the [gameserver_npcchat.yaml](https://github.com/googleforgames/agones/blob/main/examples/simple-genai-server/gameserver_npcchat.yaml) file.
+update the [gameserver_npcchat.yaml](https://github.com/agones-dev/agones/blob/main/examples/simple-genai-server/gameserver_npcchat.yaml) file.
 Choose between `GEN_AI_ENDPOINT` or `SIM_ENDPOINT` and set it to `http://genai-api.genai.svc/genai/npc_chat` for the NPC service. 
 Mark either `GEN_AI_NPC` or `SIM_NPC` as "true" to indicate it's connected to the NPC service. The `NPCRequest` to the NPC endpoint only sends 
 the message (prompt), so any additional context outside of the prompt is ignored. FROM_ID is the entity sending messages to NPC, and 

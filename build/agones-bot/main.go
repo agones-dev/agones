@@ -169,7 +169,7 @@ A preview of the website (the last 30 builds are retained):
 
 To install this version:
 ` + "```" + `
-git fetch https://github.com/googleforgames/agones.git pull/{{ $pr }}/head:pr_{{ $pr }} && git checkout pr_{{ $pr }}
+git fetch https://github.com/agones-dev/agones.git pull/{{ $pr }}/head:pr_{{ $pr }} && git checkout pr_{{ $pr }}
 helm install agones ./install/helm/agones --namespace agones-system --set agones.image.registry=us-docker.pkg.dev/agones-images/ci --set agones.image.tag={{ $tag }}
 ` + "```"
 

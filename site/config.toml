@@ -74,7 +74,7 @@ description = "Agones is a library for hosting, running and scaling dedicated ga
 [params]
 copyright = "Copyright Google LLC All Rights Reserved."
 privacy_policy = "https://policies.google.com/privacy"
-github_repo = "https://github.com/googleforgames/agones"
+github_repo = "https://github.com/agones-dev/agones"
 
 # Google Custom Search Engine ID. Remove or comment out to disable search.
 gcs_engine_id = "016691298986124624340:x7qv2dywdao"
@@ -121,8 +121,8 @@ showLightDarkModeMenu = true
 [params.ui.feedback]
 enable = true
 # The responses that the user sees after clicking "yes" (the page was helpful) or "no" (the page was not helpful).
-yes = 'Glad to hear it! Please <a href="https://github.com/googleforgames/agones/issues/new">tell us how we can improve</a>.'
-no = 'Sorry to hear that. Please <a href="https://github.com/googleforgames/agones/issues/new">tell us how we can improve</a>.'
+yes = 'Glad to hear it! Please <a href="https://github.com/agones-dev/agones/issues/new">tell us how we can improve</a>.'
+no = 'Sorry to hear that. Please <a href="https://github.com/agones-dev/agones/issues/new">tell us how we can improve</a>.'
 
 [params.links]
 # End user relevant links. These will show up on left side of footer and in the community page if you have one.
@@ -145,11 +145,11 @@ desc = "Chat with other project users in #users"
 	name ="Community Meetings"
 	url = "https://www.youtube.com/playlist?list=PLhkWKwFGACw2dFpdmwxOyUCzlGP2-n7uF"
 	icon = "fab fa-youtube"
-	desc = "Live discussion of new features and issues, see the <a href=\"https://github.com/googleforgames/agones/blob/main/CONTRIBUTING.md#community-meetings\">calendar</a> or <a href=\"https://groups.google.com/forum/#!forum/agones-discuss\">mailing list</a> for details"
+	desc = "Live discussion of new features and issues, see the <a href=\"https://github.com/agones-dev/agones/blob/main/CONTRIBUTING.md#community-meetings\">calendar</a> or <a href=\"https://groups.google.com/forum/#!forum/agones-discuss\">mailing list</a> for details"
 # Developer relevant links. These will show up on right side of footer and in the community page if you have one.
 [[params.links.developer]]
 	name = "GitHub"
-	url = "https://github.com/googleforgames/agones"
+	url = "https://github.com/agones-dev/agones"
 	icon = "fab fa-github"
 	desc = "Development takes place here!"
 [[params.links.developer]]
@@ -161,7 +161,7 @@ desc = "Chat with other project users in #users"
 	name ="Community Meetings"
 	url = "https://www.youtube.com/playlist?list=PLhkWKwFGACw2dFpdmwxOyUCzlGP2-n7uF"
 	icon = "fab fa-youtube"
-	desc = "Live discussion of new features and issues, see the <a href=\"https://github.com/googleforgames/agones/blob/main/CONTRIBUTING.md#community-meetings\">calendar</a> or <a href=\"https://groups.google.com/forum/#!forum/agones-discuss\">mailing list</a> for details"
+	desc = "Live discussion of new features and issues, see the <a href=\"https://github.com/agones-dev/agones/blob/main/CONTRIBUTING.md#community-meetings\">calendar</a> or <a href=\"https://groups.google.com/forum/#!forum/agones-discuss\">mailing list</a> for details"
 # [[params.links.developer]]
 # 	name = "Developer mailing list"
 # 	url = "https://example.org/mail"

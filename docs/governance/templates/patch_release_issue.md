@@ -37,10 +37,10 @@ Note: "If needed" means if this step only needs to be done if it was modified as
       to increment the previous version by 1 to {patch_version} in the build/Makefile as well as the
       SDK files.
 - [ ] Update `_BASE_VERSION` in `cloudbuild.yaml` to `{patch_version}`.
-- [ ] Create a _draft_ release with the [release template](https://github.com/googleforgames/agones/blob/main/docs/governance/templates/release.md).
+- [ ] Create a _draft_ release with the [release template](https://github.com/agones-dev/agones/blob/main/docs/governance/templates/release.md).
   - [ ] Run `make release-example-image-markdown` to populate example images and append the output
         in `Images available with this release` section.
-  - [ ] Draft a new release with [release draft](https://github.com/googleforgames/agones/releases).
+  - [ ] Draft a new release with [release draft](https://github.com/agones-dev/agones/releases).
         Update the `Tag version` and `Release title` with the release version and click on `Generate release notes`
         to generate the release notes with `Full Changelog` info for {patch_version}. Make sure to
         add the description. Include the `Images available with this release` section from the
@@ -92,7 +92,7 @@ Note: "If needed" means if this step only needs to be done if it was modified as
 - [ ] Post to the [agonesdev](https://twitter.com/agonesdev) Twitter account.
 - [ ] Close this issue. _Congratulations!_ - the patch release is now complete! :tada: :clap: :smile: :+1:
 
-[release-template]: https://github.com/googleforgames/agones/blob/main/docs/governance/templates/release.md
-[release-draft]: https://github.com/googleforgames/agones/releases
-[build-makefile]: https://github.com/googleforgames/agones/blob/main/build/Makefile
+[release-template]: https://github.com/agones-dev/agones/blob/main/docs/governance/templates/release.md
+[release-draft]: https://github.com/agones-dev/agones/releases
+[build-makefile]: https://github.com/agones-dev/agones/blob/main/build/Makefile
 [Internal Mailing list posting guide]: https://docs.google.com/document/d/1qYR9ccVURgujqFAIpjpSN2GRcCeQ29ow5H_V4sm4RGs/edit#heading=h.zge9gjrt8ws8

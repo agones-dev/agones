@@ -1,7 +1,7 @@
 {
     "author": "Google LLC",
     "bugs": {
-        "url": "https://github.com/googleforgames/agones/issues"
+        "url": "https://github.com/agones-dev/agones/issues"
     },
     "dependencies": {
         "@grpc/grpc-js": "1.14.3",

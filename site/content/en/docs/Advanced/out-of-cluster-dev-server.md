@@ -63,7 +63,7 @@ The game server binary can either be run within a docker container or run locall
 
 Alternatively, the `simple-game-server` can also be run from source code; see `examples/simple-game-server/main.go`. More details about running from source can be found [here]({{< ref "/docs/Guides/Client SDKs/local.md#running-from-source-code-instead-of-prebuilt-binary" >}}).
 
-**Disclaimer:** Agones is run and tested with the version of Go specified by the `GO_VERSION` variable in the project's [build Dockerfile](https://github.com/googleforgames/agones/blob/main/build/build-image/Dockerfile). Other versions are not supported, but may still work.
+**Disclaimer:** Agones is run and tested with the version of Go specified by the `GO_VERSION` variable in the project's [build Dockerfile](https://github.com/agones-dev/agones/blob/main/build/build-image/Dockerfile). Other versions are not supported, but may still work.
 
 If a developer has their own game server logic, written in the language of their choice, that would be perfectly fine.
 A custom game server can be similarly run within a docker container, run directly on commandline, or run via an IDE/debugger.

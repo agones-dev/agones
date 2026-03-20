@@ -1,8 +1,8 @@
 <!--  Thanks for sending a pull request!  Here are some tips for you:
 
-1. If this is your first time, please read our contributor guidelines: https://github.com/googleforgames/agones/blob/main/CONTRIBUTING.md and developer guide https://github.com/googleforgames/agones/blob/main/build/README.md
+1. If this is your first time, please read our contributor guidelines: https://github.com/agones-dev/agones/blob/main/CONTRIBUTING.md and developer guide https://github.com/agones-dev/agones/blob/main/build/README.md
 2. Please label this pull request according to what type of issue you are addressing.
-3. Ensure you have added or ran the appropriate tests for your PR: https://github.com/googleforgames/agones/blob/main/build/README.md#testing-and-building
+3. Ensure you have added or ran the appropriate tests for your PR: https://github.com/agones-dev/agones/blob/main/build/README.md#testing-and-building
 -->
 
 **What type of PR is this?**

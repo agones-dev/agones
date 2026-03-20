@@ -13,7 +13,7 @@ In this folder you will find:
 
 Here is the architecture of GCP resources created:
 
-![architecture](https://github.com/googleforgames/agones/blob/main/examples/allocation-endpoint/architecture.png?raw=true)
+![architecture](https://github.com/agones-dev/agones/blob/main/examples/allocation-endpoint/architecture.png?raw=true)
 
 
 ## GKE cluster

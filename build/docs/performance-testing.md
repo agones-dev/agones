@@ -70,8 +70,8 @@ This script is an entyrpoint to be able to run the allocation performance test w
 
 You can see the fleet and autoscaler configuration (such as buffer size and min/max replicas, etc) in the following files: 
 
-* [performance-test-fleet-template](https://github.com/googleforgames/agones/blob/main/test/load/allocation/performance-test-fleet-template.yaml)
-* [performance-test-autoscaler-template.yaml](https://github.com/googleforgames/agones/blob/main/test/load/allocation/performance-test-autoscaler-template.yaml)
+* [performance-test-fleet-template](https://github.com/agones-dev/agones/blob/main/test/load/allocation/performance-test-fleet-template.yaml)
+* [performance-test-autoscaler-template.yaml](https://github.com/agones-dev/agones/blob/main/test/load/allocation/performance-test-autoscaler-template.yaml)
 
 You could also modify the `automatic shutdown delay` parameter where if the value is greater than zero, it will automatically shut down the server this many seconds after the server becomes allocated (cannot be used if `automaticShutdownDelayMin` is set). It's a configuration for the simple game server.
 

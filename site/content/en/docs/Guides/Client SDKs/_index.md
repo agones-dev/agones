@@ -175,7 +175,7 @@ the GameServer is currently allocated to.
 
 Since the GameServer contains an entire [PodTemplate](https://kubernetes.io/docs/concepts/workloads/pods/pod-overview/#pod-templates)
 the returned object is limited to that configuration that was deemed useful. If there are
-areas that you feel are missing, please [file an issue](https://github.com/googleforgames/agones/issues) or pull request.
+areas that you feel are missing, please [file an issue](https://github.com/agones-dev/agones/issues) or pull request.
 
 The easiest way to see what is exposed, is to check
 the {{% ghlink href="proto/sdk/sdk.proto" %}}`sdk.proto`{{% /ghlink %}}, specifically at
@@ -195,7 +195,7 @@ This is especially useful when combined with `GameServerAllocation` [applied met
 
 Since the GameServer contains an entire [PodTemplate](https://kubernetes.io/docs/concepts/workloads/pods/pod-overview/#pod-templates)
 the returned object is limited to that configuration that was deemed useful. If there are
-areas that you feel are missing, please [file an issue](https://github.com/googleforgames/agones/issues) or pull request.
+areas that you feel are missing, please [file an issue](https://github.com/agones-dev/agones/issues) or pull request.
 
 The easiest way to see what is exposed, is to check
 the {{% ghlink href="proto/sdk/sdk.proto" %}}`sdk.proto`{{% /ghlink %}}, specifically at
@@ -279,7 +279,7 @@ to the capacity of that Counter or List.
 All functions will return an error if the specified `key` is not predefined in the 
 [`GameServer.Spec.Counters`][gameserverspec] resource configuration.
 
-**Note:** For Counters, the default setting for the capacity is preset to 1000. It is recommended to avoid configuring the capacity to max(int64), as doing so could cause problems with [JSON Patch operations](https://github.com/googleforgames/agones/issues/3636).
+**Note:** For Counters, the default setting for the capacity is preset to 1000. It is recommended to avoid configuring the capacity to max(int64), as doing so could cause problems with [JSON Patch operations](https://github.com/agones-dev/agones/issues/3636).
 
 ##### Beta().GetCounterCount(key)
 
