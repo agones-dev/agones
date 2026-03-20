@@ -72,8 +72,8 @@ description = "Agones is a library for hosting, running and scaling dedicated ga
 # Everything below this are Site Params
 
 [params]
-copyright = "Copyright Google LLC All Rights Reserved."
-privacy_policy = "https://policies.google.com/privacy"
+copyright = "Copyright Agones a Series of LF Projects, LLC"
+privacy_policy = "https://lfprojects.org/policies/"
 github_repo = "https://github.com/agones-dev/agones"
 
 # Google Custom Search Engine ID. Remove or comment out to disable search.

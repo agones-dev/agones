@@ -40,3 +40,37 @@
     background-color: var(--bs-primary-bg-subtle) !important;
     color: var(--bs-body-color) !important;
 }
+
+/* CNCF section - light background in light mode, subtle dark background in dark mode */
+.td-box--light {
+    background-color: #f8f9fa !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+[data-bs-theme="dark"] .td-box--light {
+    background-color: #212529 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-bs-theme="dark"] .td-box--light .lead {
+    color: var(--bs-body-color) !important;
+}
+
+/* CNCF logo - invert colors in dark mode to make it white */
+[data-bs-theme="dark"] .td-box--light img[alt="CNCF Logo"] {
+    filter: brightness(0) invert(1);
+}
+
+/* Footer text visibility - ensure light text on dark background in both modes */
+.td-footer {
+    background-color: #212529;
+    color: #f8f9fa;
+}
+
+.td-footer a {
+    color: #6ea8fe;
+}
+
+.td-footer .text-muted {
+    color: #adb5bd !important;
+}
