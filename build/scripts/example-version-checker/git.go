@@ -13,7 +13,7 @@ import (
 
 const cloneDir = "tmp"
 const rootDir = "../../../"
-const gitUrl = "https://github.com/googleforgames/agones.git"
+const gitUrl = "https://github.com/agones-dev/agones.git"
 const targetBranch = "refs/heads/main"
 
 func getFailedFiles() []string {

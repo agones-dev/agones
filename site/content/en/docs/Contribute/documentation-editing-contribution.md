@@ -38,7 +38,7 @@ version is incremented on the release:
 ### At the Page Level
 
 Use `publishDate` and `expiryDate` in [Hugo Front Matter](https://gohugo.io/content-management/front-matter/) to control
-when the page is displayed (or hidden). You can look at the [Release Calendar](https://github.com/googleforgames/agones/blob/main/docs/governance/release_process.md#release-calendar)
+when the page is displayed (or hidden). You can look at the [Release Calendar](https://github.com/agones-dev/agones/blob/main/docs/governance/release_process.md#release-calendar)
 to align it with the next release
 candidate release date - or whichever release is most relevant.  
 

@@ -21,6 +21,6 @@ take advantage of now and in the future:
 Big thanks to [Hugo](https://gohugo.io) for being the static site generator, and the
 [docsy](https://github.com/google/docsy) team for the core documentation theme 👍
 
-Please let us know if you have feedback, either by [filing an issue](https://github.com/googleforgames/agones/issues)
-, or [submitting a pull request](https://github.com/googleforgames/agones/pulls) or come chat with us
+Please let us know if you have feedback, either by [filing an issue](https://github.com/agones-dev/agones/issues)
+, or [submitting a pull request](https://github.com/agones-dev/agones/pulls) or come chat with us
 on [Slack](https://join.slack.com/t/agones/shared_invite/enQtMzE5NTE0NzkyOTk1LWU3ODAyZjdjMjNlYWIxZTAwODkxMGY3YWEyZjNjMjc4YWM1Zjk0OThlMGU2ZmUyMzRlMDljNDJiNmZlMGQ1M2U)! 

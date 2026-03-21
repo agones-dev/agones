@@ -70,7 +70,7 @@ module "aks_cluster" {
   // Update ?ref= to the agones release you are installing. For example, ?ref=release-1.17.0 corresponds
   // to Agones version 1.17.0
   // ***************************************************************************************************
-  source = "git::https://github.com/googleforgames/agones.git//install/terraform/modules/aks/?ref=main"
+  source = "git::https://github.com/agones-dev/agones.git//install/terraform/modules/aks/?ref=main"
 
   client_id               = var.client_id
   client_secret           = var.client_secret
@@ -87,7 +87,7 @@ module "helm_agones" {
   // Update ?ref= to the agones release you are installing. For example, ?ref=release-1.17.0 corresponds
   // to Agones version 1.17.0
   // ***************************************************************************************************
-  source = "git::https://github.com/googleforgames/agones.git//install/terraform/modules/helm3/?ref=main"
+  source = "git::https://github.com/agones-dev/agones.git//install/terraform/modules/helm3/?ref=main"
 
   agones_version         = var.agones_version
   cluster_ca_certificate = module.aks_cluster.cluster_ca_certificate

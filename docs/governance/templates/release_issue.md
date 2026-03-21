@@ -86,7 +86,7 @@ and copy it into a release issue. Fill in relevant values, found inside {}
 - [ ] Create PR with these changes, and merge them with approval
 - [ ] Close this issue. _Congratulations!_ - the release is now complete! :tada: :clap: :smile: :+1:
 
-[release-template]: https://github.com/googleforgames/agones/blob/main/docs/governance/templates/release.md
-[release-draft]: https://github.com/googleforgames/agones/releases
-[build-makefile]: https://github.com/googleforgames/agones/blob/main/build/Makefile
+[release-template]: https://github.com/agones-dev/agones/blob/main/docs/governance/templates/release.md
+[release-draft]: https://github.com/agones-dev/agones/releases
+[build-makefile]: https://github.com/agones-dev/agones/blob/main/build/Makefile
 [Internal Mailing list posting guide]: https://docs.google.com/document/d/1qYR9ccVURgujqFAIpjpSN2GRcCeQ29ow5H_V4sm4RGs/edit#heading=h.zge9gjrt8ws8

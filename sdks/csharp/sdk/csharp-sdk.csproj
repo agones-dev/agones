@@ -9,7 +9,7 @@
     <PackageReleaseNotes></PackageReleaseNotes>
     <Description>Game Server SDK for Agones, the open source project for hosting dedicated game servers on Kubernetes</Description>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-    <RepositoryUrl>https://github.com/googleforgames/agones</RepositoryUrl>
+    <RepositoryUrl>https://github.com/agones-dev/agones</RepositoryUrl>
     <PackageProjectUrl>https://agones.dev</PackageProjectUrl>
     <PackageLicenseUrl>http://www.apache.org/licenses/LICENSE-2.0</PackageLicenseUrl>
     <AssemblyName>AgonesSDK</AssemblyName>

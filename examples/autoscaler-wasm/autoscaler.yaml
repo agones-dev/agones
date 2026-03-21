@@ -36,4 +36,4 @@ spec:
       from:
         url:
           # Direct URL to the wasm plugin
-          url: "https://github.com/googleforgames/agones/raw/refs/heads/main/examples/autoscaler-wasm/plugin.wasm"
+          url: "https://github.com/agones-dev/agones/raw/refs/heads/main/examples/autoscaler-wasm/plugin.wasm"

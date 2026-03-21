@@ -84,7 +84,7 @@ spec:
       from:
         url:
           # Direct URL to the wasm plugin
-          url: "https://github.com/googleforgames/agones/raw/refs/heads/main/examples/autoscaler-wasm/plugin.wasm"
+          url: "https://github.com/agones-dev/agones/raw/refs/heads/main/examples/autoscaler-wasm/plugin.wasm"
 ```
 
 ### Understanding the Wasm Policy Configuration
@@ -158,7 +158,7 @@ Spec:
         buffer_size:  5
       From:
         URL:
-          URL:   https://github.com/googleforgames/agones/raw/refs/heads/main/examples/autoscaler-wasm/plugin.wasm
+          URL:   https://github.com/agones-dev/agones/raw/refs/heads/main/examples/autoscaler-wasm/plugin.wasm
       Function:  scale
   Sync:
     Fixed Interval:
@@ -246,7 +246,7 @@ Spec:
         buffer_size:  5
       From:
         URL:
-          URL:   https://github.com/googleforgames/agones/raw/refs/heads/main/examples/autoscaler-wasm/plugin.wasm
+          URL:   https://github.com/agones-dev/agones/raw/refs/heads/main/examples/autoscaler-wasm/plugin.wasm
       Function:  scale
   Sync:
     Fixed Interval:

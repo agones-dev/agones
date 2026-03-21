@@ -451,7 +451,7 @@ install: $(ensure-build-image) install-custom-pull-secret
 		HELM_STATUS=$$(helm status agones -n agones-system --output json 2>/dev/null || echo "{}") && \
 		STATUS=$$(echo "$$HELM_STATUS" | jq -r ".info.status // \"not-found\"" 2>/dev/null || echo "not-found") && \
 		DESCRIPTION=$$(echo "$$HELM_STATUS" | jq -r ".info.description // \"no details\"" 2>/dev/null || echo "no details") && \
-		if [[ "$$STATUS" =~ ^(failed|pending-.*)$$ ]]; then \
+		if [[ "$$STATUS" != "deployed" && "$$STATUS" != "not-found" ]]; then \
 			echo "Uninstalling problematic Agones release in $$STATUS state: $$DESCRIPTION..." && \
 			helm uninstall agones --namespace=agones-system --wait --timeout=20m; \
 		fi || true'

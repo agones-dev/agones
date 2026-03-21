@@ -48,7 +48,7 @@ We have more exciting this on the horizon! Items on the roadmap include:
 
 But we also want to hear from our users and testers of Agones -- what would you like to see in the project? If there
 is a feature that would be useful for you, please 
-[file a feature request](https://github.com/googleforgames/agones/issues/new?assignees=&labels=kind%2Ffeature&template=feature_request.md&title=),
+[file a feature request](https://github.com/agones-dev/agones/issues/new?assignees=&labels=kind%2Ffeature&template=feature_request.md&title=),
 or talk about it in our
 [Slack channel](https://join.slack.com/t/agones/shared_invite/enQtMzE5NTE0NzkyOTk1LWU3ODAyZjdjMjNlYWIxZTAwODkxMGY3YWEyZjNjMjc4YWM1Zjk0OThlMGU2ZmUyMzRlMDljNDJiNmZlMGQ1M2U)!
 

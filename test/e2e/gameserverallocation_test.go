@@ -1460,12 +1460,12 @@ func TestGameServerAllocationDuringMultipleAllocationClients(t *testing.T) {
 		return true
 	})
 
-	// TODO: Compromising on the expected allocation count to be between 98 to 100 due to a known allocation issue. Please check: [https://github.com/googleforgames/agones/issues/3553]
+	// TODO: Compromising on the expected allocation count to be between 98 to 100 due to a known allocation issue. Please check: [https://github.com/agones-dev/agones/issues/3553]
 	switch {
 	case uniqueAllocatedGSs < 98:
 		t.Errorf("Test failed: Less than 98 GameServers were allocated. Allocated: %d", uniqueAllocatedGSs)
 	case uniqueAllocatedGSs < 100:
-		t.Logf("Number of GameServers Allocated: %d. This might be due to a known allocation issue. Please check: [https://github.com/googleforgames/agones/issues/3553]", uniqueAllocatedGSs)
+		t.Logf("Number of GameServers Allocated: %d. This might be due to a known allocation issue. Please check: [https://github.com/agones-dev/agones/issues/3553]", uniqueAllocatedGSs)
 	default:
 		t.Logf("Number of GameServers allocated: %d. This matches the expected outcome.", uniqueAllocatedGSs)
 	}

@@ -56,4 +56,4 @@ We expect the aggregate memory consumption of the pods will be slightly higher t
 
 ## Feature Design
 
-Please see [HA Agones](https://github.com/googleforgames/agones/issues/2797).
+Please see [HA Agones](https://github.com/agones-dev/agones/issues/2797).

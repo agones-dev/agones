@@ -93,7 +93,7 @@ template.
 <!--
 **ACTION REQUIRED:** In order to merge code into a release, there must be an
 issue in [agones/proposals] referencing this AFP and targeting a release
-version **before the [Feature Freeze](https://github.com/googleforgames/agones/tree/main/site/content/en/blog/releases)
+version **before the [Feature Freeze](https://github.com/agones-dev/agones/tree/main/site/content/en/blog/releases)
 of the targeted release**.
 
 For features that make changes to code or processes/procedures in core
@@ -122,9 +122,9 @@ Items marked with (R) are required *prior to targeting to a release version / re
 -->
 
 [agones.dev]: https://agones.dev
-[agones/proposals]: https://github.com/googleforgames/agones/tree/main/docs/proposals
-[googleforgames/agones]: https://github.com/googleforgames/agones
-[agones/site]: https://github.com/googleforgames/agones/tree/main/site
+[agones/proposals]: https://github.com/agones-dev/agones/tree/main/docs/proposals
+[googleforgames/agones]: https://github.com/agones-dev/agones
+[agones/site]: https://github.com/agones-dev/agones/tree/main/site
 
 ## Summary
 
@@ -238,7 +238,7 @@ All code is expected to have adequate tests (eventually with coverage
 expectations). Please adhere to the [Agones testing guidelines][testing-guidelines]
 when drafting this test plan.
 
-[testing-guidelines]: https://github.com/googleforgames/agones/tree/main/build#testing-and-building
+[testing-guidelines]: https://github.com/agones-dev/agones/tree/main/build#testing-and-building
 -->
 
 ##### Prerequisite testing updates

@@ -27,7 +27,7 @@ kubectl create namespace agones-system
 kubectl apply --server-side -f https://raw.githubusercontent.com/googleforgames/agones/{{< release-branch >}}/install/yaml/install.yaml
 ```
 
-You can also find the `install.yaml` in the latest `agones-install` zip from the [releases](https://github.com/googleforgames/agones/releases) archive.
+You can also find the `install.yaml` in the latest `agones-install` zip from the [releases](https://github.com/agones-dev/agones/releases) archive.
 
 ### Customizing your install
 
