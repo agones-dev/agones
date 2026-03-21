@@ -95,6 +95,24 @@ func NewSucceededController(health healthcheck.Handler,
 		},
 	})
 
+	// Recovery path: if a pod Succeeded event was missed (e.g. during controller restart),
+	// the GameServer informer resync will re-check the pod phase and re-enqueue.
+	_, _ = gameServers.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		UpdateFunc: func(_, newObj interface{}) {
+			gs := newObj.(*agonesv1.GameServer)
+			if _, isDev := gs.GetDevAddress(); isDev {
+				return
+			}
+			if gs.IsBeingDeleted() || agonesv1.TerminalGameServerStates[gs.Status.State] || isBeforePodCreated(gs) {
+				return
+			}
+			pod, err := c.podLister.Pods(gs.ObjectMeta.Namespace).Get(gs.ObjectMeta.Name)
+			if err == nil && isGameServerPod(pod) && pod.Status.Phase == corev1.PodSucceeded {
+				c.workerqueue.Enqueue(pod)
+			}
+		},
+	})
+
 	return c
 }
 

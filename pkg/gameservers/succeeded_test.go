@@ -15,17 +15,21 @@
 package gameservers
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
 	agtesting "agones.dev/agones/pkg/testing"
 	"github.com/heptiolabs/healthcheck"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/watch"
 	k8stesting "k8s.io/client-go/testing"
+	"k8s.io/client-go/tools/cache"
 )
 
 func TestSucceededControllerSyncGameServer(t *testing.T) {
@@ -248,4 +252,103 @@ func TestSucceededControllerRun(t *testing.T) {
 	case value := <-updated:
 		require.True(t, value)
 	}
+}
+
+// TestSucceededControllerRunGameServerResync verifies the recovery path: if a pod Succeeded
+// event was missed, the GameServer informer resync will detect the pod phase and re-enqueue.
+func TestSucceededControllerRunGameServerResync(t *testing.T) {
+	m := agtesting.NewMocks()
+	c := NewSucceededController(healthcheck.NewHandler(), m.KubeClient, m.AgonesClient, m.KubeInformerFactory, m.AgonesInformerFactory)
+
+	gs := &agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "default"},
+		Spec: newSingleContainerSpec(), Status: agonesv1.GameServerStatus{}}
+	gs.ApplyDefaults()
+	gs.Status.State = agonesv1.GameServerStateReady
+
+	pod, err := gs.Pod(agtesting.FakeAPIHooks{})
+	require.NoError(t, err)
+
+	received := make(chan string, 10)
+	c.workerqueue.SyncHandler = func(_ context.Context, name string) error {
+		received <- name
+		return nil
+	}
+
+	gsWatch := watch.NewFake()
+	podWatch := watch.NewFake()
+	m.AgonesClient.AddWatchReactor("gameservers", k8stesting.DefaultWatchReactor(gsWatch, nil))
+	m.KubeClient.AddWatchReactor("pods", k8stesting.DefaultWatchReactor(podWatch, nil))
+
+	// Pod starts in Running state so the initial pod AddFunc does not enqueue
+	m.KubeClient.AddReactor("list", "pods", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+		return true, &corev1.PodList{Items: []corev1.Pod{*pod}}, nil
+	})
+	m.AgonesClient.AddReactor("list", "gameservers", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+		return true, &agonesv1.GameServerList{Items: []agonesv1.GameServer{*gs}}, nil
+	})
+
+	ctx, cancel := agtesting.StartInformers(m, c.gameServerSynced, c.podSynced)
+	defer cancel()
+
+	go func() {
+		err := c.Run(ctx, 1)
+		assert.Nil(t, err)
+	}()
+
+	noChange := func(reason string) {
+		require.True(t, cache.WaitForCacheSync(ctx.Done(), c.gameServerSynced, c.podSynced))
+		select {
+		case <-received:
+			require.FailNow(t, "should not have run sync: "+reason)
+		default:
+		}
+	}
+
+	result := func() {
+		select {
+		case res := <-received:
+			require.Equal(t, "default/test", res)
+		case <-time.After(2 * time.Second):
+			require.FailNow(t, "timed out waiting for sync")
+		}
+	}
+
+	// Update pod to Succeeded via pod watch — updates the lister cache and triggers
+	// the existing pod UpdateFunc path (consumed here, not the focus of this test)
+	pod.Status.Phase = corev1.PodSucceeded
+	podWatch.Modify(pod.DeepCopy())
+	result()
+
+	// Pod lister now has a Succeeded pod. Test the GS resync path for various states:
+
+	// before pod is created — should not enqueue
+	gs.Status.State = agonesv1.GameServerStateStarting
+	gsWatch.Modify(gs.DeepCopy())
+	noChange("starting state")
+
+	// Ready — should enqueue
+	gs.Status.State = agonesv1.GameServerStateReady
+	gsWatch.Modify(gs.DeepCopy())
+	result()
+
+	// Allocated — should enqueue
+	gs.Status.State = agonesv1.GameServerStateAllocated
+	gsWatch.Modify(gs.DeepCopy())
+	result()
+
+	// terminal: Unhealthy — should not enqueue
+	gs.Status.State = agonesv1.GameServerStateUnhealthy
+	gsWatch.Modify(gs.DeepCopy())
+	noChange("unhealthy state")
+
+	// terminal: Shutdown — should not enqueue
+	gs.Status.State = agonesv1.GameServerStateShutdown
+	gsWatch.Modify(gs.DeepCopy())
+	noChange("shutdown state")
+
+	// dev GameServer — should not enqueue
+	gs.Status.State = agonesv1.GameServerStateReady
+	gs.ObjectMeta.Annotations[agonesv1.DevAddressAnnotation] = ipFixture
+	gsWatch.Modify(gs.DeepCopy())
+	noChange("dev server")
 }
