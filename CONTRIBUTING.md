@@ -44,11 +44,44 @@ looking for help.
   for review to happen early, and ensures no wasted effort occurs.
 - For new features, documentation *must* be included. Review the [Documentation Editing and Contribution](https://agones.dev/site/docs/contribute/)
   guide for details.
-- It is strongly recommended that new API design follows the [Google AIPs](https://google.aip.dev/) design guidelines.  
+- It is strongly recommended that new API design follows the [Google AIPs](https://google.aip.dev/) design guidelines.
 - All submissions, including submissions by project members, will require review before being merged.
 - Once review has occurred, please rebase your PR down to a single commit. This will ensure a nice clean Git history.
 - If you are unable to access build errors from your PR, make sure that you have joined the [agones-discuss mailing list](https://groups.google.com/forum/#!forum/agones-discuss).
 - Please follow the code formatting instructions below.
+
+### Developer Certificate of Origin (DCO)
+
+All contributions to Agones must be signed off in accordance with the
+[Developer Certificate of Origin (DCO)](https://developercertificate.org/). This is enforced via the
+[DCO GitHub App](https://github.com/apps/dco) on all pull requests.
+
+Signing off certifies that you have the right to submit the code you are contributing and that you agree
+to the DCO terms. To sign off a commit, use the `-s` or `--signoff` flag with `git commit`:
+
+```bash
+git commit -s -m "Your commit message"
+```
+
+This appends a `Signed-off-by` line to your commit message using your configured git name and email:
+
+```
+Signed-off-by: Your Name <your.email@example.com>
+```
+
+Make sure your git `user.name` and `user.email` are set correctly:
+
+```bash
+git config --global user.name "Your Name"
+git config --global user.email "your.email@example.com"
+```
+
+If you forgot to sign off on previous commits in a pull request, you can amend them:
+
+- For the most recent commit: `git commit --amend --signoff`
+- For multiple commits: `git rebase --signoff HEAD~N` (where `N` is the number of commits to sign)
+
+Then force-push your branch to update the pull request.
 
 ### Additional Instructions for Unreal Plugin Pull Requests
 
