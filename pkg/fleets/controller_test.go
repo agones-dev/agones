@@ -991,6 +991,61 @@ func TestControllerFilterGameServerSetByActive(t *testing.T) {
 	assert.Equal(t, []*agonesv1.GameServerSet{gsSet1, gsSet2}, rest)
 }
 
+func TestControllerFilterGameServerSetByActiveDuplicates(t *testing.T) {
+	t.Parallel()
+
+	f := defaultFixture()
+	c, _ := newFakeController()
+
+	now := time.Now()
+
+	// Three GameServerSets with the same template (simulates duplicate creation
+	// caused by informer cache lag).
+	gsSet1 := f.GameServerSet()
+	gsSet1.ObjectMeta.Name = "gsSet1"
+	gsSet1.ObjectMeta.UID = "uid-1"
+	gsSet1.ObjectMeta.CreationTimestamp = metav1.NewTime(now.Add(-2 * time.Minute))
+
+	gsSet2 := f.GameServerSet()
+	gsSet2.ObjectMeta.Name = "gsSet2"
+	gsSet2.ObjectMeta.UID = "uid-2"
+	gsSet2.ObjectMeta.CreationTimestamp = metav1.NewTime(now.Add(-1 * time.Minute))
+
+	gsSet3 := f.GameServerSet()
+	gsSet3.ObjectMeta.Name = "gsSet3"
+	gsSet3.ObjectMeta.UID = "uid-3"
+	gsSet3.ObjectMeta.CreationTimestamp = metav1.NewTime(now)
+
+	// Different template GameServerSet (from a previous Fleet spec).
+	gsSet4 := f.GameServerSet()
+	gsSet4.ObjectMeta.Name = "gsSet4"
+	gsSet4.ObjectMeta.UID = "uid-4"
+	gsSet4.Spec.Template.Spec.Ports = []agonesv1.GameServerPort{{HostPort: 9999}}
+
+	// With 3 duplicate-template GSS, oldest should be active, others in rest.
+	active, rest := c.filterGameServerSetByActive(f, []*agonesv1.GameServerSet{gsSet1, gsSet2, gsSet3})
+	assert.Equal(t, gsSet1, active, "oldest GameServerSet should be active")
+	assert.Len(t, rest, 2)
+	assert.Contains(t, rest, gsSet2)
+	assert.Contains(t, rest, gsSet3)
+
+	// Order should not matter — even if newest comes first in the list,
+	// oldest should still be active.
+	active, rest = c.filterGameServerSetByActive(f, []*agonesv1.GameServerSet{gsSet3, gsSet1, gsSet2})
+	assert.Equal(t, gsSet1, active, "oldest GameServerSet should be active regardless of list order")
+	assert.Len(t, rest, 2)
+	assert.Contains(t, rest, gsSet2)
+	assert.Contains(t, rest, gsSet3)
+
+	// Mix of matching and non-matching templates.
+	active, rest = c.filterGameServerSetByActive(f, []*agonesv1.GameServerSet{gsSet3, gsSet4, gsSet1, gsSet2})
+	assert.Equal(t, gsSet1, active, "oldest matching GameServerSet should be active")
+	assert.Len(t, rest, 3)
+	assert.Contains(t, rest, gsSet2)
+	assert.Contains(t, rest, gsSet3)
+	assert.Contains(t, rest, gsSet4)
+}
+
 func TestControllerRecreateDeployment(t *testing.T) {
 	t.Parallel()
 
