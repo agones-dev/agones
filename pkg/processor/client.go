@@ -32,6 +32,9 @@ import (
 	allocationpb "agones.dev/agones/pkg/allocation/go"
 )
 
+// maxSendRetries is the maximum number of times a request can be re-queued after send failures
+const maxSendRetries = 3
+
 // Config holds the processor client configuration
 type Config struct {
 	// ClientID is a unique identifier for this processor client instance
@@ -83,6 +86,9 @@ type pendingRequest struct {
 
 	// id is the unique identifier for this request
 	id string
+
+	// sendRetries tracks how many times this request has been re-queued after a send failure
+	sendRetries int
 }
 
 // Client interface for allocation operations
@@ -116,6 +122,8 @@ func NewClient(config Config, logger logrus.FieldLogger) Client {
 // It will retry connecting to the processor service until the context is cancelled
 func (p *client) Run(ctx context.Context) error {
 	p.logger.Info("Starting processor client")
+
+	defer p.drainPendingRequests()
 
 	// Main connection loop with retry
 	for {
@@ -260,7 +268,7 @@ func (p *client) pullRequestHandler(ctx context.Context, stream allocationpb.Pro
 // handlePullRequest responds to pull requests by sending the current batch of allocation requests
 // It swaps out the hot batch, resets it for new requests, and sends the ready batch to the processor
 func (p *client) handlePullRequest(stream allocationpb.Processor_StreamBatchesClient) {
-	// Swap out the hot batch and pending requests
+	// Swap out the hot batch and filter stale requests
 	p.batchMutex.Lock()
 	readyBatch := p.hotBatch
 	readyRequests := p.pendingRequests
@@ -270,7 +278,22 @@ func (p *client) handlePullRequest(stream allocationpb.Processor_StreamBatchesCl
 		Requests: make([]*allocationpb.RequestWrapper, 0, p.config.MaxBatchSize),
 	}
 	p.pendingRequests = make([]*pendingRequest, 0, p.config.MaxBatchSize)
+
+	// Filter out requests whose callers have already timed out or cancelled
+	filteredRequests := make([]*pendingRequest, 0, len(readyRequests))
+	filteredWrappers := make([]*allocationpb.RequestWrapper, 0, len(readyBatch.Requests))
+	for i, req := range readyRequests {
+		if _, exists := p.requestIDMapping[req.id]; exists {
+			filteredRequests = append(filteredRequests, req)
+			filteredWrappers = append(filteredWrappers, readyBatch.Requests[i])
+		} else {
+			p.logger.WithField("requestID", req.id).Debug("Dropping stale request from batch")
+		}
+	}
 	p.batchMutex.Unlock()
+
+	readyBatch.Requests = filteredWrappers
+	readyRequests = filteredRequests
 
 	if len(readyRequests) == 0 {
 		p.logger.Debug("No requests to send in batch")
@@ -297,9 +320,19 @@ func (p *client) sendBatch(stream allocationpb.Processor_StreamBatchesClient, ba
 	if err := stream.Send(batchMsg); err != nil {
 		p.logger.WithError(err).Error("Failed to send batch")
 
-		// Re-add the request to the hot batch and pendingRequests for the next pull
+		// Re-add retryable requests to the hot batch
 		p.batchMutex.Lock()
 		for _, req := range requests {
+			req.sendRetries++
+			if req.sendRetries > maxSendRetries {
+				p.logger.WithField("requestID", req.id).Warn("Request exceeded max send retries, failing")
+				delete(p.requestIDMapping, req.id)
+				select {
+				case req.error <- status.Errorf(codes.Unavailable, "failed to send after %d retries", maxSendRetries):
+				default:
+				}
+				continue
+			}
 			p.hotBatch.Requests = append(p.hotBatch.Requests, &allocationpb.RequestWrapper{
 				RequestId: req.id,
 				Request:   req.request,
@@ -527,4 +560,24 @@ func (p *client) registerClient(stream allocationpb.Processor_StreamBatchesClien
 	}
 
 	return nil
+}
+
+// drainPendingRequests clears all pending requests and sends an error to their channels during shutdown
+func (p *client) drainPendingRequests() {
+	p.batchMutex.Lock()
+	defer p.batchMutex.Unlock()
+
+	drainErr := status.Errorf(codes.Unavailable, "processor client shutting down")
+	for id, req := range p.requestIDMapping {
+		select {
+		case req.error <- drainErr:
+		default:
+		}
+		delete(p.requestIDMapping, id)
+	}
+
+	p.hotBatch.Requests = p.hotBatch.Requests[:0]
+	p.pendingRequests = p.pendingRequests[:0]
+
+	p.logger.Info("Drained all pending requests on shutdown")
 }

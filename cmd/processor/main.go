@@ -236,7 +236,7 @@ func main() {
 		cancelCtx()
 	})
 
-	whenLeader(ctx, cancelCtx, logger, conf, kubeClient, func(_ context.Context) {
+	whenLeader(ctx, cancelCtx, logger, conf, kubeClient, grpcHealth, func(_ context.Context) {
 		logger.Info("Starting processor work as leader")
 		grpcHealth.SetServingStatus("processor", grpc_health_v1.HealthCheckResponse_SERVING)
 		processorService.StartPullRequestTicker()
@@ -246,7 +246,7 @@ func main() {
 }
 
 func whenLeader(ctx context.Context, cancel context.CancelFunc, logger *logrus.Entry,
-	conf processorConfig, kubeClient *kubernetes.Clientset, start func(_ context.Context)) {
+	conf processorConfig, kubeClient *kubernetes.Clientset, grpcHealth *grpchealth.Server, start func(_ context.Context)) {
 	logger.WithField("leaderElectionEnabled", conf.LeaderElection).Info("Leader election configuration")
 
 	if !conf.LeaderElection {
@@ -286,6 +286,7 @@ func whenLeader(ctx context.Context, cancel context.CancelFunc, logger *logrus.E
 			OnStartedLeading: start,
 			OnStoppedLeading: func() {
 				logger.WithField("id", id).Info("Leader Lost")
+				grpcHealth.SetServingStatus("processor", grpc_health_v1.HealthCheckResponse_NOT_SERVING)
 				cancel()
 				os.Exit(0)
 			},

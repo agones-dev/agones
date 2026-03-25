@@ -18,6 +18,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"sync"
 	"time"
 
@@ -38,9 +39,15 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 )
+
+// gameServerAllocator represent the interface to allocate game servers
+type gameServerAllocator interface {
+	Allocate(ctx context.Context, gsa *allocationv1.GameServerAllocation) (k8sruntime.Object, error)
+}
 
 // allocationResult represents the result of an allocation attempt
 type allocationResult struct {
@@ -54,7 +61,7 @@ type processorHandler struct {
 	ctx                       context.Context
 	cancel                    context.CancelFunc
 	mu                        sync.RWMutex
-	allocator                 *gameserverallocations.Allocator
+	allocator                 gameServerAllocator
 	clients                   map[string]allocationpb.Processor_StreamBatchesServer
 	grpcUnallocatedStatusCode codes.Code
 	pullInterval              time.Duration
@@ -83,6 +90,7 @@ func newServiceHandler(ctx context.Context, kubeClient kubernetes.Interface, ago
 		allocator:                 allocator,
 		ctx:                       batchCtx,
 		cancel:                    cancel,
+		clients:                   make(map[string]allocationpb.Processor_StreamBatchesServer),
 		grpcUnallocatedStatusCode: grpcUnallocatedStatusCode,
 		pullInterval:              config.PullInterval,
 	}
@@ -112,7 +120,7 @@ func (h *processorHandler) StreamBatches(stream allocationpb.Processor_StreamBat
 	clientID = msg.GetClientId()
 	if clientID == "" {
 		logger.Warn("Received empty clientID, closing stream")
-		return nil
+		return status.Error(codes.InvalidArgument, "clientID is required")
 	}
 
 	h.addClient(clientID, stream)
@@ -123,7 +131,11 @@ func (h *processorHandler) StreamBatches(stream allocationpb.Processor_StreamBat
 	for {
 		msg, err := stream.Recv()
 		if err != nil {
-			logger.WithError(err).Debug("Stream receive error")
+			if err == io.EOF {
+				logger.WithField("clientID", clientID).Debug("Stream closed by client")
+			} else {
+				logger.WithField("clientID", clientID).WithError(err).Warn("Stream receive error")
+			}
 			return err
 		}
 
@@ -156,7 +168,7 @@ func (h *processorHandler) StreamBatches(stream allocationpb.Processor_StreamBat
 		}
 
 		// Submit batch for processing
-		response := h.submitBatch(batchID, requestWrappers)
+		response := h.submitBatch(stream.Context(), batchID, requestWrappers)
 
 		respMsg := &allocationpb.ProcessorMessage{
 			ClientId: clientID,
@@ -165,7 +177,6 @@ func (h *processorHandler) StreamBatches(stream allocationpb.Processor_StreamBat
 			},
 		}
 
-		// TODO: we might want to retry on failure here ?
 		if err := stream.Send(respMsg); err != nil {
 			logger.WithFields(logrus.Fields{
 				"clientID":     clientID,
@@ -213,7 +224,7 @@ func (h *processorHandler) StartPullRequestTicker() {
 }
 
 // processAllocationsConcurrently processes multiple allocation requests in parallel
-func (h *processorHandler) processAllocationsConcurrently(requestWrappers []*allocationpb.RequestWrapper) []allocationResult {
+func (h *processorHandler) processAllocationsConcurrently(ctx context.Context, requestWrappers []*allocationpb.RequestWrapper) []allocationResult {
 	var wg sync.WaitGroup
 	results := make([]allocationResult, len(requestWrappers))
 
@@ -221,7 +232,7 @@ func (h *processorHandler) processAllocationsConcurrently(requestWrappers []*all
 		wg.Add(1)
 		go func(index int, requestWrapper *allocationpb.RequestWrapper) {
 			defer wg.Done()
-			results[index] = h.processAllocation(requestWrapper.Request)
+			results[index] = h.processAllocation(ctx, requestWrapper.Request)
 		}(i, reqWrapper)
 	}
 
@@ -231,7 +242,7 @@ func (h *processorHandler) processAllocationsConcurrently(requestWrappers []*all
 }
 
 // processAllocation handles a single allocation request by using the allocator
-func (h *processorHandler) processAllocation(req *allocationpb.AllocationRequest) allocationResult {
+func (h *processorHandler) processAllocation(ctx context.Context, req *allocationpb.AllocationRequest) allocationResult {
 	gsa := converters.ConvertAllocationRequestToGSA(req)
 	gsa.ApplyDefaults()
 
@@ -247,9 +258,9 @@ func (h *processorHandler) processAllocation(req *allocationpb.AllocationRequest
 		}
 	}
 
-	resultObj, err := h.allocator.Allocate(h.ctx, gsa)
+	resultObj, err := h.allocator.Allocate(ctx, gsa)
 	if err != nil {
-		return makeError(err, h.grpcUnallocatedStatusCode)
+		return makeError(err, codes.Internal)
 	}
 
 	if s, ok := resultObj.(*metav1.Status); ok {
@@ -273,15 +284,15 @@ func (h *processorHandler) processAllocation(req *allocationpb.AllocationRequest
 
 	response, err := converters.ConvertGSAToAllocationResponse(allocatedGsa, h.grpcUnallocatedStatusCode)
 	if err != nil {
-		return makeError(err, h.grpcUnallocatedStatusCode)
+		return makeError(err, codes.Internal)
 	}
 
 	return allocationResult{response: response}
 }
 
 // submitBatch accepts a batch of allocation requests, processes them, and assembles a batch response
-func (h *processorHandler) submitBatch(batchID string, requestWrappers []*allocationpb.RequestWrapper) *allocationpb.BatchResponse {
-	results := h.processAllocationsConcurrently(requestWrappers)
+func (h *processorHandler) submitBatch(ctx context.Context, batchID string, requestWrappers []*allocationpb.RequestWrapper) *allocationpb.BatchResponse {
+	results := h.processAllocationsConcurrently(ctx, requestWrappers)
 	responseWrappers := make([]*allocationpb.ResponseWrapper, len(requestWrappers))
 
 	for i, result := range results {
@@ -330,10 +341,6 @@ func (h *processorHandler) getGRPCServerOptions() []grpc.ServerOption {
 func (h *processorHandler) addClient(clientID string, stream allocationpb.Processor_StreamBatchesServer) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-
-	if h.clients == nil {
-		h.clients = make(map[string]allocationpb.Processor_StreamBatchesServer)
-	}
 
 	h.clients[clientID] = stream
 }
