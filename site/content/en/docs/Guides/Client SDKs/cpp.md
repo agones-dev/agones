@@ -60,7 +60,7 @@ the supported gRPC version for you. Unfortunately this process was very brittle 
 therefore this functionality has been removed, and a manual installation of gRPC is now required.
 {{% /alert %}}
 
-This version of the Agones C++ SDK has been tested with gRPC 1.76.0. To install it from source 
+This version of the Agones C++ SDK has been tested with gRPC v1.78.1. To install it from source 
 [follow the instructions](https://grpc.io/docs/languages/cpp/quickstart/#build-and-install-grpc-and-protocol-buffers).
 
 It may also be available from your system's package manager, but that may not align with the supported gRPC version, so
