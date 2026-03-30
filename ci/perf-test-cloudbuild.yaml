@@ -97,7 +97,7 @@ steps:
       - tag-build-image
 
 substitutions:
-  _TEST_CLUSTER_NAME: standard-performance-test-cluster-1-33
+  _TEST_CLUSTER_NAME: standard-performance-test-cluster-1-34
   _TEST_CLUSTER_LOCATION: us-central1
   _REGISTRY: us-docker.pkg.dev/agones-images/ci
   _TEST_PROJECT_ID: agones-images
