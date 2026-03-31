@@ -72,7 +72,7 @@ type fasState struct {
 // fasThread is used for tracking each Fleet's autoscaling jobs
 type fasThread struct {
 	cancel     context.CancelFunc
-	state      fasState
+	state      *fasState
 	generation int64
 }
 
@@ -360,7 +360,7 @@ func (c *Controller) syncFleetAutoscaler(ctx context.Context, key string) error 
 
 	currentReplicas := fleet.Status.Replicas
 	gameServerNamespacedLister := c.gameServerLister.GameServers(fleet.ObjectMeta.Namespace)
-	desiredReplicas, scalingLimited, err := computeDesiredFleetSize(ctx, &thread.state, fas.Spec.Policy, fleet, gameServerNamespacedLister, c.counter.Counts(), &fasLog)
+	desiredReplicas, scalingLimited, err := computeDesiredFleetSize(ctx, thread.state, fas.Spec.Policy, fleet, gameServerNamespacedLister, c.counter.Counts(), &fasLog)
 
 	// If the err is not nil and not an inactive schedule error (ignorable in this case), then record the event
 	if err != nil {
@@ -498,7 +498,7 @@ func (c *Controller) addFasThread(fas *autoscalingv1.FleetAutoscaler, lock bool)
 	thread := fasThread{
 		cancel:     cancel,
 		generation: fas.Generation,
-		state:      fasState{},
+		state:      &fasState{},
 	}
 
 	if lock {
