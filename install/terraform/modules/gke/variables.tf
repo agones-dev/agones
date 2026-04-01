@@ -28,7 +28,7 @@ variable "cluster" {
     "network"                       = "default"
     "subnetwork"                    = ""
     "releaseChannel"                = "UNSPECIFIED"
-    "kubernetesVersion"             = "1.33"
+    "kubernetesVersion"             = "1.34"
     "windowsInitialNodeCount"       = "0"
     "windowsMachineType"            = "e2-standard-4"
     "autoscale"                     = false

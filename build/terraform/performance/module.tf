@@ -41,7 +41,7 @@ variable "kubernetes_versions" {
   description = "Create performance test clusters with these k8s versions in these regions"
   type        = map(list(string))
   default     = {
-    "1.33" = ["us-central1", "RAPID"]
+    "1.34" = ["us-central1", "RAPID"]
   }
 }
 

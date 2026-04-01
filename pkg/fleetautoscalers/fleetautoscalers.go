@@ -319,6 +319,8 @@ func applyWebhookPolicy(state *fasState, w *autoscalingv1.URLConfiguration, f *a
 		return 0, false, err
 	}
 	defer func() {
+		// Drain any unread body so the underlying connection can be reused by http.Transport.
+		_, _ = io.Copy(io.Discard, res.Body)
 		if cerr := res.Body.Close(); cerr != nil {
 			if err != nil {
 				err = errors.Wrap(err, cerr.Error())

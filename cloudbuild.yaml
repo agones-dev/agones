@@ -318,7 +318,7 @@ steps:
         set -o pipefail
         pids=()
         cloudProducts=("generic" "gke-autopilot")
-        declare -A versionsAndRegions=( [1.32]=us-west1 [1.33]=asia-east1 [1.34]=europe-west1 )
+        declare -A versionsAndRegions=([1.33]=asia-east1 [1.34]=europe-west1 [1.35]=us-east1)
 
         # Keep in sync with the inverse of 'alpha' and 'beta' features in
         # pkg/util/runtime/features.go:featureDefaults
@@ -326,7 +326,7 @@ steps:
         featureWithoutGate=""
 
         # Use this if specific feature gates can only be supported on specific Kubernetes versions.
-        declare -A featureWithGateByVersion=( [1.32]="${featureWithGate}" [1.33]="${featureWithGate}" [1.34]="${featureWithGate}")
+        declare -A featureWithGateByVersion=( [1.33]="${featureWithGate}" [1.34]="${featureWithGate}" [1.35]="${featureWithGate}")
 
         # simple-game-server image for e2e tests
         sgs_image="${_REGISTRY}/simple-game-server:${COMMIT_SHA}"

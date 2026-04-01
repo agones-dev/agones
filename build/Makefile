@@ -917,10 +917,10 @@ setup-grafana: PVC ?= true
 setup-grafana: PV_SIZE ?= 64Gi
 setup-grafana: PASSWORD ?= admin
 setup-grafana:
-	$(DOCKER_RUN) helm repo add grafana https://grafana.github.io/helm-charts
+	$(DOCKER_RUN) helm repo add grafana-community https://grafana-community.github.io/helm-charts
 	$(DOCKER_RUN) helm repo update
 	$(DOCKER_RUN) kubectl apply -f $(mount_path)/build/grafana/
-	$(DOCKER_RUN) helm upgrade grafana grafana/grafana --install --wait \
+	$(DOCKER_RUN) helm upgrade grafana grafana-community/grafana --install --wait \
 		--namespace metrics --create-namespace \
 		--set persistence.enabled=$(PVC),server.persistentVolume.size=$(PV_SIZE) \
 		--set adminPassword=$(PASSWORD) $(HELM_ARGS) -f $(mount_path)/build/grafana.yaml

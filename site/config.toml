@@ -92,12 +92,12 @@ aks_example_cluster_version = "1.34"
 eks_example_cluster_version = "1.34"
 minikube_example_cluster_version = "1.33.5"
 # shown in development (or the next versions that will be supported)
-dev_supported_k8s = ["1.32", "1.33", "1.34"]
-dev_k8s_api_version = "1.33"
-dev_gke_example_cluster_version = "1.33"
-dev_aks_example_cluster_version = "1.34"
-dev_eks_example_cluster_version = "1.34"
-dev_minikube_example_cluster_version = "1.33.5"
+dev_supported_k8s = ["1.33", "1.34", "1.35"]
+dev_k8s_api_version = "1.34"
+dev_gke_example_cluster_version = "1.34"
+dev_aks_example_cluster_version = "1.35"
+dev_eks_example_cluster_version = "1.35"
+dev_minikube_example_cluster_version = "1.34.6"
 
 # example tag
 example_image_tag = "us-docker.pkg.dev/agones-images/examples/simple-game-server:0.40"

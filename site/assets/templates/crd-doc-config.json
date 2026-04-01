@@ -14,7 +14,7 @@
         },
         {
             "typeMatchPrefix": "^k8s\\.io/(api|apimachinery/pkg/apis)/",
-            "docsURLTemplate": "https://v1-33.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#{{lower .TypeIdentifier}}-{{arrIndex .PackageSegments -1}}-{{arrIndex .PackageSegments -2}}"
+            "docsURLTemplate": "https://v1-34.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#{{lower .TypeIdentifier}}-{{arrIndex .PackageSegments -1}}-{{arrIndex .PackageSegments -2}}"
         },
         {
             "typeMatchPrefix": "^github\\.com/knative/pkg/apis/duck/",

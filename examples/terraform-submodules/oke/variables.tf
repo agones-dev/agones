@@ -71,7 +71,7 @@ variable "ssh_public_key_path" {
 # Cluster
 variable "kubernetes_version" {
   description = "The version of Kubernetes to use."
-  default     = "v1.33.1"
+  default     = "v1.34.1"
   type        = string
 }
 

@@ -22,7 +22,7 @@ RUN apk update && \
 WORKDIR /usr/local
 
 # install kubectl
-ENV KUBECTL_VER=1.33.5
+ENV KUBECTL_VER=1.34.6
 RUN curl -LO https://dl.k8s.io/release/v${KUBECTL_VER}/bin/linux/amd64/kubectl && \
     chmod go+rx ./kubectl && \
     mv ./kubectl /usr/local/bin/kubectl

@@ -1178,9 +1178,9 @@ func TestControllerCleanFasThreads(t *testing.T) {
 
 	c.fasThreadMutex.Lock()
 	c.fasThreads = map[types.UID]fasThread{
-		"1":                {func() {}, fasState{}, 1},
-		"2":                {func() {}, fasState{}, 2},
-		fas.ObjectMeta.UID: {func() {}, fasState{}, 3},
+		"1":                {func() {}, &fasState{}, 1},
+		"2":                {func() {}, &fasState{}, 2},
+		fas.ObjectMeta.UID: {func() {}, &fasState{}, 3},
 	}
 	c.fasThreadMutex.Unlock()
 

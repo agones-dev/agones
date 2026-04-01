@@ -22,7 +22,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /project
 
 # Install gRPC and dependencies
-RUN git clone --recurse-submodules -b v1.78.1 --depth 1 --shallow-submodules https://github.com/grpc/grpc /var/local/git/grpc && \
+RUN git clone --recurse-submodules -b v1.80.0 --depth 1 --shallow-submodules https://github.com/grpc/grpc /var/local/git/grpc && \
     cd /var/local/git/grpc && \
     mkdir -p cmake/build && \
     cd cmake/build && \
