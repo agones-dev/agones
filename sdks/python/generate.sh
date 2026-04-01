@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+
+# Copyright 2026 Google LLC All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Generates Python gRPC code from proto definitions.
+# Requires: pip install grpcio-tools
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROTO_DIR="${SCRIPT_DIR}/../../proto"
+OUT_DIR="${SCRIPT_DIR}/agones/_generated"
+
+# Use googleapis protos vendored by the Rust SDK (needed for beta.proto)
+GOOGLEAPIS_DIR="${SCRIPT_DIR}/../rust/proto/googleapis"
+
+rm -rf "${OUT_DIR}"
+mkdir -p "${OUT_DIR}/alpha" "${OUT_DIR}/beta"
+
+# Create stripped proto files without HTTP/swagger annotation imports.
+# These annotations are only needed for grpc-gateway and OpenAPI generation,
+# not for the gRPC Python client.
+STRIPPED_DIR=$(mktemp -d)
+trap 'rm -rf "${STRIPPED_DIR}"' EXIT
+
+mkdir -p "${STRIPPED_DIR}/sdk/alpha" "${STRIPPED_DIR}/sdk/beta"
+for proto in sdk/sdk.proto sdk/alpha/alpha.proto sdk/beta/beta.proto; do
+    python -c "
+import re, sys
+text = open(sys.argv[1]).read()
+# Remove import lines for annotations
+text = re.sub(r'import \"google/api/annotations\.proto\";\n', '', text)
+text = re.sub(r'import \"google/api/client\.proto\";\n', '', text)
+text = re.sub(r'import \"protoc-gen-openapiv2/.*\";\n', '', text)
+# Remove openapiv2 option blocks (multiline with nested braces)
+text = re.sub(r'option \(grpc\.gateway\.protoc_gen_openapiv2[^;]*\{[^}]*\{[^}]*\}[^}]*\};\n', '', text)
+# Remove google.api.http option blocks (can be multiline)
+text = re.sub(r'\s*option \(google\.api\.http\) = \{[\s\S]*?\};\n', '\n', text)
+# Remove google.api.method_signature options
+text = re.sub(r'\s*option \(google\.api\.method_signature\).*;\n', '\n', text)
+# Remove openapiv2_field annotations from field definitions
+text = re.sub(r' \[\(grpc\.gateway\.protoc_gen_openapiv2\.options\.openapiv2_field\)[^\]]*\]', '', text)
+# Remove google.api.resource_reference annotations (multiline)
+text = re.sub(r',?\s*\(google\.api\.resource_reference\) = \{[\s\S]*?\}', '', text)
+# Remove google.api.resource options (multiline)
+text = re.sub(r'\s*option \(google\.api\.resource\) = \{[\s\S]*?\};\n', '\n', text)
+# Remove google.api.field_behavior annotations (inline and multiline)
+text = re.sub(r',?\s*\(google\.api\.field_behavior\) = REQUIRED', '', text)
+# Remove import lines for field_behavior and resource
+text = re.sub(r'import \"google/api/field_behavior\.proto\";\n', '', text)
+text = re.sub(r'import \"google/api/resource\.proto\";\n', '', text)
+# Clean up trailing commas in field option brackets
+text = re.sub(r',\s*\]', ']', text)
+# Clean up empty brackets
+text = re.sub(r' \[\s*\]', '', text)
+open(sys.argv[2], 'w').write(text)
+" "${PROTO_DIR}/${proto}" "${STRIPPED_DIR}/${proto}"
+done
+
+# Generate core SDK
+python -m grpc_tools.protoc \
+    -I"${STRIPPED_DIR}/sdk" \
+    --python_out="${OUT_DIR}" \
+    --grpc_python_out="${OUT_DIR}" \
+    "${STRIPPED_DIR}/sdk/sdk.proto"
+
+# Generate Alpha SDK
+python -m grpc_tools.protoc \
+    -I"${STRIPPED_DIR}/sdk/alpha" \
+    --python_out="${OUT_DIR}/alpha" \
+    --grpc_python_out="${OUT_DIR}/alpha" \
+    "${STRIPPED_DIR}/sdk/alpha/alpha.proto"
+
+# Generate Beta SDK
+python -m grpc_tools.protoc \
+    -I"${STRIPPED_DIR}/sdk/beta" \
+    -I"${GOOGLEAPIS_DIR}" \
+    --python_out="${OUT_DIR}/beta" \
+    --grpc_python_out="${OUT_DIR}/beta" \
+    "${STRIPPED_DIR}/sdk/beta/beta.proto"
+
+# Fix imports to use relative imports within the package
+sed -i '' 's/^import sdk_pb2/from . import sdk_pb2/' "${OUT_DIR}/sdk_pb2_grpc.py"
+sed -i '' 's/^import alpha_pb2/from . import alpha_pb2/' "${OUT_DIR}/alpha/alpha_pb2_grpc.py"
+sed -i '' 's/^import beta_pb2/from . import beta_pb2/' "${OUT_DIR}/beta/beta_pb2_grpc.py"
+
+# Create __init__.py files
+touch "${OUT_DIR}/__init__.py"
+touch "${OUT_DIR}/alpha/__init__.py"
+touch "${OUT_DIR}/beta/__init__.py"
+
+echo "Generated Python gRPC code in ${OUT_DIR}"
