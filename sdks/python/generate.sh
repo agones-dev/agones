@@ -92,9 +92,18 @@ python -m grpc_tools.protoc \
     "${STRIPPED_DIR}/sdk/beta/beta.proto"
 
 # Fix imports to use relative imports within the package
-sed -i '' 's/^import sdk_pb2/from . import sdk_pb2/' "${OUT_DIR}/sdk_pb2_grpc.py"
-sed -i '' 's/^import alpha_pb2/from . import alpha_pb2/' "${OUT_DIR}/alpha/alpha_pb2_grpc.py"
-sed -i '' 's/^import beta_pb2/from . import beta_pb2/' "${OUT_DIR}/beta/beta_pb2_grpc.py"
+python -c "
+import re
+files = [
+    ('${OUT_DIR}/sdk_pb2_grpc.py', 'sdk_pb2'),
+    ('${OUT_DIR}/alpha/alpha_pb2_grpc.py', 'alpha_pb2'),
+    ('${OUT_DIR}/beta/beta_pb2_grpc.py', 'beta_pb2'),
+]
+for path, mod in files:
+    text = open(path).read()
+    text = re.sub(r'^import ' + mod, 'from . import ' + mod, text, flags=re.MULTILINE)
+    open(path, 'w').write(text)
+"
 
 # Create __init__.py files
 touch "${OUT_DIR}/__init__.py"
