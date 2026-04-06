@@ -316,6 +316,9 @@ spec:
         - name: PROCESSOR_GRPC_PORT
           value: {{ .Values.agones.allocator.processor.grpc.port | quote }}
 {{- end }}
+{{- if .Values.agones.allocator.env }}
+        {{- toYaml .Values.agones.allocator.env | nindent 8 }}
+{{- end }}
         ports:
         {{- if .Values.agones.allocator.service.http.enabled }}
         - name: {{ .Values.agones.allocator.service.http.portName }}

@@ -120,6 +120,9 @@ spec:
         - name: RETRY_PERIOD
           value: {{ .Values.agones.allocator.processor.leaderElection.retryPeriod | default "2s" | quote }}
         {{- end }}
+{{- if .Values.agones.allocator.processor.env }}
+        {{- toYaml .Values.agones.allocator.processor.env | nindent 8 }}
+{{- end }}
         livenessProbe:
           httpGet:
             path: /live

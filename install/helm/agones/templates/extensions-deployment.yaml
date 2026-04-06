@@ -157,6 +157,9 @@ spec:
           value: {{ .Values.agones.extensions.webhooks.port | quote }}
         - name: HTTP_PORT
           value: {{ .Values.agones.extensions.http.port | quote }}
+{{- if .Values.agones.extensions.env }}
+        {{- toYaml .Values.agones.extensions.env | nindent 8 }}
+{{- end }}
         ports:
         - name: webhooks
           containerPort: {{ .Values.agones.extensions.webhooks.port }}

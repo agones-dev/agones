@@ -113,6 +113,9 @@ spec:
             value: {{ .Values.agones.ping.udp.rateLimit | quote }}
           - name: FEATURE_GATES
             value: {{ .Values.agones.featureGates | quote }}
+{{- if .Values.agones.ping.env }}
+          {{- toYaml .Values.agones.ping.env | nindent 10 }}
+{{- end }}
 {{- if .Values.agones.image.controller.pullSecret }}
       imagePullSecrets:
         - name: {{.Values.agones.image.controller.pullSecret}}
