@@ -14,6 +14,7 @@
 
 """Agones Python SDK - Core GameServer lifecycle management."""
 
+import logging
 import os
 import queue
 import threading
@@ -107,11 +108,16 @@ class AgonesSDK:
         """Retrieve the current GameServer configuration."""
         return self._client.GetGameServer(sdk_pb2.Empty())
 
-    def watch_game_server(self, callback: Callable[[sdk_pb2.GameServer], None]) -> None:
+    def watch_game_server(self, callback: Callable[[sdk_pb2.GameServer], None], retry_interval: float = 5.0) -> None:
         """Watch for GameServer updates in a background thread."""
         def _watch():
-            for gs in self._client.WatchGameServer(sdk_pb2.Empty()):
-                callback(gs)
+            while True:
+                try:
+                    for gs in self._client.WatchGameServer(sdk_pb2.Empty()):
+                        callback(gs)
+                except Exception as e:
+                    logging.error("watch_game_server error: %s, retrying in %ss", e, retry_interval)
+                    threading.Event().wait(retry_interval)
 
         t = threading.Thread(target=_watch, daemon=True)
         t.start()
