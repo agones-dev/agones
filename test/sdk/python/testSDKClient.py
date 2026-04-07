@@ -121,10 +121,13 @@ def main():
     print("python: Connected!")
 
     uid = {"value": ""}
+    once = {"value": True}
 
     def on_game_server(gs):
         uid["value"] = gs.object_meta.uid
-        sdk.set_annotation("annotation", uid["value"])
+        if once["value"]:
+            sdk.set_annotation("annotation", uid["value"])
+            once["value"] = False
 
     sdk.watch_game_server(on_game_server)
 
