@@ -16,6 +16,7 @@
 
 import os
 import sys
+import threading
 import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../..', 'sdks/python'))
@@ -121,18 +122,16 @@ def main():
     print("python: Connected!")
 
     uid = {"value": ""}
-    once = {"value": True}
+    got_uid = threading.Event()
 
     def on_game_server(gs):
         uid["value"] = gs.object_meta.uid
-        if once["value"]:
-            sdk.set_annotation("annotation", uid["value"])
-            once["value"] = False
+        got_uid.set()
 
     sdk.watch_game_server(on_game_server)
 
-    # Wait for first watch event
-    time.sleep(1)
+    got_uid.wait(timeout=10)
+    sdk.set_annotation("annotation", uid["value"])
 
     print("python: Marking server as ready...")
     sdk.ready()
