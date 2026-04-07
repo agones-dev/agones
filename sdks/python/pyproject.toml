@@ -51,8 +51,8 @@ dev = [
 
 [project.urls]
 Homepage = "https://agones.dev"
-Repository = "https://github.com/googleforgames/agones"
-Issues = "https://github.com/googleforgames/agones/issues"
+Repository = "https://github.com/agones-dev/agones"
+Issues = "https://github.com/agones-dev/agones/issues"
 
 [tool.setuptools.packages.find]
 include = ["agones*"]
