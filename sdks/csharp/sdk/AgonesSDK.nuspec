@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>AgonesSDK</id>
-    <version>1.57.0-dev</version>
+    <version>1.57.0</version>
     <authors>Google LLC</authors>
     <owners>Google LLC</owners>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
