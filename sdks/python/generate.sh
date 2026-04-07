@@ -23,8 +23,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROTO_DIR="${SCRIPT_DIR}/../../proto"
 OUT_DIR="${SCRIPT_DIR}/agones/_generated"
 
-# Use googleapis protos vendored by the Rust SDK (needed for beta.proto)
-GOOGLEAPIS_DIR="${SCRIPT_DIR}/../rust/proto/googleapis"
+# Use canonical googleapis proto definitions from the repo root
+GOOGLEAPIS_DIR="${PROTO_DIR}/googleapis"
 
 rm -rf "${OUT_DIR}"
 mkdir -p "${OUT_DIR}/alpha" "${OUT_DIR}/beta"
