@@ -538,7 +538,7 @@ func TestGameServerPodCompletedAfterCleanExit(t *testing.T) {
 		}
 	}()
 
-	err = wait.PollUntilContextTimeout(ctx, 3*time.Second, 3*time.Minute, true, func(ctx context.Context) (bool, error) {
+	err = wait.PollUntilContextTimeout(ctx, 3*time.Second, 5*time.Minute, true, func(ctx context.Context) (bool, error) {
 		gs, err = framework.AgonesClient.AgonesV1().GameServers(framework.Namespace).Get(ctx, readyGs.ObjectMeta.Name, metav1.GetOptions{})
 		log.WithField("gs", readyGs.ObjectMeta.Name).WithField("state", gs.Status.State).WithError(err).Info("checking if GameServer exists")
 		if k8serrors.IsNotFound(err) {

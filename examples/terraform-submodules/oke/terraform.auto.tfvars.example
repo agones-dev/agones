@@ -29,7 +29,7 @@ ssh_public_key_path  = "~/.ssh/ssh-key-2022-11-08.key.pub"
 # OKE cluster
 cluster_name       = "agones-cluster"
 cluster_type       = "basic"
-kubernetes_version = "v1.33.1"
+kubernetes_version = "v1.34.1"
 
 # Agones
 node_count     = 3

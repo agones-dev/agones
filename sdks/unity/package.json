@@ -1,6 +1,6 @@
 {
     "name": "com.googleforgames.agones",
-    "version": "1.57.0-dev",
+    "version": "1.58.0-dev",
     "displayName": "Agones Unity SDK",
     "description": "The Unity Gameserver SDK for Agones",
     "unity": "2019.1",

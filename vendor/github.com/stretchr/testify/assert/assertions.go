@@ -1991,7 +1991,6 @@ func Eventually(t TestingT, condition func() bool, waitFor time.Duration, tick t
 	}
 
 	ch := make(chan bool, 1)
-
 	checkCond := func() { ch <- condition() }
 
 	timer := time.NewTimer(waitFor)
@@ -2001,8 +2000,10 @@ func Eventually(t TestingT, condition func() bool, waitFor time.Duration, tick t
 	defer ticker.Stop()
 
 	var tickC <-chan time.Time
+
 	// Check the condition once first on the initial call.
 	go checkCond()
+
 	for {
 		select {
 		case <-timer.C:

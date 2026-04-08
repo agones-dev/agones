@@ -729,14 +729,29 @@ func (c *Controller) updateFleetStatus(ctx context.Context, fleet *agonesv1.Flee
 
 // filterGameServerSetByActive returns the active GameServerSet (or nil if it
 // doesn't exist) and then the rest of the GameServerSets that are controlled
-// by this Fleet
+// by this Fleet.
+// If multiple GameServerSets match the Fleet's template (e.g. due to informer
+// cache lag during creation), the oldest one by CreationTimestamp is kept as
+// active and the duplicates are placed in rest so they can be scaled down and
+// cleaned up by the normal deployment strategy.
 func (c *Controller) filterGameServerSetByActive(fleet *agonesv1.Fleet, list []*agonesv1.GameServerSet) (*agonesv1.GameServerSet, []*agonesv1.GameServerSet) {
 	var active *agonesv1.GameServerSet
 	var rest []*agonesv1.GameServerSet
 
 	for _, gsSet := range list {
 		if apiequality.Semantic.DeepEqual(gsSet.Spec.Template, fleet.Spec.Template) {
-			active = gsSet
+			if active == nil {
+				active = gsSet
+			} else {
+				// Multiple GameServerSets match the fleet template.
+				// Keep the oldest as active; treat the newer duplicate as rest.
+				if gsSet.ObjectMeta.CreationTimestamp.Before(&active.ObjectMeta.CreationTimestamp) {
+					rest = append(rest, active)
+					active = gsSet
+				} else {
+					rest = append(rest, gsSet)
+				}
+			}
 		} else {
 			rest = append(rest, gsSet)
 		}

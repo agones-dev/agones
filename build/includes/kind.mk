@@ -26,7 +26,7 @@ kind-test-cluster: DOCKER_RUN_ARGS+=--network=host
 kind-test-cluster: $(ensure-build-image)
 	@if [ -z $$(kind get clusters | grep $(KIND_PROFILE)) ]; then\
 		echo "Could not find $(KIND_PROFILE) cluster. Creating...";\
-		kind create cluster --name $(KIND_PROFILE) --image kindest/node:v1.33.5 --wait 5m;\
+		kind create cluster --name $(KIND_PROFILE) --image kindest/node:v1.34.6 --wait 5m;\
 	fi
 
 # kind-metallb-helm-install installs metallb via helm for kind

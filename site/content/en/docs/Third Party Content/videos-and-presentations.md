@@ -8,6 +8,10 @@ weight: 10
 
 ## Case Studies
 
+### Keynote: How Ubisoft Orchestrates Global Multiplayer Games with Agones (KubeCon EU, 2026)
+
+{{< youtube "MUOd6IoLC5Q" >}}
+
 ### Engineering Without Limits: A Decade of Kubernetes Powering PlayStation’s Evolution (Kubecon NA, 2025)
 
 {{< youtube "goaBGk9wt0c" >}}

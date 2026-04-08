@@ -561,11 +561,11 @@ func TestAllocatorRunLocalAllocations(t *testing.T) {
 		require.Len(t, errs, 0)
 
 		// line up 3 in a batch
-		j1 := request{gsa: gsa.DeepCopy(), response: make(chan response)}
+		j1 := request{gsa: gsa.DeepCopy(), response: make(chan response, 1), ctx: context.Background()}
 		a.pendingRequests <- j1
-		j2 := request{gsa: gsa.DeepCopy(), response: make(chan response)}
+		j2 := request{gsa: gsa.DeepCopy(), response: make(chan response, 1), ctx: context.Background()}
 		a.pendingRequests <- j2
-		j3 := request{gsa: gsa.DeepCopy(), response: make(chan response)}
+		j3 := request{gsa: gsa.DeepCopy(), response: make(chan response, 1), ctx: context.Background()}
 		a.pendingRequests <- j3
 
 		go a.ListenAndAllocate(ctx, 3)
@@ -617,7 +617,7 @@ func TestAllocatorRunLocalAllocations(t *testing.T) {
 		errs := gsa.Validate()
 		require.Len(t, errs, 0)
 
-		j1 := request{gsa: gsa.DeepCopy(), response: make(chan response)}
+		j1 := request{gsa: gsa.DeepCopy(), response: make(chan response, 1), ctx: context.Background()}
 		a.pendingRequests <- j1
 
 		go a.ListenAndAllocate(ctx, 3)
@@ -626,6 +626,42 @@ func TestAllocatorRunLocalAllocations(t *testing.T) {
 		assert.Nil(t, res1.gs)
 		assert.Error(t, res1.err)
 		assert.Equal(t, ErrNoGameServer, res1.err)
+	})
+
+	t.Run("do not propagate allocation if request context cancelled", func(t *testing.T) {
+		a, m := newFakeAllocator()
+		ctx, cancel := agtesting.StartInformers(m, a.allocationCache.gameServerSynced)
+		defer cancel()
+
+		// This call initializes the cache
+		err := a.allocationCache.syncCache()
+		assert.Nil(t, err)
+
+		err = a.allocationCache.counter.Run(ctx, 0)
+		assert.Nil(t, err)
+
+		gsa := &allocationv1.GameServerAllocation{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: defaultNs,
+			},
+			Spec: allocationv1.GameServerAllocationSpec{
+				Selectors: []allocationv1.GameServerSelector{{LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{agonesv1.FleetNameLabel: "thereisnofleet"}}}},
+			}}
+		gsa.ApplyDefaults()
+		errs := gsa.Validate()
+		require.Len(t, errs, 0)
+
+		reqCtx, reqCancel := context.WithTimeout(context.Background(), time.Millisecond)
+		reqCancel()
+		j1 := request{gsa: gsa.DeepCopy(), response: make(chan response, 1), ctx: reqCtx}
+		a.pendingRequests <- j1
+
+		go a.ListenAndAllocate(ctx, 3)
+
+		res1 := <-j1.response
+		assert.Nil(t, res1.gs)
+		assert.Error(t, res1.err)
+		assert.Equal(t, ErrTotalTimeoutExceeded, res1.err)
 	})
 }
 
@@ -784,17 +820,17 @@ func TestAllocatorRunLocalAllocationsCountsAndLists(t *testing.T) {
 			},
 		}}
 
-	j1 := request{gsa: gsaDescending.DeepCopy(), response: make(chan response)}
+	j1 := request{gsa: gsaDescending.DeepCopy(), response: make(chan response, 1), ctx: context.Background()}
 	a.pendingRequests <- j1
-	j2 := request{gsa: gsaAscending.DeepCopy(), response: make(chan response)}
+	j2 := request{gsa: gsaAscending.DeepCopy(), response: make(chan response, 1), ctx: context.Background()}
 	a.pendingRequests <- j2
-	j3 := request{gsa: gsaDistributed.DeepCopy(), response: make(chan response)}
+	j3 := request{gsa: gsaDistributed.DeepCopy(), response: make(chan response, 1), ctx: context.Background()}
 	a.pendingRequests <- j3
-	j4 := request{gsa: gsaListDescending.DeepCopy(), response: make(chan response)}
+	j4 := request{gsa: gsaListDescending.DeepCopy(), response: make(chan response, 1), ctx: context.Background()}
 	a.pendingRequests <- j4
-	j5 := request{gsa: gsaListAscending.DeepCopy(), response: make(chan response)}
+	j5 := request{gsa: gsaListAscending.DeepCopy(), response: make(chan response, 1), ctx: context.Background()}
 	a.pendingRequests <- j5
-	j6 := request{gsa: gsaListDistributed.DeepCopy(), response: make(chan response)}
+	j6 := request{gsa: gsaListDistributed.DeepCopy(), response: make(chan response, 1), ctx: context.Background()}
 	a.pendingRequests <- j6
 
 	go a.ListenAndAllocate(ctx, 5)
@@ -860,7 +896,8 @@ func TestControllerAllocationUpdateWorkers(t *testing.T) {
 		r := response{
 			request: request{
 				gsa:      &allocationv1.GameServerAllocation{},
-				response: make(chan response),
+				response: make(chan response, 1),
+				ctx:      context.Background(),
 			},
 			gs: gs1,
 		}
@@ -906,7 +943,8 @@ func TestControllerAllocationUpdateWorkers(t *testing.T) {
 		r = response{
 			request: request{
 				gsa:      &allocationv1.GameServerAllocation{},
-				response: make(chan response),
+				response: make(chan response, 1),
+				ctx:      context.Background(),
 			},
 			gs: gs2,
 		}
@@ -941,7 +979,8 @@ func TestControllerAllocationUpdateWorkers(t *testing.T) {
 		r := response{
 			request: request{
 				gsa:      &allocationv1.GameServerAllocation{},
-				response: make(chan response),
+				response: make(chan response, 1),
+				ctx:      context.Background(),
 			},
 			gs: gs1,
 		}

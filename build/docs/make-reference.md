@@ -193,7 +193,7 @@ Run helm repo update to get the mose recent charts.
 
 #### `make setup-grafana`
 
-Install Grafana server using [grafana community](https://grafana.github.io/helm-charts) chart into
+Install Grafana server using [grafana community](https://grafana-community.github.io/helm-charts) chart into
 the current cluster and setup [Agones dashboards with Prometheus datasource](./grafana/).
 
 You can set your own password using the `PASSWORD` environment variable.

@@ -119,6 +119,7 @@ type Allocator struct {
 type request struct {
 	gsa      *allocationv1.GameServerAllocation
 	response chan response
+	ctx      context.Context
 }
 
 // response is an async response for a matching request
@@ -459,7 +460,13 @@ func (c *Allocator) getClientCertificates(namespace, secretName string) (clientC
 func (c *Allocator) allocate(ctx context.Context, gsa *allocationv1.GameServerAllocation) (*agonesv1.GameServer, error) {
 	// creates an allocation request. This contains the requested GameServerAllocation, as well as the
 	// channel we expect the return values to come back for this GameServerAllocation
-	req := request{gsa: gsa, response: make(chan response)}
+	req := request{gsa: gsa, response: make(chan response, 1), ctx: ctx}
+
+	// Avoid pushing request to the queue if the context is already done to prevent
+	// the pendingRequests reaching the max buffer size and blocking further allocations
+	if ctx.Err() != nil {
+		return nil, ErrTotalTimeoutExceeded
+	}
 
 	// this pushes the request into the batching process
 	c.pendingRequests <- req
@@ -517,6 +524,12 @@ func (c *Allocator) ListenAndAllocate(ctx context.Context, updateWorkerCount int
 	for {
 		select {
 		case req := <-c.pendingRequests:
+			// Ensure the request context is still active before processing to avoid allocating unnecessarily
+			if req.ctx.Err() != nil {
+				c.tryRespondWithError(req, ErrTotalTimeoutExceeded)
+				continue
+			}
+
 			// refresh the list after every 100 allocations made in a single batch
 			if requestCount >= maxBatchBeforeRefresh {
 				list = nil
@@ -556,7 +569,7 @@ func (c *Allocator) ListenAndAllocate(ctx context.Context, updateWorkerCount int
 
 			gs, index, err := findGameServerForAllocation(req.gsa, list)
 			if err != nil {
-				req.response <- response{request: req, gs: nil, err: err}
+				c.tryRespondWithError(req, err)
 				continue
 			}
 			// remove the game server that has been allocated
@@ -564,7 +577,7 @@ func (c *Allocator) ListenAndAllocate(ctx context.Context, updateWorkerCount int
 
 			if err := c.allocationCache.RemoveGameServer(gs); err != nil {
 				// this seems unlikely, but lets handle it just in case
-				req.response <- response{request: req, gs: nil, err: err}
+				c.tryRespondWithError(req, err)
 				continue
 			}
 
@@ -618,6 +631,15 @@ func (c *Allocator) allocationUpdateWorkers(ctx context.Context, workerCount int
 	}
 
 	return updateQueue
+}
+
+// tryRespondWithError attempts to send an error response without blocking
+// This prevents deadlocks when the receiver may have exited due to context cancellation
+func (c *Allocator) tryRespondWithError(req request, err error) {
+	select {
+	case req.response <- response{request: req, gs: nil, err: err}:
+	default:
+	}
 }
 
 // applyAllocationToGameServer patches the inputted GameServer with the allocation metadata changes, and updates it to the Allocated State.

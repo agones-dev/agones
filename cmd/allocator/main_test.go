@@ -37,7 +37,7 @@ func TestAllocateHandler(t *testing.T) {
 	t.Parallel()
 
 	h := serviceHandler{
-		allocationCallback: func(_ *allocationv1.GameServerAllocation) (k8sruntime.Object, error) {
+		allocationCallback: func(_ context.Context, _ *allocationv1.GameServerAllocation) (k8sruntime.Object, error) {
 			return &allocationv1.GameServerAllocation{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
@@ -71,7 +71,7 @@ func TestAllocateHandlerReturnsError(t *testing.T) {
 	t.Parallel()
 
 	h := serviceHandler{
-		allocationCallback: func(_ *allocationv1.GameServerAllocation) (k8sruntime.Object, error) {
+		allocationCallback: func(_ context.Context, _ *allocationv1.GameServerAllocation) (k8sruntime.Object, error) {
 			return nil, k8serror.NewBadRequest("error")
 		},
 	}
@@ -110,7 +110,7 @@ func TestHandlingStatus(t *testing.T) {
 
 	errorMessage := "GameServerAllocation is invalid"
 	h := serviceHandler{
-		allocationCallback: func(_ *allocationv1.GameServerAllocation) (k8sruntime.Object, error) {
+		allocationCallback: func(_ context.Context, _ *allocationv1.GameServerAllocation) (k8sruntime.Object, error) {
 			return &metav1.Status{
 				Status:  metav1.StatusFailure,
 				Message: errorMessage,
@@ -142,7 +142,7 @@ func TestBadReturnType(t *testing.T) {
 	t.Parallel()
 
 	h := serviceHandler{
-		allocationCallback: func(_ *allocationv1.GameServerAllocation) (k8sruntime.Object, error) {
+		allocationCallback: func(_ context.Context, _ *allocationv1.GameServerAllocation) (k8sruntime.Object, error) {
 			return &corev1.Secret{}, nil
 		},
 	}

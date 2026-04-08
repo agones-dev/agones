@@ -30,5 +30,5 @@ spec:
         spec:
           containers:
             - name: cpp-simple
-              image: us-docker.pkg.dev/agones-images/examples/cpp-simple-server:0.24
+              image: us-docker.pkg.dev/agones-images/examples/cpp-simple-server:0.26
               # imagePullPolicy: Always  # add for development

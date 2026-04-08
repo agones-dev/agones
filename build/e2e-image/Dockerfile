@@ -22,7 +22,7 @@ RUN wget -q https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz && \
 ENV PATH /usr/local/go/bin:/go/bin:$PATH
 
 # install kubectl without gcloud as we want the last version
-ENV KUBECTL_VER 1.33.5
+ENV KUBECTL_VER 1.34.6
 RUN curl -LO https://dl.k8s.io/release/v${KUBECTL_VER}/bin/linux/amd64/kubectl && \
     chmod go+rx ./kubectl && \
     mv ./kubectl /usr/local/bin/kubectl

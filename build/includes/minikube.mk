@@ -37,7 +37,7 @@ minikube_cert_mount := ~/.minikube:$(HOME)/.minikube
 # of the right version.
 minikube-test-cluster: DOCKER_RUN_ARGS+=--network=host -v $(minikube_cert_mount)
 minikube-test-cluster: $(ensure-build-image)
-	$(MINIKUBE) start --kubernetes-version v1.33.5 -p $(MINIKUBE_PROFILE) --driver $(MINIKUBE_DRIVER) --nodes $(MINIKUBE_NODES)
+	$(MINIKUBE) start --kubernetes-version v1.34.6 -p $(MINIKUBE_PROFILE) --driver $(MINIKUBE_DRIVER) --nodes $(MINIKUBE_NODES)
 	$(MAKE) minikube-metallb-helm-install
 	$(MAKE) minikube-metallb-configure
 

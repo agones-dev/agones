@@ -1,5 +1,45 @@
 # Changelog
 
+# [v1.57.0](https://github.com/agones-dev/agones/tree/v1.57.0) (2026-04-07)
+
+[Full Changelog](https://github.com/agones-dev/agones/compare/v1.56.0...v1.57.0)
+
+**Breaking changes**
+- Upgrade supported Kubernetes versions to 1.33, 1.34, 1.35 by @Sivasankaran25 in https://github.com/agones-dev/agones/pull/4488
+
+**Implemented enhancements**
+- feat: support init sidecar containers by @nrwiersma in https://github.com/agones-dev/agones/pull/4375
+
+**Fixed bugs**
+- fix: duplicate GameServerSets not being cleaned up under a Fleet by @mnthe in https://github.com/agones-dev/agones/pull/4469
+- Flaky Test: TestGameServerAllocationReturnLabels by @Sivasankaran25 in https://github.com/agones-dev/agones/pull/4435
+- Fix: propagate request context on allocation by @lacroixthomas in https://github.com/agones-dev/agones/pull/4415
+- Fix memory leak in fleet autoscaler webhook HTTP client by @markmandel in https://github.com/agones-dev/agones/pull/4493
+
+**Security fixes**
+- build(deps): bump minimatch in /sdks/nodejs by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4463
+- build(deps): bump gRPC and related dependencies by @markmandel in https://github.com/agones-dev/agones/pull/4485
+
+**Other**
+- Preparation for Release v1.57.0 by @Sivasankaran25 in https://github.com/agones-dev/agones/pull/4458
+- docs: add CountsAndLists priorities documentation to scheduling page by @markmandel in https://github.com/agones-dev/agones/pull/4460
+- Add agones-kotlin-sdk to list of Client SDKs by @scrayos in https://github.com/agones-dev/agones/pull/4462
+- Update links from `googleforgames` to `agones-dev` by @markmandel in https://github.com/agones-dev/agones/pull/4475
+- CNCF: update footers / logo / copyrights by @lacroixthomas in https://github.com/agones-dev/agones/pull/4470
+- build(deps): bump github.com/cloudflare/circl from 1.6.1 to 1.6.3 in /build/scripts/example-version-checker by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4459
+- docs: add DCO sign-off instructions to contributing guide by @markmandel in https://github.com/agones-dev/agones/pull/4477
+- fix: correct environment variable syntax in Dockerfile to fix LegacyKeyValueFormat warnings by @shihabhasan0161 in https://github.com/agones-dev/agones/pull/4484
+- Fix/4447 upgrade grafana helm chart by @souben in https://github.com/agones-dev/agones/pull/4454
+- docs: split feature gates table into Alpha, Beta, and Stable sections by @markmandel in https://github.com/agones-dev/agones/pull/4490
+- Created performance test cluster for 1.34 by @Sivasankaran25 in https://github.com/agones-dev/agones/pull/4489
+- docs: add Ubisoft KubeCon EU 2026 keynote to videos and presentations by @markmandel in https://github.com/agones-dev/agones/pull/4494
+- build(deps): bump google.golang.org/grpc from 1.77.0 to 1.79.3 in /build/agones-bot by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4486
+
+**New Contributors**
+- @mnthe made their first contribution in https://github.com/agones-dev/agones/pull/4469
+- @shihabhasan0161 made their first contribution in https://github.com/agones-dev/agones/pull/4484
+- @souben made their first contribution in https://github.com/agones-dev/agones/pull/4454
+
 # [v1.56.0](https://github.com/agones-dev/agones/tree/v1.56.0) (2026-02-24)
 
 [Full Changelog](https://github.com/agones-dev/agones/compare/v1.55.0...v1.56.0)

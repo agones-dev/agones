@@ -518,8 +518,8 @@ func newServiceHandler(ctx context.Context, kubeClient kubernetes.Interface, ago
 		allocationBatchWaitTime)
 
 	h := serviceHandler{
-		allocationCallback: func(gsa *allocationv1.GameServerAllocation) (k8sruntime.Object, error) {
-			return allocator.Allocate(ctx, gsa)
+		allocationCallback: func(allocationCtx context.Context, gsa *allocationv1.GameServerAllocation) (k8sruntime.Object, error) {
+			return allocator.Allocate(allocationCtx, gsa)
 		},
 		mTLSDisabled:              mTLSDisabled,
 		tlsDisabled:               tlsDisabled,
@@ -713,7 +713,7 @@ func getCACertPool(path string) (*x509.CertPool, error) {
 }
 
 type serviceHandler struct {
-	allocationCallback func(*allocationv1.GameServerAllocation) (k8sruntime.Object, error)
+	allocationCallback func(context.Context, *allocationv1.GameServerAllocation) (k8sruntime.Object, error)
 
 	certMutex  sync.RWMutex
 	caCertPool *x509.CertPool
@@ -752,7 +752,7 @@ func (h *serviceHandler) Allocate(ctx context.Context, in *pb.AllocationRequest)
 		return response, err
 	}
 
-	resultObj, err := h.allocationCallback(gsa)
+	resultObj, err := h.allocationCallback(ctx, gsa)
 	if err != nil {
 		logger.WithField("gsa", gsa).WithError(err).Error("allocation failed")
 		return nil, err
