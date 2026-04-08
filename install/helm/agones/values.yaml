@@ -321,7 +321,7 @@ agones:
         timeoutSeconds: 1
   image:
     registry: us-docker.pkg.dev/agones-images/release
-    tag: 1.57.0-dev
+    tag: 1.58.0-dev
     controller:
       name: agones-controller
       pullPolicy: IfNotPresent

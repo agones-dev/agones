@@ -443,7 +443,7 @@ steps:
         done
 
 substitutions:
-  _BASE_VERSION: 1.57.0
+  _BASE_VERSION: 1.58.0
   _CACHE_BUCKET: agones-build-cache
   _HTMLTEST_CACHE_KEY: htmltest-0.10.1
   _CPP_SDK_BUILD_CACHE_KEY: cpp-sdk-build
