@@ -24,7 +24,7 @@
 #
 
 REGISTRY ?=
-base_version = 1.57.0
+base_version = 1.58.0
 # Version defaults to the short hash of the latest commit
 VERSION ?= $(base_version)-dev-$(shell git rev-parse --short=7 HEAD)
 server_tag := $(REGISTRY)/upgrade-test-controller:$(VERSION)

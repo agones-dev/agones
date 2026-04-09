@@ -41,12 +41,14 @@ import (
 	"k8s.io/client-go/tools/record"
 )
 
-// MissingPodController makes sure that any GameServer
-// that isn't in a Scheduled or Unhealthy state and is missing a Pod is
-// moved to Unhealthy.
+// MissingPodController makes sure that any GameServer that isn't in a
+// Scheduled or Unhealthy state and is either missing a Pod, or has a Pod in a
+// Failed state, is moved to Unhealthy.
 //
 // It's possible that a GameServer is missing its associated pod due to
 // unexpected controller downtime or if the Pod is deleted with no subsequent Delete event.
+// Similarly, a Pod can reach the Failed phase (e.g. non-zero exit with SidecarContainers
+// enabled) without a corresponding Unhealthy transition being triggered.
 //
 // Since resync on the controller is every 30 seconds, even if there is some time in which a GameServer
 // is in a broken state, it will eventually move to Unhealthy, and get replaced (if in a Fleet).
@@ -94,9 +96,9 @@ func NewMissingPodController(health healthcheck.Handler,
 			if _, isDev := gs.GetDevAddress(); !isDev && !isBeforePodCreated(gs) && !gs.IsBeingDeleted() &&
 				!(gs.Status.State == agonesv1.GameServerStateUnhealthy) && !(gs.Status.State == agonesv1.GameServerStateError) {
 
-				// Only queue the Pod if there is an issue retrieving it. If it exists, don't queue it, since we know it's not missing.
+				// Enqueue if the pod is missing, not a game server pod, or has failed.
 				// If there was an error accessing the Kubernetes control plane then enqueue it, so it can be rechecked when the control plane comes back up.
-				if pod, err := c.podLister.Pods(gs.ObjectMeta.Namespace).Get(gs.ObjectMeta.Name); err != nil || !isGameServerPod(pod) {
+				if pod, err := c.podLister.Pods(gs.ObjectMeta.Namespace).Get(gs.ObjectMeta.Name); err != nil || !isGameServerPod(pod) || pod.Status.Phase == corev1.PodFailed {
 					c.workerqueue.Enqueue(gs)
 				}
 			}
@@ -132,16 +134,24 @@ func (c *MissingPodController) syncGameServer(ctx context.Context, key string) e
 		return nil
 	}
 
-	// check if the pod exists
+	// check if the pod exists and is healthy
+	podFailed := false
 	if pod, err := c.podLister.Pods(namespace).Get(name); err != nil {
 		if !k8serrors.IsNotFound(err) {
 			return errors.Wrapf(err, "error retrieving Pod %s from namespace %s", name, namespace)
 		}
 	} else if isGameServerPod(pod) {
-		// if the pod exists, all is well, and we can continue on our merry way.
-		return nil
+		if pod.Status.Phase != corev1.PodFailed {
+			// pod exists and is not failed - all is well
+			return nil
+		}
+		podFailed = true
 	}
-	c.loggerForGameServerKey(key).Debug("Pod is missing. Moving GameServer to Unhealthy.")
+	if podFailed {
+		c.loggerForGameServerKey(key).Debug("Pod has failed. Moving GameServer to Unhealthy.")
+	} else {
+		c.loggerForGameServerKey(key).Debug("Pod is missing. Moving GameServer to Unhealthy.")
+	}
 
 	gs, err := c.gameServerLister.GameServers(namespace).Get(name)
 	if err != nil {
@@ -165,6 +175,10 @@ func (c *MissingPodController) syncGameServer(ctx context.Context, key string) e
 		return errors.Wrap(err, "error updating GameServer to Unhealthy")
 	}
 
-	c.recorder.Event(gs, corev1.EventTypeWarning, string(gs.Status.State), "Pod is missing")
+	eventMessage := "Pod is missing"
+	if podFailed {
+		eventMessage = "Pod has failed"
+	}
+	c.recorder.Event(gs, corev1.EventTypeWarning, string(gs.Status.State), eventMessage)
 	return nil
 }
