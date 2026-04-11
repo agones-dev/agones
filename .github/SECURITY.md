@@ -3,7 +3,7 @@
 Agones runs on Kubernetes and extends the API with custom resources and controllers. The security of a deployment depends on correct cluster configuration (for example RBAC, network policies, TLS for the allocator service, and node isolation). Operational guidance appears in the [Agones documentation](https://agones.dev/site/docs/), including [best practices](https://agones.dev/site/docs/guides/best-practices/) and topics such as [service accounts](https://agones.dev/site/docs/advanced/service-accounts/) and the [allocator service](https://agones.dev/site/docs/advanced/allocator-service/).
 
 ## Security contacts
-Security reports are triaged by the [Agones maintainers](https://github.com/agones-dev/agones/blob/main/OWNERS). Coordinated fixes and public advisories are published through [GitHub Security Advisories](https://github.com/agones-dev/agones/security/advisories) when appropriate.
+Security reports are triaged by the [Agones maintainers](https://github.com/agones-dev/agones/blob/main/docs/governance/community_membership.md#current-members). Coordinated fixes and public advisories are published through [GitHub Security Advisories](https://github.com/agones-dev/agones/security/advisories) when appropriate.
 
 ## Reporting a vulnerability
 Please **do not report security vulnerabilities through public GitHub issues, discussions, or pull requests**.
