@@ -309,7 +309,7 @@ func main() {
 
 		h = newProcessorServiceHandler(processorClient, conf.MTLSDisabled, conf.TLSDisabled)
 	} else {
-		grpcUnallocatedStatusCode := grpcCodeFromHTTPStatus(conf.httpUnallocatedStatusCode)
+		grpcUnallocatedStatusCode := processor.GRPCCodeFromHTTPStatus(conf.httpUnallocatedStatusCode)
 		h = newServiceHandler(workerCtx, kubeClient, agonesClient, health, conf.MTLSDisabled, conf.TLSDisabled, conf.remoteAllocationTimeout, conf.totalRemoteAllocationTimeout, conf.allocationBatchWaitTime, grpcUnallocatedStatusCode)
 	}
 
@@ -775,37 +775,4 @@ func (h *serviceHandler) Allocate(ctx context.Context, in *pb.AllocationRequest)
 	logger.WithField("response", response).WithError(err).Infof("allocation response is being sent")
 
 	return response, err
-}
-
-// grpcCodeFromHTTPStatus converts an HTTP status code to the corresponding gRPC status code.
-func grpcCodeFromHTTPStatus(httpUnallocatedStatusCode int) codes.Code {
-	switch httpUnallocatedStatusCode {
-	case http.StatusOK:
-		return codes.OK
-	case 499:
-		return codes.Canceled
-	case http.StatusInternalServerError:
-		return codes.Internal
-	case http.StatusBadRequest:
-		return codes.InvalidArgument
-	case http.StatusGatewayTimeout:
-		return codes.DeadlineExceeded
-	case http.StatusNotFound:
-		return codes.NotFound
-	case http.StatusConflict:
-		return codes.AlreadyExists
-	case http.StatusForbidden:
-		return codes.PermissionDenied
-	case http.StatusUnauthorized:
-		return codes.Unauthenticated
-	case http.StatusTooManyRequests:
-		return codes.ResourceExhausted
-	case http.StatusNotImplemented:
-		return codes.Unimplemented
-	case http.StatusServiceUnavailable:
-		return codes.Unavailable
-	default:
-		logger.WithField("httpStatusCode", httpUnallocatedStatusCode).Warnf("received unknown http status code, defaulting to codes.ResourceExhausted / 429")
-		return codes.ResourceExhausted
-	}
 }

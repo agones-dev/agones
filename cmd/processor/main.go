@@ -28,7 +28,11 @@ import (
 	"agones.dev/agones/pkg"
 	allocationpb "agones.dev/agones/pkg/allocation/go"
 	"agones.dev/agones/pkg/client/clientset/versioned"
+	"agones.dev/agones/pkg/client/informers/externalversions"
+	"agones.dev/agones/pkg/gameserverallocations"
+	"agones.dev/agones/pkg/gameservers"
 	"agones.dev/agones/pkg/metrics"
+	"agones.dev/agones/pkg/processor"
 	"agones.dev/agones/pkg/util/httpserver"
 	"agones.dev/agones/pkg/util/runtime"
 	"agones.dev/agones/pkg/util/signals"
@@ -39,10 +43,10 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	grpchealth "google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	leaderelection "k8s.io/client-go/tools/leaderelection"
@@ -53,6 +57,7 @@ const (
 	allocationBatchWaitTime          = "allocation-batch-wait-time"
 	apiServerBurstQPSFlag            = "api-server-qps-burst"
 	apiServerSustainedQPSFlag        = "api-server-qps"
+	defaultResync                    = 30 * time.Second
 	enablePrometheusMetricsFlag      = "prometheus-exporter"
 	enableStackdriverMetricsFlag     = "stackdriver-exporter"
 	grpcPortFlag                     = "grpc-port"
@@ -218,8 +223,26 @@ func main() {
 		logger.WithError(err).Fatal("Could not create clients")
 	}
 
-	grpcUnallocatedStatusCode := grpcCodeFromHTTPStatus(conf.HTTPUnallocatedStatusCode)
-	processorService := newServiceHandler(ctx, kubeClient, agonesClient, health, conf, grpcUnallocatedStatusCode)
+	grpcUnallocatedStatusCode := processor.GRPCCodeFromHTTPStatus(conf.HTTPUnallocatedStatusCode)
+	agonesInformerFactory := externalversions.NewSharedInformerFactory(agonesClient, defaultResync)
+	kubeInformerFactory := informers.NewSharedInformerFactory(kubeClient, defaultResync)
+	gsCounter := gameservers.NewPerNodeCounter(kubeInformerFactory, agonesInformerFactory)
+	allocator := gameserverallocations.NewAllocator(
+		agonesInformerFactory.Multicluster().V1().GameServerAllocationPolicies(),
+		kubeInformerFactory.Core().V1().Secrets(),
+		agonesClient.AgonesV1(),
+		kubeClient,
+		gameserverallocations.NewAllocationCache(agonesInformerFactory.Agones().V1().GameServers(), gsCounter, health),
+		conf.RemoteAllocationTimeout,
+		conf.TotalRemoteAllocationTimeout,
+		conf.AllocationBatchWaitTime)
+	kubeInformerFactory.Start(ctx.Done())
+	agonesInformerFactory.Start(ctx.Done())
+	if err := allocator.Run(ctx); err != nil {
+		logger.WithError(err).Fatal("Starting allocator failed.")
+	}
+
+	processorService := processor.NewServiceHandler(allocator, conf.PullInterval, grpcUnallocatedStatusCode)
 
 	grpcHealth := grpchealth.NewServer()
 	grpcHealth.SetServingStatus("processor", grpc_health_v1.HealthCheckResponse_NOT_SERVING)
@@ -239,7 +262,7 @@ func main() {
 	whenLeader(ctx, cancelCtx, logger, conf, kubeClient, grpcHealth, func(_ context.Context) {
 		logger.Info("Starting processor work as leader")
 		grpcHealth.SetServingStatus("processor", grpc_health_v1.HealthCheckResponse_SERVING)
-		processorService.StartPullRequestTicker()
+		processorService.StartPullRequestTicker(ctx)
 	})
 
 	logger.Info("Processor exited gracefully.")
@@ -300,7 +323,7 @@ func whenLeader(ctx context.Context, cancel context.CancelFunc, logger *logrus.E
 	})
 }
 
-func runGRPC(ctx context.Context, h *processorHandler, grpcHealth *grpchealth.Server, grpcPort int) {
+func runGRPC(ctx context.Context, h *processor.ProcessorHandler, grpcHealth *grpchealth.Server, grpcPort int) {
 	logger.WithField("port", grpcPort).Info("Running the grpc handler on port")
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", grpcPort))
 	if err != nil {
@@ -308,7 +331,7 @@ func runGRPC(ctx context.Context, h *processorHandler, grpcHealth *grpchealth.Se
 		os.Exit(1)
 	}
 
-	grpcServer := grpc.NewServer(h.getGRPCServerOptions()...)
+	grpcServer := grpc.NewServer(h.GetGRPCServerOptions()...)
 	allocationpb.RegisterProcessorServer(grpcServer, h)
 	grpc_health_v1.RegisterHealthServer(grpcServer, grpcHealth)
 
@@ -352,39 +375,4 @@ func getClients(ctlConfig processorConfig) (*kubernetes.Clientset, *versioned.Cl
 		return nil, nil, errors.New("Could not create the agones api clientset")
 	}
 	return kubeClient, agonesClient, nil
-}
-
-// grpcCodeFromHTTPStatus converts an HTTP status code to the corresponding gRPC status code.
-func grpcCodeFromHTTPStatus(httpUnallocatedStatusCode int) codes.Code {
-	switch httpUnallocatedStatusCode {
-	case http.StatusOK:
-		return codes.OK
-	case 499:
-		return codes.Canceled
-	case http.StatusInternalServerError:
-		return codes.Internal
-	case http.StatusBadRequest:
-		return codes.InvalidArgument
-	case http.StatusGatewayTimeout:
-		return codes.DeadlineExceeded
-	case http.StatusNotFound:
-		return codes.NotFound
-	case http.StatusConflict:
-		return codes.AlreadyExists
-	case http.StatusForbidden:
-		return codes.PermissionDenied
-	case http.StatusUnauthorized:
-		return codes.Unauthenticated
-	case http.StatusTooManyRequests:
-		return codes.ResourceExhausted
-	case http.StatusNotImplemented:
-		return codes.Unimplemented
-	case http.StatusUnprocessableEntity:
-		return codes.InvalidArgument
-	case http.StatusServiceUnavailable:
-		return codes.Unavailable
-	default:
-		logger.WithField("httpStatusCode", httpUnallocatedStatusCode).Warnf("Received unknown http status code, defaulting to codes.ResourceExhausted / 429")
-		return codes.ResourceExhausted
-	}
 }

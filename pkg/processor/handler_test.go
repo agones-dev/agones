@@ -1,4 +1,4 @@
-// Copyright 2026 Google LLC All Rights Reserved.
+// Copyright Contributors to Agones a Series of LF Projects, LLC.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package processor
 
 import (
 	"context"
@@ -34,18 +34,18 @@ import (
 	"google.golang.org/grpc/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/clock"
+	testclocks "k8s.io/utils/clock/testing"
 )
 
-// newTestHandler creates a processorHandler with a mock allocator
-func newTestHandler(ctx context.Context, allocFunc func(context.Context, *allocationv1.GameServerAllocation) (k8sruntime.Object, error)) *processorHandler {
-	handlerCtx, cancel := context.WithCancel(ctx)
-	return &processorHandler{
+// newTestHandler creates a ProcessorHandler with a mock allocator.
+func newTestHandler(_ context.Context, allocFunc func(context.Context, *allocationv1.GameServerAllocation) (k8sruntime.Object, error)) *ProcessorHandler {
+	return &ProcessorHandler{
 		allocator:                 &mockAllocator{allocateFunc: allocFunc},
-		ctx:                       handlerCtx,
-		cancel:                    cancel,
 		clients:                   make(map[string]allocationpb.Processor_StreamBatchesServer),
 		grpcUnallocatedStatusCode: codes.ResourceExhausted,
 		pullInterval:              100 * time.Millisecond,
+		clock:                     clock.RealClock{},
 	}
 }
 
@@ -78,7 +78,7 @@ func TestAddClient(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			h := &processorHandler{}
+			h := &ProcessorHandler{}
 			h.clients = make(map[string]allocationpb.Processor_StreamBatchesServer)
 			stream := newMockServerStream(context.Background())
 
@@ -126,7 +126,7 @@ func TestRemoveClient(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			h := &processorHandler{
+			h := &ProcessorHandler{
 				clients: make(map[string]allocationpb.Processor_StreamBatchesServer),
 			}
 			stream := newMockServerStream(context.Background())
@@ -661,7 +661,9 @@ func TestStartPullRequestTicker(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
+			fc := testclocks.NewFakeClock(time.Now())
 			h := newTestHandler(ctx, nil)
+			h.clock = fc
 
 			streams := make([]*mockServerStream, tc.clientCount)
 			for i := 0; i < tc.clientCount; i++ {
@@ -669,25 +671,24 @@ func TestStartPullRequestTicker(t *testing.T) {
 				h.addClient(fmt.Sprintf("client-%d", i), streams[i])
 			}
 
-			h.StartPullRequestTicker()
+			h.StartPullRequestTicker(ctx)
+			require.Eventually(t, fc.HasWaiters, time.Second, time.Millisecond, "ticker goroutine should register")
 
 			if tc.wantPulls {
+				fc.Step(h.pullInterval)
 				for i, stream := range streams {
-					assert.Eventually(t, func() bool {
-						select {
-						case msg := <-stream.sendChan:
-							return msg.GetPull() != nil
-						default:
-							return false
-						}
-					}, 5*time.Second, 10*time.Millisecond, "client-%d should receive a pull", i)
+					select {
+					case msg := <-stream.sendChan:
+						assert.NotNil(t, msg.GetPull(), "client-%d should receive a pull message", i)
+					case <-time.After(time.Second):
+						t.Errorf("client-%d did not receive a pull within timeout", i)
+					}
 				}
 			} else {
-				assert.Never(t, func() bool {
-					h.mu.RLock()
-					defer h.mu.RUnlock()
-					return len(h.clients) > 0
-				}, 200*time.Millisecond, 20*time.Millisecond, "no clients should appear")
+				fc.Step(h.pullInterval)
+				h.mu.RLock()
+				assert.Empty(t, h.clients, "no clients should appear")
+				h.mu.RUnlock()
 			}
 		})
 	}
@@ -700,20 +701,15 @@ func TestStartPullRequestTickerRemovesFailingClient(t *testing.T) {
 	defer cancel()
 
 	h := newTestHandler(ctx, nil)
-	h.pullInterval = 20 * time.Millisecond
-
-	failStream := &failingSendStream{
+	h.addClient("failing-client", &failingSendStream{
 		mockServerStream: *newMockServerStream(ctx),
-	}
-	h.addClient("failing-client", failStream)
+	})
 
-	h.StartPullRequestTicker()
+	h.sendPullRequestsToClients()
 
-	assert.Eventually(t, func() bool {
-		h.mu.RLock()
-		defer h.mu.RUnlock()
-		return len(h.clients) == 0
-	}, 5*time.Second, 20*time.Millisecond, "failing client should be removed")
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	assert.Empty(t, h.clients, "failing client should be removed after a failed send")
 }
 
 type mockAllocator struct {

@@ -206,44 +206,40 @@ func (p *client) Allocate(ctx context.Context, req *allocationpb.AllocationReque
 func (p *client) handleStream(ctx context.Context, stream allocationpb.Processor_StreamBatchesClient) error {
 	p.logger.Info("Starting stream message handling")
 
-	// Channel to handle pull requests asynchronously
-	pullRequestChan := make(chan struct{}, 20)
+	pullRequestChan := make(chan struct{}, 1)
 
 	// Start goroutine to handle pull requests without blocking
 	go p.pullRequestHandler(ctx, stream, pullRequestChan)
 
 	for {
-		select {
-		case <-ctx.Done():
-			p.logger.Info("Stream handling stopping due to context cancellation")
-			return ctx.Err()
-		default:
-			// Receive message from processor
-			msg, err := stream.Recv()
-			if err != nil {
-				p.logger.WithError(err).Error("Failed to receive message from processor")
-				return errors.Wrap(err, "stream recv error")
+		msg, err := stream.Recv()
+		if err != nil {
+			if ctx.Err() != nil {
+				p.logger.Info("Stream handling stopping due to context cancellation")
+				return ctx.Err()
 			}
+			p.logger.WithError(err).Error("Failed to receive message from processor")
+			return errors.Wrap(err, "stream recv error")
+		}
 
-			// Handle message based on its payload type
-			switch payload := msg.GetPayload().(type) {
-			case *allocationpb.ProcessorMessage_Pull:
-				// Pull request: queue for async handling
-				select {
-				case pullRequestChan <- struct{}{}:
-					p.logger.Debug("Pull request queued successfully")
-				default:
-					p.logger.Warn("Pull request queue full - dropping request")
-				}
-
-			case *allocationpb.ProcessorMessage_BatchResponse:
-				// Batch response: handle immediately
-				p.handleBatchResponse(payload.BatchResponse)
-
+		// Handle message based on its payload type
+		switch payload := msg.GetPayload().(type) {
+		case *allocationpb.ProcessorMessage_Pull:
+			// Pull request: queue for async handling
+			select {
+			case pullRequestChan <- struct{}{}:
+				p.logger.Debug("Pull request queued successfully")
 			default:
-				// Unknown message type
-				p.logger.WithField("messageType", fmt.Sprintf("%T", payload)).Warn("Received unknown message type from processor")
+				p.logger.Warn("Pull request queue full - dropping request")
 			}
+
+		case *allocationpb.ProcessorMessage_BatchResponse:
+			// Batch response: handle immediately
+			p.handleBatchResponse(payload.BatchResponse)
+
+		default:
+			// Unknown message type
+			p.logger.WithField("messageType", fmt.Sprintf("%T", payload)).Warn("Received unknown message type from processor")
 		}
 	}
 }
@@ -568,13 +564,13 @@ func (p *client) drainPendingRequests() {
 	defer p.batchMutex.Unlock()
 
 	drainErr := status.Errorf(codes.Unavailable, "processor client shutting down")
-	for id, req := range p.requestIDMapping {
+	for _, req := range p.requestIDMapping {
 		select {
 		case req.error <- drainErr:
 		default:
 		}
-		delete(p.requestIDMapping, id)
 	}
+	clear(p.requestIDMapping)
 
 	p.hotBatch.Requests = p.hotBatch.Requests[:0]
 	p.pendingRequests = p.pendingRequests[:0]
