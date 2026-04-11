@@ -19,7 +19,7 @@ steps:
     id: build-report
     script: |
       #!/usr/bin/env bash
-      export GO_VERSION=1.25.0
+      export GO_VERSION=1.26.0
       cd /usr/local
       curl -SsL https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz | tar -xzf-
       export PATH=/usr/local/go/bin:${PATH}

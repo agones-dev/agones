@@ -50,7 +50,7 @@ spec:
       # serviceAccount: autoscaler-webhook
       containers:
         - name: autoscaler-webhook
-          image: us-docker.pkg.dev/agones-images/examples/autoscaler-webhook:0.22
+          image: us-docker.pkg.dev/agones-images/examples/autoscaler-webhook:0.23
           imagePullPolicy: Always
           ports:
             - name: autoscaler

@@ -1,6 +1,6 @@
 module agones.dev/agones/examples/allocation-endpoint/server
 
-go 1.25.0
+go 1.26
 
 require (
 	agones.dev/agones v1.54.0
@@ -8,7 +8,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	go.opencensus.io v0.24.0
 	golang.org/x/oauth2 v0.34.0
-	google.golang.org/grpc v1.77.0
+	google.golang.org/grpc v1.79.3
 )
 
 require (

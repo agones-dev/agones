@@ -122,7 +122,7 @@ spec:
     spec:
       containers:
         - name: simple-game-server
-          image: us-docker.pkg.dev/agones-images/examples/simple-game-server:0.41
+          image: us-docker.pkg.dev/agones-images/examples/simple-game-server:0.42
           imagePullPolicy: Always
           # nodeSelector is a label that can be used to tell Kubernetes which host
           # OS to use. For Windows game servers uncomment the nodeSelector

@@ -9,9 +9,39 @@ There are currently two roles for this project, but that may grow in the future.
 | Role         | Responsibilities                 | Requirements                                                       | Defined by                                                              |
 |--------------|----------------------------------|--------------------------------------------------------------------|-------------------------------------------------------------------------|
 | Collaborator | Can have tickets assigned        | Have one PR merged                                                 | Read access to the Agones repository                                    |
-| Releaser     | Create Agones releases           | Sponsored by 2 approvers                                           | Commit access to the Agones repository                                  |
-| Approver     | Review and approve contributions | Sponsored by 2 approvers and multiple contributions to the project | Commit access to the Agones repository and [OWNERS] file approver entry |
+| Releaser     | Create Agones releases           | Sponsored by 2 approvers                                           | Commit access to the Agones repository and listed in this document      |
+| Approver     | Review and approve contributions | Sponsored by 2 approvers and multiple contributions to the project | Commit access to the Agones repository and listed in this document      |
 
+
+## Current Members
+
+### @Approvers
+_Members of Team @Approvers_
+
+- @markmandel
+- @igooch
+- @lacroixthomas
+- @vicentefb
+
+### Releasers - @Releasers
+
+_Members of Team @Releasers_
+
+- @Sivasankaran25
+- @indurireddy-TF
+
+### Approver Emeritus
+
+- @cyriltovena
+- @EricFortin
+- @gongmax
+- @peterzhongyi
+- @roberthbailey
+- @aLekSer
+- @joeholley
+- @jkowalski
+- @ilkercelikyilmaz
+- @pooneh-m
 
 ## New contributors
 
@@ -52,7 +82,7 @@ and as such are not expected to perform code reviews or merge PRs. Using their
 commit privileges above and beyond creating releases is grounds for revoking
 commit access and being demoted from being a releaser.
 
-**Defined by:** Commit access to the Agones repository.
+**Defined by:** Commit access to the Agones repository and listed in this document.
 
 ### Requirements
 
@@ -83,7 +113,7 @@ holistic acceptance of a contribution including: backwards / forwards
 compatibility, adhering to API and flag conventions, subtle performance and
 correctness issues, interactions with other parts of the system, etc.
 
-**Defined by:** Commit access to the Agones repository and [OWNERS] file approver entry.
+**Defined by:** Commit access to the Agones repository and listed in this document.
 
 **Note:** Acceptance of code contributions requires at least one approver.
 
@@ -115,6 +145,4 @@ correctness issues, interactions with other parts of the system, etc.
 - Expected to be responsive to review requests in a timely manner
 - Assigned PRs to review related based on expertise
 - Granted commit access to Agones repo
-
-[OWNERS]: https://github.com/kubernetes/community/blob/master/contributors/guide/owners.md
 

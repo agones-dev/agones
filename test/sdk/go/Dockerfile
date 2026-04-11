@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # Build the Go image from source
-FROM golang:1.25.0 AS build-stage
+FROM golang:1.26.0 AS build-stage
 
 WORKDIR /agones.dev
 

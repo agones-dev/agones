@@ -27,7 +27,7 @@ spec:
         spec:
           containers:
             - name: simple-game-server
-              image: us-docker.pkg.dev/agones-images/examples/simple-game-server:0.41
+              image: us-docker.pkg.dev/agones-images/examples/simple-game-server:0.42
               resources:
                 requests:
                   memory: 64Mi

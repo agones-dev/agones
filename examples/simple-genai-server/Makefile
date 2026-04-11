@@ -27,7 +27,7 @@ PROD_REPO ?= us-docker.pkg.dev/agones-images/examples
 
 mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
 project_path := $(dir $(mkfile_path))
-version := 0.10
+version := 0.11
 ifeq ($(REPOSITORY),)
 	server_tag := simple-genai-game-server:$(version)
 else

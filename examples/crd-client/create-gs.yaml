@@ -34,9 +34,9 @@ spec:
               cpu: 500m
               ephemeral-storage: 1Gi
               memory: 2Gi
-          image: us-docker.pkg.dev/agones-images/examples/crd-client:0.24
+          image: us-docker.pkg.dev/agones-images/examples/crd-client:0.25
           imagePullPolicy: Always
           env:
             - name: GAMESERVER_IMAGE
-              value: us-docker.pkg.dev/agones-images/examples/simple-game-server:0.40
+              value: us-docker.pkg.dev/agones-images/examples/simple-game-server:0.42
       restartPolicy: Never

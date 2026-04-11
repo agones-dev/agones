@@ -38,7 +38,7 @@ spec:
               value: 'true'
           containers:
             - name: simple-game-server
-              image: us-docker.pkg.dev/agones-images/examples/simple-game-server:0.40
+              image: us-docker.pkg.dev/agones-images/examples/simple-game-server:0.42
               args: [-automaticShutdownDelaySec=60, -readyIterations=10]
               resources:
                 limits:

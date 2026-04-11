@@ -114,6 +114,21 @@ func TestMissingPodControllerSyncGameServer(t *testing.T) {
 				},
 			},
 		},
+		"pod exists but is in Failed state": {
+			setup: func(gs *agonesv1.GameServer, pod *corev1.Pod) (*agonesv1.GameServer, *corev1.Pod) {
+				pod.Status.Phase = corev1.PodFailed
+				return gs, pod
+			},
+			expected: expected{
+				updated: true,
+				updateTests: func(t *testing.T, gs *agonesv1.GameServer) {
+					assert.Equal(t, agonesv1.GameServerStateUnhealthy, gs.Status.State)
+				},
+				postTests: func(t *testing.T, m agtesting.Mocks) {
+					agtesting.AssertEventContains(t, m.FakeRecorder.Events, "Warning Unhealthy Pod has failed")
+				},
+			},
+		},
 	}
 
 	for k, v := range fixtures {

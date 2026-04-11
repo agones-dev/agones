@@ -26,7 +26,7 @@ spec:
     spec:
       containers:
         - name: simple-genai-game-server
-          image: us-docker.pkg.dev/agones-images/examples/simple-genai-game-server:0.10
+          image: us-docker.pkg.dev/agones-images/examples/simple-genai-game-server:0.11
           # imagePullPolicy: Always  # add for development
           env:
             - name: GEN_AI_ENDPOINT

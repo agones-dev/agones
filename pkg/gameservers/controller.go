@@ -349,7 +349,7 @@ func (ext *Extensions) creationMutationHandlerPod(review admissionv1.AdmissionRe
 
 	passthroughPortAssignmentMap := make(map[string][]int)
 	if err := json.Unmarshal([]byte(annotation), &passthroughPortAssignmentMap); err != nil {
-		return review, errors.Wrapf(err, "could not unmarshal annotation %q (value %q)", passthroughPortAssignmentMap, annotation)
+		return review, errors.Wrapf(err, "could not unmarshal annotation %v (value %q)", passthroughPortAssignmentMap, annotation)
 	}
 
 	for _, container := range pod.Spec.InitContainers {

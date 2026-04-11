@@ -64,5 +64,5 @@ spec:
       serviceAccountName: custom-controller-sa
       containers:
         - name: custom-controller
-          image: us-docker.pkg.dev/agones-images/examples/custom-controller:0.12
+          image: us-docker.pkg.dev/agones-images/examples/custom-controller:0.13
           imagePullPolicy: Always

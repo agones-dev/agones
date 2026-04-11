@@ -37,7 +37,7 @@
 ARG WINDOWS_VERSION=ltsc2019
 
 # Build Stage
-FROM --platform=linux/amd64 golang:1.25.0 as base
+FROM --platform=linux/amd64 golang:1.26.0 as base
 
 RUN apt-get update && apt-get install -y unzip curl
 
