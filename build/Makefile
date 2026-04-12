@@ -430,7 +430,8 @@ test-install-yaml:
 	sort /tmp/agones-install/install.yaml > /tmp/agones-install/install.yaml.sorted
 	$(MAKE) gen-install
 	sort $(agones_path)/install/yaml/install.yaml > /tmp/agones-install/install.current.yaml.sorted
-	diff /tmp/agones-install/install.yaml.sorted /tmp/agones-install/install.current.yaml.sorted
+	@diff /tmp/agones-install/install.yaml.sorted /tmp/agones-install/install.current.yaml.sorted || \
+		(echo "\n\n>>> Error: install.yaml is out of date. Please run 'make gen-install' to regenerate it, since the Helm template has changed.\n\n" && exit 1)
 
 # Push all the images up to $(REGISTRY)
 push: push-controller-image push-extensions-image push-agones-sdk-image push-ping-image push-allocator-image push-processor-image
