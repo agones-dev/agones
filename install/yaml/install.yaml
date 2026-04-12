@@ -15,7 +15,6 @@ metadata:
   name: agones-controller-pdb
 spec:
   minAvailable: 1
-  maxUnavailable: 
   selector:
     matchLabels:
       agones.dev/role: controller
@@ -30,7 +29,6 @@ metadata:
   name: agones-extensions-pdb
 spec:
   minAvailable: 1
-  maxUnavailable: 
   selector:
     matchLabels:
       agones.dev/role: extensions
