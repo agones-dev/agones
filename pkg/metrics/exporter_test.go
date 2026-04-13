@@ -212,6 +212,20 @@ func setupGameServer(t *testing.T, ctrl *fakeController) {
 		return gs.Status.State == agonesv1.GameServerStateCreating
 	}, 5*time.Second, time.Second)
 	ctrl.collect()
+
+	newGs := gs.DeepCopy()
+	newGs.Status.State = agonesv1.GameServerStateAllocated
+	ctrl.gsWatch.Modify(newGs)
+
+	require.Eventually(t, func() bool {
+		gs, err := ctrl.gameServerLister.GameServers(gs.ObjectMeta.Namespace).Get(gs.ObjectMeta.Name)
+		if gs == nil || err != nil {
+			return false
+		}
+		assert.NoError(t, err)
+		return gs.Status.State == agonesv1.GameServerStateAllocated
+	}, 5*time.Second, time.Second)
+	ctrl.collect()
 }
 
 func setupFleet(_ *testing.T, ctrl *fakeController) {
