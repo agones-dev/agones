@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import os
+import threading
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -92,7 +93,12 @@ class TestAgonesSDK(unittest.TestCase):
     def test_watch_game_server(self):
         gs1 = sdk_pb2.GameServer()
         gs1.status.state = "Ready"
-        self.sdk._client.WatchGameServer.return_value = [gs1]
+
+        def blocking_stream(empty):
+            yield gs1
+            threading.Event().wait()
+
+        self.sdk._client.WatchGameServer = blocking_stream
         received = []
         self.sdk.watch_game_server(lambda gs: received.append(gs))
         import time
