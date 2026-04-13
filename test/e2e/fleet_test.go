@@ -762,6 +762,26 @@ func TestFleetUpdates(t *testing.T) {
 	}
 }
 
+func TestFleetCountsAllocations(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	client := framework.AgonesClient.AgonesV1()
+	flt := defaultFleet(framework.Namespace)
+	flt.Spec.Replicas = 5
+	flt, err := client.Fleets(framework.Namespace).Create(ctx, flt, metav1.CreateOptions{})
+	require.NoError(t, err)
+	defer client.Fleets(framework.Namespace).Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+
+	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
+	_ = framework.CreateAndApplyAllocation(t, flt)
+	_ = framework.CreateAndApplyAllocation(t, flt)
+
+	framework.AssertFleetCondition(t, flt, func(_ *logrus.Entry, fleet *agonesv1.Fleet) bool {
+		return fleet.Status.Allocations == 2
+	})
+}
+
 func TestUpdateGameServerConfigurationInFleet(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
