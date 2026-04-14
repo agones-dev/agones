@@ -92,7 +92,14 @@ class AgonesSDK:
         """Send a health ping. Call periodically to keep the server healthy."""
         if self._health_queue is None:
             self._health_queue = queue.Queue()
-            self._health_stream = self._client.Health(self._health_iter())
+
+            def _stream():
+                try:
+                    self._client.Health(self._health_iter())
+                except Exception as e:
+                    logging.error("health stream error: %s", e)
+
+            threading.Thread(target=_stream, daemon=True).start()
         self._health_queue.put(sdk_pb2.Empty())
 
     def _health_iter(self):
