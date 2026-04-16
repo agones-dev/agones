@@ -27,7 +27,7 @@ steps:
   #
   # Print Docker version
   #
-  - name: gcr.io/cloud-builders/docker:24.0.6
+  - name: gcr.io/cloud-builders/docker:24.0.9
     id: docker-version
     args: [--version]
 
@@ -64,10 +64,10 @@ steps:
     args:
       - bash
       - -c
-      - "echo 'FROM gcr.io/cloud-builders/docker:24.0.6\nRUN apt-get install make\nENTRYPOINT\
+      - "echo 'FROM gcr.io/cloud-builders/docker:24.0.9\nRUN apt-get install make\nENTRYPOINT\
         \ [\"/usr/bin/make\"]' > Dockerfile.build"
     waitFor: ['-']
-  - name: gcr.io/cloud-builders/docker:24.0.6
+  - name: gcr.io/cloud-builders/docker:24.0.9
     id: build-make-docker
     args: [build, -f, Dockerfile.build, -t, make-docker, .]  # we need docker and make to run everything.
 
