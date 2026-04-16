@@ -111,8 +111,8 @@ test-gen-api-docs: ensure-build-image
 	sort /tmp/generated.html > /tmp/generated.html.sorted
 	$(GEN_API_DOCS)
 	sort $(expected_docs) > /tmp/result.sorted
-	diff -bB /tmp/result.sorted /tmp/generated.html.sorted || \
-		(echo "Error: API docs are out of date. Please run 'make gen-api-docs' to regenerate them since the CRD information in /pkg/apis has changed." && exit 1)
+	@diff -bB /tmp/result.sorted /tmp/generated.html.sorted || \
+		(echo "\n\n>>> Error: API docs are out of date. Please run 'make gen-api-docs' to regenerate them since the CRD information in /pkg/apis has changed.\n\n" && exit 1)
 
 # Remove feature expiry/publish version shortcodes update in site/content/en/docs
 feature-shortcode-update: ensure-build-image
