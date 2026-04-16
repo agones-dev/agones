@@ -222,8 +222,12 @@ spec:
 {{- fail "minAvailable and maxUnavailable are mutually exclusive!" }}
 {{- end}}
 {{- end}}
+{{- if .Values.agones.extensions.pdb.minAvailable }}
   minAvailable: {{ .Values.agones.extensions.pdb.minAvailable }}
+{{- end }}
+{{- if .Values.agones.extensions.pdb.maxUnavailable }}
   maxUnavailable: {{ .Values.agones.extensions.pdb.maxUnavailable }}
+{{- end }}
   selector:
     matchLabels:
       agones.dev/role: extensions
