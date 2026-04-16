@@ -72,9 +72,9 @@ type Controller struct {
 	fleetLister         listerv1.FleetLister
 	fleetSynced         cache.InformerSynced
 	workerqueue         *workerqueue.WorkerQueue
-	allocsMu            sync.Mutex
-	allocs              map[string]int64
 	recorder            record.EventRecorder
+	allocs              map[string]int64
+	allocsMu            sync.Mutex
 }
 
 // NewController returns a new fleets crd controller
