@@ -129,8 +129,12 @@ spec:
 {{- fail "minAvailable and maxUnavailable are mutually exclusive!" }}
 {{- end}}
 {{- end}}
+{{- if .Values.agones.ping.pdb.minAvailable }}
   minAvailable: {{ .Values.agones.ping.pdb.minAvailable }}
+{{- end }}
+{{- if .Values.agones.ping.pdb.maxUnavailable }}
   maxUnavailable: {{ .Values.agones.ping.pdb.maxUnavailable }}
+{{- end }}
   selector:
     matchLabels:
       agones.dev/role: ping
