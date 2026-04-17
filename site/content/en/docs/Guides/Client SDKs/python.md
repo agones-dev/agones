@@ -2,6 +2,7 @@
 title: "Python Game Server Client SDK"
 linkTitle: "Python"
 date: 2026-04-01T00:00:00Z
+publishDate: 2026-05-19T00:00:00Z
 weight: 55
 description: "This is the Python version of the Agones Game Server Client SDK."
 ---
@@ -48,15 +49,7 @@ Check the [Client SDK Documentation]({{< relref "_index.md" >}}) for more detail
 
 ## Installation
 
-```bash
-pip install agones
-```
-
-Or install from source:
-
-```bash
-pip install -e sdks/python
-```
+Install from source, {{< ghlink href="sdks/python" >}}directly from GitHub{{< /ghlink >}}
 
 ## Usage
 
