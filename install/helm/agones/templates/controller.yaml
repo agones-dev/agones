@@ -258,8 +258,12 @@ spec:
 {{- fail "minAvailable and maxUnavailable are mutually exclusive!" }}
 {{- end}}
 {{- end}}
+{{- if .Values.agones.controller.pdb.minAvailable }}
   minAvailable: {{ .Values.agones.controller.pdb.minAvailable }}
+{{- end }}
+{{- if .Values.agones.controller.pdb.maxUnavailable }}
   maxUnavailable: {{ .Values.agones.controller.pdb.maxUnavailable }}
+{{- end }}
   selector:
     matchLabels:
       agones.dev/role: controller
