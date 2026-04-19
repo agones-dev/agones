@@ -25,7 +25,7 @@ limitations under the License.
 //	            <other args...>) field.ErrorList
 //
 // The value and oldValue arguments will always be a nilable type.  If the
-// original value was a string, these will be a *string.  If the original value
+di value was a string, these will be a *string.  If the original value
 // was a slice or map, these will be the same slice or map type.
 //
 // For a CREATE operation, the oldValue will always be nil.  For an UPDATE

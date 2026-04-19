@@ -1,7 +1,7 @@
 //go:build !(linux || windows)
 // +build !linux,!windows
 
-// Copyright 2024 Google LLC
+// Copyright Contributors to Agones a Series of LF Projects, LLC.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
