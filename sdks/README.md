@@ -9,6 +9,7 @@ For detailed instruction on how to develop each client library please refer to r
 * Agones Go Client SDK (todo)
 * [Agones NodeJS Client SDK](nodejs/README.md)
 * [Agones Rust Client SDK](rust/README.md)
+* [Agones Python Client SDK](python/README.md)
 * OpenAPI/Swagger Definitions (todo)
 * [Agones Unity Client SDK](unity/README.md)
 * Agones Unreal Client SDK (todo)
