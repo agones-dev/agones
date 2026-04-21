@@ -56,6 +56,7 @@ func main() {
 		"sdks/csharp/sdk/AgonesSDK.nuspec",
 		"sdks/csharp/sdk/csharp-sdk.csproj",
 		"sdks/rust/Cargo.toml",
+		"sdks/python/pyproject.toml",
 	}
 
 	for _, filename := range files {
