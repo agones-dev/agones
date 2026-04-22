@@ -66,7 +66,7 @@ gen-sdk-grpc: COMMAND := gen
 gen-sdk-grpc: run-sdk-command
 
 # Runs a command on all supported languages, use COMMAND variable to select which command.
-run-all-sdk-command: run-sdk-command-go run-sdk-command-rust run-sdk-command-cpp run-sdk-command-node run-sdk-command-restapi run-sdk-command-csharp
+run-all-sdk-command: run-sdk-command-go run-sdk-command-rust run-sdk-command-cpp run-sdk-command-node run-sdk-command-restapi run-sdk-command-csharp run-sdk-command-python
 
 run-sdk-command-node:
 	$(MAKE) run-sdk-command COMMAND=$(COMMAND) SDK_FOLDER=node
@@ -85,6 +85,9 @@ run-sdk-command-restapi:
 
 run-sdk-command-csharp:
 	$(MAKE) run-sdk-command COMMAND=$(COMMAND) SDK_FOLDER=csharp
+
+run-sdk-command-python:
+	$(MAKE) run-sdk-command COMMAND=$(COMMAND) SDK_FOLDER=python
 
 # Runs a command for a specific SDK if it exists.
 run-sdk-command:
@@ -201,8 +204,14 @@ run-sdk-conformance-test-rest:
 
 	$(MAKE) run-sdk-command COMMAND=clean SDK_FOLDER=restapi
 
+run-sdk-conformance-test-python:
+	# run with Beta feature flags enabled
+	$(MAKE) run-sdk-conformance-test SDK_FOLDER=python GRPC_PORT=9006 HTTP_PORT=9106 FEATURE_GATES=$(BETA_FEATURE_GATES) TESTS=$(DEFAULT_CONFORMANCE_TESTS),$(COUNTS_AND_LISTS_TESTS)
+	# run with Alpha feature flags enabled
+	$(MAKE) run-sdk-conformance-test SDK_FOLDER=python GRPC_PORT=9006 HTTP_PORT=9106 FEATURE_GATES=$(ALPHA_FEATURE_GATES) TESTS=$(DEFAULT_CONFORMANCE_TESTS),$(ALPHA_CONFORMANCE_TESTS)
+
 # Run a conformance test for all SDKs supported
-run-sdk-conformance-tests: run-sdk-conformance-test-node run-sdk-conformance-test-go run-sdk-conformance-test-rust run-sdk-conformance-test-rest run-sdk-conformance-test-cpp run-sdk-conformance-test-csharp
+run-sdk-conformance-tests: run-sdk-conformance-test-node run-sdk-conformance-test-go run-sdk-conformance-test-rust run-sdk-conformance-test-rest run-sdk-conformance-test-cpp run-sdk-conformance-test-csharp run-sdk-conformance-test-python
 
 # Clean package directories and binary files left
 # after building conformance tests for all SDKs supported

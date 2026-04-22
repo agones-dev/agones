@@ -19,6 +19,7 @@ The current supported SDKs are:
 - [Node.js]({{< relref "nodejs.md" >}})
 - [Go]({{< relref "go.md" >}})
 - [Rust]({{< relref "rust.md" >}})
+- [Python]({{< relref "python.md" >}})
 - [REST]({{< relref "rest.md" >}})
 
 You can also find some externally supported SDKs in our 
