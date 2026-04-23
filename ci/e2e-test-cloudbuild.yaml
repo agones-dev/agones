@@ -19,7 +19,7 @@ steps:
   #
   # build the e2e test runner
   #
-  - name: gcr.io/cloud-builders/docker:24.0.6
+  - name: gcr.io/cloud-builders/docker:24.0.9
     args: [build, -f, Dockerfile, -t, e2e-runner, .]
     dir: build/e2e-image
     id: build-e2e
