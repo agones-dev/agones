@@ -40,7 +40,6 @@ import (
 
 var handlerLogger = runtime.NewLoggerWithSource("processorHandler")
 
-
 // GameServerAllocator represents the interface to allocate game servers.
 type GameServerAllocator interface {
 	Allocate(ctx context.Context, gsa *allocationv1.GameServerAllocation) (k8sruntime.Object, error)
@@ -52,20 +51,20 @@ type allocationResult struct {
 	error    *rpcstatus.Status
 }
 
-// ProcessorHandler is the gRPC server for processing allocation requests.
-type ProcessorHandler struct {
+// Handler is the gRPC server for processing allocation requests.
+type Handler struct {
 	allocationpb.UnimplementedProcessorServer
-	mu                        sync.RWMutex
 	allocator                 GameServerAllocator
 	clients                   map[string]allocationpb.Processor_StreamBatchesServer
-	grpcUnallocatedStatusCode codes.Code
-	pullInterval              time.Duration
 	clock                     clock.WithTicker
+	mu                        sync.RWMutex
+	pullInterval              time.Duration
+	grpcUnallocatedStatusCode codes.Code
 }
 
 // NewServiceHandler creates a new ProcessorHandler with the given allocator.
-func NewServiceHandler(allocator GameServerAllocator, pullInterval time.Duration, grpcUnallocatedStatusCode codes.Code) *ProcessorHandler {
-	return &ProcessorHandler{
+func NewServiceHandler(allocator GameServerAllocator, pullInterval time.Duration, grpcUnallocatedStatusCode codes.Code) *Handler {
+	return &Handler{
 		allocator:                 allocator,
 		clients:                   make(map[string]allocationpb.Processor_StreamBatchesServer),
 		grpcUnallocatedStatusCode: grpcUnallocatedStatusCode,
@@ -76,7 +75,7 @@ func NewServiceHandler(allocator GameServerAllocator, pullInterval time.Duration
 
 // StreamBatches handles a bidirectional stream for batch allocation requests from a client.
 // Registers the client, processes incoming batches, and sends responses.
-func (h *ProcessorHandler) StreamBatches(stream allocationpb.Processor_StreamBatchesServer) error {
+func (h *Handler) StreamBatches(stream allocationpb.Processor_StreamBatchesServer) error {
 	var clientID string
 
 	// Wait for first message to get clientID
@@ -152,7 +151,7 @@ func (h *ProcessorHandler) StreamBatches(stream allocationpb.Processor_StreamBat
 }
 
 // StartPullRequestTicker periodically sends pull requests to all connected clients.
-func (h *ProcessorHandler) StartPullRequestTicker(ctx context.Context) {
+func (h *Handler) StartPullRequestTicker(ctx context.Context) {
 	go func() {
 		ticker := h.clock.NewTicker(h.pullInterval)
 		defer ticker.Stop()
@@ -170,7 +169,7 @@ func (h *ProcessorHandler) StartPullRequestTicker(ctx context.Context) {
 
 // sendPullRequestsToClients sends a pull request to every connected client,
 // removing any client whose stream has become unhealthy.
-func (h *ProcessorHandler) sendPullRequestsToClients() {
+func (h *Handler) sendPullRequestsToClients() {
 	h.mu.RLock()
 	snapshot := make(map[string]allocationpb.Processor_StreamBatchesServer, len(h.clients))
 	for id, s := range h.clients {
@@ -196,7 +195,7 @@ func (h *ProcessorHandler) sendPullRequestsToClients() {
 }
 
 // processAllocationsConcurrently processes multiple allocation requests in parallel.
-func (h *ProcessorHandler) processAllocationsConcurrently(ctx context.Context, requestWrappers []*allocationpb.RequestWrapper) []allocationResult {
+func (h *Handler) processAllocationsConcurrently(ctx context.Context, requestWrappers []*allocationpb.RequestWrapper) []allocationResult {
 	var wg sync.WaitGroup
 	results := make([]allocationResult, len(requestWrappers))
 
@@ -212,7 +211,7 @@ func (h *ProcessorHandler) processAllocationsConcurrently(ctx context.Context, r
 }
 
 // processAllocation handles a single allocation request by using the allocator.
-func (h *ProcessorHandler) processAllocation(ctx context.Context, req *allocationpb.AllocationRequest) allocationResult {
+func (h *Handler) processAllocation(ctx context.Context, req *allocationpb.AllocationRequest) allocationResult {
 	gsa := converters.ConvertAllocationRequestToGSA(req)
 	gsa.ApplyDefaults()
 
@@ -261,7 +260,7 @@ func (h *ProcessorHandler) processAllocation(ctx context.Context, req *allocatio
 }
 
 // submitBatch accepts a batch of allocation requests, processes them, and assembles a batch response.
-func (h *ProcessorHandler) submitBatch(ctx context.Context, batchID string, requestWrappers []*allocationpb.RequestWrapper) *allocationpb.BatchResponse {
+func (h *Handler) submitBatch(ctx context.Context, batchID string, requestWrappers []*allocationpb.RequestWrapper) *allocationpb.BatchResponse {
 	results := h.processAllocationsConcurrently(ctx, requestWrappers)
 	responseWrappers := make([]*allocationpb.ResponseWrapper, len(requestWrappers))
 
@@ -289,7 +288,7 @@ func (h *ProcessorHandler) submitBatch(ctx context.Context, batchID string, requ
 }
 
 // GetGRPCServerOptions returns a list of gRPC server options.
-func (h *ProcessorHandler) GetGRPCServerOptions() []grpc.ServerOption {
+func (h *Handler) GetGRPCServerOptions() []grpc.ServerOption {
 	opts := []grpc.ServerOption{
 		grpc.StatsHandler(&ocgrpc.ServerHandler{}),
 
@@ -308,7 +307,7 @@ func (h *ProcessorHandler) GetGRPCServerOptions() []grpc.ServerOption {
 }
 
 // addClient registers a new client for streaming allocation responses.
-func (h *ProcessorHandler) addClient(clientID string, stream allocationpb.Processor_StreamBatchesServer) {
+func (h *Handler) addClient(clientID string, stream allocationpb.Processor_StreamBatchesServer) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -316,7 +315,7 @@ func (h *ProcessorHandler) addClient(clientID string, stream allocationpb.Proces
 }
 
 // removeClient unregisters a client from streaming allocation responses.
-func (h *ProcessorHandler) removeClient(clientID string) {
+func (h *Handler) removeClient(clientID string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 

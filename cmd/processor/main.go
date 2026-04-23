@@ -323,7 +323,7 @@ func whenLeader(ctx context.Context, cancel context.CancelFunc, logger *logrus.E
 	})
 }
 
-func runGRPC(ctx context.Context, h *processor.ProcessorHandler, grpcHealth *grpchealth.Server, grpcPort int) {
+func runGRPC(ctx context.Context, h *processor.Handler, grpcHealth *grpchealth.Server, grpcPort int) {
 	logger.WithField("port", grpcPort).Info("Running the grpc handler on port")
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", grpcPort))
 	if err != nil {

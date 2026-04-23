@@ -38,9 +38,9 @@ import (
 	testclocks "k8s.io/utils/clock/testing"
 )
 
-// newTestHandler creates a ProcessorHandler with a mock allocator.
-func newTestHandler(_ context.Context, allocFunc func(context.Context, *allocationv1.GameServerAllocation) (k8sruntime.Object, error)) *ProcessorHandler {
-	return &ProcessorHandler{
+// newTestHandler creates a Handler with a mock allocator.
+func newTestHandler(_ context.Context, allocFunc func(context.Context, *allocationv1.GameServerAllocation) (k8sruntime.Object, error)) *Handler {
+	return &Handler{
 		allocator:                 &mockAllocator{allocateFunc: allocFunc},
 		clients:                   make(map[string]allocationpb.Processor_StreamBatchesServer),
 		grpcUnallocatedStatusCode: codes.ResourceExhausted,
@@ -78,7 +78,7 @@ func TestAddClient(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			h := &ProcessorHandler{}
+			h := &Handler{}
 			h.clients = make(map[string]allocationpb.Processor_StreamBatchesServer)
 			stream := newMockServerStream(context.Background())
 
@@ -126,7 +126,7 @@ func TestRemoveClient(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			h := &ProcessorHandler{
+			h := &Handler{
 				clients: make(map[string]allocationpb.Processor_StreamBatchesServer),
 			}
 			stream := newMockServerStream(context.Background())
