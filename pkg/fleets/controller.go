@@ -18,7 +18,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"agones.dev/agones/pkg/apis/agones"
@@ -71,10 +73,9 @@ type Controller struct {
 	fleetGetter         getterv1.FleetsGetter
 	fleetLister         listerv1.FleetLister
 	fleetSynced         cache.InformerSynced
+	allocs              *allocTracker
 	workerqueue         *workerqueue.WorkerQueue
 	recorder            record.EventRecorder
-	allocs              map[string]int64
-	allocsMu            sync.Mutex
 }
 
 // NewController returns a new fleets crd controller
@@ -102,7 +103,7 @@ func NewController(
 		fleetGetter:         agonesClient.AgonesV1(),
 		fleetLister:         fleets.Lister(),
 		fleetSynced:         fInformer.HasSynced,
-		allocs:              map[string]int64{},
+		allocs:              newAllocTracker(),
 	}
 
 	c.baseLogger = runtime.NewLoggerWithType(c)
@@ -122,7 +123,7 @@ func NewController(
 		DeleteFunc: func(obj interface{}) {
 			fleet := obj.(*agonesv1.Fleet)
 
-			c.removeAllocations(fleet.ObjectMeta.Namespace, fleet.ObjectMeta.Name)
+			c.allocs.remove(fleet.ObjectMeta.Namespace, fleet.ObjectMeta.Name)
 		},
 	})
 
@@ -152,7 +153,7 @@ func NewController(
 				return
 			}
 
-			c.incAllocations(newGs.Namespace, fleet)
+			c.allocs.inc(newGs.Namespace, fleet, 1)
 		},
 	})
 
@@ -756,10 +757,18 @@ func (c *Controller) updateFleetStatus(ctx context.Context, fleet *agonesv1.Flee
 		}
 	}
 
-	fCopy.Status.Allocations += c.getAllocations(fleet.ObjectMeta.Namespace, fCopy.ObjectMeta.Name)
+	allocs := c.allocs.get(fleet.ObjectMeta.Namespace, fleet.ObjectMeta.Name)
+	fCopy.Status.Allocations += allocs
 
 	_, err = c.fleetGetter.Fleets(fCopy.ObjectMeta.Namespace).UpdateStatus(ctx, fCopy, metav1.UpdateOptions{})
-	return errors.Wrapf(err, "error updating status of fleet %s", fCopy.ObjectMeta.Name)
+	if err != nil {
+		return errors.Wrapf(err, "error updating status of fleet %s", fCopy.ObjectMeta.Name)
+	}
+
+	// The update was successful, the allocation count must be decremented to reflect this.
+	c.allocs.dec(fleet.ObjectMeta.Namespace, fleet.ObjectMeta.Name, allocs)
+
+	return nil
 }
 
 // filterGameServerSetByActive returns the active GameServerSet (or nil if it
@@ -795,60 +804,104 @@ func (c *Controller) filterGameServerSetByActive(fleet *agonesv1.Fleet, list []*
 	return active, rest
 }
 
-func (c *Controller) getAllocations(ns, fleetName string) (allocs int64) {
-	key := cache.ObjectName{Namespace: ns, Name: fleetName}.String()
-
-	c.allocsMu.Lock()
-	defer c.allocsMu.Unlock()
-
-	allocs, c.allocs[key] = c.allocs[key], 0
-	return allocs
-}
-
-func (c *Controller) incAllocations(ns, fleetName string) {
-	key := cache.ObjectName{Namespace: ns, Name: fleetName}.String()
-
-	c.allocsMu.Lock()
-	defer c.allocsMu.Unlock()
-
-	count, ok := c.allocs[key]
-	if !ok {
-		c.allocs[key] = 1
-		return
-	}
-	c.allocs[key] = count + 1
-}
-
-func (c *Controller) removeAllocations(ns, fleetName string) {
-	key := cache.ObjectName{Namespace: ns, Name: fleetName}.String()
-
-	c.allocsMu.Lock()
-	defer c.allocsMu.Unlock()
-
-	delete(c.allocs, key)
-}
-
 func (c *Controller) flushAllocations() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	c.allocsMu.Lock()
-	defer c.allocsMu.Unlock()
-
-	for fleet, allocs := range c.allocs {
-		if allocs == 0 {
-			continue
-		}
-
-		ns, name, _ := cache.SplitMetaNamespaceKey(fleet)
-		fCopy, err := c.fleetGetter.Fleets(ns).Get(ctx, name, metav1.GetOptions{})
+	c.allocs.forEach(func(ns, fleetName string, count int64) {
+		fCopy, err := c.fleetGetter.Fleets(ns).Get(ctx, fleetName, metav1.GetOptions{})
 		if err != nil {
-			continue
+			return
 		}
 
-		fCopy.Status.Allocations += allocs
+		fCopy.Status.Allocations += count
 
 		_, _ = c.fleetGetter.Fleets(ns).UpdateStatus(ctx, fCopy, metav1.UpdateOptions{})
+	})
+}
+
+type allocTracker struct {
+	counts map[string]*atomic.Int64
+	mu     sync.RWMutex
+}
+
+func newAllocTracker() *allocTracker {
+	return &allocTracker{counts: map[string]*atomic.Int64{}}
+}
+
+func (t *allocTracker) get(ns, fleetName string) int64 {
+	key := cache.ObjectName{Namespace: ns, Name: fleetName}.String()
+
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
+	counts, ok := t.counts[key]
+	if !ok {
+		return 0
+	}
+	return counts.Load()
+}
+
+func (t *allocTracker) inc(ns, fleetName string, v int64) {
+	key := cache.ObjectName{Namespace: ns, Name: fleetName}.String()
+
+	t.mu.RLock()
+	count, ok := t.counts[key]
+	if ok {
+		count.Add(v)
+		t.mu.RUnlock()
+		return
+	}
+	t.mu.RUnlock()
+
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	count, ok = t.counts[key]
+	if !ok {
+		count = &atomic.Int64{}
+		t.counts[key] = count
+	}
+	count.Add(v)
+}
+
+func (t *allocTracker) dec(ns, fleetName string, v int64) {
+	key := cache.ObjectName{Namespace: ns, Name: fleetName}.String()
+	v = -1 * v
+
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
+	// We do not decrement something that does not exist. This would
+	// lead to some fairly confusing results.
+	count, ok := t.counts[key]
+	if ok {
+		count.Add(v)
+	}
+}
+
+func (t *allocTracker) remove(ns, fleetName string) {
+	key := cache.ObjectName{Namespace: ns, Name: fleetName}.String()
+
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	delete(t.counts, key)
+}
+
+func (t *allocTracker) forEach(fn func(ns, fleetName string, count int64)) {
+	t.mu.Lock()
+	counts := make(map[string]*atomic.Int64, len(t.counts))
+	maps.Copy(counts, t.counts)
+	t.mu.Unlock()
+
+	for key, count := range counts {
+		if count.Load() == 0 {
+			continue
+		}
+
+		ns, fleetName, _ := cache.SplitMetaNamespaceKey(key)
+		fn(ns, fleetName, count.Load())
 	}
 }
 
