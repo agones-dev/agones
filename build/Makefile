@@ -24,7 +24,7 @@
 #
 
 # base version target. This is usually the next release.
-base_version = 1.57.0
+base_version = 1.58.0
 
 #
 # All of the following can be overwritten with environment variables
@@ -66,7 +66,7 @@ KIND_PROFILE ?= agones
 KIND_CONTAINER_NAME=$(KIND_PROFILE)-control-plane
 
 # Game Server image to use while doing end-to-end tests
-GS_TEST_IMAGE ?= us-docker.pkg.dev/agones-images/examples/simple-game-server:0.40
+GS_TEST_IMAGE ?= us-docker.pkg.dev/agones-images/examples/simple-game-server:0.42
 
 # Enable all beta feature gates. Keep in sync with `true` (beta) entries in pkg/util/runtime/features.go:featureDefaults
 BETA_FEATURE_GATES ?= "CountsAndLists=true&GKEAutopilotExtendedDurationPods=true&PortPolicyNone=true&PortRanges=true&RollingUpdateFix=true&ScheduledAutoscaler=true&SidecarContainers=true&FleetAutoscaleRequestMetaData=true"
@@ -430,7 +430,8 @@ test-install-yaml:
 	sort /tmp/agones-install/install.yaml > /tmp/agones-install/install.yaml.sorted
 	$(MAKE) gen-install
 	sort $(agones_path)/install/yaml/install.yaml > /tmp/agones-install/install.current.yaml.sorted
-	diff /tmp/agones-install/install.yaml.sorted /tmp/agones-install/install.current.yaml.sorted
+	@diff /tmp/agones-install/install.yaml.sorted /tmp/agones-install/install.current.yaml.sorted || \
+		(echo "\n\n>>> Error: install.yaml is out of date. Please run 'make gen-install' to regenerate it, since the Helm template has changed.\n\n" && exit 1)
 
 # Push all the images up to $(REGISTRY)
 push: push-controller-image push-extensions-image push-agones-sdk-image push-ping-image push-allocator-image push-processor-image

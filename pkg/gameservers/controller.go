@@ -1,4 +1,4 @@
-// Copyright 2018 Google LLC All Rights Reserved.
+// Copyright Contributors to Agones a Series of LF Projects, LLC.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -349,7 +349,7 @@ func (ext *Extensions) creationMutationHandlerPod(review admissionv1.AdmissionRe
 
 	passthroughPortAssignmentMap := make(map[string][]int)
 	if err := json.Unmarshal([]byte(annotation), &passthroughPortAssignmentMap); err != nil {
-		return review, errors.Wrapf(err, "could not unmarshal annotation %q (value %q)", passthroughPortAssignmentMap, annotation)
+		return review, errors.Wrapf(err, "could not unmarshal annotation %v (value %q)", passthroughPortAssignmentMap, annotation)
 	}
 
 	for _, container := range pod.Spec.InitContainers {

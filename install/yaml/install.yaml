@@ -15,7 +15,6 @@ metadata:
   name: agones-controller-pdb
 spec:
   minAvailable: 1
-  maxUnavailable: 
   selector:
     matchLabels:
       agones.dev/role: controller
@@ -30,7 +29,6 @@ metadata:
   name: agones-extensions-pdb
 spec:
   minAvailable: 1
-  maxUnavailable: 
   selector:
     matchLabels:
       agones.dev/role: extensions
@@ -59,12 +57,12 @@ metadata:
   namespace: agones-system
   labels:
     app: agones
-    chart: agones-1.57.0-dev
+    chart: agones-1.58.0-dev
     release: agones-manual
     heritage: Helm
 ---
 # Source: agones/templates/serviceaccounts/controller.yaml
-# Copyright 2018 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -84,12 +82,12 @@ metadata:
   namespace: agones-system
   labels:
     app: agones
-    chart: agones-1.57.0-dev
+    chart: agones-1.58.0-dev
     release: agones-manual
     heritage: Helm
 ---
 # Source: agones/templates/serviceaccounts/sdk.yaml
-# Copyright 2018 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -109,7 +107,7 @@ metadata:
   namespace: default
   labels:
     app: agones
-    chart: agones-1.57.0-dev
+    chart: agones-1.58.0-dev
     release: agones-manual
     heritage: Helm
 ---
@@ -121,7 +119,7 @@ metadata:
   namespace: agones-system
   labels:
     app: agones
-    chart: "agones-1.57.0-dev"
+    chart: "agones-1.58.0-dev"
     release: "agones-manual"
     heritage: "Helm"
 type: Opaque
@@ -138,7 +136,7 @@ metadata:
   namespace: agones-system
   labels:
     app: agones
-    chart: "agones-1.57.0-dev"
+    chart: "agones-1.58.0-dev"
     release: "agones-manual"
     heritage: "Helm"
 data:
@@ -154,7 +152,7 @@ metadata:
   namespace: agones-system
   labels:
     app: agones
-    chart: "agones-1.57.0-dev"
+    chart: "agones-1.58.0-dev"
     release: "agones-manual"
     heritage: "Helm"
 data:
@@ -170,7 +168,7 @@ metadata:
   namespace: agones-system
   labels:
     app: agones
-    chart: "agones-1.57.0-dev"
+    chart: "agones-1.58.0-dev"
     release: "agones-manual"
     heritage: "Helm"
 data:
@@ -179,7 +177,7 @@ data:
 # Default allocation client secret
 ---
 # Source: agones/templates/crds/fleet.yaml
-# Copyright 2018 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -200,7 +198,7 @@ metadata:
   labels:
     component: crd
     app: agones
-    chart: agones-1.57.0-dev
+    chart: agones-1.58.0-dev
     release: agones-manual
     heritage: Helm
 spec:
@@ -6650,7 +6648,7 @@ spec:
           labelSelectorPath: .status.labelSelector
 ---
 # Source: agones/templates/crds/fleetautoscaler.yaml
-# Copyright 2018 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -6671,7 +6669,7 @@ metadata:
   labels:
     component: crd
     app: agones
-    chart: agones-1.57.0-dev
+    chart: agones-1.58.0-dev
     release: agones-manual
     heritage: Helm
 spec:
@@ -7362,7 +7360,7 @@ spec:
         status: {}
 ---
 # Source: agones/templates/crds/gameserver.yaml
-# Copyright 2018 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -7383,7 +7381,7 @@ metadata:
   labels:
     component: crd
     app: agones
-    chart: agones-1.57.0-dev
+    chart: agones-1.58.0-dev
     release: agones-manual
     heritage: Helm
 spec:
@@ -13666,7 +13664,7 @@ spec:
           statusReplicasPath: .status.immutableReplicas
 ---
 # Source: agones/templates/crds/gameserverallocationpolicy.yaml
-# Copyright 2019 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13686,7 +13684,7 @@ metadata:
   labels:
     component: crd
     app: agones
-    chart: agones-1.57.0-dev
+    chart: agones-1.58.0-dev
     release: agones-manual
     heritage: Helm
   name: gameserverallocationpolicies.multicluster.agones.dev
@@ -13744,7 +13742,7 @@ spec:
                       format: byte
 ---
 # Source: agones/templates/crds/gameserverset.yaml
-# Copyright 2018 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13765,7 +13763,7 @@ metadata:
   labels:
     component: crd
     app: agones
-    chart: agones-1.57.0-dev
+    chart: agones-1.58.0-dev
     release: agones-manual
     heritage: Helm
 spec:
@@ -20204,7 +20202,7 @@ metadata:
   name: agones-allocator
   labels:
     app: agones
-    chart: agones-1.57.0-dev
+    chart: agones-1.58.0-dev
     release: agones-manual
     heritage: Helm
 rules:
@@ -20234,7 +20232,7 @@ metadata:
   name: agones-controller
   labels:
     app: agones
-    chart: agones-1.57.0-dev
+    chart: agones-1.58.0-dev
     release: agones-manual
     heritage: Helm
 rules:
@@ -20288,7 +20286,7 @@ metadata:
   name: agones-sdk
   labels:
     app: agones
-    chart: agones-1.57.0-dev
+    chart: agones-1.58.0-dev
     release: agones-manual
     heritage: Helm
 rules:
@@ -20307,7 +20305,7 @@ metadata:
   name: agones-allocator
   labels:
     app: agones
-    chart: agones-1.57.0-dev
+    chart: agones-1.58.0-dev
     release: agones-manual
     heritage: Helm
 subjects:
@@ -20326,7 +20324,7 @@ metadata:
   name: agones-controller-access
   labels:
     app: agones
-    chart: agones-1.57.0-dev
+    chart: agones-1.58.0-dev
     release: agones-manual
     heritage: Helm
 subjects:
@@ -20378,7 +20376,7 @@ metadata:
   namespace: default
   labels:
     app: agones
-    chart: agones-1.57.0-dev
+    chart: agones-1.58.0-dev
     release: agones-manual
     heritage: Helm
 subjects:
@@ -20391,7 +20389,7 @@ roleRef:
   name: agones-sdk
 ---
 # Source: agones/templates/controller-metrics-service.yaml
-# Copyright 2023 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20412,7 +20410,7 @@ metadata:
   labels:
     agones.dev/role: controller
     app: agones
-    chart: agones-1.57.0-dev
+    chart: agones-1.58.0-dev
     release: agones-manual
     heritage: Helm
 spec:
@@ -20424,7 +20422,7 @@ spec:
       targetPort: http
 ---
 # Source: agones/templates/extensions-metrics-service.yaml
-# Copyright 2023 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20446,7 +20444,7 @@ metadata:
   labels:
     agones.dev/role: extensions
     app: agones
-    chart: agones-1.57.0-dev
+    chart: agones-1.58.0-dev
     release: agones-manual
     heritage: Helm
 spec:
@@ -20466,7 +20464,7 @@ metadata:
   labels:
     component: ping
     app: agones
-    chart: agones-1.57.0-dev
+    chart: agones-1.58.0-dev
     release: agones-manual
     heritage: Helm
 spec:
@@ -20489,7 +20487,7 @@ metadata:
   labels:
     component: ping
     app: agones
-    chart: agones-1.57.0-dev
+    chart: agones-1.58.0-dev
     release: agones-manual
     heritage: Helm
 spec:
@@ -20504,7 +20502,7 @@ spec:
   externalTrafficPolicy: Cluster
 ---
 # Source: agones/templates/service.yaml
-# Copyright 2018 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20526,7 +20524,7 @@ metadata:
   labels:
     agones.dev/role: extensions
     app: agones
-    chart: agones-1.57.0-dev
+    chart: agones-1.58.0-dev
     release: agones-manual
     heritage: Helm
 spec:
@@ -20541,7 +20539,7 @@ spec:
       targetPort: http
 ---
 # Source: agones/templates/service/allocation.yaml
-# Copyright 2019 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20563,7 +20561,7 @@ metadata:
   labels:
     component: allocator
     app: agones
-    chart: agones-1.57.0-dev
+    chart: agones-1.58.0-dev
     release: agones-manual
     heritage: Helm
 spec:
@@ -20586,7 +20584,7 @@ metadata:
   labels:
     multicluster.agones.dev/role: allocator
     app: agones
-    chart: agones-1.57.0-dev
+    chart: agones-1.58.0-dev
     release: agones-manual
     heritage: Helm
 spec:
@@ -20599,7 +20597,7 @@ spec:
       protocol: TCP
 ---
 # Source: agones/templates/controller.yaml
-# Copyright 2018 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20620,7 +20618,7 @@ metadata:
   labels:
     component: controller
     app: agones
-    chart: agones-1.57.0-dev
+    chart: agones-1.58.0-dev
     release: agones-manual
     heritage: Helm
 spec:
@@ -20662,7 +20660,7 @@ spec:
       serviceAccountName: agones-controller
       containers:
       - name: agones-controller
-        image: "us-docker.pkg.dev/agones-images/release/agones-controller:1.57.0-dev"
+        image: "us-docker.pkg.dev/agones-images/release/agones-controller:1.58.0-dev"
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsNonRoot: true
@@ -20676,7 +20674,7 @@ spec:
         - name: MAX_PORT
           value: "8000"
         - name: SIDECAR_IMAGE # overwrite the GameServer sidecar image that is used
-          value: "us-docker.pkg.dev/agones-images/release/agones-sdk:1.57.0-dev"
+          value: "us-docker.pkg.dev/agones-images/release/agones-sdk:1.58.0-dev"
         - name: ALWAYS_PULL_SIDECAR # set the sidecar imagePullPolicy to Always
           value: "false"
         - name: SIDECAR_CPU_REQUEST
@@ -20774,7 +20772,7 @@ spec:
         emptyDir: {}
 ---
 # Source: agones/templates/extensions-deployment.yaml
-# Copyright 2022 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20796,7 +20794,7 @@ metadata:
   labels:
     component: extensions
     app: agones
-    chart: agones-1.57.0-dev
+    chart: agones-1.58.0-dev
     release: agones-manual
     heritage: Helm
 spec:
@@ -20840,7 +20838,7 @@ spec:
       terminationGracePeriodSeconds: 27
       containers:
       - name: agones-extensions
-        image: "us-docker.pkg.dev/agones-images/release/agones-extensions:1.57.0-dev"
+        image: "us-docker.pkg.dev/agones-images/release/agones-extensions:1.58.0-dev"
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsNonRoot: true
@@ -20929,7 +20927,7 @@ spec:
         emptyDir: {}
 ---
 # Source: agones/templates/ping.yaml
-# Copyright 2018 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20950,7 +20948,7 @@ metadata:
   labels:
     component: ping
     app: agones
-    chart: agones-1.57.0-dev
+    chart: agones-1.58.0-dev
     release: agones-manual
     heritage: Helm
 spec:
@@ -20985,7 +20983,7 @@ spec:
       priorityClassName: agones-system
       containers:
         - name: agones-ping
-          image: "us-docker.pkg.dev/agones-images/release/agones-ping:1.57.0-dev"
+          image: "us-docker.pkg.dev/agones-images/release/agones-ping:1.58.0-dev"
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsNonRoot: true
@@ -21063,7 +21061,7 @@ spec:
           secretName: allocator-client-ca
       containers:
       - name: agones-allocator
-        image: "us-docker.pkg.dev/agones-images/release/agones-allocator:1.57.0-dev"
+        image: "us-docker.pkg.dev/agones-images/release/agones-allocator:1.58.0-dev"
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsNonRoot: true
@@ -21150,7 +21148,7 @@ metadata:
   labels:
     component: controller
     app: agones
-    chart: agones-1.57.0-dev
+    chart: agones-1.58.0-dev
     release: agones-manual
     heritage: Helm
 spec:
@@ -21164,7 +21162,7 @@ spec:
   version: v1
 ---
 # Source: agones/templates/extensions.yaml
-# Copyright 2018 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21179,7 +21177,7 @@ spec:
 # limitations under the License.
 ---
 # Source: agones/templates/pdb.yaml
-# Copyright 2022 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21194,7 +21192,7 @@ spec:
 # limitations under the License.
 ---
 # Source: agones/templates/processor.yaml
-# Copyright 2025 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21216,7 +21214,7 @@ metadata:
   labels:
     component: controller
     app: agones
-    chart: agones-1.57.0-dev
+    chart: agones-1.58.0-dev
     release: agones-manual
     heritage: Helm
 webhooks:
@@ -21259,7 +21257,7 @@ metadata:
   labels:
     component: controller
     app: agones
-    chart: agones-1.57.0-dev
+    chart: agones-1.58.0-dev
     release: agones-manual
     heritage: Helm
 webhooks:
@@ -21295,7 +21293,7 @@ metadata:
   labels:
     component: controller
     app: agones
-    chart: agones-1.57.0-dev
+    chart: agones-1.58.0-dev
     release: agones-manual
     heritage: Helm
 webhooks:

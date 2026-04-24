@@ -1,4 +1,4 @@
-// Copyright 2025 Google LLC All Rights Reserved.
+// Copyright Contributors to Agones a Series of LF Projects, LLC.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -90,6 +90,24 @@ func NewSucceededController(health healthcheck.Handler,
 		UpdateFunc: func(_, newObj interface{}) {
 			pod := newObj.(*corev1.Pod)
 			if isGameServerPod(pod) && pod.Status.Phase == corev1.PodSucceeded {
+				c.workerqueue.Enqueue(pod)
+			}
+		},
+	})
+
+	// Recovery path: if a pod Succeeded event was missed (e.g. during controller restart),
+	// the GameServer informer resync will re-check the pod phase and re-enqueue.
+	_, _ = gameServers.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		UpdateFunc: func(_, newObj interface{}) {
+			gs := newObj.(*agonesv1.GameServer)
+			if _, isDev := gs.GetDevAddress(); isDev {
+				return
+			}
+			if gs.IsBeingDeleted() || agonesv1.TerminalGameServerStates[gs.Status.State] || isBeforePodCreated(gs) {
+				return
+			}
+			pod, err := c.podLister.Pods(gs.ObjectMeta.Namespace).Get(gs.ObjectMeta.Name)
+			if err == nil && isGameServerPod(pod) && pod.Status.Phase == corev1.PodSucceeded {
 				c.workerqueue.Enqueue(pod)
 			}
 		},

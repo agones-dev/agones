@@ -1,4 +1,4 @@
-// Copyright 2018 Google LLC All Rights Reserved.
+// Copyright Contributors to Agones a Series of LF Projects, LLC.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -164,7 +164,7 @@ func TestWebHookFleetValidationHandler(t *testing.T) {
 							"template": {
 								"spec": {
 									"containers": [{
-										"image": "us-docker.pkg.dev/agones-images/examples/simple-game-server:0.40",
+										"image": "us-docker.pkg.dev/agones-images/examples/simple-game-server:0.42",
 										"name": false
 									}]
 								}

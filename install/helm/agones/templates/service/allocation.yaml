@@ -1,4 +1,4 @@
-# Copyright 2019 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -363,8 +363,12 @@ spec:
 {{- fail "minAvailable and maxUnavailable are mutually exclusive!" }}
 {{- end}}
 {{- end}}
+{{- if .Values.agones.allocator.pdb.minAvailable }}
   minAvailable: {{ .Values.agones.allocator.pdb.minAvailable }}
+{{- end }}
+{{- if .Values.agones.allocator.pdb.maxUnavailable }}
   maxUnavailable: {{ .Values.agones.allocator.pdb.maxUnavailable }}
+{{- end }}
   selector:
     matchLabels:
       multicluster.agones.dev/role: allocator

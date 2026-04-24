@@ -1,5 +1,5 @@
 ---
-# Copyright 2017 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ steps:
   #
   # Print Docker version
   #
-  - name: gcr.io/cloud-builders/docker:24.0.6
+  - name: gcr.io/cloud-builders/docker:24.0.9
     id: docker-version
     args: [--version]
 
@@ -64,10 +64,10 @@ steps:
     args:
       - bash
       - -c
-      - "echo 'FROM gcr.io/cloud-builders/docker:24.0.6\nRUN apt-get install make\nENTRYPOINT\
+      - "echo 'FROM gcr.io/cloud-builders/docker:24.0.9\nRUN apt-get install make\nENTRYPOINT\
         \ [\"/usr/bin/make\"]' > Dockerfile.build"
     waitFor: ['-']
-  - name: gcr.io/cloud-builders/docker:24.0.6
+  - name: gcr.io/cloud-builders/docker:24.0.9
     id: build-make-docker
     args: [build, -f, Dockerfile.build, -t, make-docker, .]  # we need docker and make to run everything.
 
@@ -443,7 +443,7 @@ steps:
         done
 
 substitutions:
-  _BASE_VERSION: 1.57.0
+  _BASE_VERSION: 1.58.0
   _CACHE_BUCKET: agones-build-cache
   _HTMLTEST_CACHE_KEY: htmltest-0.10.1
   _CPP_SDK_BUILD_CACHE_KEY: cpp-sdk-build

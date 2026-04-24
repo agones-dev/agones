@@ -1,5 +1,5 @@
 ---
-# Copyright 2024 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ spec:
     spec:
       containers:
         - name: simple-genai-game-server
-          image: us-docker.pkg.dev/agones-images/examples/simple-genai-game-server:0.10
+          image: us-docker.pkg.dev/agones-images/examples/simple-genai-game-server:0.11
           # imagePullPolicy: Always  # add for development
           env:
             - name: GEN_AI_ENDPOINT

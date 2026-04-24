@@ -20,7 +20,7 @@ RUN apt-get --allow-releaseinfo-change update && \
 
 # install go
 WORKDIR /usr/local
-ENV GO_VERSION=1.25.0
+ENV GO_VERSION=1.26.0
 ENV GO111MODULE=on
 ENV GOPATH /go
 RUN wget -q https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz && \

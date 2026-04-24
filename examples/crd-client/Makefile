@@ -25,7 +25,7 @@
 
 REPOSITORY ?=
 PROD_REPO ?= us-docker.pkg.dev/agones-images/examples
-version := 0.24
+version := 0.25
 ifeq ($(REPOSITORY),)
 	server_tag := crd-client:$(version)
 else

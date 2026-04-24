@@ -1,5 +1,5 @@
 ---
-# Copyright 2024 Google LLC
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,8 +18,8 @@ steps:
   #
   - name: ubuntu
     script: |
-      echo 'FROM gcr.io/cloud-builders/docker:24.0.6\nRUN apt-get install make\nENTRYPOINT [\"/usr/bin/make\"]' > Dockerfile.build
-  - name: gcr.io/cloud-builders/docker:24.0.6
+      echo 'FROM gcr.io/cloud-builders/docker:24.0.9\nRUN apt-get install make\nENTRYPOINT [\"/usr/bin/make\"]' > Dockerfile.build
+  - name: gcr.io/cloud-builders/docker:24.0.9
     id: build-make-docker
     entrypoint: docker
     args: [build, -f, Dockerfile.build, -t, make-docker, .]

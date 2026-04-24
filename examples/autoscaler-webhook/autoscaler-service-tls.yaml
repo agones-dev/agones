@@ -1,5 +1,5 @@
 ---
-# Copyright 2018 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@ spec:
             secretName: autoscalersecret
       containers:
         - name: autoscaler-webhook
-          image: us-docker.pkg.dev/agones-images/examples/autoscaler-webhook:0.22
+          image: us-docker.pkg.dev/agones-images/examples/autoscaler-webhook:0.23
           imagePullPolicy: Always
           volumeMounts:
             - mountPath: /home/service/certs
