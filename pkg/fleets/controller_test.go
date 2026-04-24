@@ -334,7 +334,7 @@ func TestControllerSyncFleet(t *testing.T) {
 		ctx, cancel := agtesting.StartInformers(m, c.fleetSynced, c.gameServerSetSynced)
 		defer cancel()
 
-		c.incAllocations("default", "fleet-1")
+		c.allocs.inc("default", "fleet-1", 1)
 
 		err := c.syncFleet(ctx, "default/fleet-1")
 		assert.Nil(t, err)
