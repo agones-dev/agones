@@ -282,13 +282,10 @@ func setupGameServerAllocation(t *testing.T, ctrl *fakeController) {
 	gs.Status.State = agonesv1.GameServerStateAllocated
 	ctrl.gsWatch.Modify(gs)
 
-	require.Eventually(t, func() bool {
+	require.EventuallyWithT(t, func(collect *assert.CollectT) {
 		gs, err := ctrl.gameServerLister.GameServers(gs.ObjectMeta.Namespace).Get(gs.ObjectMeta.Name)
-		if gs == nil || err != nil {
-			return false
-		}
-		assert.NoError(t, err)
-		return gs.Status.State == agonesv1.GameServerStateAllocated
+		require.NoError(collect, err)
+		assert.Equal(collect, gs.Status.State, agonesv1.GameServerStateAllocated)
 	}, 5*time.Second, time.Second)
 	ctrl.collect()
 }
