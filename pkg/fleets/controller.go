@@ -67,6 +67,7 @@ type Extensions struct {
 type Controller struct {
 	baseLogger          *logrus.Entry
 	crdGetter           apiextclientv1.CustomResourceDefinitionInterface
+	gameServerSynced    cache.InformerSynced
 	gameServerSetGetter getterv1.GameServerSetsGetter
 	gameServerSetLister listerv1.GameServerSetLister
 	gameServerSetSynced cache.InformerSynced
@@ -97,6 +98,7 @@ func NewController(
 
 	c := &Controller{
 		crdGetter:           extClient.ApiextensionsV1().CustomResourceDefinitions(),
+		gameServerSynced:    gsInformer.HasSynced,
 		gameServerSetGetter: agonesClient.AgonesV1(),
 		gameServerSetLister: gameServerSets.Lister(),
 		gameServerSetSynced: gsSetInformer.HasSynced,
@@ -253,7 +255,7 @@ func (c *Controller) Run(ctx context.Context, workers int) error {
 	}
 
 	c.baseLogger.Debug("Wait for cache sync")
-	if !cache.WaitForCacheSync(ctx.Done(), c.gameServerSetSynced, c.fleetSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), c.gameServerSynced, c.gameServerSetSynced, c.fleetSynced) {
 		return errors.New("failed to wait for caches to sync")
 	}
 
