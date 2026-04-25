@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strconv"
 	"sync"
 	"time"
@@ -189,10 +190,18 @@ func NewController(
 	_, _ = pods.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			oldPod := oldObj.(*corev1.Pod)
+			enqueue := false
 			if isGameServerPod(oldPod) {
 				newPod := newObj.(*corev1.Pod)
 				//  node name has changed -- i.e. it has been scheduled
 				if oldPod.Spec.NodeName != newPod.Spec.NodeName {
+					enqueue = true
+				} else if !slices.Equal(oldPod.Status.PodIPs, newPod.Status.PodIPs) {
+					// PodIPs have changed, so it's time to go populate the GameServer with the new PodIPs.
+					enqueue = true
+				}
+
+				if enqueue {
 					owner := metav1.GetControllerOf(newPod)
 					c.workerqueue.Enqueue(cache.ExplicitKey(newPod.ObjectMeta.Namespace + "/" + owner.Name))
 				}
@@ -489,6 +498,9 @@ func (c *Controller) syncGameServer(ctx context.Context, key string) error {
 		return err
 	}
 	if gs, err = c.syncGameServerRequestReadyState(ctx, gs); err != nil {
+		return err
+	}
+	if gs, err = c.syncGameServerPodIPs(ctx, gs); err != nil {
 		return err
 	}
 	if gs, err = c.syncDevelopmentGameServer(ctx, gs); err != nil {
@@ -924,11 +936,6 @@ func (c *Controller) syncGameServerStartingState(ctx context.Context, gs *agones
 		return gs, workerqueue.NewTraceError(errors.Errorf("node not yet populated for Pod %s", pod.ObjectMeta.Name))
 	}
 
-	// Ensure the pod IPs are populated
-	if len(pod.Status.PodIPs) == 0 {
-		return gs, workerqueue.NewTraceError(errors.Errorf("pod IPs not yet populated for Pod %s", pod.ObjectMeta.Name))
-	}
-
 	node, err := c.nodeLister.Get(pod.Spec.NodeName)
 	if err != nil {
 		return gs, errors.Wrapf(err, "error retrieving node %s for Pod %s", pod.Spec.NodeName, pod.ObjectMeta.Name)
@@ -938,6 +945,8 @@ func (c *Controller) syncGameServerStartingState(ctx context.Context, gs *agones
 	if err != nil {
 		return gs, err
 	}
+	// append pod ip addresses if there are any
+	gsCopy, _ = applyGameServerPodIPs(gsCopy, pod)
 
 	gsCopy.Status.State = agonesv1.GameServerStateScheduled
 	gs, err = c.gameServerGetter.GameServers(gs.ObjectMeta.Namespace).Update(ctx, gsCopy, metav1.UpdateOptions{})
@@ -991,6 +1000,9 @@ func (c *Controller) syncGameServerRequestReadyState(ctx context.Context, gs *ag
 		}
 	}
 
+	// append pod ip addresses if there are any
+	gsCopy, _ = applyGameServerPodIPs(gsCopy, pod)
+
 	gsCopy, err = c.applyGameServerReadyContainerIDAnnotation(ctx, gsCopy, pod)
 	if err != nil {
 		return gs, err
@@ -1007,6 +1019,44 @@ func (c *Controller) syncGameServerRequestReadyState(ctx context.Context, gs *ag
 	}
 	c.recorder.Event(gs, corev1.EventTypeNormal, string(gs.Status.State), "SDK.Ready() complete")
 	return gs, nil
+}
+
+// syncGameServerPodIPs handles stable-state GameServers (Scheduled, Ready, Reserved, Allocated) where
+// PodIPs may arrive after the initial state transition. It updates the GameServer with any new PodIPs
+// from the pod that are not already in gs.Status.Addresses.
+func (c *Controller) syncGameServerPodIPs(ctx context.Context, gs *agonesv1.GameServer) (*agonesv1.GameServer, error) {
+	switch gs.Status.State {
+	case agonesv1.GameServerStateScheduled,
+		agonesv1.GameServerStateReady,
+		agonesv1.GameServerStateReserved,
+		agonesv1.GameServerStateAllocated:
+	default:
+		return gs, nil
+	}
+	if !gs.ObjectMeta.DeletionTimestamp.IsZero() {
+		return gs, nil
+	}
+	if _, isDev := gs.GetDevAddress(); isDev {
+		return gs, nil
+	}
+
+	pod, err := c.gameServerPod(gs)
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return gs, nil
+		}
+		return gs, err
+	}
+
+	gsCopy := gs.DeepCopy()
+	gsCopy, updated := applyGameServerPodIPs(gsCopy, pod)
+	if !updated {
+		return gs, nil
+	}
+
+	loggerForGameServer(gs, c.baseLogger).Debug("Updating GameServer with new PodIPs")
+	gs, err = c.gameServerGetter.GameServers(gs.ObjectMeta.Namespace).Update(ctx, gsCopy, metav1.UpdateOptions{})
+	return gs, errors.Wrapf(err, "error updating GameServer %s with new PodIPs", gsCopy.ObjectMeta.Name)
 }
 
 // applyGameServerReadyContainerIDAnnotation updates the GameServer and its corresponding Pod with an annotation
