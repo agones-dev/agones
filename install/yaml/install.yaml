@@ -62,7 +62,7 @@ metadata:
     heritage: Helm
 ---
 # Source: agones/templates/serviceaccounts/controller.yaml
-# Copyright 2018 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -87,7 +87,7 @@ metadata:
     heritage: Helm
 ---
 # Source: agones/templates/serviceaccounts/sdk.yaml
-# Copyright 2018 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -177,7 +177,7 @@ data:
 # Default allocation client secret
 ---
 # Source: agones/templates/crds/fleet.yaml
-# Copyright 2018 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -6648,7 +6648,7 @@ spec:
           labelSelectorPath: .status.labelSelector
 ---
 # Source: agones/templates/crds/fleetautoscaler.yaml
-# Copyright 2018 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -7360,7 +7360,7 @@ spec:
         status: {}
 ---
 # Source: agones/templates/crds/gameserver.yaml
-# Copyright 2018 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13664,7 +13664,7 @@ spec:
           statusReplicasPath: .status.immutableReplicas
 ---
 # Source: agones/templates/crds/gameserverallocationpolicy.yaml
-# Copyright 2019 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13742,7 +13742,7 @@ spec:
                       format: byte
 ---
 # Source: agones/templates/crds/gameserverset.yaml
-# Copyright 2018 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20389,7 +20389,7 @@ roleRef:
   name: agones-sdk
 ---
 # Source: agones/templates/controller-metrics-service.yaml
-# Copyright 2023 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20422,7 +20422,7 @@ spec:
       targetPort: http
 ---
 # Source: agones/templates/extensions-metrics-service.yaml
-# Copyright 2023 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20502,7 +20502,7 @@ spec:
   externalTrafficPolicy: Cluster
 ---
 # Source: agones/templates/service.yaml
-# Copyright 2018 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20539,7 +20539,7 @@ spec:
       targetPort: http
 ---
 # Source: agones/templates/service/allocation.yaml
-# Copyright 2019 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20597,7 +20597,7 @@ spec:
       protocol: TCP
 ---
 # Source: agones/templates/controller.yaml
-# Copyright 2018 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20772,7 +20772,7 @@ spec:
         emptyDir: {}
 ---
 # Source: agones/templates/extensions-deployment.yaml
-# Copyright 2022 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20927,7 +20927,7 @@ spec:
         emptyDir: {}
 ---
 # Source: agones/templates/ping.yaml
-# Copyright 2018 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21162,7 +21162,7 @@ spec:
   version: v1
 ---
 # Source: agones/templates/extensions.yaml
-# Copyright 2018 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21177,7 +21177,7 @@ spec:
 # limitations under the License.
 ---
 # Source: agones/templates/pdb.yaml
-# Copyright 2022 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21192,7 +21192,7 @@ spec:
 # limitations under the License.
 ---
 # Source: agones/templates/processor.yaml
-# Copyright 2025 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
