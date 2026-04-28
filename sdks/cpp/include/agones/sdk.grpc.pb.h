@@ -17,7 +17,7 @@
 // If you make any local change, they will be lost.
 // source: sdk.proto
 // Original file comments:
-// Copyright 2017 Google LLC All Rights Reserved.
+// Copyright Contributors to Agones a Series of LF Projects, LLC.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

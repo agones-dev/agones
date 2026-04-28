@@ -199,6 +199,9 @@ spec:
         - name: LEADER_ELECTION
           value: "true"
         {{- end }}
+{{- if .Values.agones.controller.env }}
+        {{- toYaml .Values.agones.controller.env | nindent 8 }}
+{{- end }}
         ports:
         - name: webhooks
           containerPort: 8081
