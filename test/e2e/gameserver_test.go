@@ -538,15 +538,23 @@ func TestGameServerPodCompletedAfterCleanExit(t *testing.T) {
 		}
 	}()
 
-	err = wait.PollUntilContextTimeout(ctx, 3*time.Second, 5*time.Minute, true, func(ctx context.Context) (bool, error) {
+	result := assert.EventuallyWithT(t, func(c *assert.CollectT) {
 		gs, err = framework.AgonesClient.AgonesV1().GameServers(framework.Namespace).Get(ctx, readyGs.ObjectMeta.Name, metav1.GetOptions{})
-		log.WithField("gs", readyGs.ObjectMeta.Name).WithField("state", gs.Status.State).WithError(err).Info("checking if GameServer exists")
-		if k8serrors.IsNotFound(err) {
-			return true, nil
+		log.WithField("gs", readyGs.ObjectMeta.Name).WithField("deletionTimestamp", gs.ObjectMeta.DeletionTimestamp).WithField("state", gs.Status.State).WithError(err).Info("checking if GameServer exists")
+		assert.True(c, k8serrors.IsNotFound(err))
+	}, 5*time.Minute, 3*time.Second)
+	// debug a lot if it doesn't work, because why!
+	if !result {
+		framework.LogEvents(t, log, readyGs.ObjectMeta.Namespace, readyGs)
+		pod, err := framework.KubeClient.CoreV1().Pods(readyGs.ObjectMeta.Namespace).Get(ctx, readyGs.ObjectMeta.Name, metav1.GetOptions{})
+		if err != nil {
+			log.WithError(err).Warn("error getting pod for GameServer, skipping debug output")
+			return
 		}
-		return false, err
-	})
-	require.NoError(t, err)
+		log.WithField("metadata", pod.ObjectMeta).WithField("status", pod.Status)
+		framework.LogEvents(t, log, readyGs.ObjectMeta.Namespace, pod)
+		framework.LogPodContainers(t, pod)
+	}
 }
 
 func TestDevelopmentGameServerLifecycle(t *testing.T) {
