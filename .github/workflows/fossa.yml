@@ -12,9 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# 
+#
 # This workflow utilizes https://github.com/fossas/fossa-action in GitHub Actions to run FOSSA scans on the codebase
-# 
+#
 name: FOSSA
 
 on:
