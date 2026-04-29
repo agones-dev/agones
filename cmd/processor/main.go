@@ -17,7 +17,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -39,6 +38,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/heptiolabs/healthcheck"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -344,7 +344,6 @@ func runGRPC(ctx context.Context, h *processor.Handler, grpcHealth *grpchealth.S
 		err := grpcServer.Serve(listener)
 		if err != nil {
 			logger.WithError(err).Fatal("Allocation service crashed")
-			os.Exit(1)
 		}
 		logger.Info("Allocation server closed")
 		os.Exit(0)
@@ -357,7 +356,7 @@ func getClients(ctlConfig processorConfig) (*kubernetes.Clientset, *versioned.Cl
 	// Create the in-cluster config
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		return nil, nil, errors.New("Could not create in cluster config")
+		return nil, nil, errors.Wrap(err, "Could not create in cluster config")
 	}
 
 	config.QPS = float32(ctlConfig.APIServerSustainedQPS)
@@ -366,13 +365,13 @@ func getClients(ctlConfig processorConfig) (*kubernetes.Clientset, *versioned.Cl
 	// Access to the Agones resources through the Agones Clientset
 	kubeClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return nil, nil, errors.New("Could not create the kubernetes api clientset")
+		return nil, nil, errors.Wrap(err, "Could not create the kubernetes api clientset")
 	}
 
 	// Access to the Agones resources through the Agones Clientset
 	agonesClient, err := versioned.NewForConfig(config)
 	if err != nil {
-		return nil, nil, errors.New("Could not create the agones api clientset")
+		return nil, nil, errors.Wrap(err, "Could not create the agones api clientset")
 	}
 	return kubeClient, agonesClient, nil
 }
