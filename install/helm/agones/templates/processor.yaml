@@ -146,7 +146,6 @@ spec:
           value: {{ .Values.agones.allocator.totalRemoteAllocationTimeout | quote }}
         - name: ALLOCATION_BATCH_WAIT_TIME
           value: {{ .Values.agones.allocator.processor.allocationBatchWaitTime | quote }}
-        {{- end }}
         {{- if .Values.agones.allocator.processor.env }}
          {{- toYaml .Values.agones.allocator.processor.env | nindent 8 }}
         {{- end }}
