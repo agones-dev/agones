@@ -25,8 +25,10 @@ import (
 	"github.com/heptiolabs/healthcheck"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -37,6 +39,7 @@ import (
 	"k8s.io/client-go/tools/record"
 
 	"agones.dev/agones/pkg/allocation/converters"
+	pb "agones.dev/agones/pkg/allocation/go"
 	allocationv1 "agones.dev/agones/pkg/apis/allocation/v1"
 	"agones.dev/agones/pkg/client/clientset/versioned"
 	"agones.dev/agones/pkg/client/informers/externalversions"
@@ -163,33 +166,25 @@ func (c *Extensions) processAllocationRequest(ctx context.Context, w http.Respon
 	}
 
 	if runtime.FeatureEnabled(runtime.FeatureProcessorAllocator) {
-		var result k8sruntime.Object
-		var code int
+		if errs := gsa.Validate(); len(errs) > 0 {
+			kind := allocationv1.SchemeGroupVersion.WithKind("GameServerAllocation").GroupKind()
+			statusErr := k8serrors.NewInvalid(kind, gsa.Name, errs)
+			s := &statusErr.ErrStatus
+			if gvks, _, err := apiserver.Scheme.ObjectKinds(s); err == nil {
+				s.TypeMeta = metav1.TypeMeta{Kind: gvks[0].Kind, APIVersion: gvks[0].Version}
+			}
+			return c.serialisation(r, w, s, http.StatusUnprocessableEntity, scheme.Codecs)
+		}
 
 		req := converters.ConvertGSAToAllocationRequest(gsa)
 		resp, err := c.processorClient.Allocate(ctx, req)
 		if err != nil {
-			if st, ok := status.FromError(err); ok {
-				code = gwruntime.HTTPStatusFromCode(st.Code())
-			} else {
-				code = http.StatusInternalServerError
-			}
-
-			result = &metav1.Status{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Status",
-					APIVersion: "v1",
-				},
-				Status:  metav1.StatusFailure,
-				Message: err.Error(),
-				Code:    int32(code),
-			}
-		} else {
-			result = converters.ConvertAllocationResponseToGSA(resp, resp.Source)
-			code = http.StatusCreated
+			result, code := c.convertProcessorError(err, gsa)
+			return c.serialisation(r, w, result, code, scheme.Codecs)
 		}
 
-		return c.serialisation(r, w, result, code, scheme.Codecs)
+		result := c.convertProcessorResponse(resp, gsa)
+		return c.serialisation(r, w, result, http.StatusCreated, scheme.Codecs)
 	}
 
 	result, err := c.allocator.Allocate(ctx, gsa)
@@ -265,4 +260,43 @@ func (c *Extensions) serialisation(r *http.Request, w http.ResponseWriter, obj k
 
 	err = info.Serializer.Encode(obj, w)
 	return errors.Wrapf(err, "error encoding %T", obj)
+}
+
+// convertProcessorError handles processor client errors and converts them to appropriate responses
+func (c *Extensions) convertProcessorError(err error, gsa *allocationv1.GameServerAllocation) (k8sruntime.Object, int) {
+	if st, ok := status.FromError(err); ok {
+		switch st.Code() {
+		case codes.ResourceExhausted:
+			gsa.Status.State = allocationv1.GameServerAllocationUnAllocated
+			return gsa, http.StatusCreated
+		case codes.Aborted:
+			gsa.Status.State = allocationv1.GameServerAllocationContention
+			return gsa, http.StatusCreated
+		default:
+			code := gwruntime.HTTPStatusFromCode(st.Code())
+			return &metav1.Status{
+				TypeMeta: metav1.TypeMeta{Kind: "Status", APIVersion: "v1"},
+				Status:   metav1.StatusFailure,
+				Message:  st.Message(),
+				Code:     int32(code),
+			}, code
+		}
+	}
+
+	return &metav1.Status{
+		TypeMeta: metav1.TypeMeta{Kind: "Status", APIVersion: "v1"},
+		Status:   metav1.StatusFailure,
+		Message:  err.Error(),
+		Code:     int32(http.StatusInternalServerError),
+	}, http.StatusInternalServerError
+}
+
+// convertProcessorResponse handles successful processor responses
+func (c *Extensions) convertProcessorResponse(resp *pb.AllocationResponse, originalGSA *allocationv1.GameServerAllocation) k8sruntime.Object {
+	resultGSA := originalGSA.DeepCopy()
+	converted := converters.ConvertAllocationResponseToGSA(resp, resp.Source)
+	resultGSA.Status = converted.Status
+	resultGSA.ObjectMeta.Name = resp.GameServerName
+
+	return resultGSA
 }

@@ -113,16 +113,42 @@ spec:
         {{- if gt (int .Values.agones.allocator.processor.replicas) 1 }}
         - name: LEADER_ELECTION
           value: "true"
+        {{- end }}
         - name: LEASE_DURATION
           value: {{ .Values.agones.allocator.processor.leaderElection.leaseDuration | default "15s" | quote }}
         - name: RENEW_DEADLINE
           value: {{ .Values.agones.allocator.processor.leaderElection.renewDeadline | default "10s" | quote }}
         - name: RETRY_PERIOD
           value: {{ .Values.agones.allocator.processor.leaderElection.retryPeriod | default "2s" | quote }}
+        - name: PULL_INTERVAL
+          value: {{ .Values.agones.allocator.processor.pullInterval | default "200ms" | quote }}
+        - name: GRPC_PORT
+          value: {{ .Values.agones.allocator.processor.grpc.port | quote }}
+        - name: HTTP_UNALLOCATED_STATUS_CODE
+          value: {{ .Values.agones.allocator.service.http.unallocatedStatusCode | quote }}
+        - name: API_SERVER_QPS
+          value: {{ .Values.agones.allocator.apiServerQPS | quote }}
+        - name: API_SERVER_QPS_BURST
+          value: {{ .Values.agones.allocator.apiServerQPSBurst | quote }}
+        - name: FEATURE_GATES
+          value: {{ .Values.agones.featureGates | quote }}
+        - name: PROMETHEUS_EXPORTER
+          value: {{ .Values.agones.metrics.prometheusEnabled | quote }}
+        - name: STACKDRIVER_EXPORTER
+          value: {{ .Values.agones.metrics.stackdriverEnabled | quote }}
+        - name: GCP_PROJECT_ID
+          value: {{ .Values.agones.metrics.stackdriverProjectID | quote }}
+        - name: STACKDRIVER_LABELS
+          value: {{ .Values.agones.metrics.stackdriverLabels | quote }}
+        - name: REMOTE_ALLOCATION_TIMEOUT
+          value: {{ .Values.agones.allocator.remoteAllocationTimeout | quote }}
+        - name: TOTAL_REMOTE_ALLOCATION_TIMEOUT
+          value: {{ .Values.agones.allocator.totalRemoteAllocationTimeout | quote }}
+        - name: ALLOCATION_BATCH_WAIT_TIME
+          value: {{ .Values.agones.allocator.processor.allocationBatchWaitTime | quote }}
+        {{- if .Values.agones.allocator.processor.env }}
+         {{- toYaml .Values.agones.allocator.processor.env | nindent 8 }}
         {{- end }}
-{{- if .Values.agones.allocator.processor.env }}
-        {{- toYaml .Values.agones.allocator.processor.env | nindent 8 }}
-{{- end }}
         livenessProbe:
           httpGet:
             path: /live
@@ -141,16 +167,18 @@ spec:
         ports:
         - name: http
           containerPort: {{ .Values.agones.allocator.processor.http.port }}
+        - name: grpc
+          containerPort: {{ .Values.agones.allocator.processor.grpc.port }}
         resources:
 {{- if .Values.agones.allocator.processor.resources }}
 {{ toYaml .Values.agones.allocator.processor.resources | indent 10 }}
 {{- else}}
           requests:
-            cpu: 10m
-            memory: 32Mi
+            cpu: 300m
+            memory: 256Mi
           limits:
             cpu: 500m
-            memory: 256Mi
+            memory: 512Mi
 {{- end }}
 {{- if .Values.agones.image.processor.pullSecret }}
       imagePullSecrets:
@@ -178,4 +206,7 @@ spec:
     - port: {{ .Values.agones.allocator.processor.http.port }}
       name: http
       targetPort: {{ .Values.agones.allocator.processor.http.port }}
+    - port: {{ .Values.agones.allocator.processor.grpc.port }}
+      name: grpc
+      targetPort: {{ .Values.agones.allocator.processor.grpc.port }}
 {{- end }}
