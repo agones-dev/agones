@@ -209,4 +209,28 @@ spec:
     - port: {{ .Values.agones.allocator.processor.grpc.port }}
       name: grpc
       targetPort: {{ .Values.agones.allocator.processor.grpc.port }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: agones-processor-pdb
+  namespace: {{ .Release.Namespace }}
+spec:
+{{- if .Values.agones.allocator.processor.pdb.minAvailable }}
+{{- if .Values.agones.allocator.processor.pdb.maxUnavailable }}
+{{- fail "minAvailable and maxUnavailable are mutually exclusive!" }}
+{{- end}}
+{{- end}}
+{{- if .Values.agones.allocator.processor.pdb.minAvailable }}
+  minAvailable: {{ .Values.agones.allocator.processor.pdb.minAvailable }}
+{{- end }}
+{{- if .Values.agones.allocator.processor.pdb.maxUnavailable }}
+  maxUnavailable: {{ .Values.agones.allocator.processor.pdb.maxUnavailable }}
+{{- end }}
+  selector:
+    matchLabels:
+      agones.dev/role: processor
+      app: {{ template "agones.name" . }}
+      release: {{ .Release.Name }}
+      heritage: {{ .Release.Service }}
 {{- end }}
