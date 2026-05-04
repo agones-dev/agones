@@ -54,6 +54,8 @@ func TestSucceededControllerSyncGameServer(t *testing.T) {
 		},
 		"pod exists and is in Succeeded state": {
 			setup: func(gs *agonesv1.GameServer, pod *corev1.Pod) (*agonesv1.GameServer, *corev1.Pod) {
+				now := metav1.Now()
+				pod.ObjectMeta.DeletionTimestamp = &now
 				pod.Status.Phase = corev1.PodSucceeded
 				return gs, pod
 			},
@@ -103,6 +105,8 @@ func TestSucceededControllerSyncGameServer(t *testing.T) {
 		"game server is already in Shutdown state": {
 			setup: func(gs *agonesv1.GameServer, pod *corev1.Pod) (*agonesv1.GameServer, *corev1.Pod) {
 				gs.Status.State = agonesv1.GameServerStateShutdown
+				now := metav1.Now()
+				pod.ObjectMeta.DeletionTimestamp = &now
 				pod.Status.Phase = corev1.PodSucceeded
 				return gs, pod
 			},
@@ -115,6 +119,8 @@ func TestSucceededControllerSyncGameServer(t *testing.T) {
 		"game server is in Error state": {
 			setup: func(gs *agonesv1.GameServer, pod *corev1.Pod) (*agonesv1.GameServer, *corev1.Pod) {
 				gs.Status.State = agonesv1.GameServerStateError
+				now := metav1.Now()
+				pod.ObjectMeta.DeletionTimestamp = &now
 				pod.Status.Phase = corev1.PodSucceeded
 				return gs, pod
 			},
@@ -127,6 +133,8 @@ func TestSucceededControllerSyncGameServer(t *testing.T) {
 		"game server is in Unhealthy state": {
 			setup: func(gs *agonesv1.GameServer, pod *corev1.Pod) (*agonesv1.GameServer, *corev1.Pod) {
 				gs.Status.State = agonesv1.GameServerStateUnhealthy
+				now := metav1.Now()
+				pod.ObjectMeta.DeletionTimestamp = &now
 				pod.Status.Phase = corev1.PodSucceeded
 				return gs, pod
 			},
@@ -146,6 +154,50 @@ func TestSucceededControllerSyncGameServer(t *testing.T) {
 				updated:     false,
 				updateTests: func(_ *testing.T, _ *agonesv1.GameServer) {},
 				postTests:   func(_ *testing.T, _ agtesting.Mocks) {},
+			},
+		},
+		"pod succeeded without deletion timestamp is skipped": {
+			setup: func(gs *agonesv1.GameServer, pod *corev1.Pod) (*agonesv1.GameServer, *corev1.Pod) {
+				// No deletion timestamp: HealthController handles this, SucceededController skips it
+				pod.Status.Phase = corev1.PodSucceeded
+				return gs, pod
+			},
+			expected: expected{
+				updated:     false,
+				updateTests: func(_ *testing.T, _ *agonesv1.GameServer) {},
+				postTests:   func(_ *testing.T, _ agtesting.Mocks) {},
+			},
+		},
+		"game server is in Ready state, pod terminating and succeeded": {
+			setup: func(gs *agonesv1.GameServer, pod *corev1.Pod) (*agonesv1.GameServer, *corev1.Pod) {
+				gs.Status.State = agonesv1.GameServerStateReady
+				now := metav1.Now()
+				pod.ObjectMeta.DeletionTimestamp = &now
+				pod.Status.Phase = corev1.PodSucceeded
+				return gs, pod
+			},
+			expected: expected{
+				updated: true,
+				updateTests: func(t *testing.T, gs *agonesv1.GameServer) {
+					assert.Equal(t, agonesv1.GameServerStateShutdown, gs.Status.State)
+				},
+				postTests: func(_ *testing.T, _ agtesting.Mocks) {},
+			},
+		},
+		"game server is in Allocated state, pod terminating and succeeded": {
+			setup: func(gs *agonesv1.GameServer, pod *corev1.Pod) (*agonesv1.GameServer, *corev1.Pod) {
+				gs.Status.State = agonesv1.GameServerStateAllocated
+				now := metav1.Now()
+				pod.ObjectMeta.DeletionTimestamp = &now
+				pod.Status.Phase = corev1.PodSucceeded
+				return gs, pod
+			},
+			expected: expected{
+				updated: true,
+				updateTests: func(t *testing.T, gs *agonesv1.GameServer) {
+					assert.Equal(t, agonesv1.GameServerStateShutdown, gs.Status.State)
+				},
+				postTests: func(_ *testing.T, _ agtesting.Mocks) {},
 			},
 		},
 		"pod is in terminating state but succeeded": {
@@ -223,6 +275,8 @@ func TestSucceededControllerRun(t *testing.T) {
 
 	pod, err := gs.Pod(agtesting.FakeAPIHooks{})
 	require.NoError(t, err)
+	now := metav1.Now()
+	pod.ObjectMeta.DeletionTimestamp = &now
 	pod.Status.Phase = corev1.PodSucceeded
 
 	m.AgonesClient.AddReactor("list", "gameservers", func(_ k8stesting.Action) (bool, runtime.Object, error) {

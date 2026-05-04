@@ -150,8 +150,11 @@ func (c *SucceededController) syncGameServer(ctx context.Context, key string) er
 		return nil
 	}
 
-	// If the pod exists but is not in Succeeded state, we don't need to do anything
-	if !isGameServerPod(pod) || pod.Status.Phase != corev1.PodSucceeded {
+	// If the pod exists but is not in Succeeded state, or is not terminating, we don't need to do anything.
+	// HealthController handles PodSucceeded pods that are not terminating.
+	// SucceededController handles the gap: pods that are both PodSucceeded AND terminating (deletion timestamp set),
+	// which HealthController skips (it only enqueues pods where DeletionTimestamp.IsZero()).
+	if !isGameServerPod(pod) || pod.Status.Phase != corev1.PodSucceeded || pod.ObjectMeta.DeletionTimestamp.IsZero() {
 		return nil
 	}
 
