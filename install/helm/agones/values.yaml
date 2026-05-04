@@ -107,6 +107,7 @@ agones:
     pdb:
         minAvailable: 1
     topologySpreadConstraints: []
+    env: []
   extensions:
     resources: {}
       # requests:
@@ -168,6 +169,7 @@ agones:
       periodSeconds: 3
       failureThreshold: 3
     topologySpreadConstraints: []
+    env: []
   ping:
     install: true
     pdb:
@@ -216,6 +218,7 @@ agones:
       failureThreshold: 3
       timeoutSeconds: 1
     topologySpreadConstraints: []
+    env: []
   allocator:
     install: true
     pdb:
@@ -289,9 +292,12 @@ agones:
     totalRemoteAllocationTimeout: 30s
     allocationBatchWaitTime: 500ms
     topologySpreadConstraints: []
+    env: []
     processor:
       replicas: 2
       maxBatchSize: 100
+      pullInterval: 200ms
+      allocationBatchWaitTime: 50ms
       resources: {}
       nodeSelector: {}
       annotations: {}
@@ -303,6 +309,7 @@ agones:
         effect: "NoExecute"
       affinity: {}
       topologySpreadConstraints: []
+      env: []
       logLevel: info
       leaderElection: {}
       http:

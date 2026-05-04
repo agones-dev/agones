@@ -1,6 +1,6 @@
 ---
 title: "Documentation Editing and Contribution"
-linkTitle: "Documentation Editing and Contribution"
+linkTitle: "Documentation"
 weight: 1000
 description: >
   How to contribute to the docs
@@ -29,8 +29,9 @@ with the Docsy theme for open source documentation.
 
 ## Documentation for upcoming features
 
-Since we may want to update the existing documentation for a given release, when writing documentation,
-you will likely want to make sure it doesn't get published until the next release.
+Unlike code, which has releases every 6 weeks, **the documentation is published immediately** when merged into `main`.
+This means that documentation for features not yet released needs to be gated, so it only becomes visible once the
+corresponding release is made.
 
 There are two approaches for hiding documentation for upcoming features, such that it only gets published when the
 version is incremented on the release:
@@ -62,6 +63,13 @@ or to hide a section from 1.24.0 onward:
   This is my special content that will be hidden >= 1.24.0
 {{%/* /feature */%}}
 ```
+
+{{% alert title="Note" color="info" %}}
+The `feature` shortcode does not work well when placed inside a table. If you need to gate rows or columns
+within a table, consider duplicating the entire table — wrapping one copy in a `feature` shortcode with a
+`publishVersion` parameter, and the other with an `expiryVersion` parameter set to the same version — so
+each copy is shown or hidden as appropriate.
+{{% /alert %}}
 
 ## Regenerate Diagrams
 

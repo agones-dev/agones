@@ -799,7 +799,7 @@ build-processor-image-arm64: $(ensure-build-image) build-processor-binary create
 
 # Build the debug image for the processor service
 build-processor-debug-image: $(ensure-build-image) build-processor-debug-binary build-licenses build-required-src-dist
-	docker build $(agones_path)/cmd/processor/ --file $(agones_path)/cmd/processor/Dockerfile.debug --tag=$(processor_tag) $(DOCKER_BUILD_ARGS)
+	docker build $(agones_path)/cmd/processor/ --file $(agones_path)/cmd/processor/Dockerfile.debug --tag=$(processor_amd64_tag) $(DOCKER_BUILD_ARGS)
 
 # Pushes up the processor image
 push-processor-image: push-processor-image-amd64

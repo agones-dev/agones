@@ -50,6 +50,7 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/status"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/informers"
@@ -301,12 +302,14 @@ func main() {
 					return
 				}
 				logger.WithError(err).Error("Processor client failed, initiating graceful shutdown")
+				podReady = false
+				cancelListenCtx()
 			}
 		}()
 
 		h = newProcessorServiceHandler(processorClient, conf.MTLSDisabled, conf.TLSDisabled)
 	} else {
-		grpcUnallocatedStatusCode := grpcCodeFromHTTPStatus(conf.httpUnallocatedStatusCode)
+		grpcUnallocatedStatusCode := processor.GRPCCodeFromHTTPStatus(conf.httpUnallocatedStatusCode)
 		h = newServiceHandler(workerCtx, kubeClient, agonesClient, health, conf.MTLSDisabled, conf.TLSDisabled, conf.remoteAllocationTimeout, conf.totalRemoteAllocationTimeout, conf.allocationBatchWaitTime, grpcUnallocatedStatusCode)
 	}
 
@@ -737,19 +740,20 @@ func (h *serviceHandler) Allocate(ctx context.Context, in *pb.AllocationRequest)
 	gsa.ApplyDefaults()
 
 	if runtime.FeatureEnabled(runtime.FeatureProcessorAllocator) {
-		req := converters.ConvertGSAToAllocationRequest(gsa)
+		if errs := gsa.Validate(); len(errs) > 0 {
+			kind := allocationv1.SchemeGroupVersion.WithKind("GameServerAllocation").GroupKind()
+			statusErr := k8serrors.NewInvalid(kind, gsa.Name, errs)
+			s := &statusErr.ErrStatus
+			return nil, status.Error(codes.Code(s.Code), s.Message)
+		}
 
-		resp, err := h.processorClient.Allocate(ctx, req)
+		resp, err := h.processorClient.Allocate(ctx, in)
 		if err != nil {
 			logger.WithField("gsa", gsa).WithError(err).Error("allocation failed")
 			return nil, err
 		}
 
-		allocatedGsa := converters.ConvertAllocationResponseToGSA(resp, resp.Source)
-		response, err := converters.ConvertGSAToAllocationResponse(allocatedGsa, h.grpcUnallocatedStatusCode)
-		logger.WithField("response", response).WithError(err).Info("allocation response is being sent")
-
-		return response, err
+		return resp, nil
 	}
 
 	resultObj, err := h.allocationCallback(ctx, gsa)
@@ -771,37 +775,4 @@ func (h *serviceHandler) Allocate(ctx context.Context, in *pb.AllocationRequest)
 	logger.WithField("response", response).WithError(err).Infof("allocation response is being sent")
 
 	return response, err
-}
-
-// grpcCodeFromHTTPStatus converts an HTTP status code to the corresponding gRPC status code.
-func grpcCodeFromHTTPStatus(httpUnallocatedStatusCode int) codes.Code {
-	switch httpUnallocatedStatusCode {
-	case http.StatusOK:
-		return codes.OK
-	case 499:
-		return codes.Canceled
-	case http.StatusInternalServerError:
-		return codes.Internal
-	case http.StatusBadRequest:
-		return codes.InvalidArgument
-	case http.StatusGatewayTimeout:
-		return codes.DeadlineExceeded
-	case http.StatusNotFound:
-		return codes.NotFound
-	case http.StatusConflict:
-		return codes.AlreadyExists
-	case http.StatusForbidden:
-		return codes.PermissionDenied
-	case http.StatusUnauthorized:
-		return codes.Unauthenticated
-	case http.StatusTooManyRequests:
-		return codes.ResourceExhausted
-	case http.StatusNotImplemented:
-		return codes.Unimplemented
-	case http.StatusServiceUnavailable:
-		return codes.Unavailable
-	default:
-		logger.WithField("httpStatusCode", httpUnallocatedStatusCode).Warnf("received unknown http status code, defaulting to codes.ResourceExhausted / 429")
-		return codes.ResourceExhausted
-	}
 }
