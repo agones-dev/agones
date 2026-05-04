@@ -54,6 +54,7 @@ const (
 
 func TestCreateConnect(t *testing.T) {
 	t.Parallel()
+	ctx := context.Background()
 	gs := framework.DefaultGameServer(framework.Namespace)
 	readyGs, err := framework.CreateGameServerAndWaitUntilReady(t, framework.Namespace, gs)
 	if err != nil {
@@ -64,24 +65,24 @@ func TestCreateConnect(t *testing.T) {
 	assert.NotEmpty(t, readyGs.Status.Address)
 	assert.NotEmpty(t, readyGs.Status.Addresses)
 
-	var hasPodIPAddress bool
-	for i, addr := range readyGs.Status.Addresses {
-		if addr.Type == agonesv1.NodePodIP {
-			assert.NotEmpty(t, readyGs.Status.Addresses[i].Address)
-			hasPodIPAddress = true
-		}
-	}
-	assert.True(t, hasPodIPAddress)
+	require.NotEmpty(t, readyGs.Status.NodeName)
+	require.Equal(t, readyGs.Status.State, agonesv1.GameServerStateReady)
 
-	assert.NotEmpty(t, readyGs.Status.NodeName)
-	assert.Equal(t, readyGs.Status.State, agonesv1.GameServerStateReady)
-
+	// check connectivity before anything else.
 	reply, err := framework.SendGameServerUDP(t, readyGs, "Hello World !")
-	if err != nil {
-		t.Fatalf("Could ping GameServer: %v", err)
-	}
+	require.NoError(t, err)
+	require.Equal(t, "ACK: Hello World !\n", reply)
 
-	assert.Equal(t, "ACK: Hello World !\n", reply)
+	// since the PodIP could come at any point, let's eventually it.
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		readyGs, err = framework.AgonesClient.AgonesV1().GameServers(framework.Namespace).Get(ctx, readyGs.ObjectMeta.Name, metav1.GetOptions{})
+		require.NoError(c, err)
+		for i, addr := range readyGs.Status.Addresses {
+			if addr.Type == agonesv1.NodePodIP {
+				require.NotEmpty(c, readyGs.Status.Addresses[i].Address)
+			}
+		}
+	}, 3*time.Minute, time.Second, "Failed to get PodIP")
 }
 
 func TestHostName(t *testing.T) {
