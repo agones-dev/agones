@@ -203,6 +203,60 @@ func TestApplyGameServerAddressAndPort(t *testing.T) {
 	})
 }
 
+func TestApplyGameServerPodIPs(t *testing.T) {
+	t.Parallel()
+
+	newGS := func(existingAddresses []corev1.NodeAddress) *agonesv1.GameServer {
+		gs := &agonesv1.GameServer{
+			ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "default"},
+			Spec:       newSingleContainerSpec(),
+			Status:     agonesv1.GameServerStatus{Addresses: existingAddresses},
+		}
+		gs.ApplyDefaults()
+		return gs
+	}
+
+	t.Run("adds new PodIPs not in status", func(t *testing.T) {
+		gs := newGS(nil)
+		pod := &corev1.Pod{Status: corev1.PodStatus{PodIPs: []corev1.PodIP{{IP: "10.0.0.1"}}}}
+
+		result, updated := applyGameServerPodIPs(gs, pod)
+		assert.True(t, updated)
+		assert.Len(t, result.Status.Addresses, 1)
+		assert.Equal(t, agonesv1.NodePodIP, result.Status.Addresses[0].Type)
+		assert.Equal(t, "10.0.0.1", result.Status.Addresses[0].Address)
+	})
+
+	t.Run("no-op when all PodIPs already present", func(t *testing.T) {
+		gs := newGS([]corev1.NodeAddress{{Type: agonesv1.NodePodIP, Address: "10.0.0.1"}})
+		pod := &corev1.Pod{Status: corev1.PodStatus{PodIPs: []corev1.PodIP{{IP: "10.0.0.1"}}}}
+
+		result, updated := applyGameServerPodIPs(gs, pod)
+		assert.False(t, updated)
+		assert.Len(t, result.Status.Addresses, 1)
+	})
+
+	t.Run("no-op when pod has no PodIPs", func(t *testing.T) {
+		gs := newGS(nil)
+		pod := &corev1.Pod{}
+
+		result, updated := applyGameServerPodIPs(gs, pod)
+		assert.False(t, updated)
+		assert.Empty(t, result.Status.Addresses)
+	})
+
+	t.Run("adds only missing PodIPs from multiple pod IPs", func(t *testing.T) {
+		gs := newGS([]corev1.NodeAddress{{Type: agonesv1.NodePodIP, Address: "10.0.0.1"}})
+		pod := &corev1.Pod{Status: corev1.PodStatus{PodIPs: []corev1.PodIP{{IP: "10.0.0.1"}, {IP: "10.0.0.2"}}}}
+
+		result, updated := applyGameServerPodIPs(gs, pod)
+		assert.True(t, updated)
+		assert.Len(t, result.Status.Addresses, 2)
+		assert.Equal(t, "10.0.0.1", result.Status.Addresses[0].Address)
+		assert.Equal(t, "10.0.0.2", result.Status.Addresses[1].Address)
+	})
+}
+
 func TestIsBeforePodCreated(t *testing.T) {
 	fixture := map[string]struct {
 		state    agonesv1.GameServerState
