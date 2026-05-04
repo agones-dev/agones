@@ -157,7 +157,10 @@ func NewController(
 		healthController:         NewHealthController(health, kubeClient, agonesClient, kubeInformerFactory, agonesInformerFactory, controllerHooks.WaitOnFreePorts()),
 		migrationController:      NewMigrationController(health, kubeClient, agonesClient, kubeInformerFactory, agonesInformerFactory, controllerHooks.SyncPodPortsToGameServer),
 		missingPodController:     NewMissingPodController(health, kubeClient, agonesClient, kubeInformerFactory, agonesInformerFactory),
-		succeededController:      NewSucceededController(health, kubeClient, agonesClient, kubeInformerFactory, agonesInformerFactory),
+	}
+
+	if runtime.FeatureEnabled(runtime.FeatureSidecarContainers) {
+		c.succeededController = NewSucceededController(health, kubeClient, agonesClient, kubeInformerFactory, agonesInformerFactory)
 	}
 
 	c.baseLogger = runtime.NewLoggerWithType(c)
