@@ -217,7 +217,7 @@ type FleetAutoscaleRequest struct {
 	// otherwise identical (parallel requests, requests when earlier requests did not modify etc)
 	// The UID is meant to track the round trip (request/response) between the Autoscaler and the WebHook, not the user request.
 	// It is suitable for correlating log entries between the webhook and apiserver, for either auditing or debugging.
-	UID types.UID `json:"uid""`
+	UID types.UID `json:"uid"`
 	// Name is the name of the Fleet being scaled
 	Name string `json:"name"`
 	// Namespace is the namespace associated with the request (if any).
@@ -268,7 +268,7 @@ type FleetAutoscaleRequest struct {
 	// otherwise identical (parallel requests, requests when earlier requests did not modify etc)
 	// The UID is meant to track the round trip (request/response) between the Autoscaler and the WebHook, not the user request.
 	// It is suitable for correlating log entries between the webhook and apiserver, for either auditing or debugging.
-	UID types.UID `json:"uid""`
+	UID types.UID `json:"uid"`
 	// Name is the name of the Fleet being scaled
 	Name string `json:"name"`
 	// Namespace is the namespace associated with the request (if any).

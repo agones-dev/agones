@@ -446,13 +446,10 @@ func TestControllerGameServerAllocationsTotal(t *testing.T) {
 	generateGsEvents(19, agonesv1.GameServerStateAllocated, "", c.gsWatch)
 
 	expected := 34
-	assert.Eventually(t, func() bool {
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
 		list, err := c.gameServerLister.GameServers(gs.ObjectMeta.Namespace).List(labels.Everything())
-		if err != nil || list == nil {
-			return false
-		}
-		require.NoError(t, err)
-		return len(list) == expected
+		require.NoError(ct, err)
+		assert.Len(ct, list, expected)
 	}, 10*time.Second, time.Second)
 	// While these values are tested above, the following test checks will provide a more detailed diff output
 	// in the case where the assert.Eventually(...) case fails, which makes failing tests easier to debug.

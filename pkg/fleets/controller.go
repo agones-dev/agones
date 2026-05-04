@@ -898,12 +898,13 @@ func (t *allocTracker) forEach(fn func(ns, fleetName string, count int64)) {
 	t.mu.Unlock()
 
 	for key, count := range counts {
-		if count.Load() == 0 {
+		v := count.Load()
+		if v == 0 {
 			continue
 		}
 
 		ns, fleetName, _ := cache.SplitMetaNamespaceKey(key)
-		fn(ns, fleetName, count.Load())
+		fn(ns, fleetName, v)
 	}
 }
 
