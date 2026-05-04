@@ -148,7 +148,7 @@ func TestSucceededControllerSyncGameServer(t *testing.T) {
 				postTests:   func(_ *testing.T, _ agtesting.Mocks) {},
 			},
 		},
-		"pod is in terminating state": {
+		"pod is in terminating state but succeeded": {
 			setup: func(gs *agonesv1.GameServer, pod *corev1.Pod) (*agonesv1.GameServer, *corev1.Pod) {
 				now := metav1.Now()
 				pod.ObjectMeta.DeletionTimestamp = &now
@@ -156,9 +156,11 @@ func TestSucceededControllerSyncGameServer(t *testing.T) {
 				return gs, pod
 			},
 			expected: expected{
-				updated:     false,
-				updateTests: func(_ *testing.T, _ *agonesv1.GameServer) {},
-				postTests:   func(_ *testing.T, _ agtesting.Mocks) {},
+				updated: true,
+				updateTests: func(t *testing.T, gs *agonesv1.GameServer) {
+					assert.Equal(t, agonesv1.GameServerStateShutdown, gs.Status.State)
+				},
+				postTests: func(_ *testing.T, _ agtesting.Mocks) {},
 			},
 		},
 	}
