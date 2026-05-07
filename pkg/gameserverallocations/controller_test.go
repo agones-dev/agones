@@ -856,7 +856,7 @@ func newFakeControllerWithTimeout(remoteAllocationTimeout time.Duration, totalRe
 	m.Mux = http.NewServeMux()
 	counter := gameservers.NewPerNodeCounter(m.KubeInformerFactory, m.AgonesInformerFactory)
 	api := apiserver.NewAPIServer(m.Mux)
-	c := NewExtensions(api, healthcheck.NewHandler(), counter, m.KubeClient, m.KubeInformerFactory, m.AgonesClient, m.AgonesInformerFactory, remoteAllocationTimeout, totalRemoteAllocationTimeout, 500*time.Millisecond)
+	c := NewExtensions(api, healthcheck.NewHandler(), counter, m.KubeClient, m.KubeInformerFactory, m.AgonesClient, m.AgonesInformerFactory, remoteAllocationTimeout, totalRemoteAllocationTimeout, 500*time.Millisecond, nil)
 	c.recorder = m.FakeRecorder
 	c.allocator.recorder = m.FakeRecorder
 	return c, m

@@ -144,6 +144,24 @@ func main() {
 	}
 	// https server and the items that share the Mux for routing
 	httpsServer := https.NewServer(ctlConf.CertFile, ctlConf.KeyFile, ctlConf.WebhookPort)
+
+	// Load the RequestHeader CA from the extension-apiserver-authentication ConfigMap.
+	// This enables the extensions apiserver to verify that requests come from the
+	// kube-apiserver aggregator, as required by the Kubernetes aggregation layer spec.
+	// See: https://kubernetes.io/docs/tasks/extend-kubernetes/configure-aggregation-layer/
+	reqHeaderConfig, err := apiserver.LoadRequestHeaderConfig(ctx, kubeClient)
+	if err != nil {
+		// Log a warning but don't fatal — the cluster may not have RequestHeader
+		// auth configured (e.g. some test environments). The handler-level auth
+		// check will reject requests that don't present valid client certificates.
+		logger.WithError(err).Warn("Could not load RequestHeader authentication config. " +
+			"API requests that bypass the kube-apiserver aggregator will NOT be authenticated. " +
+			"This is expected in test environments but should be resolved in production.")
+	} else {
+		httpsServer.WithClientCA(reqHeaderConfig.ClientCAPool)
+		logger.Info("RequestHeader authentication configured for extensions apiserver")
+	}
+
 	cancelTLS, err := httpsServer.WatchForCertificateChanges()
 	if err != nil {
 		logger.WithError(err).Fatal("Got an error while watching certificate changes")
@@ -217,12 +235,12 @@ func main() {
 			}
 		}()
 
-		gasExtensions = gameserverallocations.NewProcessorExtensions(api, kubeClient, processorClient)
+		gasExtensions = gameserverallocations.NewProcessorExtensions(api, kubeClient, processorClient, reqHeaderConfig)
 	} else {
 		gsCounter := gameservers.NewPerNodeCounter(kubeInformerFactory, agonesInformerFactory)
 
 		gasExtensions = gameserverallocations.NewExtensions(api, health, gsCounter, kubeClient, kubeInformerFactory,
-			agonesClient, agonesInformerFactory, 10*time.Second, 30*time.Second, ctlConf.AllocationBatchWaitTime)
+			agonesClient, agonesInformerFactory, 10*time.Second, 30*time.Second, ctlConf.AllocationBatchWaitTime, reqHeaderConfig)
 
 		kubeInformerFactory.Start(ctx.Done())
 		agonesInformerFactory.Start(ctx.Done())

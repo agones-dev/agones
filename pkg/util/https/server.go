@@ -17,6 +17,7 @@ package https
 import (
 	"context"
 	cryptotls "crypto/tls"
+	"crypto/x509"
 	"net/http"
 	"sync"
 	"time"
@@ -54,6 +55,7 @@ type Server struct {
 	certFile   string
 	keyFile    string
 	port       string
+	clientCAs  *x509.CertPool
 }
 
 // NewServer returns a Server instance.
@@ -73,13 +75,41 @@ func NewServer(certFile, keyFile string, port string) *Server {
 	return wh
 }
 
+// WithClientCA configures the TLS server to request and verify client
+// certificates against the given CA pool. This MUST be called before Run()
+// and after NewServer(). It reconfigures the internal TLS settings to
+// require client certificates signed by the provided CA.
+//
+// This is used to verify that the kube-apiserver aggregator is the one
+// making requests, per the Kubernetes extension apiserver authentication
+// requirements documented at:
+// https://kubernetes.io/docs/tasks/extend-kubernetes/configure-aggregation-layer/
+func (s *Server) WithClientCA(clientCAs *x509.CertPool) {
+	s.clientCAs = clientCAs
+	// Reconfigure the TLS server with client CA verification.
+	s.setupServer()
+	s.logger.Info("TLS server configured with client certificate verification (RequestHeader CA)")
+}
+
 func (s *Server) setupServer() {
+	tlsConfig := &cryptotls.Config{
+		GetCertificate: s.getCertificate,
+	}
+
+	// If a client CA pool is provided, configure mutual TLS.
+	// We use VerifyClientCertIfGiven rather than RequireAndVerifyClientCert
+	// because health check probes (e.g. Kubernetes liveness) may not present
+	// client certificates. The handler layer (apiserver.AuthenticateRequest)
+	// enforces the requirement for API requests.
+	if s.clientCAs != nil {
+		tlsConfig.ClientAuth = cryptotls.VerifyClientCertIfGiven
+		tlsConfig.ClientCAs = s.clientCAs
+	}
+
 	s.tls = &http.Server{
-		Addr:    ":" + s.port,
-		Handler: s.Mux,
-		TLSConfig: &cryptotls.Config{
-			GetCertificate: s.getCertificate,
-		},
+		Addr:      ":" + s.port,
+		Handler:   s.Mux,
+		TLSConfig: tlsConfig,
 	}
 
 	tlsCert, err := cryptotls.LoadX509KeyPair(tlsDir+"server.crt", tlsDir+"server.key")

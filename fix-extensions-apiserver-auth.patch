@@ -1,0 +1,796 @@
+diff --git a/cmd/extensions/main.go b/cmd/extensions/main.go
+index 4154b85..0ad3042 100644
+--- a/cmd/extensions/main.go
++++ b/cmd/extensions/main.go
+@@ -144,6 +144,24 @@ func main() {
+ 	}
+ 	// https server and the items that share the Mux for routing
+ 	httpsServer := https.NewServer(ctlConf.CertFile, ctlConf.KeyFile, ctlConf.WebhookPort)
++
++	// Load the RequestHeader CA from the extension-apiserver-authentication ConfigMap.
++	// This enables the extensions apiserver to verify that requests come from the
++	// kube-apiserver aggregator, as required by the Kubernetes aggregation layer spec.
++	// See: https://kubernetes.io/docs/tasks/extend-kubernetes/configure-aggregation-layer/
++	reqHeaderConfig, err := apiserver.LoadRequestHeaderConfig(ctx, kubeClient)
++	if err != nil {
++		// Log a warning but don't fatal — the cluster may not have RequestHeader
++		// auth configured (e.g. some test environments). The handler-level auth
++		// check will reject requests that don't present valid client certificates.
++		logger.WithError(err).Warn("Could not load RequestHeader authentication config. " +
++			"API requests that bypass the kube-apiserver aggregator will NOT be authenticated. " +
++			"This is expected in test environments but should be resolved in production.")
++	} else {
++		httpsServer.WithClientCA(reqHeaderConfig.ClientCAPool)
++		logger.Info("RequestHeader authentication configured for extensions apiserver")
++	}
++
+ 	cancelTLS, err := httpsServer.WatchForCertificateChanges()
+ 	if err != nil {
+ 		logger.WithError(err).Fatal("Got an error while watching certificate changes")
+@@ -217,12 +235,12 @@ func main() {
+ 			}
+ 		}()
+ 
+-		gasExtensions = gameserverallocations.NewProcessorExtensions(api, kubeClient, processorClient)
++		gasExtensions = gameserverallocations.NewProcessorExtensions(api, kubeClient, processorClient, reqHeaderConfig)
+ 	} else {
+ 		gsCounter := gameservers.NewPerNodeCounter(kubeInformerFactory, agonesInformerFactory)
+ 
+ 		gasExtensions = gameserverallocations.NewExtensions(api, health, gsCounter, kubeClient, kubeInformerFactory,
+-			agonesClient, agonesInformerFactory, 10*time.Second, 30*time.Second, ctlConf.AllocationBatchWaitTime)
++			agonesClient, agonesInformerFactory, 10*time.Second, 30*time.Second, ctlConf.AllocationBatchWaitTime, reqHeaderConfig)
+ 
+ 		kubeInformerFactory.Start(ctx.Done())
+ 		agonesInformerFactory.Start(ctx.Done())
+diff --git a/pkg/gameserverallocations/controller.go b/pkg/gameserverallocations/controller.go
+index 5679520..9890787 100644
+--- a/pkg/gameserverallocations/controller.go
++++ b/pkg/gameserverallocations/controller.go
+@@ -61,6 +61,8 @@ type Extensions struct {
+ 	recorder        record.EventRecorder
+ 	allocator       *Allocator
+ 	processorClient processor.Client
++	authConfig      *apiserver.RequestHeaderConfig
++	kubeClient      kubernetes.Interface
+ }
+ 
+ // NewExtensions returns the extensions controller for a GameServerAllocation
+@@ -74,9 +76,12 @@ func NewExtensions(apiServer *apiserver.APIServer,
+ 	remoteAllocationTimeout time.Duration,
+ 	totalAllocationTimeout time.Duration,
+ 	allocationBatchWaitTime time.Duration,
++	authConfig *apiserver.RequestHeaderConfig,
+ ) *Extensions {
+ 	c := &Extensions{
+-		api: apiServer,
++		api:        apiServer,
++		authConfig: authConfig,
++		kubeClient: kubeClient,
+ 	}
+ 
+ 	c.allocator = NewAllocator(
+@@ -100,10 +105,12 @@ func NewExtensions(apiServer *apiserver.APIServer,
+ }
+ 
+ // NewProcessorExtensions returns the extensions controller for a GameServerAllocation
+-func NewProcessorExtensions(apiServer *apiserver.APIServer, kubeClient kubernetes.Interface, processorClient processor.Client) *Extensions {
++func NewProcessorExtensions(apiServer *apiserver.APIServer, kubeClient kubernetes.Interface, processorClient processor.Client, authConfig *apiserver.RequestHeaderConfig) *Extensions {
+ 	c := &Extensions{
+ 		api:             apiServer,
+ 		processorClient: processorClient,
++		authConfig:      authConfig,
++		kubeClient:      kubeClient,
+ 	}
+ 
+ 	c.baseLogger = runtime.NewLoggerWithType(c)
+@@ -160,6 +167,28 @@ func (c *Extensions) processAllocationRequest(ctx context.Context, w http.Respon
+ 		return nil
+ 	}
+ 
++	// Authenticate: verify the request came from the kube-apiserver aggregator
++	// by checking the TLS client certificate and extracting the proxied user identity.
++	if c.authConfig != nil {
++		username, groups, authErr := c.authConfig.AuthenticateRequest(r)
++		if authErr != nil {
++			log.WithError(authErr).Warn("authentication failed for allocation request")
++			http.Error(w, "Unauthorized", http.StatusUnauthorized)
++			return nil
++		}
++
++		// Authorize: check that the proxied user has "create gameserverallocations"
++		// permission in the target namespace via SubjectAccessReview.
++		if c.kubeClient != nil {
++			if authzErr := apiserver.AuthorizeAllocation(ctx, c.kubeClient, username, groups, namespace); authzErr != nil {
++				log.WithError(authzErr).WithField("user", username).WithField("namespace", namespace).
++					Warn("authorization failed for allocation request")
++				http.Error(w, "Forbidden", http.StatusForbidden)
++				return nil
++			}
++		}
++	}
++
+ 	gsa, err := c.allocationDeserialization(r, namespace)
+ 	if err != nil {
+ 		return err
+diff --git a/pkg/util/apiserver/auth.go b/pkg/util/apiserver/auth.go
+new file mode 100644
+index 0000000..6242610
+--- /dev/null
++++ b/pkg/util/apiserver/auth.go
+@@ -0,0 +1,302 @@
++// Copyright Contributors to Agones a Series of LF Projects, LLC.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package apiserver
++
++import (
++	"context"
++	"crypto/x509"
++	"encoding/pem"
++	"fmt"
++	"net/http"
++
++	"agones.dev/agones/pkg/util/runtime"
++	"github.com/pkg/errors"
++	"github.com/sirupsen/logrus"
++	authorizationv1 "k8s.io/api/authorization/v1"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/client-go/kubernetes"
++)
++
++const (
++	// extensionAPIServerAuthenticationCM is the ConfigMap that the kube-apiserver
++	// populates with the RequestHeader CA bundle and allowed CNs.
++	extensionAPIServerAuthenticationCM = "extension-apiserver-authentication"
++
++	// kubeSystemNamespace is the namespace where the ConfigMap lives.
++	kubeSystemNamespace = "kube-system"
++
++	// defaultUsernameHeader is the default header used by the kube-apiserver
++	// aggregator to pass the authenticated username to extension apiservers.
++	defaultUsernameHeader = "X-Remote-User"
++
++	// defaultGroupHeader is the default header used by the kube-apiserver
++	// aggregator to pass the authenticated groups to extension apiservers.
++	defaultGroupHeader = "X-Remote-Group"
++)
++
++// RequestHeaderConfig holds the configuration loaded from the
++// extension-apiserver-authentication ConfigMap.
++type RequestHeaderConfig struct {
++	// ClientCAPool is the pool of CA certificates used to verify
++	// the client certificate presented by the kube-apiserver aggregator.
++	ClientCAPool *x509.CertPool
++
++	// AllowedNames is the list of allowed Common Names for the proxy
++	// client certificate. If empty, any CN signed by the CA is accepted.
++	AllowedNames []string
++
++	// UsernameHeaders is the list of header names to inspect for the username.
++	UsernameHeaders []string
++
++	// GroupHeaders is the list of header names to inspect for groups.
++	GroupHeaders []string
++}
++
++var authLogger = runtime.NewLoggerWithSource("apiserver-auth")
++
++// LoadRequestHeaderConfig reads the extension-apiserver-authentication ConfigMap
++// from kube-system and returns the parsed RequestHeaderConfig.
++// This is what aggregated API servers use to verify that the kube-apiserver
++// aggregator is the one making the request.
++func LoadRequestHeaderConfig(ctx context.Context, kubeClient kubernetes.Interface) (*RequestHeaderConfig, error) {
++	cm, err := kubeClient.CoreV1().ConfigMaps(kubeSystemNamespace).Get(
++		ctx, extensionAPIServerAuthenticationCM, metav1.GetOptions{})
++	if err != nil {
++		return nil, errors.Wrapf(err, "failed to get %s/%s ConfigMap", kubeSystemNamespace, extensionAPIServerAuthenticationCM)
++	}
++
++	config := &RequestHeaderConfig{
++		UsernameHeaders: []string{defaultUsernameHeader},
++		GroupHeaders:    []string{defaultGroupHeader},
++	}
++
++	// Parse the requestheader-client-ca-file
++	caPEM, ok := cm.Data["requestheader-client-ca-file"]
++	if !ok || caPEM == "" {
++		return nil, fmt.Errorf("ConfigMap %s/%s does not contain requestheader-client-ca-file",
++			kubeSystemNamespace, extensionAPIServerAuthenticationCM)
++	}
++
++	pool := x509.NewCertPool()
++	rest := []byte(caPEM)
++	count := 0
++	for {
++		var block *pem.Block
++		block, rest = pem.Decode(rest)
++		if block == nil {
++			break
++		}
++		cert, err := x509.ParseCertificate(block.Bytes)
++		if err != nil {
++			authLogger.WithError(err).Warn("skipping unparseable certificate in requestheader CA bundle")
++			continue
++		}
++		pool.AddCert(cert)
++		count++
++	}
++
++	if count == 0 {
++		return nil, fmt.Errorf("no valid certificates found in requestheader-client-ca-file")
++	}
++
++	config.ClientCAPool = pool
++	authLogger.WithField("certCount", count).Info("Loaded requestheader client CA certificates")
++
++	// Parse requestheader-allowed-names (JSON-encoded string array, optional)
++	if allowedNamesJSON, ok := cm.Data["requestheader-allowed-names"]; ok && allowedNamesJSON != "" {
++		config.AllowedNames = parseJSONStringArray(allowedNamesJSON)
++		authLogger.WithField("allowedNames", config.AllowedNames).Info("Loaded requestheader allowed names")
++	}
++
++	// Parse username/group headers if present
++	if uh, ok := cm.Data["requestheader-username-headers"]; ok && uh != "" {
++		if parsed := parseJSONStringArray(uh); len(parsed) > 0 {
++			config.UsernameHeaders = parsed
++		}
++	}
++	if gh, ok := cm.Data["requestheader-group-headers"]; ok && gh != "" {
++		if parsed := parseJSONStringArray(gh); len(parsed) > 0 {
++			config.GroupHeaders = parsed
++		}
++	}
++
++	return config, nil
++}
++
++// parseJSONStringArray attempts to parse a JSON-encoded string array.
++// Falls back to treating the whole string as a single-element array.
++func parseJSONStringArray(s string) []string {
++	// The ConfigMap values are JSON-encoded arrays like: ["front-proxy-client"]
++	var result []string
++	// Trim whitespace
++	s = trimBrackets(s)
++	if s == "" {
++		return nil
++	}
++	// Simple split on comma, remove quotes
++	for _, part := range splitAndTrim(s) {
++		if part != "" {
++			result = append(result, part)
++		}
++	}
++	return result
++}
++
++// trimBrackets removes surrounding [ ] from a string
++func trimBrackets(s string) string {
++	if len(s) >= 2 && s[0] == '[' && s[len(s)-1] == ']' {
++		return s[1 : len(s)-1]
++	}
++	return s
++}
++
++// splitAndTrim splits on comma and trims quotes and whitespace
++func splitAndTrim(s string) []string {
++	var result []string
++	for _, part := range splitComma(s) {
++		part = trimQuotes(part)
++		if part != "" {
++			result = append(result, part)
++		}
++	}
++	return result
++}
++
++func splitComma(s string) []string {
++	var parts []string
++	start := 0
++	for i := 0; i < len(s); i++ {
++		if s[i] == ',' {
++			parts = append(parts, s[start:i])
++			start = i + 1
++		}
++	}
++	parts = append(parts, s[start:])
++	return parts
++}
++
++func trimQuotes(s string) string {
++	// Trim whitespace first
++	for len(s) > 0 && (s[0] == ' ' || s[0] == '\t') {
++		s = s[1:]
++	}
++	for len(s) > 0 && (s[len(s)-1] == ' ' || s[len(s)-1] == '\t') {
++		s = s[:len(s)-1]
++	}
++	// Trim surrounding quotes
++	if len(s) >= 2 && s[0] == '"' && s[len(s)-1] == '"' {
++		return s[1 : len(s)-1]
++	}
++	return s
++}
++
++// AuthenticateRequest verifies that the request came from the kube-apiserver
++// aggregator by checking the TLS peer certificate against the RequestHeader CA.
++// Returns the authenticated username and groups, or an error.
++func (c *RequestHeaderConfig) AuthenticateRequest(r *http.Request) (username string, groups []string, err error) {
++	// 1. Verify the peer certificate was presented and signed by RequestHeader CA
++	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
++		return "", nil, fmt.Errorf("no client certificate presented")
++	}
++
++	peerCert := r.TLS.PeerCertificates[0]
++
++	// Verify the cert chain against the RequestHeader CA pool
++	opts := x509.VerifyOptions{
++		Roots:         c.ClientCAPool,
++		Intermediates: x509.NewCertPool(),
++		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
++	}
++	for _, cert := range r.TLS.PeerCertificates[1:] {
++		opts.Intermediates.AddCert(cert)
++	}
++	if _, err := peerCert.Verify(opts); err != nil {
++		return "", nil, errors.Wrap(err, "client certificate verification failed against requestheader CA")
++	}
++
++	// 2. Check the CN against allowedNames (if configured)
++	if len(c.AllowedNames) > 0 {
++		cnAllowed := false
++		for _, allowed := range c.AllowedNames {
++			if peerCert.Subject.CommonName == allowed {
++				cnAllowed = true
++				break
++			}
++		}
++		if !cnAllowed {
++			return "", nil, fmt.Errorf("client certificate CN %q is not in requestheader-allowed-names %v",
++				peerCert.Subject.CommonName, c.AllowedNames)
++		}
++	}
++
++	// 3. Extract username from headers (set by the kube-apiserver aggregator)
++	for _, header := range c.UsernameHeaders {
++		if val := r.Header.Get(header); val != "" {
++			username = val
++			break
++		}
++	}
++	if username == "" {
++		return "", nil, fmt.Errorf("no username found in request headers %v", c.UsernameHeaders)
++	}
++
++	// 4. Extract groups from headers
++	for _, header := range c.GroupHeaders {
++		groups = append(groups, r.Header.Values(header)...)
++	}
++
++	return username, groups, nil
++}
++
++// AuthorizeAllocation performs a SubjectAccessReview to check if the
++// authenticated user has "create" permission on gameserverallocations
++// in the given namespace.
++func AuthorizeAllocation(ctx context.Context, kubeClient kubernetes.Interface,
++	username string, groups []string, namespace string) error {
++
++	sar := &authorizationv1.SubjectAccessReview{
++		Spec: authorizationv1.SubjectAccessReviewSpec{
++			User:   username,
++			Groups: groups,
++			ResourceAttributes: &authorizationv1.ResourceAttributes{
++				Namespace: namespace,
++				Verb:      "create",
++				Group:     "allocation.agones.dev",
++				Resource:  "gameserverallocations",
++			},
++		},
++	}
++
++	result, err := kubeClient.AuthorizationV1().SubjectAccessReviews().Create(ctx, sar, metav1.CreateOptions{})
++	if err != nil {
++		return errors.Wrap(err, "SubjectAccessReview failed")
++	}
++
++	if !result.Status.Allowed {
++		reason := result.Status.Reason
++		if reason == "" {
++			reason = "no reason given"
++		}
++		return fmt.Errorf("user %q is not authorized to create gameserverallocations in namespace %q: %s",
++			username, namespace, reason)
++	}
++
++	authLogger.WithFields(logrus.Fields{
++		"user":      username,
++		"namespace": namespace,
++	}).Debug("Authorization check passed for allocation request")
++
++	return nil
++}
+diff --git a/pkg/util/apiserver/auth_test.go b/pkg/util/apiserver/auth_test.go
+new file mode 100644
+index 0000000..9a4a618
+--- /dev/null
++++ b/pkg/util/apiserver/auth_test.go
+@@ -0,0 +1,301 @@
++// Copyright Contributors to Agones a Series of LF Projects, LLC.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package apiserver
++
++import (
++	"context"
++	"crypto/ecdsa"
++	"crypto/elliptic"
++	"crypto/rand"
++	"crypto/tls"
++	"crypto/x509"
++	"crypto/x509/pkix"
++	"encoding/pem"
++	"math/big"
++	"net/http"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++	corev1 "k8s.io/api/core/v1"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/client-go/kubernetes/fake"
++)
++
++// generateTestCA creates a self-signed CA cert and key for testing.
++func generateTestCA(t *testing.T) (*x509.Certificate, *ecdsa.PrivateKey, []byte) {
++	t.Helper()
++
++	caKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
++	require.NoError(t, err)
++
++	caTemplate := &x509.Certificate{
++		SerialNumber: big.NewInt(1),
++		Subject: pkix.Name{
++			CommonName: "test-requestheader-ca",
++		},
++		NotBefore:             time.Now().Add(-1 * time.Hour),
++		NotAfter:              time.Now().Add(24 * time.Hour),
++		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
++		BasicConstraintsValid: true,
++		IsCA:                  true,
++	}
++
++	caCertDER, err := x509.CreateCertificate(rand.Reader, caTemplate, caTemplate, &caKey.PublicKey, caKey)
++	require.NoError(t, err)
++
++	caCert, err := x509.ParseCertificate(caCertDER)
++	require.NoError(t, err)
++
++	caPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caCertDER})
++
++	return caCert, caKey, caPEM
++}
++
++// generateTestClientCert creates a client cert signed by the given CA.
++func generateTestClientCert(t *testing.T, caCert *x509.Certificate, caKey *ecdsa.PrivateKey, cn string) tls.Certificate {
++	t.Helper()
++
++	clientKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
++	require.NoError(t, err)
++
++	clientTemplate := &x509.Certificate{
++		SerialNumber: big.NewInt(2),
++		Subject: pkix.Name{
++			CommonName: cn,
++		},
++		NotBefore: time.Now().Add(-1 * time.Hour),
++		NotAfter:  time.Now().Add(24 * time.Hour),
++		KeyUsage:  x509.KeyUsageDigitalSignature,
++		ExtKeyUsage: []x509.ExtKeyUsage{
++			x509.ExtKeyUsageClientAuth,
++		},
++	}
++
++	clientCertDER, err := x509.CreateCertificate(rand.Reader, clientTemplate, caCert, &clientKey.PublicKey, caKey)
++	require.NoError(t, err)
++
++	return tls.Certificate{
++		Certificate: [][]byte{clientCertDER},
++		PrivateKey:  clientKey,
++	}
++}
++
++func TestLoadRequestHeaderConfig(t *testing.T) {
++	t.Parallel()
++
++	_, _, caPEM := generateTestCA(t)
++
++	t.Run("success", func(t *testing.T) {
++		kubeClient := fake.NewSimpleClientset(&corev1.ConfigMap{
++			ObjectMeta: metav1.ObjectMeta{
++				Name:      extensionAPIServerAuthenticationCM,
++				Namespace: kubeSystemNamespace,
++			},
++			Data: map[string]string{
++				"requestheader-client-ca-file": string(caPEM),
++				"requestheader-allowed-names":  `["front-proxy-client"]`,
++				"requestheader-username-headers": `["X-Remote-User"]`,
++				"requestheader-group-headers":    `["X-Remote-Group"]`,
++			},
++		})
++
++		config, err := LoadRequestHeaderConfig(context.Background(), kubeClient)
++		require.NoError(t, err)
++		assert.NotNil(t, config.ClientCAPool)
++		assert.Equal(t, []string{"front-proxy-client"}, config.AllowedNames)
++		assert.Equal(t, []string{"X-Remote-User"}, config.UsernameHeaders)
++		assert.Equal(t, []string{"X-Remote-Group"}, config.GroupHeaders)
++	})
++
++	t.Run("configmap not found", func(t *testing.T) {
++		kubeClient := fake.NewSimpleClientset()
++		_, err := LoadRequestHeaderConfig(context.Background(), kubeClient)
++		assert.Error(t, err)
++		assert.Contains(t, err.Error(), "failed to get")
++	})
++
++	t.Run("no ca file in configmap", func(t *testing.T) {
++		kubeClient := fake.NewSimpleClientset(&corev1.ConfigMap{
++			ObjectMeta: metav1.ObjectMeta{
++				Name:      extensionAPIServerAuthenticationCM,
++				Namespace: kubeSystemNamespace,
++			},
++			Data: map[string]string{},
++		})
++		_, err := LoadRequestHeaderConfig(context.Background(), kubeClient)
++		assert.Error(t, err)
++		assert.Contains(t, err.Error(), "requestheader-client-ca-file")
++	})
++}
++
++func TestAuthenticateRequest(t *testing.T) {
++	t.Parallel()
++
++	caCert, caKey, _ := generateTestCA(t)
++	pool := x509.NewCertPool()
++	pool.AddCert(caCert)
++
++	config := &RequestHeaderConfig{
++		ClientCAPool:    pool,
++		AllowedNames:    []string{"front-proxy-client"},
++		UsernameHeaders: []string{"X-Remote-User"},
++		GroupHeaders:    []string{"X-Remote-Group"},
++	}
++
++	t.Run("valid request", func(t *testing.T) {
++		clientCert := generateTestClientCert(t, caCert, caKey, "front-proxy-client")
++		peerCert, err := x509.ParseCertificate(clientCert.Certificate[0])
++		require.NoError(t, err)
++
++		r := &http.Request{
++			TLS: &tls.ConnectionState{
++				PeerCertificates: []*x509.Certificate{peerCert},
++			},
++			Header: http.Header{
++				"X-Remote-User":  []string{"system:admin"},
++				"X-Remote-Group": []string{"system:masters"},
++			},
++		}
++
++		username, groups, err := config.AuthenticateRequest(r)
++		assert.NoError(t, err)
++		assert.Equal(t, "system:admin", username)
++		assert.Contains(t, groups, "system:masters")
++	})
++
++	t.Run("no client certificate", func(t *testing.T) {
++		r := &http.Request{
++			TLS:    &tls.ConnectionState{},
++			Header: http.Header{},
++		}
++		_, _, err := config.AuthenticateRequest(r)
++		assert.Error(t, err)
++		assert.Contains(t, err.Error(), "no client certificate")
++	})
++
++	t.Run("no TLS at all", func(t *testing.T) {
++		r := &http.Request{
++			Header: http.Header{},
++		}
++		_, _, err := config.AuthenticateRequest(r)
++		assert.Error(t, err)
++		assert.Contains(t, err.Error(), "no client certificate")
++	})
++
++	t.Run("wrong CN", func(t *testing.T) {
++		clientCert := generateTestClientCert(t, caCert, caKey, "evil-client")
++		peerCert, err := x509.ParseCertificate(clientCert.Certificate[0])
++		require.NoError(t, err)
++
++		r := &http.Request{
++			TLS: &tls.ConnectionState{
++				PeerCertificates: []*x509.Certificate{peerCert},
++			},
++			Header: http.Header{
++				"X-Remote-User": []string{"system:admin"},
++			},
++		}
++		_, _, err = config.AuthenticateRequest(r)
++		assert.Error(t, err)
++		assert.Contains(t, err.Error(), "not in requestheader-allowed-names")
++	})
++
++	t.Run("cert not signed by requestheader CA", func(t *testing.T) {
++		// Generate a different CA (not the one in config.ClientCAPool)
++		otherCACert, otherCAKey, _ := generateTestCA(t)
++		_ = otherCACert
++		clientCert := generateTestClientCert(t, otherCACert, otherCAKey, "front-proxy-client")
++		peerCert, err := x509.ParseCertificate(clientCert.Certificate[0])
++		require.NoError(t, err)
++
++		r := &http.Request{
++			TLS: &tls.ConnectionState{
++				PeerCertificates: []*x509.Certificate{peerCert},
++			},
++			Header: http.Header{
++				"X-Remote-User": []string{"system:admin"},
++			},
++		}
++		_, _, err = config.AuthenticateRequest(r)
++		assert.Error(t, err)
++		assert.Contains(t, err.Error(), "verification failed")
++	})
++
++	t.Run("no username header", func(t *testing.T) {
++		clientCert := generateTestClientCert(t, caCert, caKey, "front-proxy-client")
++		peerCert, err := x509.ParseCertificate(clientCert.Certificate[0])
++		require.NoError(t, err)
++
++		r := &http.Request{
++			TLS: &tls.ConnectionState{
++				PeerCertificates: []*x509.Certificate{peerCert},
++			},
++			Header: http.Header{}, // no X-Remote-User
++		}
++		_, _, err = config.AuthenticateRequest(r)
++		assert.Error(t, err)
++		assert.Contains(t, err.Error(), "no username found")
++	})
++
++	t.Run("empty allowedNames means any CN accepted", func(t *testing.T) {
++		configNoNames := &RequestHeaderConfig{
++			ClientCAPool:    pool,
++			AllowedNames:    nil, // empty = accept any
++			UsernameHeaders: []string{"X-Remote-User"},
++			GroupHeaders:    []string{"X-Remote-Group"},
++		}
++
++		clientCert := generateTestClientCert(t, caCert, caKey, "any-random-cn")
++		peerCert, err := x509.ParseCertificate(clientCert.Certificate[0])
++		require.NoError(t, err)
++
++		r := &http.Request{
++			TLS: &tls.ConnectionState{
++				PeerCertificates: []*x509.Certificate{peerCert},
++			},
++			Header: http.Header{
++				"X-Remote-User": []string{"user1"},
++			},
++		}
++		username, _, err := configNoNames.AuthenticateRequest(r)
++		assert.NoError(t, err)
++		assert.Equal(t, "user1", username)
++	})
++}
++
++func TestParseJSONStringArray(t *testing.T) {
++	t.Parallel()
++
++	tests := []struct {
++		name     string
++		input    string
++		expected []string
++	}{
++		{"json array", `["a","b","c"]`, []string{"a", "b", "c"}},
++		{"single value", `["front-proxy-client"]`, []string{"front-proxy-client"}},
++		{"empty array", `[]`, nil},
++		{"empty string", "", nil},
++		{"bare value", `front-proxy-client`, []string{"front-proxy-client"}},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			result := parseJSONStringArray(tt.input)
++			assert.Equal(t, tt.expected, result)
++		})
++	}
++}
+diff --git a/pkg/util/https/server.go b/pkg/util/https/server.go
+index caf5963..d721b2c 100644
+--- a/pkg/util/https/server.go
++++ b/pkg/util/https/server.go
+@@ -17,6 +17,7 @@ package https
+ import (
+ 	"context"
+ 	cryptotls "crypto/tls"
++	"crypto/x509"
+ 	"net/http"
+ 	"sync"
+ 	"time"
+@@ -54,6 +55,7 @@ type Server struct {
+ 	certFile   string
+ 	keyFile    string
+ 	port       string
++	clientCAs  *x509.CertPool
+ }
+ 
+ // NewServer returns a Server instance.
+@@ -73,13 +75,41 @@ func NewServer(certFile, keyFile string, port string) *Server {
+ 	return wh
+ }
+ 
++// WithClientCA configures the TLS server to request and verify client
++// certificates against the given CA pool. This MUST be called before Run()
++// and after NewServer(). It reconfigures the internal TLS settings to
++// require client certificates signed by the provided CA.
++//
++// This is used to verify that the kube-apiserver aggregator is the one
++// making requests, per the Kubernetes extension apiserver authentication
++// requirements documented at:
++// https://kubernetes.io/docs/tasks/extend-kubernetes/configure-aggregation-layer/
++func (s *Server) WithClientCA(clientCAs *x509.CertPool) {
++	s.clientCAs = clientCAs
++	// Reconfigure the TLS server with client CA verification.
++	s.setupServer()
++	s.logger.Info("TLS server configured with client certificate verification (RequestHeader CA)")
++}
++
+ func (s *Server) setupServer() {
++	tlsConfig := &cryptotls.Config{
++		GetCertificate: s.getCertificate,
++	}
++
++	// If a client CA pool is provided, configure mutual TLS.
++	// We use VerifyClientCertIfGiven rather than RequireAndVerifyClientCert
++	// because health check probes (e.g. Kubernetes liveness) may not present
++	// client certificates. The handler layer (apiserver.AuthenticateRequest)
++	// enforces the requirement for API requests.
++	if s.clientCAs != nil {
++		tlsConfig.ClientAuth = cryptotls.VerifyClientCertIfGiven
++		tlsConfig.ClientCAs = s.clientCAs
++	}
++
+ 	s.tls = &http.Server{
+-		Addr:    ":" + s.port,
+-		Handler: s.Mux,
+-		TLSConfig: &cryptotls.Config{
+-			GetCertificate: s.getCertificate,
+-		},
++		Addr:      ":" + s.port,
++		Handler:   s.Mux,
++		TLSConfig: tlsConfig,
+ 	}
+ 
+ 	tlsCert, err := cryptotls.LoadX509KeyPair(tlsDir+"server.crt", tlsDir+"server.key")

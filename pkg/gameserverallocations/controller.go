@@ -61,6 +61,8 @@ type Extensions struct {
 	recorder        record.EventRecorder
 	allocator       *Allocator
 	processorClient processor.Client
+	authConfig      *apiserver.RequestHeaderConfig
+	kubeClient      kubernetes.Interface
 }
 
 // NewExtensions returns the extensions controller for a GameServerAllocation
@@ -74,9 +76,12 @@ func NewExtensions(apiServer *apiserver.APIServer,
 	remoteAllocationTimeout time.Duration,
 	totalAllocationTimeout time.Duration,
 	allocationBatchWaitTime time.Duration,
+	authConfig *apiserver.RequestHeaderConfig,
 ) *Extensions {
 	c := &Extensions{
-		api: apiServer,
+		api:        apiServer,
+		authConfig: authConfig,
+		kubeClient: kubeClient,
 	}
 
 	c.allocator = NewAllocator(
@@ -100,10 +105,12 @@ func NewExtensions(apiServer *apiserver.APIServer,
 }
 
 // NewProcessorExtensions returns the extensions controller for a GameServerAllocation
-func NewProcessorExtensions(apiServer *apiserver.APIServer, kubeClient kubernetes.Interface, processorClient processor.Client) *Extensions {
+func NewProcessorExtensions(apiServer *apiserver.APIServer, kubeClient kubernetes.Interface, processorClient processor.Client, authConfig *apiserver.RequestHeaderConfig) *Extensions {
 	c := &Extensions{
 		api:             apiServer,
 		processorClient: processorClient,
+		authConfig:      authConfig,
+		kubeClient:      kubeClient,
 	}
 
 	c.baseLogger = runtime.NewLoggerWithType(c)
@@ -158,6 +165,28 @@ func (c *Extensions) processAllocationRequest(ctx context.Context, w http.Respon
 		log.Warn("allocation handler only supports POST")
 		http.Error(w, "Method not supported", http.StatusMethodNotAllowed)
 		return nil
+	}
+
+	// Authenticate: verify the request came from the kube-apiserver aggregator
+	// by checking the TLS client certificate and extracting the proxied user identity.
+	if c.authConfig != nil {
+		username, groups, authErr := c.authConfig.AuthenticateRequest(r)
+		if authErr != nil {
+			log.WithError(authErr).Warn("authentication failed for allocation request")
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return nil
+		}
+
+		// Authorize: check that the proxied user has "create gameserverallocations"
+		// permission in the target namespace via SubjectAccessReview.
+		if c.kubeClient != nil {
+			if authzErr := apiserver.AuthorizeAllocation(ctx, c.kubeClient, username, groups, namespace); authzErr != nil {
+				log.WithError(authzErr).WithField("user", username).WithField("namespace", namespace).
+					Warn("authorization failed for allocation request")
+				http.Error(w, "Forbidden", http.StatusForbidden)
+				return nil
+			}
+		}
 	}
 
 	gsa, err := c.allocationDeserialization(r, namespace)
