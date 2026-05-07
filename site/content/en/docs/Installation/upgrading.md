@@ -83,7 +83,7 @@ Note: By “controller derived configuration” we mean the parts of the Game Se
 are not part of the Game Server spec template that are instead passed to the Game Server through the
 controller, such as the FEATURE_GATES or the Agones SDK Image.
 
-1. Run `helm upgrade my-release agones/agones --install --atomic --wait --timeout 10m --namespace=agones-system`
+1. Run `helm upgrade my-release agones/agones --install --rollback-on-failure --wait --timeout 10m --namespace=agones-system`
    with all the appropriate arguments, such a `--version`, for your specific upgrade. Keep in mind that
    `helm upgrade` overwrites all `--set agones.*` arguments, so these must be set for each upgrade. See
    the [Helm Upgrade](https://helm.sh/docs/helm/helm_upgrade/) documentaion for information on the Helm

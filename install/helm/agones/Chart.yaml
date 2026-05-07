@@ -32,6 +32,5 @@ maintainers:
  - name: agones
    email: agones-discuss@googlegroups.com
    url: https://groups.google.com/forum/#!forum/agones-discuss
-engine: gotpl
 icon: https://github.com/agones-dev/agones/raw/main/docs/agones.png
-tillerVersion: ">2.10.0"
+

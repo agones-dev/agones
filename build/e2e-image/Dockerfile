@@ -28,7 +28,7 @@ RUN curl -LO https://dl.k8s.io/release/v${KUBECTL_VER}/bin/linux/amd64/kubectl &
     mv ./kubectl /usr/local/bin/kubectl
 
 # install Helm package manager
-ENV HELM_VER 3.18.4
+ENV HELM_VER 4.1.3
 ENV HELM_URL https://get.helm.sh/helm-v${HELM_VER}-linux-amd64.tar.gz
 RUN curl -L  ${HELM_URL} > /tmp/helm.tar.gz \
     && tar -zxvf /tmp/helm.tar.gz -C /tmp \

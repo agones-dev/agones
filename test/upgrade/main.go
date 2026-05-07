@@ -325,7 +325,7 @@ func installAgonesRelease(version, registry, featureGates, imagePullPolicy, side
 	log.Printf("Agones Version %s, FeatureGates %s", version, featureGates)
 
 	helmString := fmt.Sprintf(
-		"upgrade --install --atomic --wait --timeout=10m --namespace=agones-system --create-namespace --version %s "+
+		"upgrade --install --rollback-on-failure --wait --timeout=10m --namespace=agones-system --create-namespace --version %s "+
 			"--set agones.image.tag=%s "+
 			"--set agones.image.registry=%s "+
 			"--set agones.image.allocator.pullPolicy=%s "+
