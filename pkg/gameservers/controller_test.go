@@ -1289,13 +1289,16 @@ func TestControllerSyncGameServerStartingState(t *testing.T) {
 		assert.NotEmpty(t, gs.Status.Ports)
 	})
 
-	t.Run("Error on podIPs not populated", func(t *testing.T) {
+	t.Run("Successful transition to Scheduled without PodIPs", func(t *testing.T) {
 		c, m := newFakeController()
 		gsFixture := newFixture()
 		gsFixture.ApplyDefaults()
 		pod, err := gsFixture.Pod(agtesting.FakeAPIHooks{})
 		require.NoError(t, err)
 		pod.Spec.NodeName = nodeFixtureName
+		// no PodIPs set on the pod
+
+		gsUpdated := false
 
 		m.KubeClient.AddReactor("list", "nodes", func(_ k8stesting.Action) (bool, runtime.Object, error) {
 			return true, &corev1.NodeList{Items: []corev1.Node{node}}, nil
@@ -1304,16 +1307,23 @@ func TestControllerSyncGameServerStartingState(t *testing.T) {
 			return true, &corev1.PodList{Items: []corev1.Pod{*pod}}, nil
 		})
 		m.AgonesClient.AddReactor("update", "gameservers", func(action k8stesting.Action) (bool, runtime.Object, error) {
+			gsUpdated = true
 			ua := action.(k8stesting.UpdateAction)
 			gs := ua.GetObject().(*agonesv1.GameServer)
 			assert.Equal(t, agonesv1.GameServerStateScheduled, gs.Status.State)
-			return true, gs, errors.New("update-err")
+			return true, gs, nil
 		})
 		ctx, cancel := agtesting.StartInformers(m, c.gameServerSynced, c.podSynced, c.nodeSynced)
 		defer cancel()
 
-		_, err = c.syncGameServerStartingState(ctx, gsFixture)
-		assert.Error(t, err)
+		gs, err := c.syncGameServerStartingState(ctx, gsFixture)
+		require.NoError(t, err)
+		assert.True(t, gsUpdated)
+		assert.Equal(t, agonesv1.GameServerStateScheduled, gs.Status.State)
+		// No PodIP addresses should be present
+		for _, addr := range gs.Status.Addresses {
+			assert.NotEqual(t, agonesv1.NodePodIP, addr.Type, "unexpected PodIP address in status")
+		}
 	})
 
 	t.Run("Error on update", func(t *testing.T) {
@@ -1356,6 +1366,201 @@ func TestControllerSyncGameServerStartingState(t *testing.T) {
 		testWithNonZeroDeletionTimestamp(t, func(c *Controller, fixture *agonesv1.GameServer) (*agonesv1.GameServer, error) {
 			return c.syncGameServerStartingState(context.Background(), fixture)
 		})
+	})
+}
+
+func TestControllerSyncGameServerPodIPs(t *testing.T) {
+	t.Parallel()
+
+	podIPFixture := "10.0.0.1"
+
+	newGS := func(state agonesv1.GameServerState) *agonesv1.GameServer {
+		gs := &agonesv1.GameServer{
+			ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "default"},
+			Spec:       newSingleContainerSpec(),
+			Status:     agonesv1.GameServerStatus{State: state},
+		}
+		gs.ApplyDefaults()
+		return gs
+	}
+
+	type expected struct {
+		updated bool
+		test    func(t *testing.T, original *agonesv1.GameServer, result *agonesv1.GameServer)
+	}
+	type gameserver struct {
+		state     agonesv1.GameServerState
+		addresses []corev1.NodeAddress
+		deleted   bool
+	}
+	type pod struct {
+		podIPs []corev1.PodIP
+	}
+	fixtures := map[string]struct {
+		gameserver gameserver
+		expected   expected
+		pod        pod
+	}{
+		"Scheduled state: pod has PodIPs not in GS, GS is updated": {
+			gameserver: gameserver{
+				state:     agonesv1.GameServerStateScheduled,
+				addresses: []corev1.NodeAddress{},
+			},
+			pod: pod{
+				podIPs: []corev1.PodIP{{IP: podIPFixture}},
+			},
+			expected: expected{
+				updated: true,
+				test: func(t *testing.T, _ *agonesv1.GameServer, result *agonesv1.GameServer) {
+					var found bool
+					for _, addr := range result.Status.Addresses {
+						if addr.Type == agonesv1.NodePodIP && addr.Address == podIPFixture {
+							found = true
+						}
+					}
+					require.True(t, found, "PodIP should be in addresses")
+				},
+			},
+		},
+		"Scheduled state: PodIPs already in GS, no update": {
+			gameserver: gameserver{
+				state:     agonesv1.GameServerStateScheduled,
+				addresses: []corev1.NodeAddress{{Type: agonesv1.NodePodIP, Address: podIPFixture}},
+			},
+			pod: pod{
+				podIPs: []corev1.PodIP{{IP: podIPFixture}},
+			},
+			expected: expected{
+				updated: false,
+				test: func(t *testing.T, original *agonesv1.GameServer, result *agonesv1.GameServer) {
+					assert.Equal(t, original, result)
+				},
+			},
+		},
+		"Ready state: pod has PodIPs not in GS, GS is updated": {
+			gameserver: gameserver{
+				addresses: []corev1.NodeAddress{},
+				state:     agonesv1.GameServerStateReady,
+			},
+			pod: pod{
+				podIPs: []corev1.PodIP{{IP: podIPFixture}},
+			},
+			expected: expected{
+				updated: true,
+				test: func(t *testing.T, _ *agonesv1.GameServer, result *agonesv1.GameServer) {
+					var found bool
+					for _, addr := range result.Status.Addresses {
+						if addr.Type == agonesv1.NodePodIP && addr.Address == podIPFixture {
+							found = true
+						}
+					}
+					require.True(t, found, "PodIP should be in addresses")
+				},
+			},
+		},
+		"Starting is a no-op": {
+			gameserver: gameserver{
+				state:     agonesv1.GameServerStateStarting,
+				addresses: []corev1.NodeAddress{},
+			},
+			pod: pod{
+				podIPs: []corev1.PodIP{{IP: podIPFixture}},
+			},
+			expected: expected{
+				updated: false,
+				test: func(t *testing.T, original *agonesv1.GameServer, result *agonesv1.GameServer) {
+					assert.Equal(t, original, result)
+				},
+			},
+		},
+		"DeletionTimestamp set is a no-op": {
+			gameserver: gameserver{
+				state:     agonesv1.GameServerStateScheduled,
+				addresses: []corev1.NodeAddress{},
+				deleted:   true,
+			},
+			pod: pod{
+				podIPs: []corev1.PodIP{{IP: podIPFixture}},
+			},
+			expected: expected{
+				updated: false,
+				test: func(t *testing.T, original *agonesv1.GameServer, result *agonesv1.GameServer) {
+					assert.Equal(t, original, result)
+				},
+			},
+		},
+		"Pod has no PodIPs is a no-op": {
+			gameserver: gameserver{
+				state:     agonesv1.GameServerStateScheduled,
+				addresses: []corev1.NodeAddress{},
+			},
+			pod: pod{
+				podIPs: []corev1.PodIP{},
+			},
+			expected: expected{
+				updated: false,
+				test: func(t *testing.T, original *agonesv1.GameServer, result *agonesv1.GameServer) {
+					assert.Equal(t, original, result)
+				},
+			},
+		},
+	}
+
+	for k, v := range fixtures {
+		t.Run(k, func(t *testing.T) {
+			c, m := newFakeController()
+			gs := newGS(v.gameserver.state)
+			gs.Status.Addresses = v.gameserver.addresses
+			if v.gameserver.deleted {
+				now := metav1.Now()
+				gs.ObjectMeta.DeletionTimestamp = &now
+			}
+			pod, err := gs.Pod(agtesting.FakeAPIHooks{})
+			require.NoError(t, err)
+			pod.Status.PodIPs = v.pod.podIPs
+			gsUpdated := false
+
+			m.KubeClient.AddReactor("list", "pods", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+				return true, &corev1.PodList{Items: []corev1.Pod{*pod}}, nil
+			})
+			m.AgonesClient.AddReactor("update", "gameservers", func(action k8stesting.Action) (bool, runtime.Object, error) {
+				gsUpdated = true
+				ua := action.(k8stesting.UpdateAction)
+				updated := ua.GetObject().(*agonesv1.GameServer)
+				return true, updated, nil
+			})
+
+			ctx, cancel := agtesting.StartInformers(m, c.gameServerSynced, c.podSynced)
+			defer cancel()
+
+			result, err := c.syncGameServerPodIPs(ctx, gs)
+			require.NoError(t, err)
+			require.Equal(t, v.expected.updated, gsUpdated, "GameServer update operation did not occur as expected")
+			v.expected.test(t, gs, result)
+		})
+	}
+
+	// this one is too hard to convert to a table test, so it can live by itself.
+	t.Run("Update error is returned", func(t *testing.T) {
+		c, m := newFakeController()
+		gs := newGS(agonesv1.GameServerStateScheduled)
+		pod, err := gs.Pod(agtesting.FakeAPIHooks{})
+		require.NoError(t, err)
+		pod.Status.PodIPs = []corev1.PodIP{{IP: podIPFixture}}
+
+		m.KubeClient.AddReactor("list", "pods", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+			return true, &corev1.PodList{Items: []corev1.Pod{*pod}}, nil
+		})
+		m.AgonesClient.AddReactor("update", "gameservers", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+			return true, gs, errors.New("update-err")
+		})
+
+		ctx, cancel := agtesting.StartInformers(m, c.gameServerSynced, c.podSynced)
+		defer cancel()
+
+		_, err = c.syncGameServerPodIPs(ctx, gs)
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "error updating GameServer test with new PodIPs")
 	})
 }
 
@@ -1548,313 +1753,299 @@ func TestControllerSyncGameServerRequestReadyState(t *testing.T) {
 	agruntime.FeatureTestMutex.Lock()
 	defer agruntime.FeatureTestMutex.Unlock()
 
-	t.Run("GameServer with ReadyRequest State", func(t *testing.T) {
-		c, m := newFakeController()
+	runningStatus := func(containerName string) []corev1.ContainerStatus {
+		return []corev1.ContainerStatus{{
+			Name:        containerName,
+			State:       corev1.ContainerState{Running: &corev1.ContainerStateRunning{}},
+			ContainerID: containerID,
+		}}
+	}
 
-		gsFixture := &agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "default"},
-			Spec: newSingleContainerSpec(), Status: agonesv1.GameServerStatus{State: agonesv1.GameServerStateRequestReady}}
-		gsFixture.ApplyDefaults()
-		gsFixture.Status.NodeName = nodeName
-		pod, err := gsFixture.Pod(agtesting.FakeAPIHooks{})
-		require.NoError(t, err)
-		pod.Status.ContainerStatuses = []corev1.ContainerStatus{
-			{
-				Name:        gsFixture.Spec.Container,
-				State:       corev1.ContainerState{Running: &corev1.ContainerStateRunning{}},
-				ContainerID: containerID,
+	fixtures := map[string]struct {
+		// GS setup
+		gsNodeName    string
+		gsAnnotations map[string]string
+		// Pod setup
+		podIPs                []corev1.PodIP
+		podAnnotations        map[string]string
+		makeContainerStatuses func(string) []corev1.ContainerStatus
+		setupNode             bool
+		// Feature flag override ("" = no change)
+		featureFlags string
+		// Reactor errors
+		gsUpdateErr  error
+		podUpdateErr error
+		// Reactor assertions
+		checkGSUpdate  func(*testing.T, *agonesv1.GameServer)
+		checkPodUpdate func(*testing.T, *corev1.Pod)
+		// Post-call assertions
+		check      func(t *testing.T, gs *agonesv1.GameServer, err error, gsUpdated, podUpdated bool)
+		wantEvents []string
+	}{
+		"ReadyRequest with no PodIP": {
+			gsNodeName: nodeName,
+			checkGSUpdate: func(t *testing.T, gs *agonesv1.GameServer) {
+				assert.Equal(t, agonesv1.GameServerStateReady, gs.Status.State)
+				if !agruntime.FeatureEnabled(agruntime.FeatureSidecarContainers) {
+					assert.Equal(t, containerID, gs.Annotations[agonesv1.GameServerReadyContainerIDAnnotation])
+				}
 			},
-		}
-
-		gsUpdated := false
-		podUpdated := false
-
-		m.KubeClient.AddReactor("list", "pods", func(_ k8stesting.Action) (bool, runtime.Object, error) {
-			return true, &corev1.PodList{Items: []corev1.Pod{*pod}}, nil
-		})
-		m.AgonesClient.AddReactor("update", "gameservers", func(action k8stesting.Action) (bool, runtime.Object, error) {
-			gsUpdated = true
-			ua := action.(k8stesting.UpdateAction)
-			gs := ua.GetObject().(*agonesv1.GameServer)
-			assert.Equal(t, agonesv1.GameServerStateReady, gs.Status.State)
-
-			// only set if not using sidecars.
-			if !agruntime.FeatureEnabled(agruntime.FeatureSidecarContainers) {
+			checkPodUpdate: func(t *testing.T, pod *corev1.Pod) {
+				assert.Equal(t, containerID, pod.Annotations[agonesv1.GameServerReadyContainerIDAnnotation])
+			},
+			check: func(t *testing.T, gs *agonesv1.GameServer, err error, gsUpdated, podUpdated bool) {
+				require.NoError(t, err)
+				assert.True(t, gsUpdated, "GameServer wasn't updated")
+				if agruntime.FeatureEnabled(agruntime.FeatureSidecarContainers) {
+					assert.False(t, podUpdated, "Pod was updated")
+				} else {
+					assert.True(t, podUpdated, "Pod was not updated")
+				}
+				assert.Equal(t, agonesv1.GameServerStateReady, gs.Status.State)
+				assert.Empty(t, gs.Status.Addresses)
+			},
+			wantEvents: []string{"SDK.Ready() complete"},
+		},
+		"ReadyRequest with PodIP": {
+			gsNodeName: nodeName,
+			podIPs:     []corev1.PodIP{{IP: ipFixture}},
+			checkGSUpdate: func(t *testing.T, gs *agonesv1.GameServer) {
+				assert.Equal(t, agonesv1.GameServerStateReady, gs.Status.State)
+				assert.Equal(t, []corev1.NodeAddress{{Type: agonesv1.NodePodIP, Address: ipFixture}}, gs.Status.Addresses)
+				if !agruntime.FeatureEnabled(agruntime.FeatureSidecarContainers) {
+					assert.Equal(t, containerID, gs.Annotations[agonesv1.GameServerReadyContainerIDAnnotation])
+				}
+			},
+			checkPodUpdate: func(t *testing.T, pod *corev1.Pod) {
+				assert.Equal(t, containerID, pod.Annotations[agonesv1.GameServerReadyContainerIDAnnotation])
+			},
+			check: func(t *testing.T, gs *agonesv1.GameServer, err error, gsUpdated, podUpdated bool) {
+				require.NoError(t, err)
+				assert.True(t, gsUpdated, "GameServer wasn't updated")
+				if agruntime.FeatureEnabled(agruntime.FeatureSidecarContainers) {
+					assert.False(t, podUpdated, "Pod was updated")
+				} else {
+					assert.True(t, podUpdated, "Pod was not updated")
+				}
+				assert.Equal(t, agonesv1.GameServerStateReady, gs.Status.State)
+				assert.Equal(t, []corev1.NodeAddress{{Type: agonesv1.NodePodIP, Address: ipFixture}}, gs.Status.Addresses)
+			},
+			wantEvents: []string{"SDK.Ready() complete"},
+		},
+		"Error on GameServer update": {
+			gsNodeName:   nodeName,
+			featureFlags: string(agruntime.FeatureSidecarContainers) + "=false",
+			gsUpdateErr:  errors.New("update-err"),
+			checkGSUpdate: func(t *testing.T, gs *agonesv1.GameServer) {
+				assert.Equal(t, agonesv1.GameServerStateReady, gs.Status.State)
 				assert.Equal(t, containerID, gs.Annotations[agonesv1.GameServerReadyContainerIDAnnotation])
+			},
+			checkPodUpdate: func(t *testing.T, pod *corev1.Pod) {
+				assert.Equal(t, containerID, pod.Annotations[agonesv1.GameServerReadyContainerIDAnnotation])
+			},
+			check: func(t *testing.T, _ *agonesv1.GameServer, err error, _, podUpdated bool) {
+				assert.True(t, podUpdated, "pod was not updated")
+				require.EqualError(t, err, "error setting Ready, Port and address on GameServer test Status: update-err")
+			},
+		},
+		"Error on pod update": {
+			gsNodeName:   nodeName,
+			featureFlags: string(agruntime.FeatureSidecarContainers) + "=false",
+			podUpdateErr: errors.New("pod-error"),
+			checkPodUpdate: func(t *testing.T, pod *corev1.Pod) {
+				assert.Equal(t, containerID, pod.Annotations[agonesv1.GameServerReadyContainerIDAnnotation])
+			},
+			check: func(t *testing.T, _ *agonesv1.GameServer, err error, gsUpdated, podUpdated bool) {
+				assert.True(t, podUpdated, "pod was not updated")
+				assert.False(t, gsUpdated, "GameServer was updated")
+				require.EqualError(t, err, "error updating ready annotation on Pod: test: pod-error")
+			},
+		},
+		"Pod annotation already set": {
+			gsNodeName:     nodeName,
+			featureFlags:   string(agruntime.FeatureSidecarContainers) + "=false",
+			podAnnotations: map[string]string{agonesv1.GameServerReadyContainerIDAnnotation: containerID},
+			checkGSUpdate: func(t *testing.T, gs *agonesv1.GameServer) {
+				assert.Equal(t, agonesv1.GameServerStateReady, gs.Status.State)
+				assert.Equal(t, containerID, gs.Annotations[agonesv1.GameServerReadyContainerIDAnnotation])
+			},
+			check: func(t *testing.T, gs *agonesv1.GameServer, err error, gsUpdated, podUpdated bool) {
+				require.NoError(t, err)
+				assert.True(t, gsUpdated, "GameServer wasn't updated")
+				assert.False(t, podUpdated, "Pod was updated")
+				assert.Equal(t, agonesv1.GameServerStateReady, gs.Status.State)
+			},
+			wantEvents: []string{"SDK.Ready() complete"},
+		},
+		"GameServer without an Address but in RequestReady State": {
+			setupNode: true,
+			checkGSUpdate: func(t *testing.T, gs *agonesv1.GameServer) {
+				assert.Equal(t, agonesv1.GameServerStateReady, gs.Status.State)
+				if !agruntime.FeatureEnabled(agruntime.FeatureSidecarContainers) {
+					assert.Equal(t, containerID, gs.Annotations[agonesv1.GameServerReadyContainerIDAnnotation])
+				}
+			},
+			checkPodUpdate: func(t *testing.T, pod *corev1.Pod) {
+				assert.Equal(t, containerID, pod.Annotations[agonesv1.GameServerReadyContainerIDAnnotation])
+			},
+			check: func(t *testing.T, gs *agonesv1.GameServer, err error, gsUpdated, podUpdated bool) {
+				require.NoError(t, err)
+				assert.True(t, gsUpdated, "GameServer wasn't updated")
+				if agruntime.FeatureEnabled(agruntime.FeatureSidecarContainers) {
+					assert.False(t, podUpdated, "Pod was updated")
+				} else {
+					assert.True(t, podUpdated, "Pod wasn't updated")
+				}
+				assert.Equal(t, agonesv1.GameServerStateReady, gs.Status.State)
+				assert.Equal(t, nodeFixtureName, gs.Status.NodeName)
+				assert.Equal(t, ipFixture, gs.Status.Address)
+				assert.Equal(t, []corev1.NodeAddress{{Address: ipFixture, Type: "ExternalIP"}}, gs.Status.Addresses)
+			},
+			wantEvents: []string{"Address and port populated", "SDK.Ready() complete"},
+		},
+		"GameServer with ReadyContainerIDAnnotation already set": {
+			gsNodeName:    nodeName,
+			gsAnnotations: map[string]string{agonesv1.GameServerReadyContainerIDAnnotation: "4321"},
+			checkGSUpdate: func(t *testing.T, gs *agonesv1.GameServer) {
+				assert.Equal(t, agonesv1.GameServerStateReady, gs.Status.State)
+				assert.NotEqual(t, containerID, gs.Annotations[agonesv1.GameServerReadyContainerIDAnnotation])
+			},
+			checkPodUpdate: func(t *testing.T, pod *corev1.Pod) {
+				assert.NotEqual(t, containerID, pod.Annotations[agonesv1.GameServerReadyContainerIDAnnotation])
+			},
+			check: func(t *testing.T, gs *agonesv1.GameServer, err error, gsUpdated, podUpdated bool) {
+				require.NoError(t, err)
+				assert.True(t, gsUpdated, "GameServer wasn't updated")
+				if agruntime.FeatureEnabled(agruntime.FeatureSidecarContainers) {
+					assert.False(t, podUpdated, "Pod was updated")
+				} else {
+					assert.True(t, podUpdated, "Pod wasn't updated")
+				}
+				assert.Equal(t, agonesv1.GameServerStateReady, gs.Status.State)
+			},
+			wantEvents: []string{"SDK.Ready() complete"},
+		},
+		"Pod not in running state": {
+			gsNodeName:   nodeName,
+			featureFlags: string(agruntime.FeatureSidecarContainers) + "=false",
+			makeContainerStatuses: func(containerName string) []corev1.ContainerStatus {
+				return []corev1.ContainerStatus{{Name: containerName}}
+			},
+			check: func(t *testing.T, _ *agonesv1.GameServer, err error, gsUpdated, podUpdated bool) {
+				require.EqualError(t, err, "game server container for GameServer test in namespace default is not currently running, try again")
+				assert.False(t, gsUpdated, "GameServer was updated")
+				assert.False(t, podUpdated, "Pod was updated")
+			},
+		},
+		"Pod missing ContainerStatuses": {
+			gsNodeName:   nodeName,
+			featureFlags: string(agruntime.FeatureSidecarContainers) + "=false",
+			makeContainerStatuses: func(_ string) []corev1.ContainerStatus {
+				return nil
+			},
+			check: func(t *testing.T, _ *agonesv1.GameServer, err error, gsUpdated, podUpdated bool) {
+				require.EqualError(t, err, "game server container for GameServer test in namespace default not present in pod status, try again")
+				assert.False(t, gsUpdated, "GameServer was updated")
+				assert.False(t, podUpdated, "Pod was updated")
+			},
+		},
+		"PodIPs are folded into the Ready state update": {
+			gsNodeName: nodeName,
+			podIPs:     []corev1.PodIP{{IP: ipFixture}},
+			check: func(t *testing.T, gs *agonesv1.GameServer, err error, _, _ bool) {
+				require.NoError(t, err)
+				assert.Equal(t, agonesv1.GameServerStateReady, gs.Status.State)
+				var found bool
+				for _, addr := range gs.Status.Addresses {
+					if addr.Type == agonesv1.NodePodIP && addr.Address == ipFixture {
+						found = true
+					}
+				}
+				assert.True(t, found, "PodIP should be folded into Ready update")
+			},
+		},
+	}
+
+	for name, fixture := range fixtures {
+		t.Run(name, func(t *testing.T) {
+			if fixture.featureFlags != "" {
+				require.NoError(t, agruntime.ParseFeatures(fixture.featureFlags))
 			}
-			return true, gs, nil
+
+			c, m := newFakeController()
+
+			gsFixture := &agonesv1.GameServer{
+				ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "default"},
+				Spec:       newSingleContainerSpec(),
+				Status:     agonesv1.GameServerStatus{State: agonesv1.GameServerStateRequestReady},
+			}
+			gsFixture.ApplyDefaults()
+			gsFixture.Status.NodeName = fixture.gsNodeName
+			for k, v := range fixture.gsAnnotations {
+				gsFixture.Annotations[k] = v
+			}
+
+			pod, err := gsFixture.Pod(agtesting.FakeAPIHooks{})
+			require.NoError(t, err)
+			makeStatuses := fixture.makeContainerStatuses
+			if makeStatuses == nil {
+				makeStatuses = runningStatus
+			}
+			pod.Status.ContainerStatuses = makeStatuses(gsFixture.Spec.Container)
+			pod.Status.PodIPs = fixture.podIPs
+			if fixture.podAnnotations != nil {
+				pod.ObjectMeta.Annotations = fixture.podAnnotations
+			}
+			if fixture.setupNode {
+				pod.Spec.NodeName = nodeFixtureName
+				node := corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{Name: nodeFixtureName},
+					Status:     corev1.NodeStatus{Addresses: []corev1.NodeAddress{{Address: ipFixture, Type: corev1.NodeExternalIP}}},
+				}
+				m.KubeClient.AddReactor("list", "nodes", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+					return true, &corev1.NodeList{Items: []corev1.Node{node}}, nil
+				})
+			}
+
+			gsUpdated := false
+			podUpdated := false
+
+			m.KubeClient.AddReactor("list", "pods", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+				return true, &corev1.PodList{Items: []corev1.Pod{*pod}}, nil
+			})
+			m.AgonesClient.AddReactor("update", "gameservers", func(action k8stesting.Action) (bool, runtime.Object, error) {
+				gsUpdated = true
+				ua := action.(k8stesting.UpdateAction)
+				gs := ua.GetObject().(*agonesv1.GameServer)
+				if fixture.checkGSUpdate != nil {
+					fixture.checkGSUpdate(t, gs)
+				}
+				return true, gs, fixture.gsUpdateErr
+			})
+			m.KubeClient.AddReactor("update", "pods", func(action k8stesting.Action) (bool, runtime.Object, error) {
+				podUpdated = true
+				ua := action.(k8stesting.UpdateAction)
+				p := ua.GetObject().(*corev1.Pod)
+				if fixture.checkPodUpdate != nil {
+					fixture.checkPodUpdate(t, p)
+				}
+				return true, p, fixture.podUpdateErr
+			})
+
+			synced := []cache.InformerSynced{c.podSynced}
+			if fixture.setupNode {
+				synced = append(synced, c.nodeSynced)
+			}
+			ctx, cancel := agtesting.StartInformers(m, synced...)
+			defer cancel()
+
+			gs, err := c.syncGameServerRequestReadyState(ctx, gsFixture)
+			fixture.check(t, gs, err, gsUpdated, podUpdated)
+			for _, event := range fixture.wantEvents {
+				agtesting.AssertEventContains(t, m.FakeRecorder.Events, event)
+			}
 		})
-		m.KubeClient.AddReactor("update", "pods", func(action k8stesting.Action) (bool, runtime.Object, error) {
-			podUpdated = true
-			ua := action.(k8stesting.UpdateAction)
-			pod := ua.GetObject().(*corev1.Pod)
-			assert.Equal(t, containerID, pod.Annotations[agonesv1.GameServerReadyContainerIDAnnotation])
-			return true, pod, nil
-		})
-
-		ctx, cancel := agtesting.StartInformers(m, c.podSynced)
-		defer cancel()
-
-		gs, err := c.syncGameServerRequestReadyState(ctx, gsFixture)
-		assert.NoError(t, err, "should not error")
-		assert.True(t, gsUpdated, "GameServer wasn't updated")
-		if agruntime.FeatureEnabled(agruntime.FeatureSidecarContainers) {
-			assert.False(t, podUpdated, "Pod was updated")
-		} else {
-			assert.True(t, podUpdated, "Pod was not updated")
-		}
-		assert.Equal(t, agonesv1.GameServerStateReady, gs.Status.State)
-		agtesting.AssertEventContains(t, m.FakeRecorder.Events, "SDK.Ready() complete")
-	})
-
-	t.Run("Error on GameServer update", func(t *testing.T) {
-		require.NoError(t, agruntime.ParseFeatures(string(agruntime.FeatureSidecarContainers)+"=false"))
-
-		c, m := newFakeController()
-
-		gsFixture := &agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "default"},
-			Spec: newSingleContainerSpec(), Status: agonesv1.GameServerStatus{State: agonesv1.GameServerStateRequestReady}}
-		gsFixture.ApplyDefaults()
-		gsFixture.Status.NodeName = nodeName
-		pod, err := gsFixture.Pod(agtesting.FakeAPIHooks{})
-		require.NoError(t, err)
-		pod.Status.ContainerStatuses = []corev1.ContainerStatus{
-			{
-				Name:        gsFixture.Spec.Container,
-				State:       corev1.ContainerState{Running: &corev1.ContainerStateRunning{}},
-				ContainerID: containerID,
-			},
-		}
-		podUpdated := false
-
-		m.KubeClient.AddReactor("list", "pods", func(_ k8stesting.Action) (bool, runtime.Object, error) {
-			return true, &corev1.PodList{Items: []corev1.Pod{*pod}}, nil
-		})
-		m.AgonesClient.AddReactor("update", "gameservers", func(action k8stesting.Action) (bool, runtime.Object, error) {
-			ua := action.(k8stesting.UpdateAction)
-			gs := ua.GetObject().(*agonesv1.GameServer)
-			assert.Equal(t, agonesv1.GameServerStateReady, gs.Status.State)
-			assert.Equal(t, containerID, gs.Annotations[agonesv1.GameServerReadyContainerIDAnnotation])
-			return true, gs, errors.New("update-err")
-		})
-		m.KubeClient.AddReactor("update", "pods", func(action k8stesting.Action) (bool, runtime.Object, error) {
-			podUpdated = true
-			ua := action.(k8stesting.UpdateAction)
-			pod := ua.GetObject().(*corev1.Pod)
-			assert.Equal(t, containerID, pod.Annotations[agonesv1.GameServerReadyContainerIDAnnotation])
-			return true, pod, nil
-		})
-
-		ctx, cancel := agtesting.StartInformers(m, c.podSynced)
-		defer cancel()
-
-		_, err = c.syncGameServerRequestReadyState(ctx, gsFixture)
-		assert.True(t, podUpdated, "pod was not updated")
-		require.EqualError(t, err, "error setting Ready, Port and address on GameServer test Status: update-err")
-	})
-
-	t.Run("Error on pod update", func(t *testing.T) {
-		c, m := newFakeController()
-
-		gsFixture := &agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "default"},
-			Spec: newSingleContainerSpec(), Status: agonesv1.GameServerStatus{State: agonesv1.GameServerStateRequestReady}}
-		gsFixture.ApplyDefaults()
-		gsFixture.Status.NodeName = nodeName
-		pod, err := gsFixture.Pod(agtesting.FakeAPIHooks{})
-		require.NoError(t, err)
-		pod.Status.ContainerStatuses = []corev1.ContainerStatus{
-			{
-				Name:        gsFixture.Spec.Container,
-				State:       corev1.ContainerState{Running: &corev1.ContainerStateRunning{}},
-				ContainerID: containerID,
-			},
-		}
-		gsUpdated := false
-		podUpdated := false
-
-		m.KubeClient.AddReactor("list", "pods", func(_ k8stesting.Action) (bool, runtime.Object, error) {
-			return true, &corev1.PodList{Items: []corev1.Pod{*pod}}, nil
-		})
-		m.AgonesClient.AddReactor("update", "gameservers", func(_ k8stesting.Action) (bool, runtime.Object, error) {
-			gsUpdated = true
-			return true, nil, nil
-		})
-		m.KubeClient.AddReactor("update", "pods", func(action k8stesting.Action) (bool, runtime.Object, error) {
-			podUpdated = true
-			ua := action.(k8stesting.UpdateAction)
-			pod := ua.GetObject().(*corev1.Pod)
-			assert.Equal(t, containerID, pod.Annotations[agonesv1.GameServerReadyContainerIDAnnotation])
-			return true, pod, errors.New("pod-error")
-		})
-
-		ctx, cancel := agtesting.StartInformers(m, c.podSynced)
-		defer cancel()
-
-		_, err = c.syncGameServerRequestReadyState(ctx, gsFixture)
-		assert.True(t, podUpdated, "pod was not updated")
-		assert.False(t, gsUpdated, "GameServer was updated")
-		require.EqualError(t, err, "error updating ready annotation on Pod: test: pod-error")
-	})
-
-	t.Run("Pod annotation already set", func(t *testing.T) {
-		c, m := newFakeController()
-
-		gsFixture := &agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "default"},
-			Spec: newSingleContainerSpec(), Status: agonesv1.GameServerStatus{State: agonesv1.GameServerStateRequestReady}}
-		gsFixture.ApplyDefaults()
-		gsFixture.Status.NodeName = nodeName
-		pod, err := gsFixture.Pod(agtesting.FakeAPIHooks{})
-		require.NoError(t, err)
-		pod.ObjectMeta.Annotations = map[string]string{agonesv1.GameServerReadyContainerIDAnnotation: containerID}
-		pod.Status.ContainerStatuses = []corev1.ContainerStatus{
-			{
-				Name:        gsFixture.Spec.Container,
-				State:       corev1.ContainerState{Running: &corev1.ContainerStateRunning{}},
-				ContainerID: containerID,
-			},
-		}
-		gsUpdated := false
-		podUpdated := false
-
-		m.KubeClient.AddReactor("list", "pods", func(_ k8stesting.Action) (bool, runtime.Object, error) {
-			return true, &corev1.PodList{Items: []corev1.Pod{*pod}}, nil
-		})
-		m.AgonesClient.AddReactor("update", "gameservers", func(action k8stesting.Action) (bool, runtime.Object, error) {
-			gsUpdated = true
-			ua := action.(k8stesting.UpdateAction)
-			gs := ua.GetObject().(*agonesv1.GameServer)
-			assert.Equal(t, agonesv1.GameServerStateReady, gs.Status.State)
-			assert.Equal(t, containerID, gs.Annotations[agonesv1.GameServerReadyContainerIDAnnotation])
-			return true, gs, nil
-		})
-		m.KubeClient.AddReactor("update", "pods", func(_ k8stesting.Action) (bool, runtime.Object, error) {
-			podUpdated = true
-			return true, nil, nil
-		})
-
-		ctx, cancel := agtesting.StartInformers(m, c.podSynced)
-		defer cancel()
-
-		gs, err := c.syncGameServerRequestReadyState(ctx, gsFixture)
-		assert.NoError(t, err, "should not error")
-		assert.True(t, gsUpdated, "GameServer wasn't updated")
-		assert.False(t, podUpdated, "Pod was updated")
-		assert.Equal(t, agonesv1.GameServerStateReady, gs.Status.State)
-		agtesting.AssertEventContains(t, m.FakeRecorder.Events, "SDK.Ready() complete")
-
-	})
-
-	t.Run("GameServer without an Address, but RequestReady State", func(t *testing.T) {
-		c, m := newFakeController()
-
-		gsFixture := &agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "default"},
-			Spec: newSingleContainerSpec(), Status: agonesv1.GameServerStatus{State: agonesv1.GameServerStateRequestReady}}
-		gsFixture.ApplyDefaults()
-		pod, err := gsFixture.Pod(agtesting.FakeAPIHooks{})
-		assert.Nil(t, err)
-		pod.Spec.NodeName = nodeFixtureName
-		pod.Status.ContainerStatuses = []corev1.ContainerStatus{
-			{
-				Name:        gsFixture.Spec.Container,
-				State:       corev1.ContainerState{Running: &corev1.ContainerStateRunning{}},
-				ContainerID: containerID,
-			},
-		}
-		gsUpdated := false
-		podUpdated := false
-
-		ipFixture := "12.12.12.12"
-		nodeFixture := corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeFixtureName}, Status: corev1.NodeStatus{Addresses: []corev1.NodeAddress{{Address: ipFixture, Type: corev1.NodeExternalIP}}}}
-
-		m.KubeClient.AddReactor("list", "nodes", func(_ k8stesting.Action) (bool, runtime.Object, error) {
-			return true, &corev1.NodeList{Items: []corev1.Node{nodeFixture}}, nil
-		})
-
-		m.KubeClient.AddReactor("list", "pods", func(_ k8stesting.Action) (bool, runtime.Object, error) {
-			return true, &corev1.PodList{Items: []corev1.Pod{*pod}}, nil
-		})
-		m.AgonesClient.AddReactor("update", "gameservers", func(action k8stesting.Action) (bool, runtime.Object, error) {
-			gsUpdated = true
-			ua := action.(k8stesting.UpdateAction)
-			gs := ua.GetObject().(*agonesv1.GameServer)
-			assert.Equal(t, agonesv1.GameServerStateReady, gs.Status.State)
-			assert.Equal(t, containerID, gs.Annotations[agonesv1.GameServerReadyContainerIDAnnotation])
-			return true, gs, nil
-		})
-		m.KubeClient.AddReactor("update", "pods", func(action k8stesting.Action) (bool, runtime.Object, error) {
-			podUpdated = true
-			ua := action.(k8stesting.UpdateAction)
-			pod := ua.GetObject().(*corev1.Pod)
-			assert.Equal(t, containerID, pod.Annotations[agonesv1.GameServerReadyContainerIDAnnotation])
-			return true, pod, nil
-		})
-
-		ctx, cancel := agtesting.StartInformers(m, c.podSynced, c.nodeSynced)
-		defer cancel()
-
-		gs, err := c.syncGameServerRequestReadyState(ctx, gsFixture)
-		assert.Nil(t, err, "should not error")
-		assert.True(t, gsUpdated, "GameServer wasn't updated")
-		assert.True(t, podUpdated, "Pod wasn't updated")
-		assert.Equal(t, agonesv1.GameServerStateReady, gs.Status.State)
-
-		assert.Equal(t, gs.Status.NodeName, nodeFixture.ObjectMeta.Name)
-		assert.Equal(t, gs.Status.Address, ipFixture)
-		assert.Equal(t, []corev1.NodeAddress{{Address: ipFixture, Type: "ExternalIP"}}, gs.Status.Addresses)
-
-		agtesting.AssertEventContains(t, m.FakeRecorder.Events, "Address and port populated")
-		agtesting.AssertEventContains(t, m.FakeRecorder.Events, "SDK.Ready() complete")
-	})
-
-	t.Run("GameServer with a GameServerReadyContainerIDAnnotation already", func(t *testing.T) {
-		c, m := newFakeController()
-
-		gsFixture := &agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "default"},
-			Spec: newSingleContainerSpec(), Status: agonesv1.GameServerStatus{State: agonesv1.GameServerStateRequestReady}}
-		gsFixture.ApplyDefaults()
-		gsFixture.Status.NodeName = nodeName
-		gsFixture.Annotations[agonesv1.GameServerReadyContainerIDAnnotation] = "4321"
-		pod, err := gsFixture.Pod(agtesting.FakeAPIHooks{})
-		pod.Status.ContainerStatuses = []corev1.ContainerStatus{
-			{
-				Name:        gsFixture.Spec.Container,
-				State:       corev1.ContainerState{Running: &corev1.ContainerStateRunning{}},
-				ContainerID: containerID,
-			},
-		}
-		assert.Nil(t, err)
-		gsUpdated := false
-		podUpdated := false
-
-		m.KubeClient.AddReactor("list", "pods", func(_ k8stesting.Action) (bool, runtime.Object, error) {
-			return true, &corev1.PodList{Items: []corev1.Pod{*pod}}, nil
-		})
-		m.AgonesClient.AddReactor("update", "gameservers", func(action k8stesting.Action) (bool, runtime.Object, error) {
-			gsUpdated = true
-			ua := action.(k8stesting.UpdateAction)
-			gs := ua.GetObject().(*agonesv1.GameServer)
-			assert.Equal(t, agonesv1.GameServerStateReady, gs.Status.State)
-			assert.NotEqual(t, containerID, gs.Annotations[agonesv1.GameServerReadyContainerIDAnnotation])
-
-			return true, gs, nil
-		})
-		m.KubeClient.AddReactor("update", "pods", func(action k8stesting.Action) (bool, runtime.Object, error) {
-			podUpdated = true
-			ua := action.(k8stesting.UpdateAction)
-			pod := ua.GetObject().(*corev1.Pod)
-			assert.NotEqual(t, containerID, pod.Annotations[agonesv1.GameServerReadyContainerIDAnnotation])
-			return true, pod, nil
-		})
-
-		ctx, cancel := agtesting.StartInformers(m, c.podSynced)
-		defer cancel()
-
-		gs, err := c.syncGameServerRequestReadyState(ctx, gsFixture)
-		assert.NoError(t, err, "should not error")
-		assert.True(t, gsUpdated, "GameServer wasn't updated")
-		assert.True(t, podUpdated, "Pod wasn't updated")
-		assert.Equal(t, agonesv1.GameServerStateReady, gs.Status.State)
-		agtesting.AssertEventContains(t, m.FakeRecorder.Events, "SDK.Ready() complete")
-	})
+	}
 
 	for _, s := range []agonesv1.GameServerState{"Unknown", agonesv1.GameServerStateUnhealthy} {
 		name := fmt.Sprintf("GameServer with %s state", s)
@@ -1864,73 +2055,6 @@ func TestControllerSyncGameServerRequestReadyState(t *testing.T) {
 			})
 		})
 	}
-
-	t.Run("GameServer whose pod is currently not in a running state, so should retry and not update", func(t *testing.T) {
-		c, m := newFakeController()
-
-		gsFixture := &agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "default"},
-			Spec: newSingleContainerSpec(), Status: agonesv1.GameServerStatus{State: agonesv1.GameServerStateRequestReady}}
-		gsFixture.ApplyDefaults()
-		gsFixture.Status.NodeName = nodeName
-		pod, err := gsFixture.Pod(agtesting.FakeAPIHooks{})
-		pod.Status.ContainerStatuses = []corev1.ContainerStatus{{Name: gsFixture.Spec.Container}}
-		assert.Nil(t, err)
-		gsUpdated := false
-		podUpdated := false
-
-		m.KubeClient.AddReactor("list", "pods", func(_ k8stesting.Action) (bool, runtime.Object, error) {
-			return true, &corev1.PodList{Items: []corev1.Pod{*pod}}, nil
-		})
-		m.AgonesClient.AddReactor("update", "gameservers", func(_ k8stesting.Action) (bool, runtime.Object, error) {
-			gsUpdated = true
-			return true, nil, nil
-		})
-		m.KubeClient.AddReactor("update", "pods", func(_ k8stesting.Action) (bool, runtime.Object, error) {
-			podUpdated = true
-			return true, nil, nil
-		})
-
-		ctx, cancel := agtesting.StartInformers(m, c.podSynced)
-		defer cancel()
-
-		_, err = c.syncGameServerRequestReadyState(ctx, gsFixture)
-		assert.EqualError(t, err, "game server container for GameServer test in namespace default is not currently running, try again")
-		assert.False(t, gsUpdated, "GameServer was updated")
-		assert.False(t, podUpdated, "Pod was updated")
-	})
-
-	t.Run("GameServer whose pod is missing ContainerStatuses, so should retry and not update", func(t *testing.T) {
-		c, m := newFakeController()
-
-		gsFixture := &agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "default"},
-			Spec: newSingleContainerSpec(), Status: agonesv1.GameServerStatus{State: agonesv1.GameServerStateRequestReady}}
-		gsFixture.ApplyDefaults()
-		gsFixture.Status.NodeName = nodeName
-		pod, err := gsFixture.Pod(agtesting.FakeAPIHooks{})
-		assert.Nil(t, err)
-		gsUpdated := false
-		podUpdated := false
-
-		m.KubeClient.AddReactor("list", "pods", func(_ k8stesting.Action) (bool, runtime.Object, error) {
-			return true, &corev1.PodList{Items: []corev1.Pod{*pod}}, nil
-		})
-		m.AgonesClient.AddReactor("update", "gameservers", func(_ k8stesting.Action) (bool, runtime.Object, error) {
-			gsUpdated = true
-			return true, nil, nil
-		})
-		m.KubeClient.AddReactor("update", "pods", func(_ k8stesting.Action) (bool, runtime.Object, error) {
-			podUpdated = true
-			return true, nil, nil
-		})
-
-		ctx, cancel := agtesting.StartInformers(m, c.podSynced)
-		defer cancel()
-
-		_, err = c.syncGameServerRequestReadyState(ctx, gsFixture)
-		assert.EqualError(t, err, "game server container for GameServer test in namespace default not present in pod status, try again")
-		assert.False(t, gsUpdated, "GameServer was updated")
-		assert.False(t, podUpdated, "Pod was updated")
-	})
 
 	t.Run("GameServer with non zero deletion datetime", func(t *testing.T) {
 		testWithNonZeroDeletionTimestamp(t, func(c *Controller, fixture *agonesv1.GameServer) (*agonesv1.GameServer, error) {

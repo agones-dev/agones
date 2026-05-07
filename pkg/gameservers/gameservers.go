@@ -114,6 +114,31 @@ func applyGameServerAddressAndPort(gs *agonesv1.GameServer, node *corev1.Node, p
 	return gs, nil
 }
 
+// applyGameServerPodIPs appends any PodIPs from the pod not already present in
+// gs.Status.Addresses, returning whether any were added.
+func applyGameServerPodIPs(gs *agonesv1.GameServer, pod *corev1.Pod) (*agonesv1.GameServer, bool) {
+	if len(pod.Status.PodIPs) == 0 {
+		return gs, false
+	}
+	existing := make(map[string]bool, len(gs.Status.Addresses))
+	for _, addr := range gs.Status.Addresses {
+		if addr.Type == agonesv1.NodePodIP {
+			existing[addr.Address] = true
+		}
+	}
+	updated := false
+	for _, ip := range pod.Status.PodIPs {
+		if !existing[ip.IP] {
+			gs.Status.Addresses = append(gs.Status.Addresses, corev1.NodeAddress{
+				Type:    agonesv1.NodePodIP,
+				Address: ip.IP,
+			})
+			updated = true
+		}
+	}
+	return gs, updated
+}
+
 // isBeforePodCreated checks to see if the GameServer is in a state in which the pod could not have been
 // created yet. This includes "Starting" in which a pod MAY exist, but may not yet be available, depending on when the
 // informer cache updates
