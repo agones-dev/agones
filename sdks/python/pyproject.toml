@@ -24,7 +24,7 @@ readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.10"
 authors = [
-    {name = "Google LLC"},
+    {name = "Agones Contributors"},
 ]
 keywords = ["agones", "game-server", "kubernetes"]
 classifiers = [
