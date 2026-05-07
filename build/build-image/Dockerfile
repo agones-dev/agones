@@ -140,4 +140,4 @@ RUN wget -nv -O terraform.zip https://releases.hashicorp.com/terraform/1.5.4/ter
 COPY *.sh /root/
 RUN chmod +x /root/*.sh
 
-WORKDIR /go
+WORKDIR /go 
