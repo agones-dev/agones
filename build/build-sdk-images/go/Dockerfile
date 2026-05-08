@@ -23,8 +23,9 @@ WORKDIR /usr/local
 ENV GO_VERSION=1.26.0
 ENV GO111MODULE=on
 ENV GOPATH /go
-RUN wget -q https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz && \
-    tar -xzf go${GO_VERSION}.linux-amd64.tar.gz && rm go${GO_VERSION}.linux-amd64.tar.gz && mkdir -p ${GOPATH}
+RUN ARCH=$(dpkg --print-architecture) && \
+    wget -q https://dl.google.com/go/go${GO_VERSION}.linux-${ARCH}.tar.gz && \
+    tar -xzf go${GO_VERSION}.linux-${ARCH}.tar.gz && rm go${GO_VERSION}.linux-${ARCH}.tar.gz && mkdir -p ${GOPATH}
 
 ENV PATH /usr/local/go/bin:/go/bin:$PATH
 

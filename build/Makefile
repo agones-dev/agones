@@ -218,12 +218,6 @@ ifdef LOCAL_ZIP
 	ZIP_SDK=cd $(agones_path)/cmd/sdk-server/bin && zip -0
 endif
 
-unameprocessor := $(shell uname -p)
-ifeq ($(unameprocessor),arm)
-	DOCKER_BUILD_ARGS += --platform linux/x86_64
-	DOCKER_RUN_ARGS += --platform linux/x86_64
-endif
-
 #    ___  ____    ___            _           _
 #   / _ \/ ___|  |_ _|_ __   ___| |_   _  __| | ___
 #  | | | \___ \   | || '_ \ / __| | | | |/ _` |/ _ \
@@ -557,14 +551,14 @@ build-controller-image: build-controller-image-arm64
 endif
 
 build-controller-image-amd64: $(ensure-build-image) build-controller-binary build-licenses build-required-src-dist
-	docker build $(agones_path)/cmd/controller/ --tag=$(controller_amd64_tag) $(DOCKER_BUILD_ARGS)
+	docker build --platform linux/amd64 $(agones_path)/cmd/controller/ --tag=$(controller_amd64_tag) $(DOCKER_BUILD_ARGS)
 # creating docker builder and then using that builder to build controller image in buildx command
 build-controller-image-arm64: $(ensure-build-image) build-controller-binary create-arm64-builder
 	docker buildx build --platform linux/arm64 --builder $(BUILDX_ARM64_BUILDER) --build-arg ARCH=arm64 $(agones_path)/cmd/controller/ --tag=$(controller_arm64_tag) $(DOCKER_BUILD_ARGS)
 
 # Build the debug image for the controller service
 build-controller-debug-image: $(ensure-build-image) build-controller-debug-binary build-licenses build-required-src-dist
-	docker build $(agones_path)/cmd/controller/ --file $(agones_path)/cmd/controller/Dockerfile.debug --tag=$(controller_amd64_tag) $(DOCKER_BUILD_ARGS)
+	docker build --platform linux/amd64 $(agones_path)/cmd/controller/ --file $(agones_path)/cmd/controller/Dockerfile.debug --tag=$(controller_amd64_tag) $(DOCKER_BUILD_ARGS)
 
 # push the gameservers controller image
 push-controller-image: push-controller-image-amd64
@@ -620,14 +614,14 @@ build-extensions-image: build-extensions-image-arm64
 endif
 
 build-extensions-image-amd64: $(ensure-build-image) build-extensions-binary build-licenses build-required-src-dist
-	docker build $(agones_path)/cmd/extensions/ --tag=$(extensions_amd64_tag) $(DOCKER_BUILD_ARGS)
+	docker build --platform linux/amd64 $(agones_path)/cmd/extensions/ --tag=$(extensions_amd64_tag) $(DOCKER_BUILD_ARGS)
 # creating docker builder and then using that builder to build extensions image in buildx command
 build-extensions-image-arm64: $(ensure-build-image) build-extensions-binary create-arm64-builder
 	docker buildx build --provenance false --platform linux/arm64 --builder $(BUILDX_ARM64_BUILDER) --build-arg ARCH=arm64 $(agones_path)/cmd/extensions/ --tag=$(extensions_arm64_tag) $(DOCKER_BUILD_ARGS)
 
 # Build the debug image for the extensions service
 build-extensions-debug-image: $(ensure-build-image) build-extensions-debug-binary build-licenses build-required-src-dist
-	docker build $(agones_path)/cmd/extensions/ --file $(agones_path)/cmd/extensions/Dockerfile.debug --tag=$(extensions_amd64_tag) $(DOCKER_BUILD_ARGS)
+	docker build --platform linux/amd64 $(agones_path)/cmd/extensions/ --file $(agones_path)/cmd/extensions/Dockerfile.debug --tag=$(extensions_amd64_tag) $(DOCKER_BUILD_ARGS)
 
 # push the gameservers extensions image
 push-extensions-image: push-extensions-image-amd64
@@ -653,7 +647,7 @@ build-agones-sdk-image: build-agones-sdk-image-windows
 endif
 
 build-agones-sdk-image-amd64: $(ensure-build-image) build-agones-sdk-binary-linux-amd64
-	docker build $(agones_path)/cmd/sdk-server/ --tag=$(sidecar_linux_amd64_tag) $(DOCKER_BUILD_ARGS)
+	docker build --platform linux/amd64 $(agones_path)/cmd/sdk-server/ --tag=$(sidecar_linux_amd64_tag) $(DOCKER_BUILD_ARGS)
 # creating docker builder and then using that builder to build sdk image in buildx command
 build-agones-sdk-image-arm64: $(ensure-build-image) build-agones-sdk-binary-linux-arm64 create-arm64-builder
 	docker buildx build --provenance false --platform linux/arm64 --builder $(BUILDX_ARM64_BUILDER) --build-arg ARCH=arm64 $(agones_path)/cmd/sdk-server/ --tag=$(sidecar_linux_arm64_tag) $(DOCKER_BUILD_ARGS)
@@ -667,7 +661,7 @@ build-agones-sdk-image-windows-%: $(ensure-build-image) build-agones-sdk-binary 
 
 # Build the debug image for the agones-sdk service
 build-agones-sdk-debug-image: $(ensure-build-image) build-agones-sdk-debug-binary build-licenses build-required-src-dist
-	docker build $(agones_path)/cmd/sdk-server/ --file $(agones_path)/cmd/sdk-server/Dockerfile.debug --tag=$(sidecar_linux_amd64_tag) $(DOCKER_BUILD_ARGS)
+	docker build --platform linux/amd64 $(agones_path)/cmd/sdk-server/ --file $(agones_path)/cmd/sdk-server/Dockerfile.debug --tag=$(sidecar_linux_amd64_tag) $(DOCKER_BUILD_ARGS)
 
 # Build a static binary for the ping service
 build-ping-binary: build-ping-binary-amd64
@@ -709,14 +703,14 @@ build-ping-image: build-ping-image-arm64
 endif
 
 build-ping-image-amd64: $(ensure-build-image) build-ping-binary build-licenses build-required-src-dist
-	docker build $(agones_path)/cmd/ping/ --tag=$(ping_amd64_tag) $(DOCKER_BUILD_ARGS)
+	docker build --platform linux/amd64 $(agones_path)/cmd/ping/ --tag=$(ping_amd64_tag) $(DOCKER_BUILD_ARGS)
 # creating docker builder and then using that builder to build ping image in buildx command
 build-ping-image-arm64: $(ensure-build-image) build-ping-binary create-arm64-builder
 	docker buildx build --provenance false --platform linux/arm64 --builder $(BUILDX_ARM64_BUILDER) --build-arg ARCH=arm64 $(agones_path)/cmd/ping/ --tag=$(ping_arm64_tag) $(DOCKER_BUILD_ARGS)
 
 # Build the debug image for the ping service
 build-ping-debug-image: $(ensure-build-image) build-ping-debug-binary build-licenses build-required-src-dist
-	docker build $(agones_path)/cmd/ping/ --file $(agones_path)/cmd/ping/Dockerfile.debug --tag=$(ping_amd64_tag) $(DOCKER_BUILD_ARGS)
+	docker build --platform linux/amd64 $(agones_path)/cmd/ping/ --file $(agones_path)/cmd/ping/Dockerfile.debug --tag=$(ping_amd64_tag) $(DOCKER_BUILD_ARGS)
 
 # Build a static binary for the allocator service
 build-allocator-binary: $(ensure-build-image) build-allocator-binary-linux-amd64
@@ -757,14 +751,14 @@ build-allocator-image: build-allocator-image-arm64
 endif
 
 build-allocator-image-amd64: $(ensure-build-image) build-allocator-binary build-licenses build-required-src-dist
-	docker build $(agones_path)/cmd/allocator/ --tag=$(allocator_amd64_tag) $(DOCKER_BUILD_ARGS)
+	docker build --platform linux/amd64 $(agones_path)/cmd/allocator/ --tag=$(allocator_amd64_tag) $(DOCKER_BUILD_ARGS)
 # creating docker builder and then using that builder to build allocator image in buildx command
 build-allocator-image-arm64: $(ensure-build-image) build-allocator-binary create-arm64-builder
 	docker buildx build --provenance false $(agones_path)/cmd/allocator/ --builder $(BUILDX_ARM64_BUILDER) --tag=$(allocator_arm64_tag) --build-arg ARCH=arm64 --platform linux/arm64 $(DOCKER_BUILD_ARGS)
 
 # Build the debug image for the allocator service
 build-allocator-debug-image: $(ensure-build-image) build-allocator-debug-binary build-licenses build-required-src-dist
-	docker build $(agones_path)/cmd/allocator/ --file $(agones_path)/cmd/allocator/Dockerfile.debug --tag=$(allocator_amd64_tag) $(DOCKER_BUILD_ARGS)
+	docker build --platform linux/amd64 $(agones_path)/cmd/allocator/ --file $(agones_path)/cmd/allocator/Dockerfile.debug --tag=$(allocator_amd64_tag) $(DOCKER_BUILD_ARGS)
 
 # push the processor image
 build-processor-binary: $(ensure-build-image) build-processor-binary-linux-amd64
@@ -792,14 +786,14 @@ build-processor-image: build-processor-image-arm64
 endif
 
 build-processor-image-amd64: $(ensure-build-image) build-processor-binary build-licenses build-required-src-dist
-	docker build $(agones_path)/cmd/processor/ --tag=$(processor_amd64_tag) $(DOCKER_BUILD_ARGS)
+	docker build --platform linux/amd64 $(agones_path)/cmd/processor/ --tag=$(processor_amd64_tag) $(DOCKER_BUILD_ARGS)
 # creating docker builder and then using that builder to build processor image in buildx command
 build-processor-image-arm64: $(ensure-build-image) build-processor-binary create-arm64-builder
 	docker buildx build --provenance false --platform linux/arm64 --builder $(BUILDX_ARM64_BUILDER) --build-arg ARCH=arm64 $(agones_path)/cmd/processor/ --tag=$(processor_arm64_tag) $(DOCKER_BUILD_ARGS)
 
 # Build the debug image for the processor service
 build-processor-debug-image: $(ensure-build-image) build-processor-debug-binary build-licenses build-required-src-dist
-	docker build $(agones_path)/cmd/processor/ --file $(agones_path)/cmd/processor/Dockerfile.debug --tag=$(processor_amd64_tag) $(DOCKER_BUILD_ARGS)
+	docker build --platform linux/amd64 $(agones_path)/cmd/processor/ --file $(agones_path)/cmd/processor/Dockerfile.debug --tag=$(processor_amd64_tag) $(DOCKER_BUILD_ARGS)
 
 # Pushes up the processor image
 push-processor-image: push-processor-image-amd64

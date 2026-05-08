@@ -23,7 +23,13 @@ ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH \
     RUST_VERSION=1.90.0
-RUN wget -q https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init && \
+RUN ARCH=$(dpkg --print-architecture) && \
+    case "${ARCH}" in \
+        amd64) RUSTUP_ARCH=x86_64-unknown-linux-gnu ;; \
+        arm64) RUSTUP_ARCH=aarch64-unknown-linux-gnu ;; \
+        *) echo "Unsupported architecture: ${ARCH}" && exit 1 ;; \
+    esac && \
+    wget -q https://static.rust-lang.org/rustup/dist/${RUSTUP_ARCH}/rustup-init && \
     chmod +x rustup-init && \
     ./rustup-init -y --no-modify-path --default-toolchain $RUST_VERSION && \
     rm rustup-init && \

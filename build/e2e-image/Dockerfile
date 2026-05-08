@@ -16,25 +16,27 @@ WORKDIR /usr/local
 ENV GO_VERSION=1.26.0
 ENV GOPATH /go
 ENV GO111MODULE=on
-RUN wget -q https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz && \
-    tar -xzf go${GO_VERSION}.linux-amd64.tar.gz && rm go${GO_VERSION}.linux-amd64.tar.gz && mkdir ${GOPATH}
+RUN ARCH=$(dpkg --print-architecture) && \
+    wget -q https://dl.google.com/go/go${GO_VERSION}.linux-${ARCH}.tar.gz && \
+    tar -xzf go${GO_VERSION}.linux-${ARCH}.tar.gz && rm go${GO_VERSION}.linux-${ARCH}.tar.gz && mkdir ${GOPATH}
 
 ENV PATH /usr/local/go/bin:/go/bin:$PATH
 
 # install kubectl without gcloud as we want the last version
 ENV KUBECTL_VER 1.34.6
-RUN curl -LO https://dl.k8s.io/release/v${KUBECTL_VER}/bin/linux/amd64/kubectl && \
+RUN ARCH=$(dpkg --print-architecture) && \
+    curl -LO https://dl.k8s.io/release/v${KUBECTL_VER}/bin/linux/${ARCH}/kubectl && \
     chmod go+rx ./kubectl && \
     mv ./kubectl /usr/local/bin/kubectl
 
 # install Helm package manager
 ENV HELM_VER 3.18.4
-ENV HELM_URL https://get.helm.sh/helm-v${HELM_VER}-linux-amd64.tar.gz
-RUN curl -L  ${HELM_URL} > /tmp/helm.tar.gz \
+RUN ARCH=$(dpkg --print-architecture) && \
+    curl -L https://get.helm.sh/helm-v${HELM_VER}-linux-${ARCH}.tar.gz > /tmp/helm.tar.gz \
     && tar -zxvf /tmp/helm.tar.gz -C /tmp \
-    && mv /tmp/linux-amd64/helm /usr/local/bin/helm \
+    && mv /tmp/linux-${ARCH}/helm /usr/local/bin/helm \
     && chmod go+rx /usr/local/bin/helm \
-    && rm /tmp/helm.tar.gz && rm -rf /tmp/linux-amd64
+    && rm /tmp/helm.tar.gz && rm -rf /tmp/linux-${ARCH}
 
 # install gotestsum test runner
 RUN go install gotest.tools/gotestsum@latest

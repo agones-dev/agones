@@ -31,8 +31,9 @@ WORKDIR /usr/local
 ENV GO_VERSION=1.26.0
 ENV GOPATH=/go
 ENV GO111MODULE=on
-RUN wget -q https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz && \
-    tar -xzf go${GO_VERSION}.linux-amd64.tar.gz && rm go${GO_VERSION}.linux-amd64.tar.gz && mkdir ${GOPATH}
+RUN ARCH=$(dpkg --print-architecture) && \
+    wget -q https://dl.google.com/go/go${GO_VERSION}.linux-${ARCH}.tar.gz && \
+    tar -xzf go${GO_VERSION}.linux-${ARCH}.tar.gz && rm go${GO_VERSION}.linux-${ARCH}.tar.gz && mkdir ${GOPATH}
 
 # install gcloud + kubectl, because it's an easy way to test/dev against kubernetes.
 WORKDIR /opt
@@ -55,7 +56,8 @@ RUN go install golang.org/x/tools/cmd/goimports@latest && \
 ENV KUBERNETES_VER=1.34.6
 
 # overwrite kubectl as we want a specific version
-RUN curl -LO https://dl.k8s.io/release/v${KUBERNETES_VER}/bin/linux/amd64/kubectl && \
+RUN ARCH=$(dpkg --print-architecture) && \
+    curl -LO https://dl.k8s.io/release/v${KUBERNETES_VER}/bin/linux/${ARCH}/kubectl && \
     chmod go+rx ./kubectl && \
     mv ./kubectl /usr/local/bin/kubectl
 RUN echo "source <(kubectl completion bash)" >> /root/.bashrc
@@ -66,16 +68,17 @@ RUN mkdir -p /go/src/k8s.io && cd /go/src/k8s.io && \
 
 # install Helm package manager
 ENV HELM_VER=3.18.4
-ENV HELM_URL=https://get.helm.sh/helm-v${HELM_VER}-linux-amd64.tar.gz
-RUN curl -L  ${HELM_URL} > /tmp/helm.tar.gz \
+RUN ARCH=$(dpkg --print-architecture) && \
+    curl -L https://get.helm.sh/helm-v${HELM_VER}-linux-${ARCH}.tar.gz > /tmp/helm.tar.gz \
     && tar -zxvf /tmp/helm.tar.gz -C /tmp \
-    && mv /tmp/linux-amd64/helm /usr/local/bin/helm \
+    && mv /tmp/linux-${ARCH}/helm /usr/local/bin/helm \
     && chmod go+rx /usr/local/bin/helm \
-    && rm /tmp/helm.tar.gz && rm -rf /tmp/linux-amd64
+    && rm /tmp/helm.tar.gz && rm -rf /tmp/linux-${ARCH}
 RUN echo "source <(helm completion bash)" >> /root/.bashrc
 
 # install golang-ci linter
-RUN go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
+# CGO disabled to avoid the linker depending on gold (deprecated in debian:trixie)
+RUN CGO_ENABLED=0 go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
 
 # Install yamllint
 RUN apt-get update && \
@@ -97,8 +100,9 @@ RUN curl -s https://get.extism.org/cli | sh -s -- -v v1.6.2 -y && \
 #
 
 ENV HUGO_VER=0.152.2
-RUN mkdir /tmp/hugo && \
-    wget -q -O /tmp/hugo/hugo.tar.gz https://github.com/gohugoio/hugo/releases/download/v${HUGO_VER}/hugo_extended_${HUGO_VER}_Linux-64bit.tar.gz && \
+RUN ARCH=$(dpkg --print-architecture) && \
+    mkdir /tmp/hugo && \
+    wget -q -O /tmp/hugo/hugo.tar.gz https://github.com/gohugoio/hugo/releases/download/v${HUGO_VER}/hugo_extended_${HUGO_VER}_linux-${ARCH}.tar.gz && \
     tar -zxvf /tmp/hugo/hugo.tar.gz -C /tmp/hugo/ && \
     mv /tmp/hugo/hugo /usr/local/bin/ && \
     rm -r /tmp/hugo
@@ -122,8 +126,9 @@ RUN mkdir -p /go/src/github.com/ahmetb && \
     cd ./gen-crd-api-reference-docs && go build
 
 # html checker
-RUN mkdir /tmp/htmltest && \
-    wget -O /tmp/htmltest/htmltest.tar.gz https://github.com/wjdp/htmltest/releases/download/v0.17.0/htmltest_0.17.0_linux_amd64.tar.gz && \
+RUN ARCH=$(dpkg --print-architecture) && \
+    mkdir /tmp/htmltest && \
+    wget -O /tmp/htmltest/htmltest.tar.gz https://github.com/wjdp/htmltest/releases/download/v0.17.0/htmltest_0.17.0_linux_${ARCH}.tar.gz && \
     tar -zxvf /tmp/htmltest/htmltest.tar.gz -C /tmp/htmltest && \
     mv /tmp/htmltest/htmltest /usr/local/bin && \
     rm -r /tmp/htmltest
@@ -134,7 +139,9 @@ RUN echo "export PATH=/usr/local/go/bin:/go/bin/:\$PATH" >> /root/.bashrc
 RUN echo "export EDITOR=nano" >> /root/.bashrc
 
 # install terraform
-RUN wget -nv -O terraform.zip https://releases.hashicorp.com/terraform/1.5.4/terraform_1.5.4_linux_amd64.zip && unzip ./terraform.zip && mv terraform /usr/local/bin/
+RUN ARCH=$(dpkg --print-architecture) && \
+    wget -nv -O terraform.zip https://releases.hashicorp.com/terraform/1.5.4/terraform_1.5.4_linux_${ARCH}.zip && \
+    unzip ./terraform.zip && mv terraform /usr/local/bin/
 
 # code generation scripts
 COPY *.sh /root/
