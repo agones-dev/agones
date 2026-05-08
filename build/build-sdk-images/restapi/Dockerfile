@@ -1,4 +1,4 @@
-# Copyright 2019 Google LLC All Rights Reserved.
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,8 +23,9 @@ WORKDIR /usr/local
 ENV GO_VERSION=1.26.0
 ENV GO111MODULE=on
 ENV GOPATH /go
-RUN wget -q https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz && \
-    tar -xzf go${GO_VERSION}.linux-amd64.tar.gz && rm go${GO_VERSION}.linux-amd64.tar.gz && mkdir -p ${GOPATH}
+RUN ARCH=$(dpkg --print-architecture) && \
+    wget -q https://dl.google.com/go/go${GO_VERSION}.linux-${ARCH}.tar.gz && \
+    tar -xzf go${GO_VERSION}.linux-${ARCH}.tar.gz && rm go${GO_VERSION}.linux-${ARCH}.tar.gz && mkdir -p ${GOPATH}
 
 RUN echo '§' && apt-get -qy update
 
