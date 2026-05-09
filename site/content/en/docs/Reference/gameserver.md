@@ -158,6 +158,17 @@ The `spec` field is the actual GameServer specification and it is composed as fo
 The GameServer resource does not support updates. If you need to make regular updates to the GameServer spec, consider using a [Fleet]({{< ref "/docs/Reference/fleet.md" >}}).
 {{% /alert %}}
 
+{{% feature publishVersion="1.58.0" %}}
+## Selectable fields
+
+Agones supports selectable fields for querying `GameServer` resources based on spec field values. This feature enables efficient server-side filtering of `GameServer` resources.
+
+The following spec fields are available for field selectors in `GameServer` resources:
+- status.state - The lifecycle of the `GameServer` (See **GameServer State Diagram**)
+- status.nodeName - The node which the `GameServer` is running on
+
+{{% /feature %}}
+
 ## Sidecar Containers
 
 Agones supports the use of [Sidecar Containers](https://kubernetes.io/docs/concepts/workloads/pods/sidecar-containers/) with exposed ports.
