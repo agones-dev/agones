@@ -116,9 +116,9 @@ func (c *Allocator) ListenAndBatchAllocate(ctx context.Context, updateWorkerCoun
 		if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
 			newSortKey, err := gsa.SortKey()
 			if err != nil {
-				c.baseLogger.WithError(err).Warn("error getting sortKey for GameServerAllocationSpec", err)
+				c.baseLogger.WithError(err).Warn("error getting sortKey for GameServerAllocationSpec")
 			}
-			if sortKey == uint64(0) {
+			if sortKey == 0 {
 				sortKey = newSortKey
 			}
 
@@ -207,14 +207,14 @@ func (c *Allocator) ListenAndBatchAllocate(ctx context.Context, updateWorkerCoun
 
 // applyAllocationToLocalGameServer patches the GameServer with allocation metadata and sets
 // it to Allocated state without persisting to Kubernetes. Counter/List actions are applied
-// if FeatureCountsAndLists is enabled. Returns (applyErr, counterErrors, listErrors).
-func (c *Allocator) applyAllocationToLocalGameServer(mp allocationv1.MetaPatch, gs *agonesv1.GameServer, gsa *allocationv1.GameServerAllocation) (error, error, error) {
+// if FeatureCountsAndLists is enabled.
+func (c *Allocator) applyAllocationToLocalGameServer(mp allocationv1.MetaPatch, gs *agonesv1.GameServer, gsa *allocationv1.GameServerAllocation) (applyErr, counterErrors, listErrors error) {
 	ts, err := time.Now().MarshalText()
 	if err != nil {
 		return err, nil, nil
 	}
 	if gs.ObjectMeta.Annotations == nil {
-		gs.ObjectMeta.Annotations = make(map[string]string, 1)
+		gs.ObjectMeta.Annotations = make(map[string]string, 1+len(mp.Annotations))
 	}
 	gs.ObjectMeta.Annotations[LastAllocatedAnnotationKey] = string(ts)
 	gs.Status.State = agonesv1.GameServerStateAllocated
@@ -228,15 +228,10 @@ func (c *Allocator) applyAllocationToLocalGameServer(mp allocationv1.MetaPatch, 
 		}
 	}
 
-	if gs.ObjectMeta.Annotations == nil {
-		gs.ObjectMeta.Annotations = make(map[string]string, len(mp.Annotations))
-	}
 	for key, value := range mp.Annotations {
 		gs.ObjectMeta.Annotations[key] = value
 	}
 
-	var counterErrors error
-	var listErrors error
 	if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
 		if gsa.Spec.Counters != nil {
 			for counter, ca := range gsa.Spec.Counters {
@@ -250,5 +245,5 @@ func (c *Allocator) applyAllocationToLocalGameServer(mp allocationv1.MetaPatch, 
 		}
 	}
 
-	return nil, counterErrors, listErrors
+	return
 }

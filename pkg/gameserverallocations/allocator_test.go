@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -497,7 +498,7 @@ func TestAllocatorAllocateOnGameServerUpdateError(t *testing.T) {
 	_, err := a.allocate(ctx, gsa.DeepCopy())
 	log.WithError(err).Info("allocate (private): failed allocation")
 	require.NotEqual(t, ErrNoGameServer, err)
-	require.EqualError(t, err, ErrGameServerUpdateConflict.Error())
+	require.True(t, errors.Is(err, ErrGameServerUpdateConflict))
 
 	// make sure we aren't in the same batch!
 	time.Sleep(2 * a.batchWaitTime)
@@ -1008,7 +1009,8 @@ func TestControllerAllocationUpdateWorkers(t *testing.T) {
 		r = <-r.request.response
 
 		assert.True(t, updated)
-		assert.EqualError(t, r.err, ErrGameServerUpdateConflict.Error())
+		assert.True(t, errors.Is(r.err, ErrGameServerUpdateConflict))
+		assert.ErrorContains(t, r.err, "something went wrong")
 		assert.Equal(t, gs1, r.gs)
 		agtesting.AssertNoEvent(t, m.FakeRecorder.Events)
 
@@ -1150,9 +1152,9 @@ func TestAllocatorListenAndBatchAllocate(t *testing.T) {
 		defer cancel()
 
 		err := a.allocationCache.syncCache()
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		err = a.allocationCache.counter.Run(ctx, 0)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		gsa := &allocationv1.GameServerAllocation{
 			ObjectMeta: metav1.ObjectMeta{Namespace: defaultNs},
@@ -1192,9 +1194,9 @@ func TestAllocatorListenAndBatchAllocate(t *testing.T) {
 		defer cancel()
 
 		err := a.allocationCache.syncCache()
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		err = a.allocationCache.counter.Run(ctx, 0)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		gsa := &allocationv1.GameServerAllocation{
 			ObjectMeta: metav1.ObjectMeta{Namespace: defaultNs},
@@ -1247,9 +1249,9 @@ func TestAllocatorListenAndBatchAllocate(t *testing.T) {
 		defer cancel()
 
 		err := a.allocationCache.syncCache()
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		err = a.allocationCache.counter.Run(ctx, 0)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		gsa := &allocationv1.GameServerAllocation{
 			ObjectMeta: metav1.ObjectMeta{Namespace: defaultNs},
@@ -1274,9 +1276,9 @@ func TestAllocatorListenAndBatchAllocate(t *testing.T) {
 		defer cancel()
 
 		err := a.allocationCache.syncCache()
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		err = a.allocationCache.counter.Run(ctx, 0)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		gsa := &allocationv1.GameServerAllocation{
 			ObjectMeta: metav1.ObjectMeta{Namespace: defaultNs},
@@ -1298,6 +1300,11 @@ func TestAllocatorListenAndBatchAllocate(t *testing.T) {
 
 // newFakeAllocator returns a fake allocator.
 func newFakeAllocator() (*Allocator, agtesting.Mocks) {
+	return newFakeAllocatorWithCustomBatchWaitTime(500 * time.Millisecond)
+}
+
+// newFakeAllocatorWithCustomBatchWaitTime returns a fake allocator with a configurable batchWaitTime.
+func newFakeAllocatorWithCustomBatchWaitTime(batchWaitTime time.Duration) (*Allocator, agtesting.Mocks) {
 	m := agtesting.NewMocks()
 
 	counter := gameservers.NewPerNodeCounter(m.KubeInformerFactory, m.AgonesInformerFactory)
@@ -1309,8 +1316,94 @@ func newFakeAllocator() (*Allocator, agtesting.Mocks) {
 		NewAllocationCache(m.AgonesInformerFactory.Agones().V1().GameServers(), counter, healthcheck.NewHandler()),
 		time.Second,
 		5*time.Second,
-		500*time.Millisecond)
+		batchWaitTime)
 	a.recorder = m.FakeRecorder
 
 	return a, m
+}
+
+func TestAllocatorAllocateNoQuickNoGameServerError(t *testing.T) {
+	t.Parallel()
+
+	// TODO: remove when CountsAndLists and ProcessorAllocator feature flags are moved to stable.
+	runtime.FeatureTestMutex.Lock()
+	defer runtime.FeatureTestMutex.Unlock()
+	require.NoError(t, runtime.ParseFeatures(
+		fmt.Sprintf("%s=false&%s=true&%s=true",
+			runtime.FeaturePlayerAllocationFilter,
+			runtime.FeatureCountsAndLists,
+			runtime.FeatureProcessorAllocator)))
+
+	a, m := newFakeAllocatorWithCustomBatchWaitTime(2 * time.Second)
+
+	gs1 := agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "gs1", Namespace: defaultNs, UID: "1"},
+		Status: agonesv1.GameServerStatus{NodeName: "node1", State: agonesv1.GameServerStateAllocated,
+			Counters: map[string]agonesv1.CounterStatus{
+				"capacity": {
+					Count:    1,
+					Capacity: 1000,
+				},
+			}}}
+	gsList := []agonesv1.GameServer{gs1}
+	gsLen := len(gsList)
+	m.AgonesClient.AddReactor("list", "gameservers", func(_ k8stesting.Action) (bool, k8sruntime.Object, error) {
+		return true, &agonesv1.GameServerList{Items: gsList}, nil
+	})
+	m.AgonesClient.AddReactor("update", "gameservers", func(action k8stesting.Action) (bool, k8sruntime.Object, error) {
+		ua := action.(k8stesting.UpdateAction)
+		gs := ua.GetObject().(*agonesv1.GameServer)
+		return true, gs, nil
+	})
+
+	ctx, cancel := agtesting.StartInformers(m, a.allocationCache.gameServerSynced)
+	defer cancel()
+
+	require.NoError(t, a.Run(ctx))
+	require.Eventuallyf(t, func() bool {
+		return a.allocationCache.cache.Len() == gsLen
+	}, 10*time.Second, time.Second, fmt.Sprintf("should be %d items in the cache", gsLen))
+
+	ALLOCATED := agonesv1.GameServerStateAllocated
+	gsa := &allocationv1.GameServerAllocation{
+		ObjectMeta: metav1.ObjectMeta{Namespace: defaultNs},
+		Spec: allocationv1.GameServerAllocationSpec{
+			Scheduling: apis.Packed,
+			Selectors: []allocationv1.GameServerSelector{{
+				GameServerState: &ALLOCATED,
+				Counters: map[string]allocationv1.CounterSelector{
+					"capacity": {
+						MinAvailable: 1,
+					},
+				},
+			}},
+		},
+	}
+
+	var waitTest sync.WaitGroup
+
+	waitTest.Add(1)
+	go func() {
+		defer waitTest.Done()
+		result1, err1 := a.Allocate(ctx, gsa.DeepCopy())
+		require.NoError(t, err1)
+		require.NotNil(t, result1)
+		outGsa := result1.(*allocationv1.GameServerAllocation)
+		require.NotNil(t, outGsa)
+		require.Equal(t, allocationv1.GameServerAllocationAllocated, outGsa.Status.State)
+		require.Equal(t, gs1.ObjectMeta.Name, outGsa.Status.GameServerName)
+	}()
+
+	waitTest.Add(1)
+	go func() {
+		defer waitTest.Done()
+		result2, err2 := a.Allocate(ctx, gsa.DeepCopy())
+		require.NoError(t, err2)
+		require.NotNil(t, result2)
+		outGsa := result2.(*allocationv1.GameServerAllocation)
+		require.NotNil(t, outGsa)
+		require.Equal(t, allocationv1.GameServerAllocationAllocated, outGsa.Status.State)
+		require.Equal(t, gs1.ObjectMeta.Name, outGsa.Status.GameServerName)
+	}()
+
+	waitTest.Wait()
 }

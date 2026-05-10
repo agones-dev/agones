@@ -281,7 +281,7 @@ func (c *AllocationCache) ReorderGameServerAfterAllocation(
 		c.baseLogger.WithField("gsIndexBeforeAllocation", gsIndexBeforeAllocation).
 			WithField("gsAfterAllocation", gsAfterAllocation).
 			WithField("gsListLength", len(gsList)).
-			Warn("ReorderGameServerAfterAllocation called with invalid parameters! Reordering is skipped!")
+			Warn("ReorderGameServerAfterAllocation called with invalid parameters, reordering is skipped")
 		return
 	}
 
@@ -315,7 +315,7 @@ func (c *AllocationCache) ReorderGameServerAfterAllocation(
 		}
 	default:
 		c.baseLogger.WithField("strategy", strategy).
-			Warn("Scheduling strategy not supported! Reordering is skipped!")
+			Warn("scheduling strategy not supported, reordering is skipped")
 	}
 
 	if newIndex != gsIndexBeforeAllocation {
