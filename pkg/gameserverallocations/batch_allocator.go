@@ -245,5 +245,5 @@ func (c *Allocator) applyAllocationToLocalGameServer(mp allocationv1.MetaPatch, 
 		}
 	}
 
-	return
+	return nil, counterErrors, listErrors
 }
