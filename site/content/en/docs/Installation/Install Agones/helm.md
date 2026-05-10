@@ -398,7 +398,7 @@ The following tables lists the configurable parameters of the Agones chart and t
 | `gameservers.additionalPortRanges`     | Port ranges from which to do named dynamic port allocation. Example: <br /> additionalPortRanges: <br />&nbsp;&nbsp;game: [9000, 10000] | `{}`                                   |
 | `gameservers.podPreserveUnknownFields` | Disable [field pruning][pruning] and schema validation on the Pod template for a [GameServer][gameserver] definition                    | `false`                                |
 {{% feature publishVersion="1.58.0" %}}
-| `gameservers.selectableFields`         | spec fields available or querying [GameServer][gameserver] resources based                                                              | `[".status.state", "status.nodeName"]` |
+| `gameservers.selectableFields`         | spec fields available for querying [GameServer][gameserver] resources.                                                                  | `[".status.state", "status.nodeName"]` |
 {{% /feature %}}
 | `gameservers.lists.maxItems`           | The maximum number of items that can be specified for a list.                                                                           | `1000`                                 |
 
