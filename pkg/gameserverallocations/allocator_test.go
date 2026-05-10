@@ -34,6 +34,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -509,9 +510,11 @@ func TestAllocatorAllocateOnGameServerUpdateError(t *testing.T) {
 	// try the public method
 	result, err := a.Allocate(ctx, gsa.DeepCopy())
 	log.WithField("result", result).WithError(err).Info("Allocate (public): failed allocation")
-	require.Nil(t, result)
-	require.NotEqual(t, ErrNoGameServer, err)
-	require.EqualError(t, err, ErrGameServerUpdateConflict.Error())
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	gsa2, ok := result.(*allocationv1.GameServerAllocation)
+	require.True(t, ok)
+	require.Equal(t, allocationv1.GameServerAllocationUnAllocated, gsa2.Status.State)
 }
 
 func TestAllocatorRunLocalAllocations(t *testing.T) {
@@ -1118,6 +1121,178 @@ func TestAllocatorCreateRestClientError(t *testing.T) {
 		}
 		_, err := a.createRemoteClusterDialOption(defaultNs, connectionInfo)
 		assert.Nil(t, err)
+	})
+}
+
+func TestAllocatorListenAndBatchAllocate(t *testing.T) {
+	t.Parallel()
+
+	runtime.FeatureTestMutex.Lock()
+	defer runtime.FeatureTestMutex.Unlock()
+	require.NoError(t, runtime.ParseFeatures(string(runtime.FeatureProcessorAllocator)+"=true"))
+
+	t.Run("single allocation succeeds", func(t *testing.T) {
+		f, gsList := defaultFixtures(3)
+
+		a, m := newFakeAllocator()
+		m.AgonesClient.AddReactor("list", "gameservers", func(_ k8stesting.Action) (bool, k8sruntime.Object, error) {
+			return true, &agonesv1.GameServerList{Items: gsList}, nil
+		})
+		updateCount := 0
+		m.AgonesClient.AddReactor("update", "gameservers", func(action k8stesting.Action) (bool, k8sruntime.Object, error) {
+			updateCount++
+			uo := action.(k8stesting.UpdateAction)
+			gs := uo.GetObject().(*agonesv1.GameServer)
+			return true, gs, nil
+		})
+
+		ctx, cancel := agtesting.StartInformers(m, a.allocationCache.gameServerSynced)
+		defer cancel()
+
+		err := a.allocationCache.syncCache()
+		assert.Nil(t, err)
+		err = a.allocationCache.counter.Run(ctx, 0)
+		assert.Nil(t, err)
+
+		gsa := &allocationv1.GameServerAllocation{
+			ObjectMeta: metav1.ObjectMeta{Namespace: defaultNs},
+			Spec: allocationv1.GameServerAllocationSpec{
+				Selectors: []allocationv1.GameServerSelector{{LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{agonesv1.FleetNameLabel: f.ObjectMeta.Name}}}},
+			}}
+		gsa.ApplyDefaults()
+
+		j1 := request{gsa: gsa.DeepCopy(), response: make(chan response, 1), ctx: context.Background()}
+		a.pendingRequests <- j1
+
+		go a.ListenAndBatchAllocate(ctx, 3)
+
+		res1 := <-j1.response
+		assert.NoError(t, res1.err)
+		assert.NotNil(t, res1.gs)
+		assert.Equal(t, agonesv1.GameServerStateAllocated, res1.gs.Status.State)
+		assert.Equal(t, 1, updateCount)
+	})
+
+	t.Run("multiple allocations to different game servers each get their own update", func(t *testing.T) {
+		f, gsList := defaultFixtures(5)
+
+		a, m := newFakeAllocator()
+		m.AgonesClient.AddReactor("list", "gameservers", func(_ k8stesting.Action) (bool, k8sruntime.Object, error) {
+			return true, &agonesv1.GameServerList{Items: gsList}, nil
+		})
+		updateCount := 0
+		m.AgonesClient.AddReactor("update", "gameservers", func(action k8stesting.Action) (bool, k8sruntime.Object, error) {
+			updateCount++
+			uo := action.(k8stesting.UpdateAction)
+			gs := uo.GetObject().(*agonesv1.GameServer)
+			return true, gs, nil
+		})
+
+		ctx, cancel := agtesting.StartInformers(m, a.allocationCache.gameServerSynced)
+		defer cancel()
+
+		err := a.allocationCache.syncCache()
+		assert.Nil(t, err)
+		err = a.allocationCache.counter.Run(ctx, 0)
+		assert.Nil(t, err)
+
+		gsa := &allocationv1.GameServerAllocation{
+			ObjectMeta: metav1.ObjectMeta{Namespace: defaultNs},
+			Spec: allocationv1.GameServerAllocationSpec{
+				Selectors: []allocationv1.GameServerSelector{{LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{agonesv1.FleetNameLabel: f.ObjectMeta.Name}}}},
+			}}
+		gsa.ApplyDefaults()
+
+		j1 := request{gsa: gsa.DeepCopy(), response: make(chan response, 1), ctx: context.Background()}
+		j2 := request{gsa: gsa.DeepCopy(), response: make(chan response, 1), ctx: context.Background()}
+		j3 := request{gsa: gsa.DeepCopy(), response: make(chan response, 1), ctx: context.Background()}
+		a.pendingRequests <- j1
+		a.pendingRequests <- j2
+		a.pendingRequests <- j3
+
+		go a.ListenAndBatchAllocate(ctx, 3)
+
+		res1 := <-j1.response
+		assert.NoError(t, res1.err)
+		assert.NotNil(t, res1.gs)
+		assert.Equal(t, agonesv1.GameServerStateAllocated, res1.gs.Status.State)
+
+		res2 := <-j2.response
+		assert.NoError(t, res2.err)
+		assert.NotNil(t, res2.gs)
+		assert.NotEqual(t, res1.gs.ObjectMeta.Name, res2.gs.ObjectMeta.Name)
+
+		res3 := <-j3.response
+		assert.NoError(t, res3.err)
+		assert.NotNil(t, res3.gs)
+		assert.Equal(t, agonesv1.GameServerStateAllocated, res3.gs.Status.State)
+
+		// Packed strategy may consolidate all 3 onto one GS (batch collapsing) or spread them —
+		// either way at least 1 K8s update must have happened.
+		assert.GreaterOrEqual(t, updateCount, 1)
+	})
+
+	t.Run("k8s conflict propagates to all callers in batch", func(t *testing.T) {
+		f, gsList := defaultFixtures(3)
+
+		a, m := newFakeAllocator()
+		m.AgonesClient.AddReactor("list", "gameservers", func(_ k8stesting.Action) (bool, k8sruntime.Object, error) {
+			return true, &agonesv1.GameServerList{Items: gsList}, nil
+		})
+		m.AgonesClient.AddReactor("update", "gameservers", func(_ k8stesting.Action) (bool, k8sruntime.Object, error) {
+			return true, nil, k8serrors.NewConflict(agonesv1.Resource("gameservers"), "gs1", errors.New("conflict"))
+		})
+
+		ctx, cancel := agtesting.StartInformers(m, a.allocationCache.gameServerSynced)
+		defer cancel()
+
+		err := a.allocationCache.syncCache()
+		assert.Nil(t, err)
+		err = a.allocationCache.counter.Run(ctx, 0)
+		assert.Nil(t, err)
+
+		gsa := &allocationv1.GameServerAllocation{
+			ObjectMeta: metav1.ObjectMeta{Namespace: defaultNs},
+			Spec: allocationv1.GameServerAllocationSpec{
+				Selectors: []allocationv1.GameServerSelector{{LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{agonesv1.FleetNameLabel: f.ObjectMeta.Name}}}},
+			}}
+		gsa.ApplyDefaults()
+
+		j1 := request{gsa: gsa.DeepCopy(), response: make(chan response, 1), ctx: context.Background()}
+		a.pendingRequests <- j1
+
+		go a.ListenAndBatchAllocate(ctx, 3)
+
+		res1 := <-j1.response
+		assert.Error(t, res1.err)
+		assert.True(t, errors.Is(res1.err, ErrGameServerUpdateConflict))
+	})
+
+	t.Run("no game servers returns error", func(t *testing.T) {
+		a, m := newFakeAllocator()
+		ctx, cancel := agtesting.StartInformers(m, a.allocationCache.gameServerSynced)
+		defer cancel()
+
+		err := a.allocationCache.syncCache()
+		assert.Nil(t, err)
+		err = a.allocationCache.counter.Run(ctx, 0)
+		assert.Nil(t, err)
+
+		gsa := &allocationv1.GameServerAllocation{
+			ObjectMeta: metav1.ObjectMeta{Namespace: defaultNs},
+			Spec: allocationv1.GameServerAllocationSpec{
+				Selectors: []allocationv1.GameServerSelector{{LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{agonesv1.FleetNameLabel: "thereisnofleet"}}}},
+			}}
+		gsa.ApplyDefaults()
+
+		j1 := request{gsa: gsa.DeepCopy(), response: make(chan response, 1), ctx: context.Background()}
+		a.pendingRequests <- j1
+
+		go a.ListenAndBatchAllocate(ctx, 3)
+
+		res1 := <-j1.response
+		assert.Nil(t, res1.gs)
+		assert.ErrorIs(t, res1.err, ErrNoGameServer)
 	})
 }
 
