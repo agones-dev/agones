@@ -164,9 +164,10 @@ The GameServer resource does not support updates. If you need to make regular up
 Agones supports [selectable fields](https://kubernetes.io/docs/concepts/overview/working-with-objects/field-selectors/) for querying `GameServer` resources based on spec field values. This feature enables efficient server-side filtering of `GameServer` resources.
 
 By default, the following spec fields are available for field selectors in `GameServer` resources:
-- status.state - The lifecycle of the `GameServer` (See **GameServer State Diagram**)
+- status.state - The lifecycle of the `GameServer` (See [GameServer State Diagram]({{< ref "/docs/Reference/gameserver.md#gameserver-state-diagram" >}}))
 - status.nodeName - The node which the `GameServer` is running on
 
+If you want to configure which fields are selectable, you can configure this through [Helm GameServer configuration variables]({{< ref "docs/installation/install-agones/helm.md#gameservers" >}}).
 {{% /feature %}}
 
 ## Sidecar Containers
