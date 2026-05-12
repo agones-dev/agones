@@ -206,6 +206,10 @@ func TestAllocationApiResource(t *testing.T) {
 
 func TestMultiClusterAllocationFromLocal(t *testing.T) {
 	t.Parallel()
+
+	runtime.FeatureTestMutex.Lock()
+	defer runtime.FeatureTestMutex.Unlock()
+
 	t.Run("Handle allocation request locally", func(t *testing.T) {
 		c, m := newFakeController()
 		fleetName := addReactorForGameServer(&m)
