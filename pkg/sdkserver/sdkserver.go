@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"slices"
 	"strings"
 	"sync"
@@ -252,6 +253,10 @@ func (s *SDKServer) Run(ctx context.Context) error {
 	s.ctx = ctx
 	// we have the gameserver details now
 	s.gsWaitForSync.Done()
+
+	if runtime.FeatureEnabled(runtime.FeatureGameServerScheduledRestart) {
+		go s.watchRestartAnnotation(ctx)
+	}
 
 	gs, err := s.gameServer()
 	if err != nil {
@@ -1558,6 +1563,50 @@ func (s *SDKServer) updateConnectedPlayers(ctx context.Context) error {
 	}
 
 	return err
+}
+
+func (s *SDKServer) watchRestartAnnotation(ctx context.Context) {
+	ticker := time.NewTicker(5 * time.Second)
+	for {
+		select {
+		case <-ctx.Done():
+			ticker.Stop() // explicit stop on clean shutdown
+			return
+
+		case <-ticker.C:
+			gs, err := s.gameServerLister.GameServers(s.namespace).Get(s.gameServerName)
+			if err != nil {
+				s.logger.WithError(err).Warn("watchRestartAnnotation: could not get GameServer")
+				continue
+			}
+
+			// Only act when the RestartController has set the pending annotation.
+			if _, ok := gs.Annotations[agonesv1.GameServerRestartPendingSinceAnnotation]; !ok {
+				continue
+			}
+
+			// Gate: server must be idle (Ready, no players).
+			if gs.Status.State != agonesv1.GameServerStateReady {
+				s.logger.Debug("watchRestartAnnotation: restart pending but server not Ready; waiting")
+				continue
+			}
+			if gs.Status.Players != nil && gs.Status.Players.Count > 0 {
+				s.logger.WithField("players", gs.Status.Players.Count).
+					Debug("watchRestartAnnotation: restart pending but players connected; waiting")
+				continue
+			}
+
+			// All conditions met — exit cleanly so Kubernetes restarts the container.
+			s.logger.Info("watchRestartAnnotation: conditions met, exiting for in-place restart")
+			s.recorder.Event(gs,
+				corev1.EventTypeNormal,
+				"ScheduledRestartExec",
+				"SDK sidecar exiting cleanly for scheduled in-place container restart",
+			)
+			ticker.Stop()
+			os.Exit(0)
+		}
+	}
 }
 
 // NewSDKServerContext returns a Context that cancels when SIGTERM or os.Interrupt

@@ -1,4 +1,4 @@
-// Copyright Contributors to Agones a Series of LF Projects, LLC.
+// Copyright 2024 Google LLC All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -82,6 +82,8 @@ func ForKind(kind schema.GroupVersionKind) interface{} {
 		return &agonesv1.PlayerStatusApplyConfiguration{}
 	case v1.SchemeGroupVersion.WithKind("Priority"):
 		return &agonesv1.PriorityApplyConfiguration{}
+	case v1.SchemeGroupVersion.WithKind("RestartPolicy"):
+		return &agonesv1.RestartPolicyApplyConfiguration{}
 	case v1.SchemeGroupVersion.WithKind("SdkServer"):
 		return &agonesv1.SdkServerApplyConfiguration{}
 

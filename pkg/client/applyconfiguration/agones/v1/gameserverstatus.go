@@ -1,4 +1,4 @@
-// Copyright Contributors to Agones a Series of LF Projects, LLC.
+// Copyright 2024 Google LLC All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,16 +27,17 @@ import (
 // GameServerStatusApplyConfiguration represents a declarative configuration of the GameServerStatus type for use
 // with apply.
 type GameServerStatusApplyConfiguration struct {
-	State         *agonesv1.GameServerState                  `json:"state,omitempty"`
-	Ports         []GameServerStatusPortApplyConfiguration   `json:"ports,omitempty"`
-	Address       *string                                    `json:"address,omitempty"`
-	Addresses     []corev1.NodeAddress                       `json:"addresses,omitempty"`
-	NodeName      *string                                    `json:"nodeName,omitempty"`
-	ReservedUntil *metav1.Time                               `json:"reservedUntil,omitempty"`
-	Players       *PlayerStatusApplyConfiguration            `json:"players,omitempty"`
-	Counters      map[string]CounterStatusApplyConfiguration `json:"counters,omitempty"`
-	Lists         map[string]ListStatusApplyConfiguration    `json:"lists,omitempty"`
-	Eviction      *EvictionApplyConfiguration                `json:"eviction,omitempty"`
+	State           *agonesv1.GameServerState                  `json:"state,omitempty"`
+	Ports           []GameServerStatusPortApplyConfiguration   `json:"ports,omitempty"`
+	Address         *string                                    `json:"address,omitempty"`
+	Addresses       []corev1.NodeAddress                       `json:"addresses,omitempty"`
+	NodeName        *string                                    `json:"nodeName,omitempty"`
+	ReservedUntil   *metav1.Time                               `json:"reservedUntil,omitempty"`
+	Players         *PlayerStatusApplyConfiguration            `json:"players,omitempty"`
+	Counters        map[string]CounterStatusApplyConfiguration `json:"counters,omitempty"`
+	Lists           map[string]ListStatusApplyConfiguration    `json:"lists,omitempty"`
+	Eviction        *EvictionApplyConfiguration                `json:"eviction,omitempty"`
+	NextRestartTime *metav1.Time                               `json:"nextRestartTime,omitempty"`
 }
 
 // GameServerStatusApplyConfiguration constructs a declarative configuration of the GameServerStatus type for use with
@@ -141,5 +142,13 @@ func (b *GameServerStatusApplyConfiguration) WithLists(entries map[string]ListSt
 // If called multiple times, the Eviction field is set to the value of the last call.
 func (b *GameServerStatusApplyConfiguration) WithEviction(value *EvictionApplyConfiguration) *GameServerStatusApplyConfiguration {
 	b.Eviction = value
+	return b
+}
+
+// WithNextRestartTime sets the NextRestartTime field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the NextRestartTime field is set to the value of the last call.
+func (b *GameServerStatusApplyConfiguration) WithNextRestartTime(value metav1.Time) *GameServerStatusApplyConfiguration {
+	b.NextRestartTime = &value
 	return b
 }

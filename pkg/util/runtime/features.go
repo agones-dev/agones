@@ -79,6 +79,9 @@ const (
 	// FeatureWasmAutoscaler is a feature flag to enable/disable the script based autoscaler.
 	FeatureWasmAutoscaler Feature = "WasmAutoscaler"
 
+	// FeatureGameServerScheduledRestart is a feature flag to enable/disable the script based RestartPolicy.
+	FeatureGameServerScheduledRestart Feature = "GameServerScheduledRestart"
+
 	////////////////
 	// Dev features
 
@@ -164,9 +167,10 @@ var (
 		FeatureSidecarContainers:                true,
 
 		// Alpha features
-		FeaturePlayerAllocationFilter: false,
-		FeaturePlayerTracking:         false,
-		FeatureWasmAutoscaler:         false,
+		FeaturePlayerAllocationFilter:     false,
+		FeaturePlayerTracking:             false,
+		FeatureWasmAutoscaler:             false,
+		FeatureGameServerScheduledRestart: false,
 
 		// Dev features
 		FeatureProcessorAllocator: false,

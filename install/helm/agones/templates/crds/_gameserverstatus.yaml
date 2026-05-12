@@ -124,6 +124,17 @@ status:
           - Always
           - OnUpgrade
           - Never
+      nextRestartTime:
+                  description: >
+                    [Alpha, GameServerScheduledRestart feature flag]
+                    The wall-clock time at which the next scheduled in-place
+                    restart will be attempted. Only populated when
+                    spec.restartPolicy is configured.
+                    Written by the RestartController; cleared and re-set after
+                    each restart cycle.
+                  type: string
+                  format: date-time
+                  nullable: true
     immutableReplicas:
       type: integer
       title: Immutable count of Pods to a GameServer. Always 1. (Implementation detail of implementing the Scale subresource.)

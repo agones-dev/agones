@@ -23,7 +23,7 @@ func WithSeconds() Option {
 }
 
 // WithParser overrides the parser used for interpreting job schedules.
-func WithParser(p ScheduleParser) Option {
+func WithParser(p Parser) Option {
 	return func(c *Cron) {
 		c.parser = p
 	}

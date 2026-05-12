@@ -106,6 +106,7 @@ type Controller struct {
 	creationWorkerQueue      *workerqueue.WorkerQueue // handles creation only
 	deletionWorkerQueue      *workerqueue.WorkerQueue // handles deletion only
 	recorder                 record.EventRecorder
+	restartController        *RestartController
 }
 
 // NewController returns a new gameserver crd controller
@@ -158,6 +159,7 @@ func NewController(
 		migrationController:      NewMigrationController(health, kubeClient, agonesClient, kubeInformerFactory, agonesInformerFactory, controllerHooks.SyncPodPortsToGameServer),
 		missingPodController:     NewMissingPodController(health, kubeClient, agonesClient, kubeInformerFactory, agonesInformerFactory),
 		succeededController:      NewSucceededController(health, kubeClient, agonesClient, kubeInformerFactory, agonesInformerFactory),
+		restartController:        NewRestartController(health, kubeClient, agonesClient, agonesInformerFactory),
 	}
 
 	c.baseLogger = runtime.NewLoggerWithType(c)
@@ -444,6 +446,12 @@ func (c *Controller) Run(ctx context.Context, workers int) error {
 			}
 		}()
 	}
+	// Run the RestartPolicy Controller
+	go func() {
+		if err := c.restartController.Run(ctx, workers); err != nil {
+			c.baseLogger.WithError(err).Error("RestartController exited with error")
+		}
+	}()
 
 	// start work queues
 	var wg sync.WaitGroup

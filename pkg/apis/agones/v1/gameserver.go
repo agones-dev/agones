@@ -26,6 +26,7 @@ import (
 	"agones.dev/agones/pkg/apis/agones"
 	"agones.dev/agones/pkg/util/runtime"
 	"github.com/pkg/errors"
+	cron "github.com/robfig/cron/v3"
 	"gomodules.xyz/jsonpatch/v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -159,6 +160,12 @@ const (
 	GameServerErroredAtAnnotation = agones.GroupName + "/errored-at"
 	// FinalizerName is the domain name and finalizer path used to manage garbage collection of the GameServer.
 	FinalizerName = agones.GroupName + "/controller"
+	// GameServerRestartPendingSinceAnnotation records the RFC3339 time at which the
+	// soft-deadline restart was first triggered but deferred (server was busy).
+	GameServerRestartPendingSinceAnnotation = agones.GroupName + "/restart-pending-since"
+	// GameServerNextRestartAnnotation records the RFC3339 time for the next scheduled
+	// restart trigger. Written by the restart controller after each sync.
+	GameServerNextRestartAnnotation = agones.GroupName + "/next-restart"
 
 	// NodePodIP identifies an IP address from a pod.
 	NodePodIP corev1.NodeAddressType = "PodIP"
@@ -248,6 +255,30 @@ type GameServerSpec struct {
 	// +optional
 	Eviction *Eviction `json:"eviction,omitempty"`
 	// immutableReplicas is present in gameservers.agones.dev but omitted here (it's always 1).
+	// RestartPolicy configures scheduled in-place restart of the game server container.
+	// Alpha feature; requires the GameServerScheduledRestart feature flag.
+	// +optional
+	RestartPolicy *RestartPolicy `json:"restartPolicy,omitempty"`
+}
+
+// RestartPolicy defines the scheduled in-place restart behaviour for a GameServer.
+// The restart does not delete the Pod; only the game server container is restarted.
+type RestartPolicy struct {
+	// Schedule is a cron expression (standard 5-field) that defines when the restart
+	// is desired. E.g. "0 4 * * *" = every day at 04:00 UTC.
+	Schedule string `json:"schedule"`
+
+	// SoftDeadlineDuration is how long Agones will wait for the GameServer to become
+	// idle (not Allocated, zero players) before giving up and trying again at the next
+	// scheduled time. Defaults to 0 (retry indefinitely until next schedule).
+	// +optional
+	SoftDeadlineDuration *metav1.Duration `json:"softDeadlineDuration,omitempty"`
+
+	// HardDeadlineDuration is the maximum time after the first soft-deadline trigger
+	// that Agones will wait before force-killing the game server, even if it still has
+	// players. When unset, force-kill is never performed.
+	// +optional
+	HardDeadlineDuration *metav1.Duration `json:"hardDeadlineDuration,omitempty"`
 }
 
 // PlayersSpec tracks the initial player capacity
@@ -338,6 +369,10 @@ type GameServerStatus struct {
 	// +optional
 	Eviction *Eviction `json:"eviction,omitempty"`
 	// immutableReplicas is present in gameservers.agones.dev but omitted here (it's always 1).
+	// NextRestartTime is the wall-clock time when the next scheduled restart will be
+	// attempted. Only populated when spec.restartPolicy is set.
+	// +optional
+	NextRestartTime *metav1.Time `json:"nextRestartTime,omitempty"`
 }
 
 // GameServerStatusPort shows the port that was allocated to a
@@ -621,6 +656,27 @@ func (gss *GameServerSpec) Validate(apiHooks APIHooks, devAddress string, fldPat
 
 	allErrs = append(allErrs, apiHooks.ValidateGameServerSpec(gss, fldPath)...)
 	allErrs = append(allErrs, validateObjectMeta(&gss.Template.ObjectMeta, fldPath.Child("template", "metadata"))...)
+
+	if rp := gss.RestartPolicy; rp != nil {
+		rpPath := fldPath.Child("restartPolicy")
+		if rp.Schedule == "" {
+			allErrs = append(allErrs, field.Required(rpPath.Child("schedule"), "schedule must be a valid cron expression"))
+		} else {
+			if _, err := cron.ParseStandard(rp.Schedule); err != nil {
+				allErrs = append(allErrs, field.Invalid(rpPath.Child("schedule"), rp.Schedule,
+					fmt.Sprintf("must be a valid 5-field cron expression: %v", err)))
+			}
+		}
+		if rp.SoftDeadlineDuration != nil && rp.SoftDeadlineDuration.Duration < 0 {
+			allErrs = append(allErrs, field.Invalid(rpPath.Child("softDeadlineDuration"),
+				rp.SoftDeadlineDuration, "must not be negative"))
+		}
+		if rp.HardDeadlineDuration != nil && rp.HardDeadlineDuration.Duration <= 0 {
+			allErrs = append(allErrs, field.Invalid(rpPath.Child("hardDeadlineDuration"),
+				rp.HardDeadlineDuration, "must be a positive duration"))
+		}
+	}
+
 	return allErrs
 }
 

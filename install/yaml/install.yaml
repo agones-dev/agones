@@ -6560,7 +6560,55 @@ spec:
                              - Always
                              - OnUpgrade
                              - Never
-                       immutableReplicas:
+                     restartPolicy:
+                         description: >
+                           [Alpha, GameServerScheduledRestart feature flag]
+                           RestartPolicy configures scheduled in-place restarts of the game
+                           server container without deleting the Pod. This avoids expensive pod
+                           churn while still allowing a clean container restart on a schedule.
+                           When enabled, the RestartController watches this field and the SDK
+                           sidecar will exit (triggering a Kubernetes container restart) when
+                           conditions are met.
+                         type: object
+                         nullable: true
+                         required:
+                           - schedule
+                         properties:
+                           schedule:
+                             type: string
+                             minLength: 9
+                             maxLength: 256
+                             description: >
+                               A standard 5-field cron expression defining when the restart
+                               should be attempted. The expression is evaluated in UTC.
+                               Example: "0 4 * * *" restarts every day at 04:00 UTC.
+                               See https://en.wikipedia.org/wiki/Cron for format details.
+                           softDeadlineDuration:
+                             type: string
+                             nullable: true
+                             description: >
+                               How long the RestartController will wait for the GameServer to
+                               become idle (state=Ready, zero players) after the scheduled
+                               trigger fires, before giving up and deferring to the next
+                               scheduled window. Uses Go duration format, e.g. "2h" or "30m".
+                               When omitted (default), the controller retries every reconcile
+                               loop until the next cron window without an explicit timeout.
+                             pattern: "^([0-9]+(h|m|s))+$"
+                           hardDeadlineDuration:
+                             type: string
+                             nullable: true
+                             description: >
+                               Maximum total time to wait after the first soft-deadline trigger
+                               before forcing a restart regardless of player state or game
+                               server readiness. When the wall-clock time since
+                               "restart-pending-since" annotation exceeds this value, the
+                               restart is forced immediately.
+                               Uses Go duration format, e.g. "48h".
+                               When omitted (default), forced restarts are never performed;
+                               the controller simply defers to the next cron window after each
+                               soft deadline expiry.
+                             pattern: "^([0-9]+(h|m|s))+$"
+                     immutableReplicas:
                          type: integer
                          title: Immutable count of Pods to a GameServer. Always 1. (Implementation detail of implementing the Scale subresource.)
                          default: 1
@@ -13532,7 +13580,55 @@ spec:
                      - Always
                      - OnUpgrade
                      - Never
-               immutableReplicas:
+             restartPolicy:
+                 description: >
+                   [Alpha, GameServerScheduledRestart feature flag]
+                   RestartPolicy configures scheduled in-place restarts of the game
+                   server container without deleting the Pod. This avoids expensive pod
+                   churn while still allowing a clean container restart on a schedule.
+                   When enabled, the RestartController watches this field and the SDK
+                   sidecar will exit (triggering a Kubernetes container restart) when
+                   conditions are met.
+                 type: object
+                 nullable: true
+                 required:
+                   - schedule
+                 properties:
+                   schedule:
+                     type: string
+                     minLength: 9
+                     maxLength: 256
+                     description: >
+                       A standard 5-field cron expression defining when the restart
+                       should be attempted. The expression is evaluated in UTC.
+                       Example: "0 4 * * *" restarts every day at 04:00 UTC.
+                       See https://en.wikipedia.org/wiki/Cron for format details.
+                   softDeadlineDuration:
+                     type: string
+                     nullable: true
+                     description: >
+                       How long the RestartController will wait for the GameServer to
+                       become idle (state=Ready, zero players) after the scheduled
+                       trigger fires, before giving up and deferring to the next
+                       scheduled window. Uses Go duration format, e.g. "2h" or "30m".
+                       When omitted (default), the controller retries every reconcile
+                       loop until the next cron window without an explicit timeout.
+                     pattern: "^([0-9]+(h|m|s))+$"
+                   hardDeadlineDuration:
+                     type: string
+                     nullable: true
+                     description: >
+                       Maximum total time to wait after the first soft-deadline trigger
+                       before forcing a restart regardless of player state or game
+                       server readiness. When the wall-clock time since
+                       "restart-pending-since" annotation exceeds this value, the
+                       restart is forced immediately.
+                       Uses Go duration format, e.g. "48h".
+                       When omitted (default), forced restarts are never performed;
+                       the controller simply defers to the next cron window after each
+                       soft deadline expiry.
+                     pattern: "^([0-9]+(h|m|s))+$"
+             immutableReplicas:
                  type: integer
                  title: Immutable count of Pods to a GameServer. Always 1. (Implementation detail of implementing the Scale subresource.)
                  default: 1
@@ -13648,6 +13744,17 @@ spec:
                      - Always
                      - OnUpgrade
                      - Never
+                 nextRestartTime:
+                             description: >
+                               [Alpha, GameServerScheduledRestart feature flag]
+                               The wall-clock time at which the next scheduled in-place
+                               restart will be attempted. Only populated when
+                               spec.restartPolicy is configured.
+                               Written by the RestartController; cleared and re-set after
+                               each restart cycle.
+                             type: string
+                             format: date-time
+                             nullable: true
                immutableReplicas:
                  type: integer
                  title: Immutable count of Pods to a GameServer. Always 1. (Implementation detail of implementing the Scale subresource.)
@@ -20104,7 +20211,55 @@ spec:
                               - Always
                               - OnUpgrade
                               - Never
-                        immutableReplicas:
+                      restartPolicy:
+                          description: >
+                            [Alpha, GameServerScheduledRestart feature flag]
+                            RestartPolicy configures scheduled in-place restarts of the game
+                            server container without deleting the Pod. This avoids expensive pod
+                            churn while still allowing a clean container restart on a schedule.
+                            When enabled, the RestartController watches this field and the SDK
+                            sidecar will exit (triggering a Kubernetes container restart) when
+                            conditions are met.
+                          type: object
+                          nullable: true
+                          required:
+                            - schedule
+                          properties:
+                            schedule:
+                              type: string
+                              minLength: 9
+                              maxLength: 256
+                              description: >
+                                A standard 5-field cron expression defining when the restart
+                                should be attempted. The expression is evaluated in UTC.
+                                Example: "0 4 * * *" restarts every day at 04:00 UTC.
+                                See https://en.wikipedia.org/wiki/Cron for format details.
+                            softDeadlineDuration:
+                              type: string
+                              nullable: true
+                              description: >
+                                How long the RestartController will wait for the GameServer to
+                                become idle (state=Ready, zero players) after the scheduled
+                                trigger fires, before giving up and deferring to the next
+                                scheduled window. Uses Go duration format, e.g. "2h" or "30m".
+                                When omitted (default), the controller retries every reconcile
+                                loop until the next cron window without an explicit timeout.
+                              pattern: "^([0-9]+(h|m|s))+$"
+                            hardDeadlineDuration:
+                              type: string
+                              nullable: true
+                              description: >
+                                Maximum total time to wait after the first soft-deadline trigger
+                                before forcing a restart regardless of player state or game
+                                server readiness. When the wall-clock time since
+                                "restart-pending-since" annotation exceeds this value, the
+                                restart is forced immediately.
+                                Uses Go duration format, e.g. "48h".
+                                When omitted (default), forced restarts are never performed;
+                                the controller simply defers to the next cron window after each
+                                soft deadline expiry.
+                              pattern: "^([0-9]+(h|m|s))+$"
+                      immutableReplicas:
                           type: integer
                           title: Immutable count of Pods to a GameServer. Always 1. (Implementation detail of implementing the Scale subresource.)
                           default: 1

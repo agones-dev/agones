@@ -1,4 +1,4 @@
-// Copyright Contributors to Agones a Series of LF Projects, LLC.
+// Copyright 2024 Google LLC All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,16 +26,17 @@ import (
 // GameServerSpecApplyConfiguration represents a declarative configuration of the GameServerSpec type for use
 // with apply.
 type GameServerSpecApplyConfiguration struct {
-	Container  *string                                    `json:"container,omitempty"`
-	Ports      []GameServerPortApplyConfiguration         `json:"ports,omitempty"`
-	Health     *HealthApplyConfiguration                  `json:"health,omitempty"`
-	Scheduling *apis.SchedulingStrategy                   `json:"scheduling,omitempty"`
-	SdkServer  *SdkServerApplyConfiguration               `json:"sdkServer,omitempty"`
-	Template   *corev1.PodTemplateSpec                    `json:"template,omitempty"`
-	Players    *PlayersSpecApplyConfiguration             `json:"players,omitempty"`
-	Counters   map[string]CounterStatusApplyConfiguration `json:"counters,omitempty"`
-	Lists      map[string]ListStatusApplyConfiguration    `json:"lists,omitempty"`
-	Eviction   *EvictionApplyConfiguration                `json:"eviction,omitempty"`
+	Container     *string                                    `json:"container,omitempty"`
+	Ports         []GameServerPortApplyConfiguration         `json:"ports,omitempty"`
+	Health        *HealthApplyConfiguration                  `json:"health,omitempty"`
+	Scheduling    *apis.SchedulingStrategy                   `json:"scheduling,omitempty"`
+	SdkServer     *SdkServerApplyConfiguration               `json:"sdkServer,omitempty"`
+	Template      *corev1.PodTemplateSpec                    `json:"template,omitempty"`
+	Players       *PlayersSpecApplyConfiguration             `json:"players,omitempty"`
+	Counters      map[string]CounterStatusApplyConfiguration `json:"counters,omitempty"`
+	Lists         map[string]ListStatusApplyConfiguration    `json:"lists,omitempty"`
+	Eviction      *EvictionApplyConfiguration                `json:"eviction,omitempty"`
+	RestartPolicy *RestartPolicyApplyConfiguration           `json:"restartPolicy,omitempty"`
 }
 
 // GameServerSpecApplyConfiguration constructs a declarative configuration of the GameServerSpec type for use with
@@ -138,5 +139,13 @@ func (b *GameServerSpecApplyConfiguration) WithLists(entries map[string]ListStat
 // If called multiple times, the Eviction field is set to the value of the last call.
 func (b *GameServerSpecApplyConfiguration) WithEviction(value *EvictionApplyConfiguration) *GameServerSpecApplyConfiguration {
 	b.Eviction = value
+	return b
+}
+
+// WithRestartPolicy sets the RestartPolicy field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the RestartPolicy field is set to the value of the last call.
+func (b *GameServerSpecApplyConfiguration) WithRestartPolicy(value *RestartPolicyApplyConfiguration) *GameServerSpecApplyConfiguration {
+	b.RestartPolicy = value
 	return b
 }
