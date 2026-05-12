@@ -524,6 +524,7 @@ func TestGameServerPodCompletedAfterCleanExit(t *testing.T) {
 		for {
 			select {
 			case <-ctx.Done():
+				log.Info("Stopping udp CRASH sender")
 				return
 			default:
 				mtx.Lock()
@@ -531,8 +532,7 @@ func TestGameServerPodCompletedAfterCleanExit(t *testing.T) {
 				_, err := conn.Write([]byte("CRASH 0"))
 				mtx.Unlock()
 				if err != nil {
-					log.WithError(err).Warn("error sending udp packet. Stopping.")
-					return
+					log.WithError(err).Warn("error sending udp packet.")
 				}
 			}
 			time.Sleep(5 * time.Second)
