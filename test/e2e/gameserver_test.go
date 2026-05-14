@@ -1,4 +1,4 @@
-// Copyright 2018 Google LLC All Rights Reserved.
+// Copyright Contributors to Agones a Series of LF Projects, LLC.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -54,6 +54,7 @@ const (
 
 func TestCreateConnect(t *testing.T) {
 	t.Parallel()
+	ctx := context.Background()
 	gs := framework.DefaultGameServer(framework.Namespace)
 	readyGs, err := framework.CreateGameServerAndWaitUntilReady(t, framework.Namespace, gs)
 	if err != nil {
@@ -64,24 +65,24 @@ func TestCreateConnect(t *testing.T) {
 	assert.NotEmpty(t, readyGs.Status.Address)
 	assert.NotEmpty(t, readyGs.Status.Addresses)
 
-	var hasPodIPAddress bool
-	for i, addr := range readyGs.Status.Addresses {
-		if addr.Type == agonesv1.NodePodIP {
-			assert.NotEmpty(t, readyGs.Status.Addresses[i].Address)
-			hasPodIPAddress = true
-		}
-	}
-	assert.True(t, hasPodIPAddress)
+	require.NotEmpty(t, readyGs.Status.NodeName)
+	require.Equal(t, readyGs.Status.State, agonesv1.GameServerStateReady)
 
-	assert.NotEmpty(t, readyGs.Status.NodeName)
-	assert.Equal(t, readyGs.Status.State, agonesv1.GameServerStateReady)
-
+	// check connectivity before anything else.
 	reply, err := framework.SendGameServerUDP(t, readyGs, "Hello World !")
-	if err != nil {
-		t.Fatalf("Could ping GameServer: %v", err)
-	}
+	require.NoError(t, err)
+	require.Equal(t, "ACK: Hello World !\n", reply)
 
-	assert.Equal(t, "ACK: Hello World !\n", reply)
+	// since the PodIP could come at any point, let's eventually it.
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		readyGs, err = framework.AgonesClient.AgonesV1().GameServers(framework.Namespace).Get(ctx, readyGs.ObjectMeta.Name, metav1.GetOptions{})
+		require.NoError(c, err)
+		for i, addr := range readyGs.Status.Addresses {
+			if addr.Type == agonesv1.NodePodIP {
+				require.NotEmpty(c, readyGs.Status.Addresses[i].Address)
+			}
+		}
+	}, 3*time.Minute, time.Second, "Failed to get PodIP")
 }
 
 func TestHostName(t *testing.T) {
@@ -523,6 +524,7 @@ func TestGameServerPodCompletedAfterCleanExit(t *testing.T) {
 		for {
 			select {
 			case <-ctx.Done():
+				log.Info("Stopping udp CRASH sender")
 				return
 			default:
 				mtx.Lock()
@@ -530,8 +532,7 @@ func TestGameServerPodCompletedAfterCleanExit(t *testing.T) {
 				_, err := conn.Write([]byte("CRASH 0"))
 				mtx.Unlock()
 				if err != nil {
-					log.WithError(err).Warn("error sending udp packet. Stopping.")
-					return
+					log.WithError(err).Warn("error sending udp packet.")
 				}
 			}
 			time.Sleep(5 * time.Second)
@@ -1040,6 +1041,8 @@ func TestGameServerPortPolicyNone(t *testing.T) {
 
 func TestGameServerTcpProtocol(t *testing.T) {
 	t.Parallel()
+	log := e2eframework.TestLogger(t)
+	ctx := context.Background()
 	gs := framework.DefaultGameServer(framework.Namespace)
 
 	gs.Spec.Ports[0].Protocol = corev1.ProtocolTCP
@@ -1052,6 +1055,16 @@ func TestGameServerTcpProtocol(t *testing.T) {
 	require.NoError(t, err)
 
 	replyTCP, err := e2eframework.SendGameServerTCP(readyGs, "Hello World !")
+	if err != nil {
+		framework.LogEvents(t, log, readyGs.ObjectMeta.Namespace, readyGs)
+		pod, err := framework.KubeClient.CoreV1().Pods(readyGs.ObjectMeta.Namespace).Get(ctx, readyGs.Name, metav1.GetOptions{})
+		if err != nil {
+			log.WithError(err).Info("Could not retrieve pod for GameServer")
+		} else {
+			framework.LogEvents(t, log, readyGs.ObjectMeta.Namespace, pod)
+			framework.LogPodContainers(t, pod)
+		}
+	}
 	require.NoError(t, err)
 	assert.Equal(t, "ACK TCP: Hello World !\n", replyTCP)
 }
