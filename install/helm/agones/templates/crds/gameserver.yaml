@@ -37,6 +37,12 @@ spec:
     - name: v1
       served: true
       storage: true
+      {{- with .Values.gameservers.selectableFields }}
+      selectableFields:
+      {{- range . }}
+        - jsonPath: {{ . }}
+      {{- end }}
+      {{- end }}
       additionalPrinterColumns:
         - jsonPath: .status.state
           name: State
