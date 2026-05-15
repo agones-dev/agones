@@ -33,7 +33,7 @@ The following container operating systems and architectures can be utilised with
 | --------- | ------------ | ---------- |
 | linux     | `amd64`      | **Stable** |
 | linux     | `arm64`      | Alpha      |
-| [windows] | `amd64`      | Alpha      |
+| [windows] | `amd64`      | Beta       |
 
 For all the platforms in Alpha, we would appreciate testing and bug reports on any issue found.
 
