@@ -362,6 +362,9 @@ gameservers:
     # requires feature gate PortRanges to be enabled
     # game: [9000, 10000]
   podPreserveUnknownFields: false
+  selectableFields:
+    - .status.state
+    - .status.nodeName
   lists:
     maxItems: 1000
 

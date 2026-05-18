@@ -97,12 +97,16 @@ func main() {
 		port = &p
 	}
 
+	var listenersReady sync.WaitGroup
+
 	if *tcp {
-		go tcpListener(port, s, cancel)
+		listenersReady.Add(1)
+		go tcpListener(port, s, cancel, &listenersReady)
 	}
 
 	if *udp {
-		go udpListener(port, s, cancel)
+		listenersReady.Add(1)
+		go udpListener(port, s, cancel, &listenersReady)
 	}
 
 	if *shutdownDelaySec > 0 {
@@ -112,6 +116,7 @@ func main() {
 	}
 
 	if *readyOnStart {
+		listenersReady.Wait()
 		if *readyDelaySec > 0 {
 			log.Printf("Waiting %d seconds before moving to ready", *readyDelaySec)
 			time.Sleep(time.Duration(*readyDelaySec) * time.Second)
@@ -188,12 +193,13 @@ func shutdownAfterNAllocations(s *sdk.SDK, readyIterations, shutdownDelaySec int
 	}
 }
 
-func udpListener(port *string, s *sdk.SDK, cancel context.CancelFunc) {
+func udpListener(port *string, s *sdk.SDK, cancel context.CancelFunc, ready *sync.WaitGroup) {
 	log.Printf("Starting UDP server, listening on port %s", *port)
 	conn, err := net.ListenPacket("udp", ":"+*port)
 	if err != nil {
 		log.Fatalf("Could not start UDP server: %v", err)
 	}
+	ready.Done()
 	defer conn.Close() // nolint: errcheck
 	udpReadWriteLoop(conn, cancel, s)
 }
@@ -227,12 +233,13 @@ func udpRespond(conn net.PacketConn, sender net.Addr, txt string) {
 	}
 }
 
-func tcpListener(port *string, s *sdk.SDK, cancel context.CancelFunc) {
+func tcpListener(port *string, s *sdk.SDK, cancel context.CancelFunc, ready *sync.WaitGroup) {
 	log.Printf("Starting TCP server, listening on port %s", *port)
 	ln, err := net.Listen("tcp", ":"+*port)
 	if err != nil {
 		log.Fatalf("Could not start TCP server: %v", err)
 	}
+	ready.Done()
 	defer ln.Close() // nolint: errcheck
 
 	for {

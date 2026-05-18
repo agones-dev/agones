@@ -7397,6 +7397,9 @@ spec:
     - name: v1
       served: true
       storage: true
+      selectableFields:
+        - jsonPath: .status.state
+        - jsonPath: .status.nodeName
       additionalPrinterColumns:
         - jsonPath: .status.state
           name: State
