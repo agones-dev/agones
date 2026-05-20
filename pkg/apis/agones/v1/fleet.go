@@ -96,6 +96,8 @@ type FleetStatus struct {
 	ReservedReplicas int32 `json:"reservedReplicas"`
 	// AllocatedReplicas are the number of Allocated GameServer replicas
 	AllocatedReplicas int32 `json:"allocatedReplicas"`
+	// Allocations is a counter of the number of allocations observed.
+	Allocations int64 `json:"allocations"`
 	// [Stage:Alpha]
 	// [FeatureFlag:PlayerTracking]
 	// Players are the current total player capacity and count for this Fleet

@@ -310,6 +310,37 @@ func TestControllerSyncFleet(t *testing.T) {
 		agtesting.AssertNoEvent(t, m.FakeRecorder.Events)
 	})
 
+	t.Run("fleets update allocation counter", func(t *testing.T) {
+		f := defaultFixture()
+		f.Spec.Strategy.Type = appsv1.RollingUpdateDeploymentStrategyType
+
+		c, m := newFakeController()
+		gsSet := f.GameServerSet()
+		gsSet.ObjectMeta.Name = "gsSet1"
+		gsSet.ObjectMeta.UID = "4321"
+		gsSet.Spec.Replicas = f.Spec.Replicas
+
+		m.AgonesClient.AddReactor("list", "fleets", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+			return true, &agonesv1.FleetList{Items: []agonesv1.Fleet{*f}}, nil
+		})
+		m.AgonesClient.AddReactor("get", "fleets", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+			return true, f, nil
+		})
+
+		m.AgonesClient.AddReactor("list", "gameserversets", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+			return true, &agonesv1.GameServerSetList{Items: []agonesv1.GameServerSet{*gsSet}}, nil
+		})
+
+		ctx, cancel := agtesting.StartInformers(m, c.fleetSynced, c.gameServerSetSynced)
+		defer cancel()
+
+		c.allocs.inc("default", "fleet-1", 1)
+
+		err := c.syncFleet(ctx, "default/fleet-1")
+		assert.Nil(t, err)
+		assert.Equal(t, int64(1), f.Status.Allocations)
+	})
+
 	t.Run("error on getting fleet", func(t *testing.T) {
 		c, _ := newFakeController()
 		c.fleetLister = &fakeFleetListerWithErr{}
