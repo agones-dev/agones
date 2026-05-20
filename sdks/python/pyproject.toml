@@ -18,7 +18,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agones"
-version = "1.57.0-dev"
+version = "1.57.0"
 description = "Game Server SDK for Agones"
 readme = "README.md"
 license = "Apache-2.0"
