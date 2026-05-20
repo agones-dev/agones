@@ -56,3 +56,6 @@ You can do this through the [Helm configuration]({{< ref "/docs/Installation/Ins
 By default, this is set to having a CPU request value of 30m, with no hard CPU limit. This ensures that the sidecar always has enough CPU
 to function, but it is configurable in case a lower, or higher value is required on your clusters, or if you desire
 hard limit.
+
+When a memory request is configured, Agones sets the SDK sidecar's `GOMEMLIMIT` to 90% of that request so the Go runtime
+keeps its managed memory close to the amount scheduled for the sidecar.
