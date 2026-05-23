@@ -16,6 +16,7 @@
 package apiserver
 
 import (
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -76,6 +77,11 @@ type APIServer struct {
 	openapiv2          *spec.Swagger
 	openapiv3Discovery *handler3.OpenAPIV3Discovery
 	delegates          map[string]CRDHandler
+	// requestHeaderCA, when set, is the CA used to verify the requestheader proxy
+	// client certificate sent by the Kubernetes API server aggregation layer.
+	// Resource handlers require a valid client cert signed by this CA; discovery
+	// and OpenAPI handlers are left unauthenticated (they carry no sensitive data).
+	requestHeaderCA *x509.CertPool
 }
 
 // NewAPIServer returns a new API Server from the given Mux.
@@ -126,6 +132,43 @@ func NewAPIServer(mux *http.ServeMux) *APIServer {
 	return s
 }
 
+// SetRequestHeaderCA configures the CA pool used to authenticate the Kubernetes
+// aggregation-layer proxy client certificate.  Call this before any resource
+// handlers are invoked; requests that arrive without a certificate signed by
+// this CA will be rejected with HTTP 401.
+//
+// The verification logic mirrors k8s.io/apiserver/pkg/authentication/request/x509:
+// the leaf certificate from req.TLS.PeerCertificates is verified against the
+// supplied CA pool with ExtKeyUsageClientAuth.
+func (as *APIServer) SetRequestHeaderCA(ca *x509.CertPool) {
+	as.requestHeaderCA = ca
+}
+
+// authenticatedHandler wraps an ErrorHandlerFunc so that only requests carrying
+// a valid requestheader proxy certificate are forwarded.  If no CA has been
+// configured the handler is called directly (useful in unit tests).
+func (as *APIServer) authenticatedHandler(h https.ErrorHandlerFunc) https.ErrorHandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		if as.requestHeaderCA == nil {
+			return h(w, r)
+		}
+		if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return nil
+		}
+		opts := x509.VerifyOptions{
+			Roots:     as.requestHeaderCA,
+			KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		}
+		if _, err := r.TLS.PeerCertificates[0].Verify(opts); err != nil {
+			as.logger.WithError(err).Warn("rejecting request: requestheader client certificate verification failed")
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return nil
+		}
+		return h(w, r)
+	}
+}
+
 // AddAPIResource stores the APIResource under the given groupVersion string, and returns it
 // in the appropriate place for the K8s discovery service
 // e.g. http://localhost:8001/apis/scheduling.k8s.io/v1
@@ -141,9 +184,10 @@ func (as *APIServer) AddAPIResource(groupVersion string, resource metav1.APIReso
 		as.logger.WithField("groupversion", groupVersion).WithField("pattern", pattern).Debug("Adding Discovery Handler")
 
 		// e.g.  /apis/agones.dev/v1/namespaces/default/gameservers
-		// CRD handler
+		// CRD handler — wrapped with requestheader client-cert authentication so that
+		// in-cluster workloads cannot bypass Kubernetes RBAC by calling this port directly.
 		pattern = fmt.Sprintf("/apis/%s/namespaces/", groupVersion)
-		as.mux.HandleFunc(pattern, https.ErrorHTTPHandler(as.logger, as.resourceHandler(groupVersion)))
+		as.mux.HandleFunc(pattern, https.ErrorHTTPHandler(as.logger, as.authenticatedHandler(as.resourceHandler(groupVersion))))
 		as.logger.WithField("groupversion", groupVersion).WithField("pattern", pattern).Debug("Adding Resource Handler")
 	}
 

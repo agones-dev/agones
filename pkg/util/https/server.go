@@ -79,6 +79,11 @@ func (s *Server) setupServer() {
 		Handler: s.Mux,
 		TLSConfig: &cryptotls.Config{
 			GetCertificate: s.getCertificate,
+			// RequestClientCert asks clients to send a certificate but does not
+			// require one.  This makes the cert available in r.TLS.PeerCertificates
+			// so that the aggregation-layer auth middleware can verify it, without
+			// breaking webhook callers that do not present a cert.
+			ClientAuth: cryptotls.RequestClientCert,
 		},
 	}
 
