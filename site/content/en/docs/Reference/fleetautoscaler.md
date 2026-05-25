@@ -203,7 +203,7 @@ When the `FleetAutoscaleRequestMetaData` feature gate is enabled, the Fleet's `l
 `annotations` are included in the `FleetAutoscaleRequest`, allowing webhooks to make scaling decisions based on 
 Fleet-specific metadata.
 
-{{% feature expiryVersion="1.58.0" %}}
+{{% feature expiryVersion="1.59.0" %}}
 ```go
 // FleetAutoscaleReview is passed to the webhook with a populated Request value,
 // and then returned with a populated Response.
@@ -254,7 +254,7 @@ type FleetStatus struct {
 }
 ```
 {{% /feature %}}
-{{% feature publishVersion="1.58.0" %}}
+{{% feature publishVersion="1.59.0" %}}
 ```go
 // FleetAutoscaleReview is passed to the webhook with a populated Request value,
 // and then returned with a populated Response.
@@ -383,7 +383,7 @@ exact same structure as the [Webhook Autoscaler Specification](#webhook-endpoint
 The `FleetAutoscaleResponse`'s `Replicas` field is used to set the target `Fleet` count with each sync interval, thereby
 providing the autoscaling functionality. The `Scale` field indicates whether scaling should occur.
 
-{{% feature expiryVersion="1.58.0" %}}
+{{% feature expiryVersion="1.59.0" %}}
 ```go
 // FleetAutoscaleReview is passed to the Wasm function with a populated Request value,
 // and then returned with a populated Response.
@@ -434,7 +434,7 @@ type FleetStatus struct {
 }
 ```
 {{% /feature %}}
-{{% feature publishVersion="1.58.0" %}}
+{{% feature publishVersion="1.59.0" %}}
 ```go
 // FleetAutoscaleReview is passed to the Wasm function with a populated Request value,
 // and then returned with a populated Response.

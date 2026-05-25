@@ -45,7 +45,7 @@ Follow the [Google Cloud Monitoring installation steps](#google-cloud-monitoring
 
 
 
-{{% feature expiryVersion="1.58.0" %}}
+{{% feature expiryVersion="1.59.0" %}}
 | Name                                                  | Description                                                                                                                                                                                 | Type      |
 |-------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|
 | agones_gameservers_count                              | The number of gameservers per fleet and status                                                                                                                                              | gauge     |
@@ -77,7 +77,7 @@ Follow the [Google Cloud Monitoring installation steps](#google-cloud-monitoring
 | agones_k8s_client_workqueue_longest_running_processor | How long the longest running workqueue processor has been running in microseconds                                                                                                           | gauge     |
 | agones_k8s_client_workqueue_unfinished_work_seconds   | How long unfinished work has been sitting in the workqueue in seconds                                                                                                                       | gauge     |
 {{% /feature %}}
-{{% feature publishVersion="1.58.0" %}}
+{{% feature publishVersion="1.59.0" %}}
 | Name                                                  | Description                                                                                                                                                                                 | Type      |
 |-------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|
 | agones_gameservers_count                              | The number of gameservers per fleet and status                                                                                                                                              | gauge     |
