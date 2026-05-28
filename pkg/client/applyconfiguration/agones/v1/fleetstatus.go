@@ -25,6 +25,7 @@ type FleetStatusApplyConfiguration struct {
 	ReadyReplicas     *int32                                               `json:"readyReplicas,omitempty"`
 	ReservedReplicas  *int32                                               `json:"reservedReplicas,omitempty"`
 	AllocatedReplicas *int32                                               `json:"allocatedReplicas,omitempty"`
+	Allocations       *int64                                               `json:"allocations,omitempty"`
 	Players           *AggregatedPlayerStatusApplyConfiguration            `json:"players,omitempty"`
 	Counters          map[string]AggregatedCounterStatusApplyConfiguration `json:"counters,omitempty"`
 	Lists             map[string]AggregatedListStatusApplyConfiguration    `json:"lists,omitempty"`
@@ -65,6 +66,14 @@ func (b *FleetStatusApplyConfiguration) WithReservedReplicas(value int32) *Fleet
 // If called multiple times, the AllocatedReplicas field is set to the value of the last call.
 func (b *FleetStatusApplyConfiguration) WithAllocatedReplicas(value int32) *FleetStatusApplyConfiguration {
 	b.AllocatedReplicas = &value
+	return b
+}
+
+// WithAllocations sets the Allocations field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the Allocations field is set to the value of the last call.
+func (b *FleetStatusApplyConfiguration) WithAllocations(value int64) *FleetStatusApplyConfiguration {
+	b.Allocations = &value
 	return b
 }
 

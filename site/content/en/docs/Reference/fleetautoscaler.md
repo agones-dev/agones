@@ -203,6 +203,7 @@ When the `FleetAutoscaleRequestMetaData` feature gate is enabled, the Fleet's `l
 `annotations` are included in the `FleetAutoscaleRequest`, allowing webhooks to make scaling decisions based on 
 Fleet-specific metadata.
 
+{{% feature expiryVersion="1.59.0" %}}
 ```go
 // FleetAutoscaleReview is passed to the webhook with a populated Request value,
 // and then returned with a populated Response.
@@ -216,7 +217,7 @@ type FleetAutoscaleRequest struct {
 	// otherwise identical (parallel requests, requests when earlier requests did not modify etc)
 	// The UID is meant to track the round trip (request/response) between the Autoscaler and the WebHook, not the user request.
 	// It is suitable for correlating log entries between the webhook and apiserver, for either auditing or debugging.
-	UID types.UID `json:"uid""`
+	UID types.UID `json:"uid"`
 	// Name is the name of the Fleet being scaled
 	Name string `json:"name"`
 	// Namespace is the namespace associated with the request (if any).
@@ -252,6 +253,60 @@ type FleetStatus struct {
 	AllocatedReplicas int32 `json:"allocatedReplicas"`
 }
 ```
+{{% /feature %}}
+{{% feature publishVersion="1.59.0" %}}
+```go
+// FleetAutoscaleReview is passed to the webhook with a populated Request value,
+// and then returned with a populated Response.
+type FleetAutoscaleReview struct {
+	Request  *FleetAutoscaleRequest  `json:"request"`
+	Response *FleetAutoscaleResponse `json:"response"`
+}
+
+type FleetAutoscaleRequest struct {
+	// UID is an identifier for the individual request/response. It allows us to distinguish instances of requests which are
+	// otherwise identical (parallel requests, requests when earlier requests did not modify etc)
+	// The UID is meant to track the round trip (request/response) between the Autoscaler and the WebHook, not the user request.
+	// It is suitable for correlating log entries between the webhook and apiserver, for either auditing or debugging.
+	UID types.UID `json:"uid"`
+	// Name is the name of the Fleet being scaled
+	Name string `json:"name"`
+	// Namespace is the namespace associated with the request (if any).
+	Namespace string `json:"namespace"`
+	// The Fleet's status values
+	Status v1.FleetStatus `json:"status"`
+	// Standard map labels; More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels.
+	Labels map[string]string `json:"labels,omitempty"`
+	// Standard map annotations; More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations.
+	Annotations map[string]string `json:"annotations,omitempty"`
+}
+
+type FleetAutoscaleResponse struct {
+	// UID is an identifier for the individual request/response.
+	// This should be copied over from the corresponding FleetAutoscaleRequest.
+	UID types.UID `json:"uid"`
+	// Set to false if no scaling should occur to the Fleet
+	Scale bool `json:"scale"`
+	// The targeted replica count
+	Replicas int32 `json:"replicas"`
+}
+
+// FleetStatus is the status of a Fleet
+type FleetStatus struct {
+	// Replicas the total number of current GameServer replicas
+	Replicas int32 `json:"replicas"`
+	// ReadyReplicas are the number of Ready GameServer replicas
+	ReadyReplicas int32 `json:"readyReplicas"`
+	// ReservedReplicas are the total number of Reserved GameServer replicas in this fleet.
+	// Reserved instances won't be deleted on scale down, but won't cause an autoscaler to scale up.
+	ReservedReplicas int32 `json:"reservedReplicas"`
+	// AllocatedReplicas are the number of Allocated GameServer replicas
+	AllocatedReplicas int32 `json:"allocatedReplicas"`
+    // Allocations is a counter of the number of allocations observed.
+    Allocations int64 `json:"allocations"`
+}
+```
+{{% /feature %}}
 
 For Webhook Fleetautoscaler Policy either HTTP or HTTPS could be used. Switching between them occurs depending on https presence in `URL` or by the presence of `caBundle`.
 The example of the webhook written in Go could be found {{< ghlink href="examples/autoscaler-webhook/main.go" >}}here{{< /ghlink >}}.
@@ -328,6 +383,7 @@ exact same structure as the [Webhook Autoscaler Specification](#webhook-endpoint
 The `FleetAutoscaleResponse`'s `Replicas` field is used to set the target `Fleet` count with each sync interval, thereby
 providing the autoscaling functionality. The `Scale` field indicates whether scaling should occur.
 
+{{% feature expiryVersion="1.59.0" %}}
 ```go
 // FleetAutoscaleReview is passed to the Wasm function with a populated Request value,
 // and then returned with a populated Response.
@@ -377,6 +433,60 @@ type FleetStatus struct {
 	AllocatedReplicas int32 `json:"allocatedReplicas"`
 }
 ```
+{{% /feature %}}
+{{% feature publishVersion="1.59.0" %}}
+```go
+// FleetAutoscaleReview is passed to the Wasm function with a populated Request value,
+// and then returned with a populated Response.
+type FleetAutoscaleReview struct {
+	Request  *FleetAutoscaleRequest  `json:"request"`
+	Response *FleetAutoscaleResponse `json:"response"`
+}
+
+type FleetAutoscaleRequest struct {
+	// UID is an identifier for the individual request/response. It allows us to distinguish instances of requests which are
+	// otherwise identical (parallel requests, requests when earlier requests did not modify etc)
+	// The UID is meant to track the round trip (request/response) between the Autoscaler and the Wasm function, not the user request.
+	// It is suitable for correlating log entries between the autoscaler and the Wasm function, for either auditing or debugging.
+	UID string `json:"uid"`
+	// Name is the name of the Fleet being scaled
+	Name string `json:"name"`
+	// Namespace is the namespace associated with the request (if any).
+	Namespace string `json:"namespace"`
+	// The Fleet's status values
+	Status FleetStatus `json:"status"`
+	// Standard map labels; More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels.
+	Labels map[string]string `json:"labels,omitempty"`
+	// Standard map annotations; More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations.
+	Annotations map[string]string `json:"annotations,omitempty"`
+}
+
+type FleetAutoscaleResponse struct {
+	// UID is an identifier for the individual request/response.
+	// This should be copied over from the corresponding FleetAutoscaleRequest.
+	UID string `json:"uid"`
+	// Set to false if no scaling should occur to the Fleet
+	Scale bool `json:"scale"`
+	// The targeted replica count
+	Replicas int32 `json:"replicas"`
+}
+
+// FleetStatus is the status of a Fleet
+type FleetStatus struct {
+	// Replicas the total number of current GameServer replicas
+	Replicas int32 `json:"replicas"`
+	// ReadyReplicas are the number of Ready GameServer replicas
+	ReadyReplicas int32 `json:"readyReplicas"`
+	// ReservedReplicas are the total number of Reserved GameServer replicas in this fleet.
+	// Reserved instances won't be deleted on scale down, but won't cause an autoscaler to scale up.
+	ReservedReplicas int32 `json:"reservedReplicas"`
+	// AllocatedReplicas are the number of Allocated GameServer replicas
+	AllocatedReplicas int32 `json:"allocatedReplicas"`
+    // Allocations is a counter of the number of allocations observed.
+    Allocations int64 `json:"allocations"`
+}
+```
+{{% /feature %}}
 
 The example of a Wasm autoscaler written in Go using the Extism PDK can be found {{< ghlink href="examples/autoscaler-wasm/main.go" >}}here{{< /ghlink >}}.
 

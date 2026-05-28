@@ -428,6 +428,41 @@ func TestControllerGameServersTotal(t *testing.T) {
 	})
 }
 
+func TestControllerGameServerAllocationsTotal(t *testing.T) {
+	mu.Lock()
+	defer mu.Unlock()
+	resetMetrics()
+	reader := metricexport.NewReader()
+	c := newFakeController()
+	defer c.close()
+	c.run(t)
+
+	// deleted gs should not be counted
+	gs := gameServerWithFleetAndState("deleted", agonesv1.GameServerStateCreating)
+	c.gsWatch.Add(gs)
+	c.gsWatch.Delete(gs)
+
+	generateGsEvents(15, agonesv1.GameServerStateAllocated, "test", c.gsWatch)
+	generateGsEvents(19, agonesv1.GameServerStateAllocated, "", c.gsWatch)
+
+	expected := 34
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		list, err := c.gameServerLister.GameServers(gs.ObjectMeta.Namespace).List(labels.Everything())
+		require.NoError(ct, err)
+		assert.Len(ct, list, expected)
+	}, 10*time.Second, time.Second)
+	// While these values are tested above, the following test checks will provide a more detailed diff output
+	// in the case where the assert.Eventually(...) case fails, which makes failing tests easier to debug.
+
+	list, err := c.gameServerLister.GameServers(gs.ObjectMeta.Namespace).List(labels.Everything())
+	require.NoError(t, err)
+	require.Len(t, list, expected)
+	assertMetricData(t, c, func() {}, reader, gameServersAllocationsTotalName, []expectedMetricData{
+		{labels: []string{"test", defaultNs}, val: int64(15)},
+		{labels: []string{"none", defaultNs}, val: int64(19)},
+	})
+}
+
 func TestControllerFleetOnDeleting(t *testing.T) {
 	mu.Lock()
 	defer mu.Unlock()
