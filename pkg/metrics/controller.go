@@ -456,6 +456,9 @@ func (c *Controller) recordGameServerStatusChanges(old, next interface{}) {
 	if newGs.Status.State != oldGs.Status.State {
 		RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(keyType, string(newGs.Status.State)),
 			tag.Upsert(keyFleetName, fleetName), tag.Upsert(keyNamespace, newGs.GetNamespace())}, gameServerTotalStats.M(1))
+		if newGs.Status.State == agonesv1.GameServerStateAllocated {
+			RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(keyFleetName, fleetName), tag.Upsert(keyNamespace, newGs.GetNamespace())}, gameServerAllocationsTotalStats.M(1))
+		}
 
 		// Calculate the duration of the current state
 		duration, err := c.calcDuration(oldGs, newGs)

@@ -524,6 +524,7 @@ func TestGameServerPodCompletedAfterCleanExit(t *testing.T) {
 		for {
 			select {
 			case <-ctx.Done():
+				log.Info("Stopping udp CRASH sender")
 				return
 			default:
 				mtx.Lock()
@@ -531,8 +532,7 @@ func TestGameServerPodCompletedAfterCleanExit(t *testing.T) {
 				_, err := conn.Write([]byte("CRASH 0"))
 				mtx.Unlock()
 				if err != nil {
-					log.WithError(err).Warn("error sending udp packet. Stopping.")
-					return
+					log.WithError(err).Warn("error sending udp packet.")
 				}
 			}
 			time.Sleep(5 * time.Second)
@@ -1041,6 +1041,8 @@ func TestGameServerPortPolicyNone(t *testing.T) {
 
 func TestGameServerTcpProtocol(t *testing.T) {
 	t.Parallel()
+	log := e2eframework.TestLogger(t)
+	ctx := context.Background()
 	gs := framework.DefaultGameServer(framework.Namespace)
 
 	gs.Spec.Ports[0].Protocol = corev1.ProtocolTCP
@@ -1053,6 +1055,16 @@ func TestGameServerTcpProtocol(t *testing.T) {
 	require.NoError(t, err)
 
 	replyTCP, err := e2eframework.SendGameServerTCP(readyGs, "Hello World !")
+	if err != nil {
+		framework.LogEvents(t, log, readyGs.ObjectMeta.Namespace, readyGs)
+		pod, err := framework.KubeClient.CoreV1().Pods(readyGs.ObjectMeta.Namespace).Get(ctx, readyGs.Name, metav1.GetOptions{})
+		if err != nil {
+			log.WithError(err).Info("Could not retrieve pod for GameServer")
+		} else {
+			framework.LogEvents(t, log, readyGs.ObjectMeta.Namespace, pod)
+			framework.LogPodContainers(t, pod)
+		}
+	}
 	require.NoError(t, err)
 	assert.Equal(t, "ACK TCP: Hello World !\n", replyTCP)
 }
@@ -1297,7 +1309,7 @@ spec:
           preferredDuringSchedulingIgnoredDuringExecution: ERROR
       containers:
         - name: simple-game-server
-          image: us-docker.pkg.dev/agones-images/examples/simple-game-server:0.42
+          image: us-docker.pkg.dev/agones-images/examples/simple-game-server:0.43
 `
 	err := os.WriteFile("/tmp/invalid.yaml", []byte(gsYaml), 0o644)
 	require.NoError(t, err)

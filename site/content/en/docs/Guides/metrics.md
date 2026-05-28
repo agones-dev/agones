@@ -45,6 +45,7 @@ Follow the [Google Cloud Monitoring installation steps](#google-cloud-monitoring
 
 
 
+{{% feature expiryVersion="1.59.0" %}}
 | Name                                                  | Description                                                                                                                                                                                 | Type      |
 |-------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|
 | agones_gameservers_count                              | The number of gameservers per fleet and status                                                                                                                                              | gauge     |
@@ -75,7 +76,40 @@ Follow the [Google Cloud Monitoring installation steps](#google-cloud-monitoring
 | agones_k8s_client_workqueue_retries_total             | Total number of items retried to the work queue                                                                                                                                             | counter   |
 | agones_k8s_client_workqueue_longest_running_processor | How long the longest running workqueue processor has been running in microseconds                                                                                                           | gauge     |
 | agones_k8s_client_workqueue_unfinished_work_seconds   | How long unfinished work has been sitting in the workqueue in seconds                                                                                                                       | gauge     |
-
+{{% /feature %}}
+{{% feature publishVersion="1.59.0" %}}
+| Name                                                  | Description                                                                                                                                                                                 | Type      |
+|-------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|
+| agones_gameservers_count                              | The number of gameservers per fleet and status                                                                                                                                              | gauge     |
+| agones_gameserver_allocations_duration_seconds        | The distribution of gameserver allocation requests latencies                                                                                                                                | histogram |
+| agones_gameserver_allocations_retry_total             | The count of gameserver allocation retry until it succeeds | histogram |
+| agones_gameserver_creation_duration                   | The time gameserver takes to be created in seconds  | histogram | 
+| agones_gameservers_total                              | The total of gameservers per fleet and status                                                                                                                                               | counter   |
+| agones_gameservers_allocations_total                  | The total of gameserver allocations                                                                                                                                                         | counter   |
+| agones_gameserver_player_connected_total              | The total number of players connected to gameservers (Only available when [player tracking]({{< relref "player-tracking.md" >}}) is enabled)                                                | gauge     |
+| agones_gameserver_player_capacity_total               | The available capacity for players on gameservers (Only available when [player tracking]({{< relref "player-tracking.md" >}}) is enabled)                                                   | gauge     |
+| agones_fleets_replicas_count                          | The number of replicas per fleet (total, desired, ready, reserved, allocated)                                                                                                               | gauge     |
+| agones_fleet_counters                                 | Aggregate Metrics for Counters within a Fleet, including total capacity and count values (Only available when [Counters and Lists]({{< relref "counters-and-lists.md" >}})) are enabled)    | gauge     |
+| agones_fleet_lists                                    | Aggregate Metrics for Lists within a Fleet, including total capacity and List lengths (Only available when [Counters and Lists]({{< relref "counters-and-lists.md" >}})) are enabled)       | gauge     |
+| agones_fleet_autoscalers_able_to_scale                | The fleet autoscaler can access the fleet to scale                                                                                                                                          | gauge     |
+| agones_fleet_autoscalers_buffer_limits                | The limits of buffer based fleet autoscalers (min, max)                                                                                                                                     | gauge     |
+| agones_fleet_autoscalers_buffer_size                  | The buffer size of fleet autoscalers (count or percentage)                                                                                                                                  | gauge     |
+| agones_fleet_autoscalers_current_replicas_count       | The current replicas count as seen by autoscalers                                                                                                                                           | gauge     |
+| agones_fleet_autoscalers_desired_replicas_count       | The desired replicas count as seen by autoscalers                                                                                                                                           | gauge     |
+| agones_fleet_autoscalers_limited                      | The fleet autoscaler is outside the limits set by MinReplicas and MaxReplicas.                                                                                                              | gauge     |
+| agones_gameservers_node_count                         | The distribution of gameservers per node                                                                                                                                                    | histogram |
+| agones_nodes_count                                    | The count of nodes empty and with gameservers                                                                                                                                               | gauge     |
+| agones_gameserver_state_duration                      | The distribution of gameserver state duration in seconds. Note: this metric could have some missing samples by design. Do not use the `_total` counter as the real value for state changes. | histogram |
+| agones_k8s_client_http_request_total                  | The total of HTTP requests to the Kubernetes API by status code                                                                                                                             | counter   |
+| agones_k8s_client_http_request_duration_seconds       | The distribution of HTTP requests latencies to the Kubernetes API by status code                                                                                                            | histogram |
+| agones_k8s_client_workqueue_depth                     | Current depth of the work queue                                                                                                                                                             | gauge     |
+| agones_k8s_client_workqueue_latency_seconds           | How long an item stays in the work queue                                                                                                                                                    | histogram |
+| agones_k8s_client_workqueue_items_total               | Total number of items added to the work queue                                                                                                                                               | counter   |
+| agones_k8s_client_workqueue_work_duration_seconds     | How long processing an item from the work queue takes                                                                                                                                       | histogram |
+| agones_k8s_client_workqueue_retries_total             | Total number of items retried to the work queue                                                                                                                                             | counter   |
+| agones_k8s_client_workqueue_longest_running_processor | How long the longest running workqueue processor has been running in microseconds                                                                                                           | gauge     |
+| agones_k8s_client_workqueue_unfinished_work_seconds   | How long unfinished work has been sitting in the workqueue in seconds                                                                                                                       | gauge     |
+{{% /feature %}}
 
 
 ### Dropping Metric Labels

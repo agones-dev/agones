@@ -203,13 +203,11 @@ The following tables lists the configurable parameters of the Agones chart and t
 | `agones.controller.maxGameServerDeletionsPerBatch`       | Maximum number of GameServer deletion calls per batch                                                                                                                                                                               | `64`    |
 | `agones.controller.maxPodPendingCount`                   | Maximum number of pending pods per game server set                                                                                                                                                                                  | `5000`  |
 
-{{% feature publishVersion="1.58.0" %}}
 
 | Parameter | Description | Default |
 | --------- | ----------- | ------- |
 | `agones.controller.env` | Additional [environment variables](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/) to inject into the controller pod | `[]` |
 
-{{% /feature %}}
 
 ### SDK Server
 
@@ -260,13 +258,11 @@ The following tables lists the configurable parameters of the Agones chart and t
 | `agones.ping.pdb.maxUnavailable`                         | Description of the number of pods from that set that can be unavailable after the eviction. It can be either an absolute number or a percentage Mutually Exclusive with `minAvailable`                                              | \`\`           |
 | `agones.ping.topologySpreadConstraints`                  | Ensures better resource utilization and high availability by evenly distributing Pods in the agones-system namespace                                                                                                                | `{}`           |
 
-{{% feature publishVersion="1.58.0" %}}
 
 | Parameter | Description | Default |
 | --------- | ----------- | ------- |
 | `agones.ping.env` | Additional [environment variables](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/) to inject into the ping pod | `[]` |
 
-{{% /feature %}}
 
 
 ### Allocator Service
@@ -331,14 +327,12 @@ The following tables lists the configurable parameters of the Agones chart and t
 | `agones.allocator.pdb.maxUnavailable`                 | Description of the number of pods from that set that can be unavailable after the eviction. It can be either an absolute number or a percentage. Mutually Exclusive with `minAvailable`                                             | \`\`                               |
 | `agones.allocator.topologySpreadConstraints`          | Ensures better resource utilization and high availability by evenly distributing Pods in the agones-system namespace                                                                                                                | `{}`                               |
 
-{{% feature publishVersion="1.58.0" %}}
 
 | Parameter | Description | Default |
 | --------- | ----------- | ------- |
 | `agones.allocator.env` | Additional [environment variables](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/) to inject into the allocator pod | `[]` |
 | `agones.allocator.processor.env` | Additional [environment variables](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/) to inject into the allocator processor pod | `[]` |
 
-{{% /feature %}}
 
 
 ### Extensions
@@ -380,25 +374,23 @@ The following tables lists the configurable parameters of the Agones chart and t
 | `agones.extensions.replicas`                             | The number of replicas to run in the deployment                                                                                                                                                                                   | `2`     |
 | `agones.extensions.topologySpreadConstraints`            | Ensures better resource utilization and high availability by evenly distributing Pods in the agones-system namespace                                                                                                              | `{}`    |
 
-{{% feature publishVersion="1.58.0" %}}
 
 | Parameter | Description | Default |
 | --------- | ----------- | ------- |
 | `agones.extensions.env` | Additional [environment variables](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/) to inject into the extensions pod | `[]` |
 
-{{% /feature %}}
 
 ### GameServers
 
-| Parameter                              | Description                                                                                                                             | Default       |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| `gameservers.namespaces`               | a list of namespaces you are planning to use to deploy game servers                                                                     | `["default"]` |
-| `gameservers.minPort`                  | Minimum port to use for dynamic port allocation                                                                                         | `7000`        |
-| `gameservers.maxPort`                  | Maximum port to use for dynamic port allocation                                                                                         | `8000`        |
-| `gameservers.additionalPortRanges`     | Port ranges from which to do named dynamic port allocation. Example: <br /> additionalPortRanges: <br />&nbsp;&nbsp;game: [9000, 10000] | `{}`          |
-| `gameservers.podPreserveUnknownFields` | Disable [field pruning][pruning] and schema validation on the Pod template for a [GameServer][gameserver] definition                    | `false`       |
-| `gameservers.lists.maxItems`           | The maximum number of items that can be specified for a list.                                                                           | `1000`        |
-
+| Parameter                              | Description                                                                                                                             | Default                                |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------|
+| `gameservers.namespaces`               | a list of namespaces you are planning to use to deploy game servers                                                                     | `["default"]`                          |
+| `gameservers.minPort`                  | Minimum port to use for dynamic port allocation                                                                                         | `7000`                                 |
+| `gameservers.maxPort`                  | Maximum port to use for dynamic port allocation                                                                                         | `8000`                                 |
+| `gameservers.additionalPortRanges`     | Port ranges from which to do named dynamic port allocation. Example: <br /> additionalPortRanges: <br />&nbsp;&nbsp;game: [9000, 10000] | `{}`                                   |
+| `gameservers.podPreserveUnknownFields` | Disable [field pruning][pruning] and schema validation on the Pod template for a [GameServer][gameserver] definition                    | `false`                                |
+| `gameservers.selectableFields`         | spec fields available for querying [GameServer][gameserver] resources.                                                                  | `[".status.state", "status.nodeName"]` |
+| `gameservers.lists.maxItems`           | The maximum number of items that can be specified for a list.                                                                           | `1000`                                 |
 
 ### Helm Installation
 

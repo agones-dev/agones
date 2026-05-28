@@ -32,6 +32,8 @@ If you're new to the project and want to help, but don't know where to start, lo
 These labels help you find issues that are well-suited for external contributions and where maintainers are actively
 looking for help.
 
+For information on how project decisions are made, including voting and governance, see the [Agones Governance](./GOVERNANCE.md) documentation.
+
 ## Submitting code via Pull Requests
 
 *Thank you* for considering submitting code to Agones!

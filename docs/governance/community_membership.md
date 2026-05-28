@@ -1,6 +1,7 @@
 # Community Membership
 
 This document outlines the responsibilities of contributor roles in Agones.
+It is referenced by the [Agones Project Governance](../../GOVERNANCE.md).
 
 This is based on the [Kubernetes Community Membership](https://github.com/kubernetes/community/blob/master/community-membership.md).
 
@@ -146,3 +147,18 @@ correctness issues, interactions with other parts of the system, etc.
 - Assigned PRs to review related based on expertise
 - Granted commit access to Agones repo
 
+### Resignation and removal
+
+Approvers and releasers may resign at any time if they feel that they will not be able to
+continue fulfilling their project duties.
+
+Approvers and releasers may also be removed after being inactive, failure to fulfill their
+responsibilities, violating the Code of Conduct, or other reasons.
+Inactivity is defined as a period of very low or no activity in the project
+for a year or more, with no definite schedule to return to full role activity.
+
+An Approver or releaser may be removed at any time by a 2/3 vote of the remaining approvers.
+
+Depending on the reason for removal, an Approver or releaser may be converted to Emeritus
+status. Emeritus members will still be consulted on some project matters 
+and can be rapidly returned to their original status if their availability changes.

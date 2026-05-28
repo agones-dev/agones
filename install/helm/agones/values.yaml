@@ -330,7 +330,7 @@ agones:
         minAvailable: 1
   image:
     registry: us-docker.pkg.dev/agones-images/release
-    tag: 1.58.0-dev
+    tag: 1.59.0-dev
     controller:
       name: agones-controller
       pullPolicy: IfNotPresent
@@ -362,6 +362,9 @@ gameservers:
     # requires feature gate PortRanges to be enabled
     # game: [9000, 10000]
   podPreserveUnknownFields: false
+  selectableFields:
+    - .status.state
+    - .status.nodeName
   lists:
     maxItems: 1000
 

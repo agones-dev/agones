@@ -1,5 +1,69 @@
 # Changelog
 
+# [v1.58.0](https://github.com/agones-dev/agones/tree/v1.58.0) (2026-05-19)
+
+[Full Changelog](https://github.com/agones-dev/agones/compare/v1.57.0...v1.58.0)
+
+**Breaking changes**
+- bug: Don't block for PodIP population by @markmandel in https://github.com/agones-dev/agones/pull/4535
+
+**Implemented enhancements**
+- docs: audit membership roles and update community_membership.md by @markmandel in https://github.com/agones-dev/agones/pull/4500
+- golang upgrade 1.26 by @indurireddy-TF in https://github.com/agones-dev/agones/pull/4497
+- Feat: add python sdk for Agones game server by @hiromesh in https://github.com/agones-dev/agones/pull/4496
+- Feat: implement the processor server by @lacroixthomas in https://github.com/agones-dev/agones/pull/4263
+- Feat: setup fossa GitHub action by @lacroixthomas in https://github.com/agones-dev/agones/pull/4541
+- Feat: support arm64 architecture in development tooling by @nicknikolakakis in https://github.com/agones-dev/agones/pull/4545
+- Feat: Add PDB on new processor allocator by @lacroixthomas in https://github.com/agones-dev/agones/pull/4546
+- Add selectable fields to gameserver crd by @swermin in https://github.com/agones-dev/agones/pull/4542
+
+**Fixed bugs**
+- fix: recovery paths for PodSucceeded and PodFailed GameServer lifecycle by @markmandel in https://github.com/agones-dev/agones/pull/4480
+- fix: only render set PDB field to fix schema validation by @nicknikolakakis in https://github.com/agones-dev/agones/pull/4511
+- fix: simple-game-server ports are bound before calling SDK Ready() by @markmandel in https://github.com/agones-dev/agones/pull/4567
+
+**Other**
+- Preparation for Release v1.58.0 by @Sivasankaran25 in https://github.com/agones-dev/agones/pull/4505
+- Docs: add allocator, ping, and topology spread HA details by @NA-V10 in https://github.com/agones-dev/agones/pull/4509
+- build: improve gen-install and gen-api-docs failure messages by @markmandel in https://github.com/agones-dev/agones/pull/4512
+- chore: update copyright headers to CNCF format (cmd/, pkg/apis/) by @yosofbadr in https://github.com/agones-dev/agones/pull/4515
+- build(deps): bump github.com/go-git/go-git/v5 from 5.17.1 to 5.18.0 in /build/scripts/example-version-checker by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4518
+- chore: update copyright header to CNCF format in pkg directory by @JeevaRamanathan in https://github.com/agones-dev/agones/pull/4520
+- build(deps): bump protobufjs from 7.5.4 to 7.5.5 in /sdks/nodejs by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4517
+- chore: update copyright headers to CNCF format (non-helm YAML/config) by @mateenali66 in https://github.com/agones-dev/agones/pull/4522
+- Bump cloud build docker client version to 24.0.9 by @markmandel in https://github.com/agones-dev/agones/pull/4516
+- chore: update copyright headers to CNCF format (install/helm) by @mateenali66 in https://github.com/agones-dev/agones/pull/4527
+- Update to security policy for CNCF migration by @galalmounir in https://github.com/agones-dev/agones/pull/4504
+- build(deps): bump go.opentelemetry.io/otel from 1.39.0 to 1.41.0 by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4531
+- chore: update copyright header to CNCF format in .sh files by @lakshpraveen in https://github.com/agones-dev/agones/pull/4536
+- Add env option to all Agones component deployments by @lazy-slackoth in https://github.com/agones-dev/agones/pull/4499
+- chore: update copyright header to CNCF format in proto directory by @JeevaRamanathan in https://github.com/agones-dev/agones/pull/4525
+- flaky: TestGameServerPodCompletedAfterCleanExit extra debugging by @markmandel in https://github.com/agones-dev/agones/pull/4537
+- docs: update documentation contribution guidelines by @markmandel in https://github.com/agones-dev/agones/pull/4534
+- chore: migrate pkg/processor to pkg/gsAlloc/processor by @lacroixthomas in https://github.com/agones-dev/agones/pull/4547
+- Update htmltest user agent by @markmandel in https://github.com/agones-dev/agones/pull/4551
+- fix(ping): correct flag default and bind pflags to viper by @bosiakov in https://github.com/agones-dev/agones/pull/4543
+- Update Apache License Copyright Headers to CNCF Format by @ethanzhou-dev in https://github.com/agones-dev/agones/pull/4554
+- Update authors on SDK package metadata by @markmandel in https://github.com/agones-dev/agones/pull/4558
+- flaky: TestMultiClusterAllocationFromLocal by @markmandel in https://github.com/agones-dev/agones/pull/4563
+- Flaky: TestGameServerPodCompletedAfterCleanExit by @markmandel in https://github.com/agones-dev/agones/pull/4562
+- Add debug logging to TestGameServerTcpProtocol for flaky test diagnosis by @markmandel in https://github.com/agones-dev/agones/pull/4539
+- build(deps): bump @protobufjs/utf8 from 1.1.0 to 1.1.1 in /sdks/nodejs by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4564
+- build(deps): bump protobufjs from 7.5.5 to 7.5.8 in /sdks/nodejs by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4565
+
+**New Contributors**
+- @NA-V10 made their first contribution in https://github.com/agones-dev/agones/pull/4509
+- @nicknikolakakis made their first contribution in https://github.com/agones-dev/agones/pull/4511
+- @yosofbadr made their first contribution in https://github.com/agones-dev/agones/pull/4515
+- @hiromesh made their first contribution in https://github.com/agones-dev/agones/pull/4496
+- @JeevaRamanathan made their first contribution in https://github.com/agones-dev/agones/pull/4520
+- @mateenali66 made their first contribution in https://github.com/agones-dev/agones/pull/4522
+- @galalmounir made their first contribution in https://github.com/agones-dev/agones/pull/4504
+- @lakshpraveen made their first contribution in https://github.com/agones-dev/agones/pull/4536
+- @lazy-slackoth made their first contribution in https://github.com/agones-dev/agones/pull/4499
+- @bosiakov made their first contribution in https://github.com/agones-dev/agones/pull/4543
+- @ethanzhou-dev made their first contribution in https://github.com/agones-dev/agones/pull/4554
+
 # [v1.57.0](https://github.com/agones-dev/agones/tree/v1.57.0) (2026-04-07)
 
 [Full Changelog](https://github.com/agones-dev/agones/compare/v1.56.0...v1.57.0)
