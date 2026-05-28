@@ -18,6 +18,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"agones.dev/agones/pkg/apis/agones"
@@ -64,12 +67,14 @@ type Extensions struct {
 type Controller struct {
 	baseLogger          *logrus.Entry
 	crdGetter           apiextclientv1.CustomResourceDefinitionInterface
+	gameServerSynced    cache.InformerSynced
 	gameServerSetGetter getterv1.GameServerSetsGetter
 	gameServerSetLister listerv1.GameServerSetLister
 	gameServerSetSynced cache.InformerSynced
 	fleetGetter         getterv1.FleetsGetter
 	fleetLister         listerv1.FleetLister
 	fleetSynced         cache.InformerSynced
+	allocs              *allocTracker
 	workerqueue         *workerqueue.WorkerQueue
 	recorder            record.EventRecorder
 }
@@ -82,6 +87,9 @@ func NewController(
 	agonesClient versioned.Interface,
 	agonesInformerFactory externalversions.SharedInformerFactory) *Controller {
 
+	gameServers := agonesInformerFactory.Agones().V1().GameServers()
+	gsInformer := gameServers.Informer()
+
 	gameServerSets := agonesInformerFactory.Agones().V1().GameServerSets()
 	gsSetInformer := gameServerSets.Informer()
 
@@ -90,12 +98,14 @@ func NewController(
 
 	c := &Controller{
 		crdGetter:           extClient.ApiextensionsV1().CustomResourceDefinitions(),
+		gameServerSynced:    gsInformer.HasSynced,
 		gameServerSetGetter: agonesClient.AgonesV1(),
 		gameServerSetLister: gameServerSets.Lister(),
 		gameServerSetSynced: gsSetInformer.HasSynced,
 		fleetGetter:         agonesClient.AgonesV1(),
 		fleetLister:         fleets.Lister(),
 		fleetSynced:         fInformer.HasSynced,
+		allocs:              newAllocTracker(),
 	}
 
 	c.baseLogger = runtime.NewLoggerWithType(c)
@@ -112,6 +122,11 @@ func NewController(
 		UpdateFunc: func(_, newObj interface{}) {
 			c.workerqueue.Enqueue(newObj)
 		},
+		DeleteFunc: func(obj interface{}) {
+			fleet := obj.(*agonesv1.Fleet)
+
+			c.allocs.remove(fleet.ObjectMeta.Namespace, fleet.ObjectMeta.Name)
+		},
 	})
 
 	_, _ = gsSetInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -122,6 +137,25 @@ func NewController(
 			if gsSet.ObjectMeta.DeletionTimestamp.IsZero() {
 				c.gameServerSetEventHandler(gsSet)
 			}
+		},
+	})
+
+	_, _ = gsInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			oldGs := oldObj.(*agonesv1.GameServer)
+			newGs := newObj.(*agonesv1.GameServer)
+
+			if oldGs.Status.State == agonesv1.GameServerStateAllocated || newGs.Status.State != agonesv1.GameServerStateAllocated {
+				// Count only the transition of a GameServer into the Allocated state.
+				return
+			}
+			fleet, ok := newGs.Labels[agonesv1.FleetNameLabel]
+			if !ok || fleet == "" {
+				// The game server is not attached to a fleet. Nothing to do.
+				return
+			}
+
+			c.allocs.inc(newGs.Namespace, fleet, 1)
 		},
 	})
 
@@ -221,11 +255,13 @@ func (c *Controller) Run(ctx context.Context, workers int) error {
 	}
 
 	c.baseLogger.Debug("Wait for cache sync")
-	if !cache.WaitForCacheSync(ctx.Done(), c.gameServerSetSynced, c.fleetSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), c.gameServerSynced, c.gameServerSetSynced, c.fleetSynced) {
 		return errors.New("failed to wait for caches to sync")
 	}
 
 	c.workerqueue.Run(ctx, workers)
+
+	c.flushAllocations()
 	return nil
 }
 
@@ -723,8 +759,18 @@ func (c *Controller) updateFleetStatus(ctx context.Context, fleet *agonesv1.Flee
 		}
 	}
 
+	allocs := c.allocs.get(fleet.ObjectMeta.Namespace, fleet.ObjectMeta.Name)
+	fCopy.Status.Allocations += allocs
+
 	_, err = c.fleetGetter.Fleets(fCopy.ObjectMeta.Namespace).UpdateStatus(ctx, fCopy, metav1.UpdateOptions{})
-	return errors.Wrapf(err, "error updating status of fleet %s", fCopy.ObjectMeta.Name)
+	if err != nil {
+		return errors.Wrapf(err, "error updating status of fleet %s", fCopy.ObjectMeta.Name)
+	}
+
+	// The update was successful, the allocation count must be decremented to reflect this.
+	c.allocs.dec(fleet.ObjectMeta.Namespace, fleet.ObjectMeta.Name, allocs)
+
+	return nil
 }
 
 // filterGameServerSetByActive returns the active GameServerSet (or nil if it
@@ -758,6 +804,108 @@ func (c *Controller) filterGameServerSetByActive(fleet *agonesv1.Fleet, list []*
 	}
 
 	return active, rest
+}
+
+func (c *Controller) flushAllocations() {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	c.allocs.forEach(func(ns, fleetName string, count int64) {
+		fCopy, err := c.fleetGetter.Fleets(ns).Get(ctx, fleetName, metav1.GetOptions{})
+		if err != nil {
+			return
+		}
+
+		fCopy.Status.Allocations += count
+
+		_, _ = c.fleetGetter.Fleets(ns).UpdateStatus(ctx, fCopy, metav1.UpdateOptions{})
+	})
+}
+
+type allocTracker struct {
+	counts map[string]*atomic.Int64
+	mu     sync.RWMutex
+}
+
+func newAllocTracker() *allocTracker {
+	return &allocTracker{counts: map[string]*atomic.Int64{}}
+}
+
+func (t *allocTracker) get(ns, fleetName string) int64 {
+	key := cache.ObjectName{Namespace: ns, Name: fleetName}.String()
+
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
+	counts, ok := t.counts[key]
+	if !ok {
+		return 0
+	}
+	return counts.Load()
+}
+
+func (t *allocTracker) inc(ns, fleetName string, v int64) {
+	key := cache.ObjectName{Namespace: ns, Name: fleetName}.String()
+
+	t.mu.RLock()
+	count, ok := t.counts[key]
+	if ok {
+		count.Add(v)
+		t.mu.RUnlock()
+		return
+	}
+	t.mu.RUnlock()
+
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	count, ok = t.counts[key]
+	if !ok {
+		count = &atomic.Int64{}
+		t.counts[key] = count
+	}
+	count.Add(v)
+}
+
+func (t *allocTracker) dec(ns, fleetName string, v int64) {
+	key := cache.ObjectName{Namespace: ns, Name: fleetName}.String()
+	v = -1 * v
+
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
+	// We do not decrement something that does not exist. This would
+	// lead to some fairly confusing results.
+	count, ok := t.counts[key]
+	if ok {
+		count.Add(v)
+	}
+}
+
+func (t *allocTracker) remove(ns, fleetName string) {
+	key := cache.ObjectName{Namespace: ns, Name: fleetName}.String()
+
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	delete(t.counts, key)
+}
+
+func (t *allocTracker) forEach(fn func(ns, fleetName string, count int64)) {
+	t.mu.Lock()
+	counts := make(map[string]*atomic.Int64, len(t.counts))
+	maps.Copy(counts, t.counts)
+	t.mu.Unlock()
+
+	for key, count := range counts {
+		v := count.Load()
+		if v == 0 {
+			continue
+		}
+
+		ns, fleetName, _ := cache.SplitMetaNamespaceKey(key)
+		fn(ns, fleetName, v)
+	}
 }
 
 // mergeCounters adds the contents of AggregatedCounterStatus c2 into c1.
