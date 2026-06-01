@@ -12,26 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# This workflow utilizes https://github.com/fossas/fossa-action in GitHub Actions to run FOSSA scans on the codebase
-#
-name: FOSSA
 
-on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
-
-permissions: {}
-jobs:
-  fossa:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-      - uses: fossas/fossa-action@ff70fe9fe17cbd2040648f1c45e8ec4e4884dcf3 # v1.9.0
-        with:
-          api-key: ${{ secrets.FOSSA_API_KEY }}
-          team: Agones
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "build"
+    labels:
+      - kind/cleanup
