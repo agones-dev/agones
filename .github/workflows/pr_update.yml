@@ -29,7 +29,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Automatically update PR
-        uses: adRise/update-pr-branch@v0.6.0
+        uses: adRise/update-pr-branch@af3debe20101b0f5debd9ba9f52f41b3cdcc142d # v0.6.0
         with:
           token: ${{ secrets.AGONES_BOT }}
           base: main
