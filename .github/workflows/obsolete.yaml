@@ -30,7 +30,7 @@ jobs:
     name: Track Obsolete Issues
     steps:
       - name: Track stale issues and check if obsolete
-        uses: actions/stale@1160a2240286f5da8ec72b1c0816ce2481aabf84 # v8
+        uses: actions/stale@1160a2240286f5da8ec72b1c0816ce2481aabf84  # v8
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           days-before-issue-stale: 30
