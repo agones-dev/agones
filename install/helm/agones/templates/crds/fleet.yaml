@@ -157,6 +157,9 @@ spec:
                 allocatedReplicas:
                   type: integer
                   minimum: 0
+                allocations:
+                  type: integer
+                  minimum: 0
                 players:
                   type: object
                   nullable: true

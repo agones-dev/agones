@@ -38,5 +38,5 @@ spec:
           imagePullPolicy: Always
           env:
             - name: GAMESERVER_IMAGE
-              value: us-docker.pkg.dev/agones-images/examples/simple-game-server:0.42
+              value: us-docker.pkg.dev/agones-images/examples/simple-game-server:0.43
       restartPolicy: Never

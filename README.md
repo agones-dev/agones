@@ -49,7 +49,8 @@ the [Project Security Policy](.github/SECURITY.md)
 
 ## Development and Contribution
 
-Please read the [contributing](CONTRIBUTING.md) guide for directions on submitting Pull Requests to Agones, and community membership governance.
+Please read the [contributing](CONTRIBUTING.md) guide for directions on submitting Pull Requests to Agones, 
+and the [governance](GOVERNANCE.md) documentation for decision-making and community membership governance.
 
 See the [Developing, Testing and Building Agones](build/README.md) documentation for developing, testing and building Agones from source. For adding a new field to one of the Custom Resource Definitions refer to [Development Work on Agones Custom Resource Definitions (CRDs)](install/helm/agones/README.md).
 
