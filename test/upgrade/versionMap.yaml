@@ -127,9 +127,15 @@ data:
           "alphaGates": ["PlayerAllocationFilter", "PlayerTracking", "WasmAutoscaler"],
           "betaGates": ["CountsAndLists", "GKEAutopilotExtendedDurationPods", "PortPolicyNone", "PortRanges", "RollingUpdateFix", "ScheduledAutoscaler",  "FleetAutoscaleRequestMetaData", "SidecarContainers"]
         },
+        "1.59.0": {
+          "alphaGates": ["PlayerAllocationFilter", "PlayerTracking", "WasmAutoscaler"],
+          "betaGates": ["CountsAndLists", "GKEAutopilotExtendedDurationPods", "PortRanges", "RollingUpdateFix", "ScheduledAutoscaler", "FleetAutoscaleRequestMetaData", "SidecarContainers"],
+          "stableGates": ["PortPolicyNone"]
+        },
         "Dev": {
           "alphaGates": ["PlayerAllocationFilter", "PlayerTracking", "WasmAutoscaler"],
-          "betaGates": ["CountsAndLists", "GKEAutopilotExtendedDurationPods", "PortPolicyNone", "PortRanges", "RollingUpdateFix", "ScheduledAutoscaler",  "FleetAutoscaleRequestMetaData", "SidecarContainers"]
+          "betaGates": ["CountsAndLists", "GKEAutopilotExtendedDurationPods", "PortRanges", "RollingUpdateFix", "ScheduledAutoscaler", "FleetAutoscaleRequestMetaData", "SidecarContainers"],
+          "stableGates": ["PortPolicyNone"]
         }
       }
     }
