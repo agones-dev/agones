@@ -151,6 +151,7 @@ var (
 		// Note that stable features cannot be set to "false", and are here so that upgrades from a
 		// previous version with the feature flag do not fail on parsing an unknown flag.
 		FeatureDisableResyncOnSDKServer: true,
+		FeatureRollingUpdateFix:         true,
 		FeatureAutopilotPassthroughPort: true,
 
 		// Beta features
@@ -158,7 +159,6 @@ var (
 		FeatureGKEAutopilotExtendedDurationPods: true,
 		FeaturePortPolicyNone:                   true,
 		FeaturePortRanges:                       true,
-		FeatureRollingUpdateFix:                 true,
 		FeatureScheduledAutoscaler:              true,
 		FeatureFleetAutoscaleRequestMetaData:    true,
 		FeatureSidecarContainers:                true,
