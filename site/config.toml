@@ -28,6 +28,12 @@ enableMissingTranslationPlaceholders = true
 
 disableKinds = ["taxonomy"]
 
+
+# AI AGENT OUTPUTS
+[outputs]
+home = ["HTML", "RSS", "JSON", "LLMS"]
+
+
 # Highlighting config
 pygmentsCodeFences = true
 pygmentsUseClasses = false
