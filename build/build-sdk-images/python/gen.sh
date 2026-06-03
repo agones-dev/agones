@@ -17,5 +17,5 @@
 set -ex
 cd /go/src/agones.dev/agones/sdks/python
 python3 -m venv .venv
-.venv/bin/pip install grpcio-tools
+.venv/bin/pip install grpcio-tools==1.80.0
 PATH="$(pwd)/.venv/bin:$PATH" bash generate.sh

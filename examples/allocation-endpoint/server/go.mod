@@ -3,7 +3,7 @@ module agones.dev/agones/examples/allocation-endpoint/server
 go 1.26
 
 require (
-	agones.dev/agones v1.54.0
+	agones.dev/agones v1.58.0
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
 	go.opencensus.io v0.24.0
