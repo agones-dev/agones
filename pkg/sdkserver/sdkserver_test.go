@@ -1865,9 +1865,8 @@ func TestSDKServerUpdateList(t *testing.T) {
 				cancel()
 				wg.Wait()
 				return
-			} else {
-				assert.NoError(t, err)
 			}
+			assert.NoError(t, err)
 
 			got, err := sc.GetList(context.Background(), &beta.GetListRequest{Name: testCase.listName})
 			assert.NoError(t, err)
