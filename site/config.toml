@@ -184,3 +184,5 @@ path = "github.com/google/docsy/dependencies"
 home = [ "HTML", "markdown", "LLMS" ]
 page = [ "HTML", "markdown" ]
 section = [ "HTML", "RSS", "print", "markdown" ]
+taxonomy = [ "HTML" ]
+term = [ "HTML" ]
