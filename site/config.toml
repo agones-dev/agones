@@ -181,4 +181,6 @@ path = "github.com/google/docsy/dependencies"
 
 # AI AGENT OUTPUTS
 [outputs]
-home = ["HTML", "RSS", "JSON", "LLMS"]
+home = [ "HTML", "markdown", "LLMS" ]
+page = [ "HTML", "markdown" ]
+section = [ "HTML", "RSS", "print", "markdown" ]
