@@ -1536,34 +1536,6 @@ func TestCounters(t *testing.T) {
 	}
 	t.Parallel()
 	ctx := context.Background()
-	gs := framework.DefaultGameServer(framework.Namespace)
-
-	gs.Spec.Counters = make(map[string]agonesv1.CounterStatus)
-	gs.Spec.Counters["games"] = agonesv1.CounterStatus{
-		Count:    1,
-		Capacity: 50,
-	}
-	gs.Spec.Counters["foo"] = agonesv1.CounterStatus{
-		Count:    10,
-		Capacity: 100,
-	}
-	gs.Spec.Counters["bar"] = agonesv1.CounterStatus{
-		Count:    10,
-		Capacity: 10,
-	}
-	gs.Spec.Counters["baz"] = agonesv1.CounterStatus{
-		Count:    1000,
-		Capacity: 1000,
-	}
-	gs.Spec.Counters["qux"] = agonesv1.CounterStatus{
-		Count:    42,
-		Capacity: 50,
-	}
-
-	gs, err := framework.CreateGameServerAndWaitUntilReady(t, framework.Namespace, gs)
-	require.NoError(t, err)
-	defer framework.AgonesClient.AgonesV1().GameServers(framework.Namespace).Delete(ctx, gs.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint: errcheck
-	assert.Equal(t, agonesv1.GameServerStateReady, gs.Status.State)
 
 	testCases := map[string]struct {
 		msg          string
@@ -1663,9 +1635,21 @@ func TestCounters(t *testing.T) {
 			wantCount:   "COUNTER: 1\n",
 		},
 	}
-	// nolint:dupl  // Linter errors on lines are duplicate of TestLists
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			gs := framework.DefaultGameServer(framework.Namespace)
+			gs.Spec.Counters = map[string]agonesv1.CounterStatus{
+				"games": {Count: 1, Capacity: 50},
+				"foo":   {Count: 10, Capacity: 100},
+				"bar":   {Count: 10, Capacity: 10},
+				"baz":   {Count: 1000, Capacity: 1000},
+				"qux":   {Count: 42, Capacity: 50},
+			}
+			gs, err := framework.CreateGameServerAndWaitUntilReady(t, framework.Namespace, gs)
+			require.NoError(t, err)
+			defer framework.AgonesClient.AgonesV1().GameServers(framework.Namespace).Delete(ctx, gs.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint: errcheck
+
 			logrus.WithField("msg", testCase.msg).Info(name)
 			reply, err := framework.SendGameServerUDP(t, gs, testCase.msg)
 			require.NoError(t, err)
@@ -1696,37 +1680,6 @@ func TestLists(t *testing.T) {
 	}
 	t.Parallel()
 	ctx := context.Background()
-	gs := framework.DefaultGameServer(framework.Namespace)
-	gs.Labels = map[string]string{agonesv1.FleetNameLabel: "fleet-example"}
-	gs.Spec.Lists = make(map[string]agonesv1.ListStatus)
-	gs.Spec.Lists["players"] = agonesv1.ListStatus{
-		Capacity: 1000,
-	}
-	gs.Spec.Lists["games"] = agonesv1.ListStatus{
-		Values:   []string{"game1", "game2"},
-		Capacity: 50,
-	}
-	gs.Spec.Lists["foo"] = agonesv1.ListStatus{
-		Values:   []string{},
-		Capacity: 1,
-	}
-	gs.Spec.Lists["bar"] = agonesv1.ListStatus{
-		Values:   []string{"bar1", "bar2"},
-		Capacity: 10,
-	}
-	gs.Spec.Lists["baz"] = agonesv1.ListStatus{
-		Values:   []string{"baz1"},
-		Capacity: 1,
-	}
-	gs.Spec.Lists["qux"] = agonesv1.ListStatus{
-		Values:   []string{"qux1", "qux2", "qux3", "qux4"},
-		Capacity: 5,
-	}
-
-	gs, err := framework.CreateGameServerAndWaitUntilReady(t, framework.Namespace, gs)
-	require.NoError(t, err)
-	defer framework.AgonesClient.AgonesV1().GameServers(framework.Namespace).Delete(ctx, gs.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint: errcheck
-	assert.Equal(t, agonesv1.GameServerStateReady, gs.Status.State)
 
 	testCases := map[string]struct {
 		msg          string
@@ -1802,9 +1755,23 @@ func TestLists(t *testing.T) {
 			wantLength: "LENGTH: 2\n",
 		},
 	}
-	// nolint:dupl  // Linter errors on lines are duplicate of TestCounters
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			gs := framework.DefaultGameServer(framework.Namespace)
+			gs.Labels = map[string]string{agonesv1.FleetNameLabel: "fleet-example"}
+			gs.Spec.Lists = map[string]agonesv1.ListStatus{
+				"players": {Capacity: 1000},
+				"games":   {Values: []string{"game1", "game2"}, Capacity: 50},
+				"foo":     {Values: []string{}, Capacity: 1},
+				"bar":     {Values: []string{"bar1", "bar2"}, Capacity: 10},
+				"baz":     {Values: []string{"baz1"}, Capacity: 1},
+				"qux":     {Values: []string{"qux1", "qux2", "qux3", "qux4"}, Capacity: 5},
+			}
+			gs, err := framework.CreateGameServerAndWaitUntilReady(t, framework.Namespace, gs)
+			require.NoError(t, err)
+			defer framework.AgonesClient.AgonesV1().GameServers(framework.Namespace).Delete(ctx, gs.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint: errcheck
+
 			logrus.WithField("msg", testCase.msg).Info(name)
 			reply, err := framework.SendGameServerUDP(t, gs, testCase.msg)
 			require.NoError(t, err)
