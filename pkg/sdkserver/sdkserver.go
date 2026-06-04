@@ -1161,7 +1161,7 @@ func (s *SDKServer) UpdateList(ctx context.Context, in *beta.UpdateListRequest) 
 	list, err := s.GetList(ctx, &beta.GetListRequest{Name: in.List.Name})
 	if err != nil {
 
-		return nil, errors.Errorf("not found. %s List not found", list.Name)
+		return nil, errors.Errorf("not found. %s List not found", in.List.Name)
 	}
 
 	s.gsUpdateMutex.Lock()
@@ -1604,11 +1604,17 @@ func (s *SDKServer) GsListsMaxItems(ctx context.Context) error {
 	if s.namespace == "default" {
 		labelsName = "fleet-example"
 	} else {
-		gs, _ := s.gameServerGetter.GameServers(s.namespace).Get(
+		gs, err := s.gameServerGetter.GameServers(s.namespace).Get(
 			ctx,
 			s.gameServerName,
 			metav1.GetOptions{},
 		)
+		if err != nil {
+			return errors.Wrapf(err, "failed to get GameServer %s", s.gameServerName)
+		}
+		if gs == nil {
+			return errors.Errorf("retrieved nil GameServer %s", s.gameServerName)
+		}
 		labelsName = gs.ObjectMeta.Labels[agonesv1.FleetNameLabel]
 	}
 	selector := labels.Set{
