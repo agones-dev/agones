@@ -12,20 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-apiVersion: agones.dev/v1
-kind: GameServer
-metadata:
-  name: supertuxkart
-spec:
-  ports:
-    - name: default
-      containerPort: 8080
-  template:
-    spec:
-      containers:
-        - name: supertuxkart
-          image: us-docker.pkg.dev/agones-images/examples/supertuxkart-example:0.24
-          # imagePullPolicy: Always  # add for development
-          env:
-            - name: ENABLE_PLAYER_TRACKING
-              value: 'false'
+
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "build"
+    labels:
+      - kind/cleanup

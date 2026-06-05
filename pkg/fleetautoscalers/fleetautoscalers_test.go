@@ -84,6 +84,17 @@ func (t testServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Simulate a webhook that returns a valid JSON body but omits the 'response' field,
+	// which sets faResp.Response to nil after Unmarshal (issue #4555).
+	if faRequest.Request.Status.AllocatedReplicas == -30 {
+		_, err = io.WriteString(w, "{}")
+		if err != nil {
+			http.Error(w, "Error writing json from /address", http.StatusInternalServerError)
+			return
+		}
+		return
+	}
+
 	faReq := faRequest.Request
 	faResp := autoscalingv1.FleetAutoscaleResponse{
 		Scale:    false,
@@ -583,6 +594,24 @@ func TestApplyWebhookPolicy(t *testing.T) {
 				replicas: 0,
 				limited:  false,
 				err:      "service was not provided, either URL or Service must be provided",
+			},
+		},
+		{
+			// Replicates issue #4555: webhook returns valid JSON that omits the 'response' field,
+			// leaving faResp.Response nil. Without the nil check this causes a panic.
+			description: "Webhook response omits 'response' field, nil Response should error not panic",
+			webhookPolicy: &autoscalingv1.URLConfiguration{
+				Service: nil,
+				URL:     &(server.URL),
+			},
+			specReplicas:            50,
+			statusReplicas:          50,
+			statusAllocatedReplicas: -30,
+			statusReadyReplicas:     40,
+			expected: expected{
+				replicas: 0,
+				limited:  false,
+				err:      "webhook response missing required 'response' field",
 			},
 		},
 	}
