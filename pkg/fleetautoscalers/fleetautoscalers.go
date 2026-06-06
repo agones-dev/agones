@@ -187,6 +187,9 @@ func applyWasmPolicy(ctx context.Context, state *fasState, wp *autoscalingv1.Was
 	loggerForFleetAutoscalerKey(log.fas.ObjectMeta.Name, log.baseLogger).Debugf(
 		"Fleet Autoscaler operation completed for fleet: %s, with was function: %s", f.ObjectMeta.Name, wp.Function)
 
+	if review.Response == nil {
+		return 0, false, errors.New("wasm response missing required 'response' field")
+	}
 	if review.Response.Scale {
 		return review.Response.Replicas, false, nil
 	}
@@ -352,6 +355,9 @@ func applyWebhookPolicy(state *fasState, w *autoscalingv1.URLConfiguration, f *a
 	loggerForFleetAutoscalerKey(fasLog.fas.ObjectMeta.Name, fasLog.baseLogger).Debugf(
 		"Fleet Autoscaler operation completed for fleet: %s, with WebhookPolicy: %s", f.ObjectMeta.Name, webhookPolicyName)
 
+	if faResp.Response == nil {
+		return 0, false, errors.New("webhook response missing required 'response' field")
+	}
 	if faResp.Response.Scale {
 		return faResp.Response.Replicas, false, nil
 	}

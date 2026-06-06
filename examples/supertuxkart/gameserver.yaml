@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
         - name: supertuxkart
-          image: us-docker.pkg.dev/agones-images/examples/supertuxkart-example:0.23
+          image: us-docker.pkg.dev/agones-images/examples/supertuxkart-example:0.24
           # imagePullPolicy: Always  # add for development
           env:
             - name: ENABLE_PLAYER_TRACKING
