@@ -306,8 +306,7 @@ func validatePortPolicy(p agonesv1.GameServerPort, i int, fldPath *field.Path) f
 	switch p.PortPolicy {
 	case agonesv1.Dynamic, agonesv1.Passthrough:
 		// These policies are always valid on GKE Autopilot.
-	case agonesv1.None:
-		
+	case agonesv1.None:	
 	default:
 		// Any other port policy, such as "Static", is considered invalid on GKE Autopilot.
 		allErrs = append(allErrs, field.Invalid(portPath.Child("portPolicy"), p.PortPolicy, "portPolicy must be Dynamic, Passthrough, or None on GKE Autopilot"))

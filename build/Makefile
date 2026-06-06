@@ -998,4 +998,3 @@ install-release: $(ensure-build-image)
 # Validates the Helm values.yaml file against the values.schema.json file.
 helm-lint:
 	$(DOCKER_RUN) bash -c 'cd $(mount_path)/install/helm/agones && helm lint .'
-

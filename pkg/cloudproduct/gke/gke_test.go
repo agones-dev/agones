@@ -84,7 +84,6 @@ func TestValidateGameServer(t *testing.T) {
 		scheduling         apis.SchedulingStrategy
 		safeToEvict        agonesv1.EvictionSafe
 		want               field.ErrorList
-
 	}{
 		"no ports => validated": {scheduling: apis.Packed},
 		"good ports => validated": {
