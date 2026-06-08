@@ -97,7 +97,7 @@ RUN go install github.com/extism/cli/extism@v1.6.3
 #     \_/\_/ \___|_.__/|___/_|\__\___|
 #
 
-ENV HUGO_VER=0.152.2
+ENV HUGO_VER=0.157.0
 RUN ARCH=$(dpkg --print-architecture) && \
     mkdir /tmp/hugo && \
     wget -q -O /tmp/hugo/hugo.tar.gz https://github.com/gohugoio/hugo/releases/download/v${HUGO_VER}/hugo_extended_${HUGO_VER}_linux-${ARCH}.tar.gz && \
@@ -146,3 +146,4 @@ COPY *.sh /root/
 RUN chmod +x /root/*.sh
 
 WORKDIR /go
+

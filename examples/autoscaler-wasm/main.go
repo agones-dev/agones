@@ -107,4 +107,13 @@ func ScaleNone() int32 {
 	return 0
 }
 
+// ScaleEmpty is used for testing purposes only. It returns an empty JSON object
+// with no 'response' field, which triggers the nil-response code path in applyWasmPolicy.
+//
+//go:wasmexport scaleEmpty
+func ScaleEmpty() int32 {
+	pdk.OutputString("{}")
+	return 0
+}
+
 func main() {}

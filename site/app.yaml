@@ -24,6 +24,9 @@ handlers:
   - url: /site
     static_dir: public
     secure: always
+  - url: /llms.txt
+    static_files: public/llms.txt
+    upload: public/llms.txt
   - url: /.*
     secure: always
     script: auto

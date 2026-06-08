@@ -1782,6 +1782,20 @@ func TestSDKServerUpdateList(t *testing.T) {
 			updated:                 true,
 			expectedUpdatesQueueLen: 0,
 		},
+		"update list not found (potential panic)": {
+			listName: "nonexistent",
+			request: &beta.UpdateListRequest{
+				List: &beta.List{
+					Name:     "nonexistent",
+					Capacity: int64(100),
+				},
+				UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"capacity"}},
+			},
+			want:                    agonesv1.ListStatus{},
+			updateErr:               true,
+			updated:                 false,
+			expectedUpdatesQueueLen: 0,
+		},
 	}
 	// Maximum capacity for the game server list.
 	// of game server items the system can manage at once.
@@ -1838,16 +1852,21 @@ func TestSDKServerUpdateList(t *testing.T) {
 			// check initial value comes through
 			require.Eventually(t, func() bool {
 				list, err := sc.GetList(context.Background(), &beta.GetListRequest{Name: testCase.listName})
-				return cmp.Equal(list.Values, []string{"one", "two", "three", "four"}) && list.Capacity == 100 && err == nil
+				if testCase.listName == "nonexistent" {
+					return list == nil && err != nil
+				}
+				return list != nil && cmp.Equal(list.Values, []string{"one", "two", "three", "four"}) && list.Capacity == 100 && err == nil
 			}, 10*time.Second, time.Second)
 
 			// Update the List
 			_, err = sc.UpdateList(context.Background(), testCase.request)
 			if testCase.updateErr {
 				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
+				cancel()
+				wg.Wait()
+				return
 			}
+			assert.NoError(t, err)
 
 			got, err := sc.GetList(context.Background(), &beta.GetListRequest{Name: testCase.listName})
 			assert.NoError(t, err)
