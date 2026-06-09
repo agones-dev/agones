@@ -232,6 +232,28 @@ func TestApplyWasmPolicy(t *testing.T) {
 				err:      "",
 			},
 		},
+		// Replicates issue #4555: wasm function returns valid JSON that omits the 'response' field,
+		// leaving review.Response nil. Without the nil check this causes a panic.
+		"scaleEmpty returns no 'response' field, nil Response should error not panic": {
+			wasmPolicy: &autoscalingv1.WasmPolicy{
+				Function: "scaleEmpty",
+				From: autoscalingv1.WasmFrom{
+					URL: &autoscalingv1.URLConfiguration{
+						URL: &fileURL,
+					},
+				},
+			},
+			fleet:                   f,
+			specReplicas:            10,
+			statusReplicas:          10,
+			statusAllocatedReplicas: 8,
+			statusReadyReplicas:     2,
+			expected: expected{
+				replicas: 0,
+				limited:  false,
+				err:      "wasm response missing required 'response' field",
+			},
+		},
 		"nil WasmPolicy, error returned": {
 			wasmPolicy: nil,
 			fleet:      f,

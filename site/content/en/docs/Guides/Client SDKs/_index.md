@@ -71,16 +71,13 @@ Functions which changes GameServer state or settings are:
 4. SetAnnotation()
 5. Allocate()
 6. Reserve()
-7. Alpha().SetCapacity()
-8. Alpha().PlayerConnect()
-9. Alpha().PlayerDisconnect()
-10. Beta().SetCounterCount()
-11. Beta().IncrementCounter()
-12. Beta().DecrementCounter()
-13. Beta().SetCounterCapacity()
-14. Beta().AppendListValue()
-15. Beta().DeleteListValue()
-16. Beta().SetListCapacity()
+7. Beta().SetCounterCount()
+8. Beta().IncrementCounter()
+9. Beta().DecrementCounter()
+10. Beta().SetCounterCapacity()
+11. Beta().AppendListValue()
+12. Beta().DeleteListValue()
+13. Beta().SetListCapacity()
 
 ### Lifecycle Management
 
@@ -359,109 +356,6 @@ Convenience function, which retrieves the length of the results of [`Beta().GetL
 
 [gameserverspec]: {{< ref "/docs/Reference/agones_crd_api_reference.html#agones.dev/v1.GameServerSpec" >}}
 [gameserverstatus]: {{< ref "/docs/Reference/agones_crd_api_reference.html#agones.dev/v1.GameServerStatus" >}}
-
-### Player Tracking
-
-{{% pageinfo color="info" %}}
-[Counters and Lists]({{< ref "/docs/Guides/counters-and-lists.md" >}}) will eventually replace the Alpha functionality
-of Player Tracking, which will subsequently be removed from Agones.
-
-If you are currently using this Alpha feature, we would love for you to test (and ideally migrate to!) this new
-functionality to Counters and Lists to ensure it meet all your needs.
-{{% /pageinfo %}}
-
-{{< alpha title="Player Tracking" gate="PlayerTracking" >}}
-
-#### Alpha().PlayerConnect(playerID)
-
-This function increases the SDK’s stored player count by one, and appends this playerID to
-`GameServer.Status.Players.IDs`.
-
-[`GameServer.Status.Players.Count` and `GameServer.Status.Players.IDs`][playerstatus]
-are then set to update the player count and id list a second from now,
-unless there is already an update pending, in which case the update joins that batch operation.
-
-`PlayerConnect()` returns true and adds the playerID to the list of playerIDs if this playerID was not already in the
-list of connected playerIDs.
-
-If the playerID exists within the list of connected playerIDs, `PlayerConnect()` will return false, and the list of
-connected playerIDs will be left unchanged.
-
-An error will be returned if the playerID was not already in the list of connected playerIDs but the player capacity for
-the server has been reached. The playerID will not be added to the list of playerIDs.
-
-{{% alert title="Note" color="info" %}}
-Do not use this method if you are manually managing `GameServer.Status.Players.IDs` and `GameServer.Status.Players.Count`
-through the Kubernetes API, as indeterminate results will occur.  
-{{% /alert %}}
-
-#### Alpha().PlayerDisconnect(playerID)
-
-This function decreases the SDK’s stored player count by one, and removes the playerID from
-[`GameServer.Status.Players.IDs`][playerstatus].
-
-`GameServer.Status.Players.Count` and `GameServer.Status.Players.IDs` are then set to
-update the player count and id list a second from now,
-unless there is already an update pending, in which case the update joins that batch operation.
-
-`PlayerDisconnect()` will return true and remove the supplied playerID from the list of connected playerIDs if the
-playerID value exists within the list.
-
-If the playerID was not in the list of connected playerIDs, the call will return false, and the connected playerID list
-will be left unchanged.
-
-{{% alert title="Note" color="info" %}}
-Do not use this method if you are manually managing `GameServer.Status.Players.IDs` and `GameServer.Status.Players.Count`
-through the Kubernetes API, as indeterminate results will occur.  
-{{% /alert %}}
-
-#### Alpha().SetPlayerCapacity(count)
-
-Update the [`GameServer.Status.Players.Capacity`][playerstatus] value with a new capacity.
-
-#### Alpha().GetPlayerCapacity()
-
-This function retrieves the current player capacity. This is always accurate from what has been set through this SDK,
-even if the value has yet to be updated on the GameServer status resource.
-
-{{% alert title="Note" color="info" %}}
-If `GameServer.Status.Players.Capacity` is set manually through the Kubernetes API, use `SDK.GameServer()` or
-`SDK.WatchGameServer()` instead to view this value.
-{{% /alert %}}
-
-#### Alpha().GetPlayerCount()
-
-This function retrieves the current player count.
-This is always accurate from what has been set through this SDK, even if the value has yet to be updated on the
-GameServer status resource.
-
-{{% alert title="Note" color="info" %}}
-If `GameServer.Status.Players.IDs` is set manually through the Kubernetes API, use SDK.GameServer()
-or SDK.WatchGameServer() instead to retrieve the current player count.
-{{% /alert %}}
-
-#### Alpha().IsPlayerConnected(playerID)
-
-This function returns if the playerID is currently connected to the GameServer. This is always accurate from what has
-been set through this SDK,
-even if the value has yet to be updated on the GameServer status resource.
-
-{{% alert title="Note" color="info" %}}
-If `GameServer.Status.Players.IDs` is set manually through the Kubernetes API, use SDK.GameServer()
-or SDK.WatchGameServer() instead to determine connected status.
-{{% /alert %}}
-
-#### Alpha().GetConnectedPlayers()
-
-This function returns the list of the currently connected player ids. This is always accurate from what has been set
-through this SDK, even if the value has yet to be updated on the GameServer status resource.
-
-{{% alert title="Note" color="info" %}}
-If `GameServer.Status.Players.IDs` is set manually through the Kubernetes API, use SDK.GameServer()
-or SDK.WatchGameServer() instead to list the connected players.
-{{% /alert %}}
-
-[playerstatus]: {{< ref "/docs/Reference/agones_crd_api_reference.html#agones.dev/v1.PlayerStatus" >}}
 
 ## Writing your own SDK
 
