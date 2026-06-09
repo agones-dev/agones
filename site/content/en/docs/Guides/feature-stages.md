@@ -30,9 +30,7 @@ The current set of `alpha`, `beta` and `stable` feature gates include:
 
 | Feature Name                                                                                                      | Gate                     | Default  | Stage   | Since  |
 |-------------------------------------------------------------------------------------------------------------------|--------------------------|----------|---------|--------|
-| [Player Tracking]({{< ref "/docs/Guides/player-tracking.md" >}})                                                  | `PlayerTracking`         | Disabled | `Alpha` | 1.6.0  |
 | Example Gate (not in use)                                                                                         | `Example`                | Disabled | None    | 0.13.0 |
-| [GameServer player capacity filtering on GameServerAllocations](https://github.com/agones-dev/agones/issues/1239) | `PlayerAllocationFilter` | Disabled | `Alpha` | 1.14.0 |
 | [Wasm Autoscaler](https://github.com/agones-dev/agones/issues/4080)                                               | `WasmAutoscaler`         | Disabled | `Alpha` | 1.54.0 |
 
 ### Beta

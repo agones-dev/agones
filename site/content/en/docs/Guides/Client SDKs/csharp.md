@@ -37,14 +37,6 @@ Check the [Client SDK Documentation]({{< relref "_index.md" >}}) for more detail
 | Lists           | ListContains        | ✔️          |
 | Lists           | GetListLength       | ✔️          |
 | Lists           | GetListValues       | ✔️          |
-| Player Tracking | GetConnectedPlayers | ✔️          |
-| Player Tracking | GetPlayerCapacity   | ✔️          |
-| Player Tracking | GetPlayerCount      | ✔️          |
-| Player Tracking | IsPlayerConnected   | ✔️          |
-| Player Tracking | PlayerConnect       | ✔️          |
-| Player Tracking | PlayerDisconnect    | ✔️          |
-| Player Tracking | SetPlayerCapacity   | ✔️          |
-
 
 ## Download
 
@@ -288,65 +280,6 @@ was not predefined in the GameServer resource on creation.
 string key = "players";
 List<string> values = await agones.Beta().GetListValuesAsync(key);
 ```
-
-### Player Tracking
-
-{{< alpha title="Player Tracking" gate="PlayerTracking" >}}
-
-#### Alpha: PlayerConnect
-
-This method increases the SDK’s stored player count by one, and appends this playerID to GameServer.Status.Players.IDs.
-Returns true and adds the playerID to the list of playerIDs if the playerIDs was not already in the list of connected playerIDs.
-
-```csharp
-bool ok = await agones.Alpha().PlayerConnectAsync(playerId);
-```
-
-#### Alpha: PlayerDisconnect
-
-This function decreases the SDK’s stored player count by one, and removes the playerID from GameServer.Status.Players.IDs.
-Will return true and remove the supplied playerID from the list of connected playerIDs if the playerID value exists within the list.
-
-```csharp
-bool ok = await agones.Alpha().PlayerDisconnectAsync(playerId);
-```
-
-#### Alpha: SetPlayerCapacity
-
-Update the `GameServer.Status.Players.Capacity` value with a new capacity.
-
-```csharp
-var capacity = 100;
-var status = await agones.Alpha().SetPlayerCapacityAsync(capacity);
-```
-
-#### Alpha: GetPlayerCapacity
-
-This function retrieves the current player capacity `GameServer.Status.Players.Capacity`.
-This is always accurate from what has been set through this SDK, even if the value has yet to be updated on the GameServer status resource.
-
-```csharp
-long cap = await agones.Alpha().GetPlayerCapacityAsync();
-```
-
-#### Alpha: GetPlayerCount
-
-Returns the current player count
-
-```csharp
-long count = await agones.Alpha().GetPlayerCountAsync();
-```
-
-#### Alpha: IsPlayerConnected
-
-This returns if the playerID is currently connected to the GameServer.
-This is always accurate, even if the value hasn’t been updated to the GameServer status yet.
-
-```csharp
-var playerId = "player1";
-bool isConnected = await agones.Alpha().IsPlayerConnectedAsync(playerId);
-```
-
 ## Remarks
 - All requests will wait for up to 15 seconds before giving up. Time to wait can also be set in the constructor.
 - Default host & port are `localhost:9357`

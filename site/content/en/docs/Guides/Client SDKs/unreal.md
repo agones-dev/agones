@@ -32,13 +32,6 @@ Check the [Client SDK Documentation]({{< relref "_index.md" >}}) for more detail
 | Lists                | UpdateList               | ✔️                            |
 | Lists                | AddListValue             | ✔️                            |
 | Lists                | RemoveListValue          | ✔️                            |
-| Player Tracking      | GetConnectedPlayers      | ✔️                            |
-| Player Tracking      | GetPlayerCapacity        | ✔️                            |
-| Player Tracking      | GetPlayerCount           | ✔️                            |
-| Player Tracking      | IsPlayerConnected        | ✔️                            |
-| Player Tracking      | PlayerConnect            | ✔️                            |
-| Player Tracking      | PlayerDisconnect         | ✔️                            |
-| Player Tracking      | SetPlayerCapacity        | ✔️                            |
 
 Additional methods have been added for ease of use (both of which are enabled by default):
 
@@ -125,19 +118,6 @@ PublicDependencyModuleNames.AddRange(
 #include "AgonesSubsystem.h"
 ```
 
-- Use the Agones subsystem to call PlayerReady
-```c++
-void APlatformGameSession::PostLogin(APlayerController* NewPlayer)
-{
-  UAgonesSubsystem* AgonesSDK = UAgonesSubsystem::Get(this);
-  if (AgonesSDK) // Check for nullptr is a must.
-  {
-    // Empty brances are for callbacks on success and errror.
-    AgonesSDK->PlayerConnect("netspeak-player", {}, {});
-  }
-}
-```
-
 #### Using Blueprints
 - Accessing Agones functionality can be done via Blueprints.
 ![usage](../../../../images/unreal_bp_usage.png)
@@ -160,6 +140,4 @@ Within the Unreal [GameMode](https://docs.unrealengine.com/en-US/API/Runtime/Eng
 funtions that can be used to fit in with making calls out to Agones.
 
 A few examples are:
-- `RegisterServer` to call `SetLabel`, `SetPlayerCapacity`
-- `PostLogin` to call `PlayerConnect`
-- `NotifyLogout` to call `PlayerDisconnect`
+- `RegisterServer` to call `SetLabel`
