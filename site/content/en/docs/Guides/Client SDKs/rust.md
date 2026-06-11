@@ -35,13 +35,6 @@ Check the [Client SDK Documentation]({{< relref "_index.md" >}}) for more detail
 | Lists           | ListContains        | ✔️          |
 | Lists           | GetListLength       | ✔️          |
 | Lists           | GetListValues       | ✔️          |
-| Player Tracking | GetConnectedPlayers | ✔️          |
-| Player Tracking | GetPlayerCapacity   | ✔️          |
-| Player Tracking | GetPlayerCount      | ✔️          |
-| Player Tracking | IsPlayerConnected   | ✔️          |
-| Player Tracking | PlayerConnect       | ✔️          |
-| Player Tracking | PlayerDisconnect    | ✔️          |
-| Player Tracking | SetPlayerCapacity   | ✔️          |
 {{% /feature %}}
 
 {{% feature expiryVersion="1.52.0" %}}
@@ -69,13 +62,6 @@ Check the [Client SDK Documentation]({{< relref "_index.md" >}}) for more detail
 | Lists           | ListContains        | ❌         |
 | Lists           | GetListLength       | ❌         |
 | Lists           | GetListValues       | ❌         |
-| Player Tracking | GetConnectedPlayers | ✔️          |
-| Player Tracking | GetPlayerCapacity   | ✔️          |
-| Player Tracking | GetPlayerCount      | ✔️          |
-| Player Tracking | IsPlayerConnected   | ✔️          |
-| Player Tracking | PlayerConnect       | ✔️          |
-| Player Tracking | PlayerDisconnect    | ✔️          |
-| Player Tracking | SetPlayerCapacity   | ✔️          |
 {{% /feature %}}
 
 ## Prerequisites

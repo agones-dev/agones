@@ -21,6 +21,7 @@ name: PR update
 on:
   push:
     branches: [main]
+permissions: {}
 jobs:
   autoupdate:
     runs-on: ubuntu-latest
@@ -29,7 +30,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Automatically update PR
-        uses: adRise/update-pr-branch@v0.6.0
+        uses: adRise/update-pr-branch@fe3b7082713cc6b51fab6cc16765fa6cbcae8ba4  # v0.11.0
         with:
           token: ${{ secrets.AGONES_BOT }}
           base: main

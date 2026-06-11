@@ -1,3 +1,4 @@
+---
 # Copyright Contributors to Agones a Series of LF Projects, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,17 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Gather dependencies and build the executable
-FROM golang:1.26.0 AS builder
-WORKDIR /go/src/crd-client
-COPY . .
-
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o client .
-
-# Create the final image that will run the webhook server for FleetAutoscaler webhook policy
-FROM gcr.io/distroless/static-debian13:nonroot
-
-COPY --from=builder /go/src/crd-client/client /
-
-USER nonroot:nonroot
-ENTRYPOINT ["/client"]
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "build"
+    labels:
+      - kind/cleanup

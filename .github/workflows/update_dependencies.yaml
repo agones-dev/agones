@@ -3,6 +3,7 @@ name: Update Dependencies
 on:
   schedule:
     - cron: 0 0 * * 1
+permissions: {}
 jobs:
   create_issue:
     name: Create update dependency issue once every six weeks
@@ -14,8 +15,8 @@ jobs:
       - name: Run this workflow only every six weeks (fail this step the other five weeks)
         run: |
           if [[ $(("( $(date +%s) - $(date +%s --date=20250310) ) / 86400 % 42")) -eq  0 ]] then exit 0; else exit 1; fi
-      - uses: actions/checkout@v3
-      - uses: JasonEtco/create-an-issue@v2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+      - uses: JasonEtco/create-an-issue@1b14a70e4d8dc185e5cc76d3bec9eab20257b2c5  # v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
