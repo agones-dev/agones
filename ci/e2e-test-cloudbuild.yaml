@@ -24,7 +24,6 @@ steps:
     dir: build/e2e-image
     id: build-e2e
     waitFor: ['-']
-
   #
   # Run the e2e tests with FeatureGates inverted compared to Stable
   #
@@ -39,7 +38,6 @@ steps:
     id: e2e-feature-gates
     waitFor:
       - build-e2e
-
   #
   # Run the e2e tests without FeatureGates
   #
@@ -53,6 +51,27 @@ steps:
       - ${_GS_TEST_IMAGE}
     id: e2e-stable
     waitFor: [e2e-feature-gates]
+  #
+  # Run Windows GameServer smoke test.
+  # Windows nodes are NOT supported on GKE Autopilot:
+  # https://cloud.google.com/kubernetes-engine/docs/concepts/windows-server-gke#limitations
+  # The test itself calls t.Skip() when CloudProduct == "gke-autopilot".
+  # Runs parallel with e2e-feature-gates to avoid adding wall-clock time.
+  #
+  - name: e2e-runner
+    args:
+      - ${_FEATURE_WITHOUT_GATE}
+      - ${_CLOUD_PRODUCT}
+      - ${_TEST_CLUSTER_NAME}
+      - ${_TEST_CLUSTER_LOCATION}
+      - ${_REGISTRY}
+      - ${_GS_TEST_IMAGE}
+    env:
+      - 'E2E_TEST_RUN=TestWindowsCreateConnect'
+    id: e2e-windows-smoke
+    waitFor:
+      - build-e2e
+    timeout: 900s
 tags:
   - e2e-test
   - cluster-${_TEST_CLUSTER_NAME}
@@ -60,5 +79,4 @@ tags:
   - commit-${_PARENT_COMMIT_SHA}
   - started-by-${_PARENT_BUILD_ID}
 timeout: 5400s  # 1.5h
-queueTtl: 7200s  # 2h // only one set of e2es should be running at once
-logsBucket: gs://agones-build-logs
+queueTtl: 7200s  # 2h
