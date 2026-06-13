@@ -225,10 +225,6 @@ func (f *Fleet) Validate(apiHooks APIHooks) field.ErrorList {
 		allErrs = append(allErrs, f.Spec.AllocationOverflow.Validate(field.NewPath("spec", "allocationOverflow"))...)
 	}
 
-	if f.Spec.Priorities != nil && !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "priorities"), "FeatureCountsAndLists is not enabled"))
-	}
-
 	return allErrs
 }
 

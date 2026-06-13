@@ -1119,9 +1119,6 @@ func TestSDKServerUpdateCounter(t *testing.T) {
 	agruntime.FeatureTestMutex.Lock()
 	defer agruntime.FeatureTestMutex.Unlock()
 
-	err := agruntime.ParseFeatures(string(agruntime.FeatureCountsAndLists) + "=true")
-	require.NoError(t, err, "Can not parse FeatureCountsAndLists feature")
-
 	counters := map[string]agonesv1.CounterStatus{
 		"widgets":  {Count: int64(10), Capacity: int64(100)},
 		"foo":      {Count: int64(10), Capacity: int64(100)},
@@ -1385,9 +1382,6 @@ func TestSDKServerAddListValue(t *testing.T) {
 	agruntime.FeatureTestMutex.Lock()
 	defer agruntime.FeatureTestMutex.Unlock()
 
-	err := agruntime.ParseFeatures(string(agruntime.FeatureCountsAndLists) + "=true")
-	require.NoError(t, err, "Can not parse FeatureCountsAndLists feature")
-
 	lists := map[string]agonesv1.ListStatus{
 		"foo": {Values: []string{"one", "two", "three", "four"}, Capacity: int64(10)},
 		"bar": {Values: []string{"one", "two", "three", "four"}, Capacity: int64(10)},
@@ -1541,9 +1535,6 @@ func TestSDKServerRemoveListValue(t *testing.T) {
 	agruntime.FeatureTestMutex.Lock()
 	defer agruntime.FeatureTestMutex.Unlock()
 
-	err := agruntime.ParseFeatures(string(agruntime.FeatureCountsAndLists) + "=true")
-	require.NoError(t, err, "Can not parse FeatureCountsAndLists feature")
-
 	lists := map[string]agonesv1.ListStatus{
 		"foo": {Values: []string{"one", "two", "three", "four"}, Capacity: int64(100)},
 		"bar": {Values: []string{"one", "two", "three", "four"}, Capacity: int64(100)},
@@ -1689,9 +1680,6 @@ func TestSDKServerUpdateList(t *testing.T) {
 	t.Parallel()
 	agruntime.FeatureTestMutex.Lock()
 	defer agruntime.FeatureTestMutex.Unlock()
-
-	err := agruntime.ParseFeatures(string(agruntime.FeatureCountsAndLists) + "=true")
-	require.NoError(t, err, "Can not parse FeatureCountsAndLists feature")
 
 	lists := map[string]agonesv1.ListStatus{
 		"foo":  {Values: []string{"one", "two", "three", "four"}, Capacity: int64(100)},

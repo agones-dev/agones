@@ -17,7 +17,6 @@ package v1
 import (
 	"agones.dev/agones/pkg/apis"
 	"agones.dev/agones/pkg/apis/agones"
-	"agones.dev/agones/pkg/util/runtime"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -127,11 +126,6 @@ func (gsSet *GameServerSet) Validate(apiHooks APIHooks) field.ErrorList {
 	// check GameServer specification in a GameServerSet
 	allErrs = append(allErrs, validateGSSpec(apiHooks, gsSet, field.NewPath("spec", "template", "spec"))...)
 	allErrs = append(allErrs, apiHooks.ValidateScheduling(gsSet.Spec.Scheduling, field.NewPath("spec", "scheduling"))...)
-
-	if gsSet.Spec.Priorities != nil && !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "priorities"), "FeatureCountsAndLists is not enabled"))
-	}
-
 	allErrs = append(allErrs, validateObjectMeta(&gsSet.Spec.Template.ObjectMeta, field.NewPath("spec", "template", "metadata"))...)
 	return allErrs
 }
