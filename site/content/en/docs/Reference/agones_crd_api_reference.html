@@ -3,7 +3,7 @@ title="Agones Kubernetes API"
 description="Detailed list of Agones Custom Resource Definitions available"
 +++
 
-{{% feature expiryVersion="1.58.0" %}}
+{{% feature expiryVersion="1.59.0" %}}
 <p>Packages:</p>
 <ul>
 <li>
@@ -1024,6 +1024,17 @@ int32
 </td>
 <td>
 <p>AllocatedReplicas are the number of Allocated GameServer replicas</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>allocations</code><br/>
+<em>
+int64
+</em>
+</td>
+<td>
+<p>Allocations is a counter of the number of allocations observed.</p>
 </td>
 </tr>
 <tr>
@@ -5014,7 +5025,7 @@ ClusterConnectionInfo
 Generated with <code>gen-crd-api-reference-docs</code>.
 </em></p>
 {{% /feature %}}
-{{% feature publishVersion="1.58.0" %}}
+{{% feature publishVersion="1.59.0" %}}
 <p>Packages:</p>
 <ul>
 <li>
@@ -6134,8 +6145,6 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>(Alpha, PortRanges feature flag) Range is the port range name from which to select a port when using a
-&lsquo;Dynamic&rsquo; or &lsquo;Passthrough&rsquo; port policy.</p>
 </td>
 </tr>
 <tr>

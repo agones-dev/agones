@@ -48,12 +48,6 @@ func TestPortAllocatorAllocate(t *testing.T) {
 	utilruntime.FeatureTestMutex.Lock()
 	defer utilruntime.FeatureTestMutex.Unlock()
 
-	err := utilruntime.ParseFeatures(string(utilruntime.FeaturePortRanges) + "=true")
-	assert.NoError(t, err)
-	defer func() {
-		_ = utilruntime.ParseFeatures("")
-	}()
-
 	m := agtesting.NewMocks()
 	pr := map[string]PortRange{
 		agonesv1.DefaultPortRange: {MinPort: 10, MaxPort: 50},
@@ -72,7 +66,7 @@ func TestPortAllocatorAllocate(t *testing.T) {
 	nodeWatch.Add(&n2)
 	assert.True(t, cache.WaitForCacheSync(ctx.Done(), pa.allocators[0].nodeSynced, pa.allocators[1].nodeSynced))
 
-	err = pa.allocators[0].syncAll()
+	err := pa.allocators[0].syncAll()
 	require.NoError(t, err)
 	err = pa.allocators[1].syncAll()
 	require.NoError(t, err)
@@ -346,12 +340,6 @@ func TestPortRangeAllocatorAllocate_NamedRange(t *testing.T) {
 	utilruntime.FeatureTestMutex.Lock()
 	defer utilruntime.FeatureTestMutex.Unlock()
 
-	err := utilruntime.ParseFeatures(string(utilruntime.FeaturePortRanges) + "=true")
-	assert.NoError(t, err)
-	defer func() {
-		_ = utilruntime.ParseFeatures("")
-	}()
-
 	m := agtesting.NewMocks()
 	pa := newRangeAllocator("test", 10, 50, m.KubeInformerFactory, m.AgonesInformerFactory)
 	nodeWatch := watch.NewFake()
@@ -366,7 +354,7 @@ func TestPortRangeAllocatorAllocate_NamedRange(t *testing.T) {
 	nodeWatch.Add(&n2)
 	assert.True(t, cache.WaitForCacheSync(ctx.Done(), pa.nodeSynced))
 
-	err = pa.syncAll()
+	err := pa.syncAll()
 	require.NoError(t, err)
 
 	// single port empty
