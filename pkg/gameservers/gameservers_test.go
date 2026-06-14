@@ -166,10 +166,6 @@ func TestApplyGameServerAddressAndPort(t *testing.T) {
 			pod.Status.PodIPs = []corev1.PodIP{{IP: ipFixture}}
 			tc.podMod(pod)
 
-			// PortPolicy None is behind a feature flag
-			runtime.FeatureTestMutex.Lock()
-			defer runtime.FeatureTestMutex.Unlock()
-			require.NoError(t, runtime.ParseFeatures(string(runtime.FeaturePortPolicyNone)+"=true"))
 
 			gs, err := applyGameServerAddressAndPort(gsFixture, node, pod, tc.podSyncer)
 			require.NoError(t, err)

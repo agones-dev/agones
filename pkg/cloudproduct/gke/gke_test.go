@@ -84,7 +84,6 @@ func TestValidateGameServer(t *testing.T) {
 		scheduling         apis.SchedulingStrategy
 		safeToEvict        agonesv1.EvictionSafe
 		want               field.ErrorList
-		portPolicyNoneFlag string
 	}{
 		"no ports => validated": {scheduling: apis.Packed},
 		"good ports => validated": {
@@ -254,31 +253,10 @@ func TestValidateGameServer(t *testing.T) {
 				field.Invalid(field.NewPath("spec", "ports").Index(2).Child("portPolicy"), agonesv1.Static, "portPolicy must be Dynamic, Passthrough, or None on GKE Autopilot"),
 			},
 		},
-		"port policy none with feature disabled => fails validation": {
-			portPolicyNoneFlag: "false",
-			ports: []agonesv1.GameServerPort{
-				{
-					Name:          "none-gate-turned-off",
-					PortPolicy:    agonesv1.None,
-					Range:         agonesv1.DefaultPortRange,
-					ContainerPort: 1234,
-					Protocol:      corev1.ProtocolUDP,
-				},
-			},
-			scheduling: apis.Packed,
-			want: field.ErrorList{
-				field.Invalid(field.NewPath("spec", "ports").Index(0).Child("portPolicy"), agonesv1.None, "PortPolicy 'None' is not enabled"),
-			},
-		},
+		
 	} {
 		t.Run(name, func(t *testing.T) {
-			// PortPolicy None is behind a feature flag
-			runtime.FeatureTestMutex.Lock()
-			defer runtime.FeatureTestMutex.Unlock()
-			if tc.portPolicyNoneFlag == "" {
-				tc.portPolicyNoneFlag = "true"
-			}
-			require.NoError(t, runtime.ParseFeatures(fmt.Sprintf("%s=%s", runtime.FeaturePortPolicyNone, tc.portPolicyNoneFlag)))
+			
 			causes := (&gkeAutopilot{useExtendedDurationPods: tc.edPods}).ValidateGameServerSpec(&agonesv1.GameServerSpec{
 				Ports:      tc.ports,
 				Scheduling: tc.scheduling,

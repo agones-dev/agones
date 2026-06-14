@@ -36,6 +36,8 @@ const (
 
 	// FeatureAutopilotPassthroughPort is a feature flag that enables/disables Passthrough Port Policy.
 	FeatureAutopilotPassthroughPort Feature = "AutopilotPassthroughPort"
+	// FeaturePortPolicyNone is a feature flag to allow setting Port Policy to None.
+	FeaturePortPolicyNone Feature = "PortPolicyNone"
 
 	////////////////
 	// Beta features
@@ -48,8 +50,6 @@ const (
 	// when Agones is running on Autopilot. Available on 1.28+ only.
 	FeatureGKEAutopilotExtendedDurationPods = "GKEAutopilotExtendedDurationPods"
 
-	// FeaturePortPolicyNone is a feature flag to allow setting Port Policy to None.
-	FeaturePortPolicyNone Feature = "PortPolicyNone"
 
 	// FeaturePortRanges is a feature flag to enable/disable specific port ranges.
 	FeaturePortRanges Feature = "PortRanges"

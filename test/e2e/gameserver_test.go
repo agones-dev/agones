@@ -1014,9 +1014,6 @@ func TestGameServerPassthroughPort(t *testing.T) {
 }
 
 func TestGameServerPortPolicyNone(t *testing.T) {
-	if !runtime.FeatureEnabled(runtime.FeaturePortPolicyNone) {
-		t.SkipNow()
-	}
 
 	t.Parallel()
 
