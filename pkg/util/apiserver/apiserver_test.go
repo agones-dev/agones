@@ -15,11 +15,18 @@
 package apiserver
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/json"
 	"io"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/go-openapi/spec"
 	"github.com/stretchr/testify/assert"
@@ -295,4 +302,155 @@ func TestSplitNameSpaceResource(t *testing.T) {
 			assert.Equal(t, test.expected.resource, r)
 		})
 	}
+}
+
+func newTestCA(t *testing.T) (*x509.Certificate, *rsa.PrivateKey, *x509.CertPool) {
+	t.Helper()
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+
+	tmpl := &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "test-requestheader-ca"},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(time.Hour),
+		IsCA:                  true,
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		BasicConstraintsValid: true,
+	}
+	certDER, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
+	require.NoError(t, err)
+	cert, err := x509.ParseCertificate(certDER)
+	require.NoError(t, err)
+
+	pool := x509.NewCertPool()
+	pool.AddCert(cert)
+	return cert, key, pool
+}
+
+func newClientCert(t *testing.T, caCert *x509.Certificate, caKey *rsa.PrivateKey) *x509.Certificate {
+	t.Helper()
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+
+	tmpl := &x509.Certificate{
+		SerialNumber: big.NewInt(2),
+		Subject:      pkix.Name{CommonName: "test-apiserver-proxy"},
+		NotBefore:    time.Now().Add(-time.Hour),
+		NotAfter:     time.Now().Add(time.Hour),
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+	}
+	certDER, err := x509.CreateCertificate(rand.Reader, tmpl, caCert, &key.PublicKey, caKey)
+	require.NoError(t, err)
+	cert, err := x509.ParseCertificate(certDER)
+	require.NoError(t, err)
+	return cert
+}
+
+func TestAuthenticatedHandlerNoCA(t *testing.T) {
+	t.Parallel()
+	mux := http.NewServeMux()
+	api := NewAPIServer(mux)
+
+	called := false
+	h := api.authenticatedHandler(func(w http.ResponseWriter, _ *http.Request) error {
+		called = true
+		w.WriteHeader(http.StatusOK)
+		return nil
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	rr := httptest.NewRecorder()
+	require.NoError(t, h(rr, req))
+	assert.True(t, called)
+	assert.Equal(t, http.StatusOK, rr.Code)
+}
+
+func TestAuthenticatedHandlerRejectPlainHTTP(t *testing.T) {
+	t.Parallel()
+	_, _, pool := newTestCA(t)
+	mux := http.NewServeMux()
+	api := NewAPIServer(mux)
+	api.SetRequestHeaderCA(pool)
+
+	called := false
+	h := api.authenticatedHandler(func(_ http.ResponseWriter, _ *http.Request) error {
+		called = true
+		return nil
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	rr := httptest.NewRecorder()
+	require.NoError(t, h(rr, req))
+	assert.False(t, called)
+	assert.Equal(t, http.StatusUnauthorized, rr.Code)
+}
+
+func TestAuthenticatedHandlerRejectNoCert(t *testing.T) {
+	t.Parallel()
+	_, _, pool := newTestCA(t)
+	mux := http.NewServeMux()
+	api := NewAPIServer(mux)
+	api.SetRequestHeaderCA(pool)
+
+	called := false
+	h := api.authenticatedHandler(func(_ http.ResponseWriter, _ *http.Request) error {
+		called = true
+		return nil
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req.TLS = &tls.ConnectionState{} // no PeerCertificates
+	rr := httptest.NewRecorder()
+	require.NoError(t, h(rr, req))
+	assert.False(t, called)
+	assert.Equal(t, http.StatusUnauthorized, rr.Code)
+}
+
+func TestAuthenticatedHandlerAcceptValidCert(t *testing.T) {
+	t.Parallel()
+	caCert, caKey, pool := newTestCA(t)
+	clientCert := newClientCert(t, caCert, caKey)
+
+	mux := http.NewServeMux()
+	api := NewAPIServer(mux)
+	api.SetRequestHeaderCA(pool)
+
+	called := false
+	h := api.authenticatedHandler(func(w http.ResponseWriter, _ *http.Request) error {
+		called = true
+		w.WriteHeader(http.StatusOK)
+		return nil
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req.TLS = &tls.ConnectionState{PeerCertificates: []*x509.Certificate{clientCert}}
+	rr := httptest.NewRecorder()
+	require.NoError(t, h(rr, req))
+	assert.True(t, called)
+	assert.Equal(t, http.StatusOK, rr.Code)
+}
+
+func TestAuthenticatedHandlerRejectUntrustedCert(t *testing.T) {
+	t.Parallel()
+	_, _, pool := newTestCA(t)
+	otherCA, otherKey, _ := newTestCA(t)
+	untrustedCert := newClientCert(t, otherCA, otherKey)
+
+	mux := http.NewServeMux()
+	api := NewAPIServer(mux)
+	api.SetRequestHeaderCA(pool)
+
+	called := false
+	h := api.authenticatedHandler(func(_ http.ResponseWriter, _ *http.Request) error {
+		called = true
+		return nil
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req.TLS = &tls.ConnectionState{PeerCertificates: []*x509.Certificate{untrustedCert}}
+	rr := httptest.NewRecorder()
+	require.NoError(t, h(rr, req))
+	assert.False(t, called)
+	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 }
