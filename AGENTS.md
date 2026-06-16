@@ -18,8 +18,7 @@ Rules for AI coding agents contributing to Agones. `CONTRIBUTING.md` and `build/
 
 There is no root Makefile. Builds, tests, and lint run through `build/Makefile` inside a Docker build image (the only host dependencies are Make and Docker), so invoke targets as `make -C build <target>` from the repo root.
 
-- Validate Go changes with `make -C build test-go` and `make -C build lint` before opening a PR, and do not claim they pass without running them. The first run builds the image and is slow.
-- `make -C build test` runs the local, non-e2e suite. See `build/docs/make-reference.md` for the documented targets.
+- Validate Go changes with `make -C build lint test-go` before opening a PR, and do not claim they pass without running them. The first run builds the image and is slow.
 - CI runs these targets in the build image with a pinned Go toolchain, so a passing raw `go test`, `go build`, or `golangci-lint` does not mean CI passes, and is not a substitute.
 - Do not run the e2e targets (`make -C build test-e2e...`) unless asked. They need a live Kubernetes cluster and take a long time.
 - Do not disable or weaken checks (deleting tests, broad `//nolint`, skipping hooks) to get a PR green. Fix the underlying issue.
