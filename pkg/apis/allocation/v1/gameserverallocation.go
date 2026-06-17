@@ -133,12 +133,6 @@ type GameServerSelector struct {
 	// via Allocation. Defaults to "Ready". The only other option is "Allocated", which can be used in conjunction with
 	// label/annotation/player selectors to retrieve an already Allocated GameServer.
 	GameServerState *agonesv1.GameServerState `json:"gameServerState,omitempty"`
-	// [Stage:Alpha]
-	// [FeatureFlag:PlayerAllocationFilter]
-	// +optional
-	// Players provides a filter on minimum and maximum values for player capacity when retrieving a GameServer
-	// through Allocation. Defaults to no limits.
-	Players *PlayerSelector `json:"players,omitempty"`
 	// [Stage: Beta]
 	// [FeatureFlag:CountsAndLists]
 	// Counters provides filters on minimum and maximum values
@@ -153,12 +147,6 @@ type GameServerSelector struct {
 	// through Allocation. Defaults to no limits.
 	// +optional
 	Lists map[string]ListSelector `json:"lists,omitempty"`
-}
-
-// PlayerSelector is the filter options for a GameServer based on player counts
-type PlayerSelector struct {
-	MinAvailable int64 `json:"minAvailable,omitempty"`
-	MaxAvailable int64 `json:"maxAvailable,omitempty"`
 }
 
 // CounterSelector is the filter options for a GameServer based on the count and/or available capacity.
@@ -224,12 +212,6 @@ func (s *GameServerSelector) ApplyDefaults() {
 		s.GameServerState = &state
 	}
 
-	if runtime.FeatureEnabled(runtime.FeaturePlayerAllocationFilter) {
-		if s.Players == nil {
-			s.Players = &PlayerSelector{}
-		}
-	}
-
 	if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
 		if s.Counters == nil {
 			s.Counters = make(map[string]CounterSelector)
@@ -261,17 +243,6 @@ func (s *GameServerSelector) Matches(gs *agonesv1.GameServer) bool {
 	// then if state is being checked, check state
 	if s.GameServerState != nil && gs.Status.State != *s.GameServerState {
 		return false
-	}
-
-	// then if player count is being checked, check that
-	if runtime.FeatureEnabled(runtime.FeaturePlayerAllocationFilter) {
-		// 0 is unlimited number of players
-		if s.Players != nil && gs.Status.Players != nil && s.Players.MaxAvailable != 0 {
-			available := gs.Status.Players.Capacity - gs.Status.Players.Count
-			if !(available >= s.Players.MinAvailable && available <= s.Players.MaxAvailable) {
-				return false
-			}
-		}
 	}
 
 	if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
@@ -407,20 +378,6 @@ func (s *GameServerSelector) Validate(fldPath *field.Path) field.ErrorList {
 
 	if s.GameServerState != nil && !(*s.GameServerState == agonesv1.GameServerStateAllocated || *s.GameServerState == agonesv1.GameServerStateReady) {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("gameServerState"), *s.GameServerState, "GameServerState must be either Allocated or Ready"))
-	}
-
-	if runtime.FeatureEnabled(runtime.FeaturePlayerAllocationFilter) && s.Players != nil {
-		if s.Players.MinAvailable < 0 {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("players").Child("minAvailable"), s.Players.MinAvailable, apivalidation.IsNegativeErrorMsg))
-		}
-
-		if s.Players.MaxAvailable < 0 {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("players").Child("maxAvailable"), s.Players.MaxAvailable, apivalidation.IsNegativeErrorMsg))
-		}
-
-		if s.Players.MinAvailable > s.Players.MaxAvailable {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("players").Child("minAvailable"), s.Players.MinAvailable, "minAvailable cannot be greater than maxAvailable"))
-		}
 	}
 
 	if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {

@@ -202,65 +202,6 @@ func TestHighDensityGameServerFlow(t *testing.T) {
 	}, time.Minute, time.Second, "Could not re-allocation")
 }
 
-func TestCreateFleetAndGameServerPlayerCapacityAllocation(t *testing.T) {
-	if !(runtime.FeatureEnabled(runtime.FeaturePlayerAllocationFilter)) {
-		t.SkipNow()
-	}
-	t.Parallel()
-
-	fleets := framework.AgonesClient.AgonesV1().Fleets(framework.Namespace)
-	fleet := defaultFleet(framework.Namespace)
-	fleet.Spec.Template.Spec.Players = &agonesv1.PlayersSpec{InitialCapacity: 10}
-	ctx := context.Background()
-
-	flt, err := fleets.Create(ctx, fleet, metav1.CreateOptions{})
-	require.NoError(t, err)
-	defer fleets.Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
-
-	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
-
-	fleetSelector := metav1.LabelSelector{MatchLabels: map[string]string{agonesv1.FleetNameLabel: flt.ObjectMeta.Name}}
-	allocated := agonesv1.GameServerStateAllocated
-	gsa := &allocationv1.GameServerAllocation{
-		Spec: allocationv1.GameServerAllocationSpec{
-			Selectors: []allocationv1.GameServerSelector{
-				{
-					LabelSelector:   fleetSelector,
-					GameServerState: &allocated,
-					Players: &allocationv1.PlayerSelector{
-						MinAvailable: 1,
-						MaxAvailable: 99,
-					},
-				},
-				{LabelSelector: fleetSelector, Players: &allocationv1.PlayerSelector{MinAvailable: 5, MaxAvailable: 10}},
-			},
-		}}
-
-	// first try should give me a Ready->Allocated server
-	gsa, err = framework.AgonesClient.AllocationV1().GameServerAllocations(fleet.ObjectMeta.Namespace).Create(ctx, gsa.DeepCopy(), metav1.CreateOptions{})
-	require.NoError(t, err)
-	assert.Equal(t, string(allocationv1.GameServerAllocationAllocated), string(gsa.Status.State))
-
-	gs1, err := framework.AgonesClient.AgonesV1().GameServers(fleet.ObjectMeta.Namespace).Get(ctx, gsa.Status.GameServerName, metav1.GetOptions{})
-	require.NoError(t, err)
-	assert.Equal(t, agonesv1.GameServerStateAllocated, gs1.Status.State)
-	assert.NotNil(t, gs1.ObjectMeta.Annotations["agones.dev/last-allocated"])
-
-	// second try should give me the same allocated server
-	gsa, err = framework.AgonesClient.AllocationV1().GameServerAllocations(fleet.ObjectMeta.Namespace).Create(ctx, gsa.DeepCopy(), metav1.CreateOptions{})
-	require.NoError(t, err)
-	assert.Equal(t, string(allocationv1.GameServerAllocationAllocated), string(gsa.Status.State))
-	assert.Equal(t, gs1.ObjectMeta.Name, gsa.Status.GameServerName)
-
-	gs2, err := framework.AgonesClient.AgonesV1().GameServers(fleet.ObjectMeta.Namespace).Get(ctx, gsa.Status.GameServerName, metav1.GetOptions{})
-	require.NoError(t, err)
-	assert.Equal(t, agonesv1.GameServerStateAllocated, gs2.Status.State)
-
-	require.Equal(t, gs1.ObjectMeta.Name, gs2.ObjectMeta.Name)
-	require.NotEqual(t, gs1.ObjectMeta.ResourceVersion, gs2.ObjectMeta.ResourceVersion)
-	require.NotEqual(t, gs1.ObjectMeta.Annotations["agones.dev/last-allocated"], gs2.ObjectMeta.Annotations["agones.dev/last-allocated"])
-}
-
 func TestCounterAndListGameServerAllocation(t *testing.T) {
 	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
 		t.SkipNow()

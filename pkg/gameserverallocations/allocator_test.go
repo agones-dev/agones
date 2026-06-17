@@ -454,7 +454,7 @@ func TestAllocatorAllocateOnGameServerUpdateError(t *testing.T) {
 	// TODO: remove when `CountsAndLists` feature flag is moved to stable.
 	runtime.FeatureTestMutex.Lock()
 	defer runtime.FeatureTestMutex.Unlock()
-	require.NoError(t, runtime.ParseFeatures(fmt.Sprintf("%s=false&%s=false", runtime.FeaturePlayerAllocationFilter, runtime.FeatureCountsAndLists)))
+	require.NoError(t, runtime.ParseFeatures(fmt.Sprintf("%s=false", runtime.FeatureCountsAndLists)))
 
 	a, m := newFakeAllocator()
 	log := framework.TestLogger(t)
