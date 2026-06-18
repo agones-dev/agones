@@ -62,14 +62,6 @@ spec:
           containsValue: "x6k8z"  # only match GameServers who has this value in the list. Defaults to "", which is all.
           minAvailable: 1  # minimum available (current capacity - current count). Defaults to 0.
           maxAvailable: 10  # maximum available (current capacity - current count) Defaults to 0, which translates to max(int64)
-      #
-      # [Stage:Alpha]
-      # [FeatureFlag:PlayerAllocationFilter]
-      # Provides a filter on minimum and maximum values for player capacity when retrieving a GameServer
-      # through Allocation. Defaults to no limits.
-      players:
-        minAvailable: 0
-        maxAvailable: 99
   # defines how GameServers are organised across the cluster.
   # Options include:
   # "Packed" (default) is aimed at dynamic Kubernetes clusters, such as cloud providers, wherein we want to bin pack
