@@ -87,14 +87,6 @@ spec:
     # conflict with other TCP connections.
     grpcPort: 9357
     httpPort: 9358
-  # [Stage:Alpha]
-  # [FeatureFlag:PlayerTracking]
-  # Players provides the configuration for player tracking features.
-  # Commented out since Alpha, and disabled by default
-  # players:
-  #  # set this GameServer's initial player capacity
-  #   initialCapacity: 10
-  #
   # [Stage:Beta]
   # [FeatureFlag:CountsAndLists]
   # Counts and Lists provides the configuration for generic (player, room, session, etc.) tracking features.

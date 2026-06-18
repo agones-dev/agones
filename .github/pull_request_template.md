@@ -22,8 +22,15 @@
 <!--
 *Automatically closes linked issue when PR is merged.
 Usage: `Closes #<issue number>`, or `Closes (paste link of issue)`.
+Use "Work on #<issue number>" if you wish to reference the issue without closing it.
 -->
 Closes #
+
+**Did you use AI tools in preparing this PR?**:
+<!--
+If you used AI tools in preparing your PR, you must disclose this in the description of your PR.
+--->
+Y/N
 
 **Special notes for your reviewer**:
 

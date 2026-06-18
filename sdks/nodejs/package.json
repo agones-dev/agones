@@ -4,14 +4,14 @@
         "url": "https://github.com/agones-dev/agones/issues"
     },
     "dependencies": {
-        "@grpc/grpc-js": "1.14.3",
+        "@grpc/grpc-js": "1.14.4",
         "google-protobuf": "4.0.1"
     },
     "description": "Game Server SDK for Agones, the open source project for hosting dedicated game servers on Kubernetes",
     "devDependencies": {
         "@biomejs/biome": "^2.3.11",
         "jasmine": "^5.13.0",
-        "nyc": "^17.1.0"
+        "nyc": "^18.0.0"
     },
     "homepage": "https://agones.dev",
     "license": "Apache-2.0",
