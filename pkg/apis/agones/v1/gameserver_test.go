@@ -69,9 +69,6 @@ func TestStatus(t *testing.T) {
 			expected:      GameServerStatusPort{Name: "test-name", Port: 7777},
 		},
 	}
-	runtime.FeatureTestMutex.Lock()
-	defer runtime.FeatureTestMutex.Unlock()
-	require.NoError(t, runtime.ParseFeatures(string(runtime.FeaturePortPolicyNone)+"=true"))
 
 	for _, tc := range testCases {
 		name := "test-name"
@@ -1537,34 +1534,7 @@ func TestGameServerValidateFeatures(t *testing.T) {
 			},
 		},
 		{
-			description: "PortPolicyNone is disabled, PortPolicy field set to None",
-			feature:     fmt.Sprintf("%s=false", runtime.FeaturePortPolicyNone),
-			gs: GameServer{
-				Spec: GameServerSpec{
-					Ports: []GameServerPort{
-						{
-							Name:          "main",
-							ContainerPort: 7777,
-							PortPolicy:    None,
-						},
-					},
-					Container: "testing",
-					Lists:     map[string]ListStatus{},
-					Template: corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "testing", Image: "testing/image"}}},
-					},
-				},
-			},
-			want: field.ErrorList{
-				field.Forbidden(
-					field.NewPath("spec.ports[0].portPolicy"),
-					"Value cannot be set to None unless feature flag PortPolicyNone is enabled",
-				),
-			},
-		},
-		{
 			description: "PortPolicyNone is enabled, PortPolicy field set to None",
-			feature:     fmt.Sprintf("%s=true", runtime.FeaturePortPolicyNone),
 			gs: GameServer{
 				Spec: GameServerSpec{
 					Ports: []GameServerPort{
