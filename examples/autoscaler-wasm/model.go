@@ -19,12 +19,6 @@ A copy of the FleetAutoscaleReview to avoid pulling in the entire Agones codebas
 (which won't compile to Wasm anyway).
 */
 
-// AggregatedPlayerStatus stores total player tracking values
-type AggregatedPlayerStatus struct {
-	Count    int64 `json:"count"`
-	Capacity int64 `json:"capacity"`
-}
-
 // AggregatedCounterStatus stores total and allocated Counter tracking values
 type AggregatedCounterStatus struct {
 	AllocatedCount    int64 `json:"allocatedCount"`
@@ -52,11 +46,6 @@ type FleetStatus struct {
 	ReservedReplicas int32 `json:"reservedReplicas"`
 	// AllocatedReplicas are the number of Allocated GameServer replicas
 	AllocatedReplicas int32 `json:"allocatedReplicas"`
-	// [Stage:Alpha]
-	// [FeatureFlag:PlayerTracking]
-	// Players are the current total player capacity and count for this Fleet
-	// +optional
-	Players *AggregatedPlayerStatus `json:"players,omitempty"`
 	// (Beta, CountsAndLists feature flag) Counters provides aggregated Counter capacity and Counter
 	// count for this Fleet.
 	// +optional
