@@ -45,7 +45,7 @@ Start new Go files with the Apache license header, copied from an existing non-g
 
 - Sign off every commit with `git commit -s`. DCO is bot-enforced, and an unsigned commit blocks the PR.
 - Squash the branch to a single commit before it merges.
-- Fill in `.github/pull_request_template.md`: set one `/kind` label, describe what and why, and put `Closes #<issue>` for the issue it fixes.
+- Fill in `.github/pull_request_template.md`: set one `/kind` label, describe what and why, and put `Closes #<issue>` for the issue it fixes, or `Work on #<issue>` to reference an issue without closing it.
 
 ## New features
 
