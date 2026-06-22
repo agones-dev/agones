@@ -38,21 +38,7 @@ minikube_cert_mount := ~/.minikube:$(HOME)/.minikube
 minikube-test-cluster: DOCKER_RUN_ARGS+=--network=host -v $(minikube_cert_mount)
 minikube-test-cluster: $(ensure-build-image)
 	$(MINIKUBE) start --kubernetes-version v1.34.6 -p $(MINIKUBE_PROFILE) --driver $(MINIKUBE_DRIVER) --nodes $(MINIKUBE_NODES)
-	$(MAKE) minikube-metallb-helm-install
-	$(MAKE) minikube-metallb-configure
-
-# minikube-metallb-helm-install installs metallb via helm
-minikube-metallb-helm-install:
-	helm repo add metallb https://metallb.github.io/metallb
-	helm repo update
-	helm upgrade metallb metallb/metallb --install --namespace metallb-system --create-namespace --version 0.15.2 --wait --timeout 5m
-
-# minikube-metallb-configure configures metallb with an ip address range based on the minikube ip
-minikube-metallb-configure:
-	MINIKUBE_IP=$$($(MINIKUBE) ip -p $(MINIKUBE_PROFILE)); \
-	NETWORK_PREFIX=$$(echo "$$MINIKUBE_IP" | cut -d '.' -f 1-3); \
-	METALLB_IP_RANGE="$$NETWORK_PREFIX.50-$$NETWORK_PREFIX.250"; \
-	sed "s|__RANGE__|$${METALLB_IP_RANGE}|g" $(build_path)/metallb-config.yaml.tpl | kubectl apply -f -
+	$(MINIKUBE) tunnel -p $(MINIKUBE_PROFILE)
 
 # Connecting to minikube requires so enhanced permissions, so use this target
 # instead of `make shell` to start an interactive shell for development on minikube.
