@@ -34,6 +34,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -151,6 +153,71 @@ func TestAllocatorWithSelectors(t *testing.T) {
 		helper.ValidateAllocatorResponse(t, allocatedResponse)
 		assert.Equal(c, flt.ObjectMeta.Name, allocatedResponse.GetMetadata().GetLabels()[agonesv1.FleetNameLabel])
 
+	}, 5*time.Minute, 2*time.Second)
+}
+
+func TestAllocatorWithMatchExpressions(t *testing.T) {
+	ctx := context.Background()
+
+	ip, port := helper.GetAllocatorEndpoint(ctx, t, framework)
+	requestURL := fmt.Sprintf(allocatorReqURLFmt, ip, port)
+	tlsCA := helper.RefreshAllocatorTLSCerts(ctx, t, ip, framework)
+
+	flt, err := helper.CreateFleetWithOpts(ctx, framework.Namespace, framework, func(f *agonesv1.Fleet) {
+		if f.Spec.Template.ObjectMeta.Labels == nil {
+			f.Spec.Template.ObjectMeta.Labels = make(map[string]string)
+		}
+		f.Spec.Template.ObjectMeta.Labels["tier"] = "staging"
+	})
+	require.NoError(t, err)
+	defer framework.AgonesClient.AgonesV1().Fleets(framework.Namespace).Delete(ctx, flt.Name, metav1.DeleteOptions{}) // nolint: errcheck
+	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
+
+	// Allocate using matchExpressions (In operator) — should succeed.
+	request := &pb.AllocationRequest{
+		Namespace: framework.Namespace,
+		GameServerSelectors: []*pb.GameServerSelector{{
+			MatchLabels: map[string]string{agonesv1.FleetNameLabel: flt.ObjectMeta.Name},
+			MatchExpressions: []*pb.LabelMatchExpressions{
+				{Key: "tier", Operator: pb.LabelMatchExpressions_In, Values: []string{"staging", "production"}},
+			},
+		}},
+		Scheduling: pb.AllocationRequest_Packed,
+		Metadata:   &pb.MetaPatch{Labels: map[string]string{"gslabel": "allocatedbytest"}},
+	}
+
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		dialOpts, err := helper.CreateRemoteClusterDialOptions(ctx, allocatorClientSecretNamespace, allocatorClientSecretName, tlsCA, framework)
+		require.NoError(c, err)
+
+		conn, err := grpc.NewClient(requestURL, dialOpts...)
+		require.NoError(c, err, "failing grpc.NewClient")
+		defer conn.Close() // nolint: errcheck
+
+		grpcClient := pb.NewAllocationServiceClient(conn)
+		response, err := grpcClient.Allocate(ctx, request)
+		require.NoError(c, err, "failing Allocate request")
+		helper.ValidateAllocatorResponse(t, response)
+		require.Equal(t, response.Metadata.Labels["tier"], "staging")
+		require.Equal(t, response.Metadata.Labels["gslabel"], "allocatedbytest")
+
+		// Attempt allocation with NotIn on the same label value — should find no match.
+		noMatchRequest := &pb.AllocationRequest{
+			Namespace: framework.Namespace,
+			GameServerSelectors: []*pb.GameServerSelector{{
+				MatchLabels: map[string]string{agonesv1.FleetNameLabel: flt.ObjectMeta.Name},
+				MatchExpressions: []*pb.LabelMatchExpressions{
+					{Key: "tier", Operator: pb.LabelMatchExpressions_NotIn, Values: []string{"staging"}},
+				},
+			}},
+		}
+		noMatchResponse, err := grpcClient.Allocate(ctx, noMatchRequest)
+		require.Nil(c, noMatchResponse)
+		st, ok := status.FromError(err)
+		require.True(c, ok)
+		require.Equal(c, codes.ResourceExhausted, st.Code())
 	}, 5*time.Minute, 2*time.Second)
 }
 

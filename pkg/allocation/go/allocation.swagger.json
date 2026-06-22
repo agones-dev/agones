@@ -133,6 +133,17 @@
       ],
       "default": "READY"
     },
+    "LabelMatchExpressionsOperator": {
+      "type": "string",
+      "enum": [
+        "In",
+        "NotIn",
+        "Exists",
+        "DoesNotExist"
+      ],
+      "default": "In",
+      "description": "operator represents a key's relationship to a set of values.\nIn and NotIn require a non-empty values array; Exists and DoesNotExist require an empty one."
+    },
     "PriorityOrder": {
       "type": "string",
       "enum": [
@@ -319,9 +330,37 @@
           "additionalProperties": {
             "$ref": "#/definitions/allocationListSelector"
           }
+        },
+        "matchExpressions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/allocationLabelMatchExpressions"
+          },
+          "description": "matchExpressions is a list of label selector requirements. The requirements are ANDed\nwith matchLabels."
         }
       },
       "description": "GameServerSelector used for finding a GameServer with matching filters."
+    },
+    "allocationLabelMatchExpressions": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string",
+          "description": "key is the label key that the selector applies to."
+        },
+        "operator": {
+          "$ref": "#/definitions/LabelMatchExpressionsOperator"
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "values is an array of string values."
+        }
+      },
+      "description": "LabelMatchExpressions is a selector that contains values, a key, and an operator\nthat relates the key and values. The requirements are ANDed."
     },
     "allocationLabelSelector": {
       "type": "object",
