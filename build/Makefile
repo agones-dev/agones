@@ -465,7 +465,16 @@ install: $(ensure-build-image) install-custom-pull-secret
 		--set agones.allocator.service.loadBalancerIP=$(EXTERNAL_IP) \
 		--set agones.metrics.serviceMonitor.enabled=$(SERVICE_MONITOR) \
 		$(HELM_ARGS) \
-		agones $(mount_path)/install/helm/agones/
+		agones $(mount_path)/install/helm/agones/ \
+	|| { \
+		echo "Agones install via Helm failed. Gathering debug information from the agones-system namespace..."; \
+		$(DOCKER_RUN) bash -c ' \
+			echo "--- helm releases ---"; helm ls --namespace agones-system; \
+			echo "--- pods ---"; kubectl get pods --namespace agones-system -o wide; \
+			echo "--- pod details ---"; kubectl describe pods --namespace agones-system; \
+			echo "--- recent events ---"; kubectl get events --namespace agones-system --sort-by=.lastTimestamp'; \
+		exit 1; \
+	}
 
 update-allocation-certs: NAMESPACE ?= default
 update-allocation-certs: install
