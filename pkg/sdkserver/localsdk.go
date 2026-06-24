@@ -72,13 +72,11 @@ func defaultGs() *sdk.GameServer {
 		},
 	}
 
-	if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		gs.Status.Counters = map[string]*sdk.GameServer_Status_CounterStatus{
-			"rooms": {Count: 1, Capacity: 10},
-		}
-		gs.Status.Lists = map[string]*sdk.GameServer_Status_ListStatus{
-			"players": {Values: []string{"test0", "test1", "test2"}, Capacity: 100},
-		}
+	gs.Status.Counters = map[string]*sdk.GameServer_Status_CounterStatus{
+		"rooms": {Count: 1, Capacity: 10},
+	}
+	gs.Status.Lists = map[string]*sdk.GameServer_Status_ListStatus{
+		"players": {Values: []string{"test0", "test1", "test2"}, Capacity: 100},
 	}
 
 	return gs
@@ -156,13 +154,11 @@ func NewLocalSDKServer(filePath string, testSdkName string) (*LocalSDKServer, er
 		l.gs.Status.Players = &sdk.GameServer_Status_PlayerStatus{}
 	}
 
-	if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		if l.gs.Status.Counters == nil {
-			l.gs.Status.Counters = make(map[string]*sdk.GameServer_Status_CounterStatus)
-		}
-		if l.gs.Status.Lists == nil {
-			l.gs.Status.Lists = make(map[string]*sdk.GameServer_Status_ListStatus)
-		}
+	if l.gs.Status.Counters == nil {
+		l.gs.Status.Counters = make(map[string]*sdk.GameServer_Status_CounterStatus)
+	}
+	if l.gs.Status.Lists == nil {
+		l.gs.Status.Lists = make(map[string]*sdk.GameServer_Status_ListStatus)
 	}
 
 	go func() {
@@ -609,13 +605,7 @@ func (l *LocalSDKServer) GetPlayerCapacity(_ context.Context, _ *alpha.Empty) (*
 }
 
 // GetCounter returns a Counter. Returns not found if the counter does not exist.
-// [Stage:Beta]
-// [FeatureFlag:CountsAndLists]
 func (l *LocalSDKServer) GetCounter(_ context.Context, in *beta.GetCounterRequest) (*beta.Counter, error) {
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
-	}
-
 	if in == nil {
 		return nil, errors.Errorf("invalid argument. GetCounterRequest cannot be nil")
 	}
@@ -638,10 +628,6 @@ func (l *LocalSDKServer) GetCounter(_ context.Context, in *beta.GetCounterReques
 // [Stage:Beta]
 // [FeatureFlag:CountsAndLists]
 func (l *LocalSDKServer) UpdateCounter(_ context.Context, in *beta.UpdateCounterRequest) (*beta.Counter, error) {
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
-	}
-
 	if in.CounterUpdateRequest == nil {
 		return nil, errors.Errorf("invalid argument. CounterUpdateRequest cannot be nil")
 	}
@@ -697,10 +683,6 @@ func (l *LocalSDKServer) UpdateCounter(_ context.Context, in *beta.UpdateCounter
 // [Stage:Beta]
 // [FeatureFlag:CountsAndLists]
 func (l *LocalSDKServer) GetList(_ context.Context, in *beta.GetListRequest) (*beta.List, error) {
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
-	}
-
 	l.logger.WithField("name", in.Name).Info("Getting List")
 	l.recordRequest("getlist")
 	l.gsMutex.RLock()
@@ -721,10 +703,6 @@ func (l *LocalSDKServer) GetList(_ context.Context, in *beta.GetListRequest) (*b
 // [Stage:Beta]
 // [FeatureFlag:CountsAndLists]
 func (l *LocalSDKServer) UpdateList(_ context.Context, in *beta.UpdateListRequest) (*beta.List, error) {
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
-	}
-
 	if in.List == nil || in.UpdateMask == nil {
 		return nil, errors.Errorf("invalid argument. List: %v and UpdateMask %v cannot be nil", in.List, in.UpdateMask)
 	}
@@ -780,10 +758,6 @@ func (l *LocalSDKServer) UpdateList(_ context.Context, in *beta.UpdateListReques
 // [Stage:Beta]
 // [FeatureFlag:CountsAndLists]
 func (l *LocalSDKServer) AddListValue(_ context.Context, in *beta.AddListValueRequest) (*beta.List, error) {
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
-	}
-
 	l.logger.WithField("name", in.Name).Info("Adding Value to List")
 	l.recordRequest("addlistvalue")
 	l.gsMutex.Lock()
@@ -813,10 +787,6 @@ func (l *LocalSDKServer) AddListValue(_ context.Context, in *beta.AddListValueRe
 // [Stage:Beta]
 // [FeatureFlag:CountsAndLists]
 func (l *LocalSDKServer) RemoveListValue(_ context.Context, in *beta.RemoveListValueRequest) (*beta.List, error) {
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
-	}
-
 	l.logger.WithField("name", in.Name).Info("Removing Value from List")
 	l.recordRequest("removelistvalue")
 	l.gsMutex.Lock()

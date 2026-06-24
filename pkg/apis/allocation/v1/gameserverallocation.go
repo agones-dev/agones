@@ -230,14 +230,13 @@ func (s *GameServerSelector) ApplyDefaults() {
 		}
 	}
 
-	if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		if s.Counters == nil {
-			s.Counters = make(map[string]CounterSelector)
-		}
-		if s.Lists == nil {
-			s.Lists = make(map[string]ListSelector)
-		}
+	if s.Counters == nil {
+		s.Counters = make(map[string]CounterSelector)
 	}
+	if s.Lists == nil {
+		s.Lists = make(map[string]ListSelector)
+	}
+
 }
 
 // Matches checks to see if a GameServer matches a given GameServerSelector's criteria.
@@ -274,46 +273,6 @@ func (s *GameServerSelector) Matches(gs *agonesv1.GameServer) bool {
 		}
 	}
 
-	if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		// Only check for matches if there are CounterSelectors or ListSelectors
-		if (s.Counters != nil) && (len(s.Counters) != 0) {
-			if !(s.matchCounters(gs)) {
-				return false
-			}
-		}
-		if (s.Lists != nil) && (len(s.Lists) != 0) {
-			if !(s.matchLists(gs)) {
-				return false
-			}
-		}
-	}
-
-	return true
-}
-
-// matchCounters returns true if there is a match for the CounterSelector in the GameServerStatus
-func (s *GameServerSelector) matchCounters(gs *agonesv1.GameServer) bool {
-	if gs.Status.Counters == nil {
-		return false
-	}
-	for counter, counterSelector := range s.Counters {
-		// If the Counter Selector does not exist in GameServerStatus, return false.
-		counterStatus, ok := gs.Status.Counters[counter]
-		if !ok {
-			return false
-		}
-		// 0 means undefined (unlimited) for MaxAvailable.
-		available := counterStatus.Capacity - counterStatus.Count
-		if available < counterSelector.MinAvailable ||
-			(counterSelector.MaxAvailable != 0 && available > counterSelector.MaxAvailable) {
-			return false
-		}
-		// 0 means undefined (unlimited) for MaxCount.
-		if counterStatus.Count < counterSelector.MinCount ||
-			(counterSelector.MaxCount != 0 && counterStatus.Count > counterSelector.MaxCount) {
-			return false
-		}
-	}
 	return true
 }
 
@@ -361,41 +320,6 @@ func (la *ListAction) ListActions(list string, gs *agonesv1.GameServer) error {
 	return errs
 }
 
-// matchLists returns true if there is a match for the ListSelector in the GameServerStatus
-func (s *GameServerSelector) matchLists(gs *agonesv1.GameServer) bool {
-	if gs.Status.Lists == nil {
-		return false
-	}
-	for list, listSelector := range s.Lists {
-		// If the List Selector does not exist in GameServerStatus, return false.
-		listStatus, ok := gs.Status.Lists[list]
-		if !ok {
-			return false
-		}
-		// Match List based on capacity
-		available := listStatus.Capacity - int64(len(listStatus.Values))
-		// 0 means undefined (unlimited) for MaxAvailable.
-		if available < listSelector.MinAvailable ||
-			(listSelector.MaxAvailable != 0 && available > listSelector.MaxAvailable) {
-			return false
-		}
-		// Check if List contains ContainsValue (if a value has been specified)
-		if listSelector.ContainsValue != "" {
-			valueExists := false
-			for _, value := range listStatus.Values {
-				if value == listSelector.ContainsValue {
-					valueExists = true
-					break
-				}
-			}
-			if !valueExists {
-				return false
-			}
-		}
-	}
-	return true
-}
-
 // Validate validates that the selection fields have valid values
 func (s *GameServerSelector) Validate(fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
@@ -420,69 +344,6 @@ func (s *GameServerSelector) Validate(fldPath *field.Path) field.ErrorList {
 
 		if s.Players.MinAvailable > s.Players.MaxAvailable {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("players").Child("minAvailable"), s.Players.MinAvailable, "minAvailable cannot be greater than maxAvailable"))
-		}
-	}
-
-	if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		if s.Counters != nil {
-			allErrs = append(allErrs, validateCounters(s.Counters, fldPath.Child("counters"))...)
-		}
-		if s.Lists != nil {
-			allErrs = append(allErrs, validateLists(s.Lists, fldPath.Child("lists"))...)
-		}
-	} else {
-		if s.Counters != nil {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("counters"), "Feature CountsAndLists must be enabled"))
-		}
-		if s.Lists != nil {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("lists"), "Feature CountsAndLists must be enabled"))
-		}
-	}
-
-	return allErrs
-}
-
-// validateCounters validates that the selection field has valid values for CounterSelectors
-func validateCounters(counters map[string]CounterSelector, fldPath *field.Path) field.ErrorList {
-	var allErrs field.ErrorList
-	for key, counterSelector := range counters {
-		keyPath := fldPath.Key(key)
-		if counterSelector.MinCount < 0 {
-			allErrs = append(allErrs, field.Invalid(keyPath.Child("minCount"), counterSelector.MinCount, apivalidation.IsNegativeErrorMsg))
-		}
-		if counterSelector.MaxCount < 0 {
-			allErrs = append(allErrs, field.Invalid(keyPath.Child("maxCount"), counterSelector.MaxCount, apivalidation.IsNegativeErrorMsg))
-		}
-		if (counterSelector.MaxCount < counterSelector.MinCount) && (counterSelector.MaxCount != 0) {
-			allErrs = append(allErrs, field.Invalid(keyPath, counterSelector.MaxCount, fmt.Sprintf("maxCount must zero or greater than minCount %d", counterSelector.MinCount)))
-		}
-		if counterSelector.MinAvailable < 0 {
-			allErrs = append(allErrs, field.Invalid(keyPath.Child("minAvailable"), counterSelector.MinAvailable, apivalidation.IsNegativeErrorMsg))
-		}
-		if counterSelector.MaxAvailable < 0 {
-			allErrs = append(allErrs, field.Invalid(keyPath.Child("maxAvailable"), counterSelector.MaxAvailable, apivalidation.IsNegativeErrorMsg))
-		}
-		if (counterSelector.MaxAvailable < counterSelector.MinAvailable) && (counterSelector.MaxAvailable != 0) {
-			allErrs = append(allErrs, field.Invalid(keyPath, counterSelector.MaxAvailable, fmt.Sprintf("maxAvailable must zero or greater than minAvailable %d", counterSelector.MinAvailable)))
-		}
-	}
-
-	return allErrs
-}
-
-// validateLists validates that the selection field has valid values for ListSelectors
-func validateLists(lists map[string]ListSelector, fldPath *field.Path) field.ErrorList {
-	var allErrs field.ErrorList
-	for key, listSelector := range lists {
-		keyPath := fldPath.Key(key)
-		if listSelector.MinAvailable < 0 {
-			allErrs = append(allErrs, field.Invalid(keyPath.Child("minAvailable"), listSelector.MinAvailable, apivalidation.IsNegativeErrorMsg))
-		}
-		if listSelector.MaxAvailable < 0 {
-			allErrs = append(allErrs, field.Invalid(keyPath.Child("maxAvailable"), listSelector.MaxAvailable, apivalidation.IsNegativeErrorMsg))
-		}
-		if (listSelector.MaxAvailable < listSelector.MinAvailable) && (listSelector.MaxAvailable != 0) {
-			allErrs = append(allErrs, field.Invalid(keyPath, listSelector.MaxAvailable, fmt.Sprintf("maxAvailable must zero or greater than minAvailable %d", listSelector.MinAvailable)))
 		}
 	}
 
@@ -626,30 +487,6 @@ func (gsa *GameServerAllocation) Validate() field.ErrorList {
 	}
 	for i := range gsa.Spec.Selectors {
 		allErrs = append(allErrs, gsa.Spec.Selectors[i].Validate(specPath.Child("selectors").Index(i))...)
-	}
-
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		if gsa.Spec.Priorities != nil {
-			allErrs = append(allErrs, field.Forbidden(specPath.Child("priorities"), "Feature CountsAndLists must be enabled if Priorities is specified"))
-		}
-		if gsa.Spec.Counters != nil {
-			allErrs = append(allErrs, field.Forbidden(specPath.Child("counters"), "Feature CountsAndLists must be enabled if Counters is specified"))
-		}
-		if gsa.Spec.Lists != nil {
-			allErrs = append(allErrs, field.Forbidden(specPath.Child("lists"), "Feature CountsAndLists must be enabled if Lists is specified"))
-		}
-	}
-
-	if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		if gsa.Spec.Priorities != nil {
-			allErrs = append(allErrs, validatePriorities(gsa.Spec.Priorities, specPath.Child("priorities"))...)
-		}
-		if gsa.Spec.Counters != nil {
-			allErrs = append(allErrs, validateCounterActions(gsa.Spec.Counters, specPath.Child("counters"))...)
-		}
-		if gsa.Spec.Lists != nil {
-			allErrs = append(allErrs, validateListActions(gsa.Spec.Lists, specPath.Child("lists"))...)
-		}
 	}
 
 	allErrs = append(allErrs, gsa.Spec.MetaPatch.Validate(specPath.Child("metadata"))...)
