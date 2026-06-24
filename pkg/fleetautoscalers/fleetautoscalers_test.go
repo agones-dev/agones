@@ -2464,6 +2464,157 @@ func TestApplyListPolicy(t *testing.T) {
 	}
 }
 
+// TestApplyListPolicyFlapping covers a List based FleetAutoscaler flapping bug where scale down
+// logic counted un-deletable (Allocated) game servers toward a reduction, along with scaling up
+// and down against the Min/MaxCapacity limiter.
+func TestApplyListPolicyFlapping(t *testing.T) {
+	utilruntime.FeatureTestMutex.Lock()
+	defer utilruntime.FeatureTestMutex.Unlock()
+
+	require.NoError(t, utilruntime.ParseFeatures(string(utilruntime.FeatureCountsAndLists)+"=true"))
+
+	// One replica provides 60 capacity; the buffer wants 120 available.
+	lp := &autoscalingv1.ListPolicy{
+		Key:         "players",
+		MaxCapacity: 300,
+		MinCapacity: 120,
+		BufferSize:  intstr.FromInt(120),
+	}
+
+	nc := map[string]gameservers.NodeCount{
+		"n1": {Ready: 2},
+		"n2": {Allocated: 1},
+	}
+
+	players := make([]string, 55)
+	for i := range players {
+		players[i] = fmt.Sprintf("player-%d", i)
+	}
+
+	newFleet := func(mutate func(*agonesv1.Fleet)) *agonesv1.Fleet {
+		_, f := defaultFixtures()
+		f.Spec.Template.Spec.Lists = map[string]agonesv1.ListStatus{
+			"players": {Values: []string{}, Capacity: 60},
+		}
+		mutate(f)
+		return f
+	}
+
+	// Full, Allocated (un-deletable) game server.
+	allocatedGS := func(name string) agonesv1.GameServer {
+		return agonesv1.GameServer{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: "default",
+				Labels:    map[string]string{"agones.dev/fleet": "fleet-1"}},
+			Status: agonesv1.GameServerStatus{
+				State:    agonesv1.GameServerStateAllocated,
+				NodeName: "n2",
+				Lists: map[string]agonesv1.ListStatus{
+					"players": {Values: players, Capacity: 60},
+				}}}
+	}
+
+	// Empty, Ready (deletable) game server.
+	readyGS := func(name string) agonesv1.GameServer {
+		return agonesv1.GameServer{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: "default",
+				Labels:    map[string]string{"agones.dev/fleet": "fleet-1"}},
+			Status: agonesv1.GameServerStatus{
+				State:    agonesv1.GameServerStateReady,
+				NodeName: "n1",
+				Lists: map[string]agonesv1.ListStatus{
+					"players": {Values: []string{}, Capacity: 60},
+				}}}
+	}
+
+	type expected struct {
+		replicas int32
+		limited  bool
+	}
+
+	testCases := map[string]struct {
+		fleet  *agonesv1.Fleet
+		gsList []agonesv1.GameServer
+		want   expected
+	}{
+		"scale up to satisfy buffer": {
+			fleet: newFleet(func(f *agonesv1.Fleet) {
+				f.Status.Replicas = 2
+				f.Status.ReadyReplicas = 1
+				f.Status.AllocatedReplicas = 1
+				f.Status.Lists = map[string]agonesv1.AggregatedListStatus{
+					"players": {Count: 55, Capacity: 120, AllocatedCount: 55, AllocatedCapacity: 60},
+				}
+			}),
+			gsList: []agonesv1.GameServer{allocatedGS("hub-allocated"), readyGS("hub-empty-1"), readyGS("hub-empty-2")},
+			want:   expected{replicas: 3, limited: false},
+		},
+		// At 3 replicas the fleet is stable
+		"stable at buffer, no flap down": {
+			fleet: newFleet(func(f *agonesv1.Fleet) {
+				f.Status.Replicas = 3
+				f.Status.ReadyReplicas = 2
+				f.Status.AllocatedReplicas = 1
+				f.Status.Lists = map[string]agonesv1.AggregatedListStatus{
+					"players": {Count: 55, Capacity: 180, AllocatedCount: 55, AllocatedCapacity: 60},
+				}
+			}),
+			gsList: []agonesv1.GameServer{allocatedGS("hub-allocated"), readyGS("hub-empty-1"), readyGS("hub-empty-2")},
+			want:   expected{replicas: 3, limited: false},
+		},
+		// Below MinCapacity, so scale up to the minimum
+		"limited up to MinCapacity": {
+			fleet: newFleet(func(f *agonesv1.Fleet) {
+				f.Status.Replicas = 1
+				f.Status.ReadyReplicas = 0
+				f.Status.AllocatedReplicas = 1
+				f.Status.Lists = map[string]agonesv1.AggregatedListStatus{
+					"players": {Count: 55, Capacity: 60, AllocatedCount: 55, AllocatedCapacity: 60},
+				}
+			}),
+			gsList: []agonesv1.GameServer{allocatedGS("hub-allocated")},
+			want:   expected{replicas: 2, limited: true},
+		},
+		// Above MaxCapacity, but every server is Allocated and so nothing happens (intended)
+		"limited down blocked by allocated servers": {
+			fleet: newFleet(func(f *agonesv1.Fleet) {
+				f.Status.Replicas = 6
+				f.Status.ReadyReplicas = 0
+				f.Status.AllocatedReplicas = 6
+				f.Status.Lists = map[string]agonesv1.AggregatedListStatus{
+					"players": {Count: 330, Capacity: 360, AllocatedCount: 330, AllocatedCapacity: 360},
+				}
+			}),
+			gsList: []agonesv1.GameServer{
+				allocatedGS("hub-1"), allocatedGS("hub-2"), allocatedGS("hub-3"),
+				allocatedGS("hub-4"), allocatedGS("hub-5"), allocatedGS("hub-6"),
+			},
+			want: expected{replicas: 6, limited: true},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			m := agtesting.NewMocks()
+			m.AgonesClient.AddReactor("list", "gameservers", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+				return true, &agonesv1.GameServerList{Items: tc.gsList}, nil
+			})
+			informer := m.AgonesInformerFactory.Agones().V1()
+			_, cancel := agtesting.StartInformers(m, informer.GameServers().Informer().HasSynced)
+			defer cancel()
+			lister := informer.GameServers().Lister().GameServers("default")
+
+			replicas, limited, err := applyCounterOrListPolicy(nil, lp, tc.fleet, lister, nc)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.want.limited, limited)
+			assert.Equal(t, tc.want.replicas, replicas)
+		})
+	}
+}
+
 // nolint:dupl  // Linter errors on lines are duplicate of TestApplySchedulePolicy
 // NOTE: Does not test for the validity of a fleet autoscaler policy (ValidateSchedulePolicy)
 func TestApplySchedulePolicy(t *testing.T) {

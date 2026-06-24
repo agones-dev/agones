@@ -176,16 +176,10 @@ message GameServerSelector {
     ALLOCATED = 1;
   };
   GameServerState gameServerState = 2;
-  PlayerSelector players = 3;
+  // Reserved for removed players field.
+  reserved 3;
   map<string, CounterSelector> counters = 4;
   map<string, ListSelector> lists = 5;
-}
-
-// PlayerSelector is filter for player capacity values.
-// minAvailable should always be less or equal to maxAvailable.
-message PlayerSelector {
-  uint64 minAvailable = 1;
-  uint64 maxAvailable = 2;
 }
 
 // CounterSelector is the filter options for a GameServer based on the count and/or available capacity.
