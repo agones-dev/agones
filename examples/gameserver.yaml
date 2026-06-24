@@ -48,8 +48,6 @@ spec:
       # port is available. When static is the policy specified, `hostPort` is required to be populated
       # - "Passthrough" dynamically sets the `containerPort` to the same value as the dynamically selected hostPort.
       #      This will mean that users will need to lookup what port has been opened through the server side SDK.
-      # [Stage:Beta]
-      # [FeatureFlag:PortPolicyNone]
       # - "None" means the `hostPort` is ignored and if defined, the `containerPort` (optional) is used to set the port on the GameServer instance.
       portPolicy: Dynamic
       # The name of the container to open the port on. Defaults to the game server container if omitted or empty.
