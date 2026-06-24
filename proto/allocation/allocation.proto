@@ -176,6 +176,8 @@ message GameServerSelector {
     ALLOCATED = 1;
   };
   GameServerState gameServerState = 2;
+  // Reserved for removed players field.
+  reserved 3;
   map<string, CounterSelector> counters = 4;
   map<string, ListSelector> lists = 5;
 }
