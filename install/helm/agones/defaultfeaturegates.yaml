@@ -19,13 +19,13 @@
 # previous version with the feature flag do not fail on parsing an unknown flag.
 DisableResyncOnSDKServer: true
 AutopilotPassthroughPort: true
+PortRanges: true
 
 # Beta features
 
 CountsAndLists: true
 GKEAutopilotExtendedDurationPods: true
 PortPolicyNone: true
-PortRanges: true
 ScheduledAutoscaler: true
 RollingUpdateFix: true
 SidecarContainers: true

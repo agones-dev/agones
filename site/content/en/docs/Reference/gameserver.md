@@ -24,8 +24,6 @@ spec:
   ports:
     # name is a descriptive name for the port
   - name: default
-    # [Stage:Beta]
-    # [FeatureFlag:PortRanges]
     # range is the optional port range name from which to select a port when using a 'Dynamic' or 'Passthrough' port policy.
     range: default
     # portPolicy has four options:
@@ -132,7 +130,7 @@ The `spec` field is the actual GameServer specification and it is composed as fo
 - `container` is the name of container running the GameServer in case you have more than one container defined in the [pod](https://kubernetes.io/docs/concepts/workloads/pods/pod-overview/). If you do,  this is a mandatory field. For instance this is useful if you want to run a sidecar to ship logs.
 - `ports` are an array of ports that can be exposed as direct connections to the game server container
   - `name` is an optional descriptive name for a port
-  - `range` (Alpha, behind "PortRanges" feature gate) is the optional port range name from which to select a port when using a 'Dynamic' or 'Passthrough' port policy.
+  - `range` is the optional port range name from which to select a port when using a 'Dynamic' or 'Passthrough' port policy.
   - `portPolicy` has four options:
     - `Dynamic` (default) the system allocates a random free hostPort for the gameserver, for game clients to connect to.
     - `Static`, user defines the hostPort that the game client will connect to. Then onus is on the user to ensure that the port is available. When static is the policy specified, `hostPort` is required to be populated.

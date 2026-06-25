@@ -426,7 +426,7 @@ func parseEnvFlags() config {
 }
 
 func parsePortRanges(s string) (map[string]portallocator.PortRange, error) {
-	if s == "" || !runtime.FeatureEnabled(runtime.FeaturePortRanges) {
+	if s == "" {
 		return map[string]portallocator.PortRange{}, nil
 	}
 

@@ -69,7 +69,7 @@ KIND_CONTAINER_NAME=$(KIND_PROFILE)-control-plane
 GS_TEST_IMAGE ?= us-docker.pkg.dev/agones-images/examples/simple-game-server:0.43
 
 # Enable all beta feature gates. Keep in sync with `true` (beta) entries in pkg/util/runtime/features.go:featureDefaults
-BETA_FEATURE_GATES ?= "CountsAndLists=true&GKEAutopilotExtendedDurationPods=true&PortPolicyNone=true&PortRanges=true&RollingUpdateFix=true&ScheduledAutoscaler=true&SidecarContainers=true&FleetAutoscaleRequestMetaData=true"
+BETA_FEATURE_GATES ?= "CountsAndLists=true&GKEAutopilotExtendedDurationPods=true&PortPolicyNone=true&RollingUpdateFix=true&ScheduledAutoscaler=true&SidecarContainers=true&FleetAutoscaleRequestMetaData=true"
 
 
 # Enable all alpha feature gates. Keep in sync with `false` (alpha) entries in pkg/util/runtime/features.go:featureDefaults
@@ -465,7 +465,16 @@ install: $(ensure-build-image) install-custom-pull-secret
 		--set agones.allocator.service.loadBalancerIP=$(EXTERNAL_IP) \
 		--set agones.metrics.serviceMonitor.enabled=$(SERVICE_MONITOR) \
 		$(HELM_ARGS) \
-		agones $(mount_path)/install/helm/agones/
+		agones $(mount_path)/install/helm/agones/ \
+	|| { \
+		echo "Agones install via Helm failed. Gathering debug information from the agones-system namespace..."; \
+		$(DOCKER_RUN) bash -c ' \
+			echo "--- helm releases ---"; helm ls --namespace agones-system; \
+			echo "--- pods ---"; kubectl get pods --namespace agones-system -o wide; \
+			echo "--- pod details ---"; kubectl describe pods --namespace agones-system; \
+			echo "--- recent events ---"; kubectl get events --namespace agones-system --sort-by=.lastTimestamp'; \
+		exit 1; \
+	}
 
 update-allocation-certs: NAMESPACE ?= default
 update-allocation-certs: install
