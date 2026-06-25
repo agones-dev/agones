@@ -308,9 +308,6 @@
         "gameServerState": {
           "$ref": "#/definitions/GameServerSelectorGameServerState"
         },
-        "players": {
-          "$ref": "#/definitions/allocationPlayerSelector"
-        },
         "counters": {
           "type": "object",
           "additionalProperties": {
@@ -410,20 +407,6 @@
         }
       },
       "description": "Specifies settings for multi-cluster allocation."
-    },
-    "allocationPlayerSelector": {
-      "type": "object",
-      "properties": {
-        "minAvailable": {
-          "type": "string",
-          "format": "uint64"
-        },
-        "maxAvailable": {
-          "type": "string",
-          "format": "uint64"
-        }
-      },
-      "description": "PlayerSelector is filter for player capacity values.\nminAvailable should always be less or equal to maxAvailable."
     },
     "allocationPriority": {
       "type": "object",

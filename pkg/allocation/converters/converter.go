@@ -191,13 +191,6 @@ func convertGameServerSelectorToInternalGameServerSelector(in *pb.GameServerSele
 		result.GameServerState = &ready
 	}
 
-	if runtime.FeatureEnabled(runtime.FeaturePlayerAllocationFilter) && in.Players != nil {
-		result.Players = &allocationv1.PlayerSelector{
-			MinAvailable: int64(in.Players.MinAvailable),
-			MaxAvailable: int64(in.Players.MaxAvailable),
-		}
-	}
-
 	if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
 		if in.Counters != nil {
 			result.Counters = map[string]allocationv1.CounterSelector{}
@@ -239,13 +232,6 @@ func convertInternalGameServerSelectorToGameServer(in *allocationv1.GameServerSe
 			result.GameServerState = pb.GameServerSelector_READY
 		case agonesv1.GameServerStateAllocated:
 			result.GameServerState = pb.GameServerSelector_ALLOCATED
-		}
-	}
-
-	if runtime.FeatureEnabled(runtime.FeaturePlayerAllocationFilter) && in.Players != nil {
-		result.Players = &pb.PlayerSelector{
-			MinAvailable: uint64(in.Players.MinAvailable),
-			MaxAvailable: uint64(in.Players.MaxAvailable),
 		}
 	}
 

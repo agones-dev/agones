@@ -34,8 +34,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -63,15 +61,8 @@ func TestAllocatorWithDeprecatedRequired(t *testing.T) {
 
 	var flt *agonesv1.Fleet
 	var err error
-	if runtime.FeatureEnabled(runtime.FeaturePlayerAllocationFilter) {
-		flt, err = helper.CreateFleetWithOpts(ctx, framework.Namespace, framework, func(f *agonesv1.Fleet) {
-			f.Spec.Template.Spec.Players = &agonesv1.PlayersSpec{
-				InitialCapacity: 10,
-			}
-		})
-	} else {
-		flt, err = helper.CreateFleet(ctx, framework.Namespace, framework)
-	}
+
+	flt, err = helper.CreateFleet(ctx, framework.Namespace, framework)
 	require.NoError(t, err)
 	defer framework.AgonesClient.AgonesV1().Fleets(framework.Namespace).Delete(ctx, flt.Name, metav1.DeleteOptions{}) // nolint: errcheck
 
@@ -103,40 +94,12 @@ func TestAllocatorWithDeprecatedRequired(t *testing.T) {
 		helper.ValidateAllocatorResponse(t, response)
 
 		// let's do a re-allocation
-		if runtime.FeatureEnabled(runtime.FeaturePlayerAllocationFilter) {
-			// nolint:staticcheck
-			request.PreferredGameServerSelectors[0].GameServerState = pb.GameServerSelector_ALLOCATED
-			allocatedResponse, err := grpcClient.Allocate(ctx, request)
-			require.NoError(c, err)
-			require.Equal(c, response.GameServerName, allocatedResponse.GetGameServerName())
-			helper.ValidateAllocatorResponse(t, allocatedResponse)
-
-			// do a capacity based allocation
-			logrus.Info("testing capacity allocation filter")
-			// nolint:staticcheck
-			request.PreferredGameServerSelectors[0].Players = &pb.PlayerSelector{
-				MinAvailable: 5,
-				MaxAvailable: 10,
-			}
-			allocatedResponse, err = grpcClient.Allocate(ctx, request)
-			require.NoError(c, err)
-			require.Equal(c, response.GameServerName, allocatedResponse.GetGameServerName())
-			helper.ValidateAllocatorResponse(t, allocatedResponse)
-
-			// do a capacity based allocation that should fail
-			// nolint:staticcheck
-			request.PreferredGameServerSelectors = nil
-			// nolint:staticcheck
-			request.RequiredGameServerSelector.GameServerState = pb.GameServerSelector_ALLOCATED
-			// nolint:staticcheck
-			request.RequiredGameServerSelector.Players = &pb.PlayerSelector{MinAvailable: 99, MaxAvailable: 200}
-
-			allocatedResponse, err = grpcClient.Allocate(ctx, request)
-			require.Nil(c, allocatedResponse)
-			status, ok := status.FromError(err)
-			require.True(c, ok)
-			require.Equal(c, codes.ResourceExhausted, status.Code())
-		}
+		// nolint:staticcheck
+		request.PreferredGameServerSelectors[0].GameServerState = pb.GameServerSelector_ALLOCATED
+		allocatedResponse, err := grpcClient.Allocate(ctx, request)
+		require.NoError(c, err)
+		require.Equal(c, response.GameServerName, allocatedResponse.GetGameServerName())
+		helper.ValidateAllocatorResponse(t, allocatedResponse)
 	}, 5*time.Minute, 2*time.Second)
 }
 
@@ -149,15 +112,8 @@ func TestAllocatorWithSelectors(t *testing.T) {
 
 	var flt *agonesv1.Fleet
 	var err error
-	if runtime.FeatureEnabled(runtime.FeaturePlayerAllocationFilter) {
-		flt, err = helper.CreateFleetWithOpts(ctx, framework.Namespace, framework, func(f *agonesv1.Fleet) {
-			f.Spec.Template.Spec.Players = &agonesv1.PlayersSpec{
-				InitialCapacity: 10,
-			}
-		})
-	} else {
-		flt, err = helper.CreateFleet(ctx, framework.Namespace, framework)
-	}
+
+	flt, err = helper.CreateFleet(ctx, framework.Namespace, framework)
 	assert.NoError(t, err)
 	defer framework.AgonesClient.AgonesV1().Fleets(framework.Namespace).Delete(ctx, flt.Name, metav1.DeleteOptions{}) // nolint: errcheck
 
@@ -188,35 +144,13 @@ func TestAllocatorWithSelectors(t *testing.T) {
 		helper.ValidateAllocatorResponse(t, response)
 
 		// let's do a re-allocation
-		if runtime.FeatureEnabled(runtime.FeaturePlayerAllocationFilter) {
-			request.GameServerSelectors[0].GameServerState = pb.GameServerSelector_ALLOCATED
-			allocatedResponse, err := grpcClient.Allocate(ctx, request)
-			assert.NoError(c, err)
-			assert.Equal(c, response.GameServerName, allocatedResponse.GetGameServerName())
-			helper.ValidateAllocatorResponse(t, allocatedResponse)
-			assert.Equal(c, flt.ObjectMeta.Name, allocatedResponse.GetMetadata().GetLabels()[agonesv1.FleetNameLabel])
+		request.GameServerSelectors[0].GameServerState = pb.GameServerSelector_ALLOCATED
+		allocatedResponse, err := grpcClient.Allocate(ctx, request)
+		assert.NoError(c, err)
+		assert.Equal(c, response.GameServerName, allocatedResponse.GetGameServerName())
+		helper.ValidateAllocatorResponse(t, allocatedResponse)
+		assert.Equal(c, flt.ObjectMeta.Name, allocatedResponse.GetMetadata().GetLabels()[agonesv1.FleetNameLabel])
 
-			// do a capacity based allocation
-			logrus.Info("testing capacity allocation filter")
-			request.GameServerSelectors[0].Players = &pb.PlayerSelector{
-				MinAvailable: 5,
-				MaxAvailable: 10,
-			}
-			allocatedResponse, err = grpcClient.Allocate(ctx, request)
-			assert.NoError(c, err)
-			assert.Equal(c, response.GameServerName, allocatedResponse.GetGameServerName())
-			helper.ValidateAllocatorResponse(t, allocatedResponse)
-
-			// do a capacity based allocation that should fail
-			request.GameServerSelectors[0].GameServerState = pb.GameServerSelector_ALLOCATED
-			request.GameServerSelectors[0].Players = &pb.PlayerSelector{MinAvailable: 99, MaxAvailable: 200}
-
-			allocatedResponse, err = grpcClient.Allocate(ctx, request)
-			assert.Nil(c, allocatedResponse)
-			status, ok := status.FromError(err)
-			assert.True(c, ok)
-			assert.Equal(c, codes.ResourceExhausted, status.Code())
-		}
 	}, 5*time.Minute, 2*time.Second)
 }
 
