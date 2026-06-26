@@ -456,6 +456,42 @@ func TestConvertAllocationRequestToGameServerAllocation(t *testing.T) {
 			},
 		},
 		{
+			name: "matchExpressions in selectors",
+			in: &pb.AllocationRequest{
+				GameServerSelectors: []*pb.GameServerSelector{
+					{
+						MatchLabels: map[string]string{"app": "game"},
+						MatchExpressions: []*pb.LabelMatchExpressions{
+							{Key: "tier", Operator: pb.LabelMatchExpressions_In, Values: []string{"frontend", "backend"}},
+							{Key: "env", Operator: pb.LabelMatchExpressions_NotIn, Values: []string{"dev"}},
+							{Key: "ready", Operator: pb.LabelMatchExpressions_Exists},
+							{Key: "deprecated", Operator: pb.LabelMatchExpressions_DoesNotExist},
+						},
+					},
+				},
+				Scheduling: pb.AllocationRequest_Packed,
+			},
+			want: &allocationv1.GameServerAllocation{
+				Spec: allocationv1.GameServerAllocationSpec{
+					Selectors: []allocationv1.GameServerSelector{
+						{
+							LabelSelector: metav1.LabelSelector{
+								MatchLabels: map[string]string{"app": "game"},
+								MatchExpressions: []metav1.LabelSelectorRequirement{
+									{Key: "tier", Operator: metav1.LabelSelectorOpIn, Values: []string{"frontend", "backend"}},
+									{Key: "env", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"dev"}},
+									{Key: "ready", Operator: metav1.LabelSelectorOpExists},
+									{Key: "deprecated", Operator: metav1.LabelSelectorOpDoesNotExist},
+								},
+							},
+							GameServerState: &ready,
+						},
+					},
+					Scheduling: apis.Packed,
+				},
+			},
+		},
+		{
 			name: "empty object to GSA",
 			in:   &pb.AllocationRequest{},
 			want: &allocationv1.GameServerAllocation{
@@ -672,6 +708,52 @@ func TestConvertGSAToAllocationRequest(t *testing.T) {
 				MultiClusterSetting: &pb.MultiClusterSetting{},
 				Metadata:            &pb.MetaPatch{},
 				MetaPatch:           &pb.MetaPatch{},
+			},
+		}, {
+			name: "matchExpressions in selectors",
+			in: &allocationv1.GameServerAllocation{
+				Spec: allocationv1.GameServerAllocationSpec{
+					Selectors: []allocationv1.GameServerSelector{
+						{
+							LabelSelector: metav1.LabelSelector{
+								MatchLabels: map[string]string{"app": "game"},
+								MatchExpressions: []metav1.LabelSelectorRequirement{
+									{Key: "tier", Operator: metav1.LabelSelectorOpIn, Values: []string{"frontend", "backend"}},
+									{Key: "env", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"dev"}},
+									{Key: "ready", Operator: metav1.LabelSelectorOpExists},
+									{Key: "deprecated", Operator: metav1.LabelSelectorOpDoesNotExist},
+								},
+							},
+						},
+					},
+					Scheduling: apis.Packed,
+				},
+			},
+			want: &pb.AllocationRequest{
+				MultiClusterSetting:          &pb.MultiClusterSetting{},
+				Metadata:                     &pb.MetaPatch{},
+				MetaPatch:                    &pb.MetaPatch{},
+				PreferredGameServerSelectors: []*pb.GameServerSelector{},
+				RequiredGameServerSelector: &pb.GameServerSelector{
+					MatchLabels: map[string]string{"app": "game"},
+					MatchExpressions: []*pb.LabelMatchExpressions{
+						{Key: "tier", Operator: pb.LabelMatchExpressions_In, Values: []string{"frontend", "backend"}},
+						{Key: "env", Operator: pb.LabelMatchExpressions_NotIn, Values: []string{"dev"}},
+						{Key: "ready", Operator: pb.LabelMatchExpressions_Exists},
+						{Key: "deprecated", Operator: pb.LabelMatchExpressions_DoesNotExist},
+					},
+				},
+				GameServerSelectors: []*pb.GameServerSelector{
+					{
+						MatchLabels: map[string]string{"app": "game"},
+						MatchExpressions: []*pb.LabelMatchExpressions{
+							{Key: "tier", Operator: pb.LabelMatchExpressions_In, Values: []string{"frontend", "backend"}},
+							{Key: "env", Operator: pb.LabelMatchExpressions_NotIn, Values: []string{"dev"}},
+							{Key: "ready", Operator: pb.LabelMatchExpressions_Exists},
+							{Key: "deprecated", Operator: pb.LabelMatchExpressions_DoesNotExist},
+						},
+					},
+				},
 			},
 		}, {
 			name:     "partial GSA with CountsAndLists",
