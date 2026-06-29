@@ -174,12 +174,59 @@ func convertLabelSelectorToInternalLabelSelector(in *pb.LabelSelector) *metav1.L
 	return &metav1.LabelSelector{MatchLabels: in.GetMatchLabels()}
 }
 
+func convertMatchExpressionsToInternal(in []*pb.LabelMatchExpressions) []metav1.LabelSelectorRequirement {
+	var out []metav1.LabelSelectorRequirement
+	for _, expr := range in {
+		req := metav1.LabelSelectorRequirement{
+			Key:    expr.Key,
+			Values: expr.Values,
+		}
+		switch expr.Operator {
+		case pb.LabelMatchExpressions_NotIn:
+			req.Operator = metav1.LabelSelectorOpNotIn
+		case pb.LabelMatchExpressions_Exists:
+			req.Operator = metav1.LabelSelectorOpExists
+		case pb.LabelMatchExpressions_DoesNotExist:
+			req.Operator = metav1.LabelSelectorOpDoesNotExist
+		default:
+			req.Operator = metav1.LabelSelectorOpIn
+		}
+		out = append(out, req)
+	}
+	return out
+}
+
+func convertInternalMatchExpressions(in []metav1.LabelSelectorRequirement) []*pb.LabelMatchExpressions {
+	var out []*pb.LabelMatchExpressions
+	for _, req := range in {
+		expr := &pb.LabelMatchExpressions{
+			Key:    req.Key,
+			Values: req.Values,
+		}
+		switch req.Operator {
+		case metav1.LabelSelectorOpNotIn:
+			expr.Operator = pb.LabelMatchExpressions_NotIn
+		case metav1.LabelSelectorOpExists:
+			expr.Operator = pb.LabelMatchExpressions_Exists
+		case metav1.LabelSelectorOpDoesNotExist:
+			expr.Operator = pb.LabelMatchExpressions_DoesNotExist
+		default:
+			expr.Operator = pb.LabelMatchExpressions_In
+		}
+		out = append(out, expr)
+	}
+	return out
+}
+
 func convertGameServerSelectorToInternalGameServerSelector(in *pb.GameServerSelector) *allocationv1.GameServerSelector {
 	if in == nil {
 		return nil
 	}
 	result := &allocationv1.GameServerSelector{
-		LabelSelector: metav1.LabelSelector{MatchLabels: in.GetMatchLabels()},
+		LabelSelector: metav1.LabelSelector{
+			MatchLabels:      in.GetMatchLabels(),
+			MatchExpressions: convertMatchExpressionsToInternal(in.GetMatchExpressions()),
+		},
 	}
 
 	switch in.GameServerState {
@@ -223,7 +270,8 @@ func convertInternalGameServerSelectorToGameServer(in *allocationv1.GameServerSe
 		return nil
 	}
 	result := &pb.GameServerSelector{
-		MatchLabels: in.MatchLabels,
+		MatchLabels:      in.MatchLabels,
+		MatchExpressions: convertInternalMatchExpressions(in.MatchExpressions),
 	}
 
 	if in.GameServerState != nil {

@@ -359,7 +359,6 @@ gameservers:
   minPort: 7000
   maxPort: 8000
   additionalPortRanges: {}
-    # requires feature gate PortRanges to be enabled
     # game: [9000, 10000]
   podPreserveUnknownFields: false
   selectableFields:

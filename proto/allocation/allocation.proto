@@ -161,6 +161,24 @@ message MetaPatch {
   map<string, string> annotations = 2;
 }
 
+// LabelMatchExpressions is a selector that contains values, a key, and an operator
+// that relates the key and values. The requirements are ANDed.
+message LabelMatchExpressions {
+  // key is the label key that the selector applies to.
+  string key = 1;
+  // operator represents a key's relationship to a set of values.
+  // In and NotIn require a non-empty values array; Exists and DoesNotExist require an empty one.
+  enum Operator {
+    In = 0;
+    NotIn = 1;
+    Exists = 2;
+    DoesNotExist = 3;
+  }
+  Operator operator = 2;
+  // values is an array of string values.
+  repeated string values = 3;
+}
+
 // LabelSelector used for finding a GameServer with matching labels.
 message LabelSelector {
   // Labels to match.
@@ -180,6 +198,9 @@ message GameServerSelector {
   reserved 3;
   map<string, CounterSelector> counters = 4;
   map<string, ListSelector> lists = 5;
+  // matchExpressions is a list of label selector requirements. The requirements are ANDed
+  // with matchLabels.
+  repeated LabelMatchExpressions matchExpressions = 6;
 }
 
 // CounterSelector is the filter options for a GameServer based on the count and/or available capacity.
