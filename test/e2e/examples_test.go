@@ -54,7 +54,7 @@ func TestSuperTuxKartGameServerReady(t *testing.T) {
 					Containers: []corev1.Container{
 						{
 							Name:  "supertuxkart",
-							Image: "us-docker.pkg.dev/agones-images/examples/supertuxkart-example:0.24",
+							Image: "us-docker.pkg.dev/agones-images/examples/supertuxkart-example:0.44",
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("1Gi"),
@@ -241,7 +241,7 @@ func TestXonoticGameServerReady(t *testing.T) {
 					Containers: []corev1.Container{
 						{
 							Name:  "xonotic",
-							Image: "us-docker.pkg.dev/agones-images/examples/xonotic-example:2.8",
+							Image: "us-docker.pkg.dev/agones-images/examples/xonotic-example:0.44",
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("700Mi"),

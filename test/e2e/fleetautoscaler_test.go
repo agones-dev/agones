@@ -717,7 +717,7 @@ func defaultAutoscalerWebhook(namespace string, fixedReplicasEnabled string) (*c
 			Containers: []corev1.Container{
 				{
 					Name:            "webhook",
-					Image:           "us-docker.pkg.dev/agones-images/examples/autoscaler-webhook:0.23",
+					Image:           "us-docker.pkg.dev/agones-images/examples/autoscaler-webhook:0.44",
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Ports: []corev1.ContainerPort{{
 						ContainerPort: 8000,

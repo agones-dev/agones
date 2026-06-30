@@ -30,7 +30,7 @@ PROD_REPO ?= us-docker.pkg.dev/agones-images/examples
 mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
 project_path := $(dir $(mkfile_path))
 root_path = $(realpath $(project_path)/../..)
-version := 0.17
+version := 0.44
 ifeq ($(REPOSITORY),)
 	server_tag := allocation-endpoint-proxy:$(version)
 else
