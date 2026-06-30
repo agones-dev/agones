@@ -27,6 +27,10 @@ Libraries or applications that implement messaging systems.
 - [Octops/Image Syncer](https://github.com/Octops/octops-image-syncer) - Watch Fleets and pre-pull images of game servers on every node running in the cluster
 - [Octops/Fleet Garbage Collector](https://github.com/Octops/octops-fleet-gc) - Delete Fleets based on its TTL
 
+## Monitoring
+
+- [Flowtriq](https://flowtriq.com) - DDoS detection agent that labels attacked GameServers via the Agones SDK sidecar REST API for automated fleet response
+
 ## Allocation
 
 - [agones-allocator-client](https://github.com/FairwindsOps/agones-allocator-client) - A client for testing allocation servers.
