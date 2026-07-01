@@ -330,7 +330,7 @@ agones:
         minAvailable: 1
   image:
     registry: us-docker.pkg.dev/agones-images/release
-    tag: 1.59.0-dev
+    tag: 1.59.0
     controller:
       name: agones-controller
       pullPolicy: IfNotPresent
