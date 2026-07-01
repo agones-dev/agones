@@ -17,6 +17,7 @@ package main
 
 import (
 	"context"
+	"crypto/x509"
 	"fmt"
 	"io"
 	"os"
@@ -47,6 +48,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"gopkg.in/natefinch/lumberjack.v2"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 )
@@ -151,6 +153,16 @@ func main() {
 	defer cancelTLS()
 	wh := webhooks.NewWebHook(httpsServer.Mux)
 	api := apiserver.NewAPIServer(httpsServer.Mux)
+
+	// Load the requestheader client CA published by Kubernetes so that only the
+	// API server aggregation-layer proxy can reach allocation resource handlers.
+	// See: https://kubernetes.io/docs/tasks/extend-kubernetes/configure-aggregation-layer/
+	if ca, caErr := loadRequestHeaderCA(ctx, kubeClient); caErr != nil {
+		logger.WithError(caErr).Warn("Could not load requestheader client CA; allocation endpoint will reject unauthenticated requests once the CA is available")
+	} else {
+		api.SetRequestHeaderCA(ca)
+		logger.Info("Requestheader client CA loaded; allocation endpoint authentication enabled")
+	}
 
 	agonesInformerFactory := externalversions.NewSharedInformerFactory(agonesClient, defaultResync)
 	kubeInformerFactory := informers.NewSharedInformerFactory(kubeClient, defaultResync)
@@ -354,6 +366,26 @@ func parseEnvFlags() config {
 		processorGRPCPort:     int(viper.GetInt32(processorGRPCPort)),
 		processorMaxBatchSize: int(viper.GetInt32(processorMaxBatchSize)),
 	}
+}
+
+// loadRequestHeaderCA fetches the requestheader client CA from the
+// kube-system/extension-apiserver-authentication ConfigMap, which Kubernetes
+// populates automatically for aggregated API servers.
+// See https://kubernetes.io/docs/tasks/extend-kubernetes/configure-aggregation-layer/
+func loadRequestHeaderCA(ctx context.Context, client kubernetes.Interface) (*x509.CertPool, error) {
+	cm, err := client.CoreV1().ConfigMaps("kube-system").Get(ctx, "extension-apiserver-authentication", metav1.GetOptions{})
+	if err != nil {
+		return nil, errors.Wrap(err, "getting extension-apiserver-authentication ConfigMap")
+	}
+	pemData, ok := cm.Data["requestheader-client-ca-file"]
+	if !ok || pemData == "" {
+		return nil, errors.New("requestheader-client-ca-file key missing or empty in extension-apiserver-authentication ConfigMap")
+	}
+	pool := x509.NewCertPool()
+	if !pool.AppendCertsFromPEM([]byte(pemData)) {
+		return nil, errors.New("no valid PEM certificates found in requestheader-client-ca-file")
+	}
+	return pool, nil
 }
 
 // config stores all required configuration to create a game server extensions.
