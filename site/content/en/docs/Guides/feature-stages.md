@@ -40,7 +40,7 @@ The current set of `alpha`, `beta` and `stable` feature gates include:
 |------------------------------------------------------------------------------------------------------------------------|------------------------------------|---------|--------|--------|
 | [CountsAndLists](https://github.com/agones-dev/agones/issues/2716)                                                     | `CountsAndLists`                   | Enabled | `Beta` | 1.41.0 |
 | [Support for Extended Duration Pods on GKE Autopilot (*1.28+ only*)](https://github.com/agones-dev/agones/issues/3386) | `GKEAutopilotExtendedDurationPods` | Enabled | `Beta` | 1.44.0 |
-| [Port Policy None](https://github.com/agones-dev/agones/issues/3804)                                                   | `PortPolicyNone`                   | Enabled | `Beta` | 1.49.0 |
+| [Port Policy None](https://github.com/agones-dev/agones/issues/3804)                                                   | `PortPolicyNone`                   | Enabled | `Stable` | 1.59.0 |
 | [Scheduled Fleet Autoscaling](https://github.com/agones-dev/agones/issues/3008)                                        | `ScheduledAutoscaler`              | Enabled | `Beta` | 1.51.0 |
 | [Extend Webhook autoscaler to send fleet metadata with the request](https://github.com/agones-dev/agones/issues/3951)  | `FleetAutoscaleRequestMetaData`    | Enabled | `Beta` | 1.54.0 |
 | [Sidecar Containers](https://github.com/agones-dev/agones/issues/3642)                                                 | `SidecarContainers`                | Enabled | `Beta` | 1.56.0 |

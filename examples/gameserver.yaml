@@ -46,7 +46,6 @@ spec:
       # port is available. When static is the policy specified, `hostPort` is required to be populated
       # - "Passthrough" dynamically sets the `containerPort` to the same value as the dynamically selected hostPort.
       #      This will mean that users will need to lookup what port has been opened through the server side SDK.
-      # [Stage:Beta]
       # [FeatureFlag:PortPolicyNone]
       # - "None" means the `hostPort` is ignored and if defined, the `containerPort` (optional) is used to set the port on the GameServer instance.
       portPolicy: Dynamic
@@ -85,7 +84,6 @@ spec:
     # conflict with other TCP connections.
     grpcPort: 9357
     httpPort: 9358
-  # [Stage:Beta]
   # [FeatureFlag:CountsAndLists]
   # Counts and Lists provides the configuration for generic (player, room, session, etc.) tracking features.
   # Now in Beta, and enabled by default
