@@ -66,7 +66,7 @@ KIND_PROFILE ?= agones
 KIND_CONTAINER_NAME=$(KIND_PROFILE)-control-plane
 
 # Game Server image to use while doing end-to-end tests
-GS_TEST_IMAGE ?= us-docker.pkg.dev/agones-images/examples/simple-game-server:0.43
+GS_TEST_IMAGE ?= us-docker.pkg.dev/agones-images/examples/simple-game-server:0.44
 
 # Enable all beta feature gates. Keep in sync with `true` (beta) entries in pkg/util/runtime/features.go:featureDefaults
 BETA_FEATURE_GATES ?= "CountsAndLists=true&GKEAutopilotExtendedDurationPods=true&PortPolicyNone=true&ScheduledAutoscaler=true&SidecarContainers=true&FleetAutoscaleRequestMetaData=true"
