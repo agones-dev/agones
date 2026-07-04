@@ -24,6 +24,22 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestLogRequestRedactsSensitiveHeaders(t *testing.T) {
+	r, err := http.NewRequest(http.MethodPost, "/apis/allocation.agones.dev/v1/namespaces/default/gameserverallocations", nil)
+	assert.NoError(t, err)
+	r.Header.Set("Authorization", "Bearer super-secret-token")
+	r.Header.Set("X-Api-Key", "another-secret-value")
+	r.Header.Set("Content-Type", "application/json")
+
+	entry := LogRequest(logrus.WithField("source", "test"), r)
+
+	headers, ok := entry.Data["headers"].(http.Header)
+	assert.True(t, ok)
+	assert.Equal(t, []string{"REDACTED"}, headers.Values("Authorization"))
+	assert.Equal(t, []string{"REDACTED"}, headers.Values("X-Api-Key"))
+	assert.Equal(t, []string{"application/json"}, headers.Values("Content-Type"))
+}
+
 func TestFourZeroFour(t *testing.T) {
 	b := bytes.NewBuffer(nil)
 	r, err := http.NewRequest(http.MethodGet, "/", b)
