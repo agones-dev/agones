@@ -122,47 +122,6 @@ func TestControllerSyncFleet(t *testing.T) {
 		agtesting.AssertNoEvent(t, m.FakeRecorder.Events)
 	})
 
-	t.Run("gameserverset with different number of replicas", func(t *testing.T) {
-		if utilruntime.FeatureEnabled(utilruntime.FeatureRollingUpdateFix) {
-			t.SkipNow()
-		}
-
-		f := defaultFixture()
-		f.Spec.Strategy.Type = appsv1.RecreateDeploymentStrategyType
-		c, m := newFakeController()
-		gsSet := f.GameServerSet()
-		gsSet.ObjectMeta.Name = "gsSet1"
-		gsSet.ObjectMeta.UID = "1234"
-		gsSet.Spec.Replicas = f.Spec.Replicas + 10
-		updated := false
-
-		m.AgonesClient.AddReactor("list", "fleets", func(_ k8stesting.Action) (bool, runtime.Object, error) {
-			return true, &agonesv1.FleetList{Items: []agonesv1.Fleet{*f}}, nil
-		})
-
-		m.AgonesClient.AddReactor("list", "gameserversets", func(_ k8stesting.Action) (bool, runtime.Object, error) {
-			return true, &agonesv1.GameServerSetList{Items: []agonesv1.GameServerSet{*gsSet}}, nil
-		})
-
-		m.AgonesClient.AddReactor("update", "gameserversets", func(action k8stesting.Action) (bool, runtime.Object, error) {
-			updated = true
-
-			ua := action.(k8stesting.UpdateAction)
-			gsSet := ua.GetObject().(*agonesv1.GameServerSet)
-			assert.Equal(t, f.Spec.Replicas, gsSet.Spec.Replicas)
-
-			return true, gsSet, nil
-		})
-
-		ctx, cancel := agtesting.StartInformers(m, c.fleetSynced, c.gameServerSetSynced)
-		defer cancel()
-
-		err := c.syncFleet(ctx, "default/fleet-1")
-		assert.Nil(t, err)
-		assert.True(t, updated, "gameserverset should have been updated")
-		agtesting.AssertEventContains(t, m.FakeRecorder.Events, "ScalingGameServerSet")
-	})
-
 	t.Run("gameserverset with different scheduling", func(t *testing.T) {
 		f := defaultFixture()
 		f.Spec.Strategy.Type = appsv1.RecreateDeploymentStrategyType
@@ -199,71 +158,6 @@ func TestControllerSyncFleet(t *testing.T) {
 		assert.Nil(t, err)
 		assert.True(t, updated, "gameserverset should have been updated")
 		agtesting.AssertEventContains(t, m.FakeRecorder.Events, "ScalingGameServerSet")
-	})
-
-	t.Run("gameserverset with different image details", func(t *testing.T) {
-		if utilruntime.FeatureEnabled(utilruntime.FeatureRollingUpdateFix) {
-			t.SkipNow()
-		}
-
-		f := defaultFixture()
-		f.Spec.Strategy.Type = appsv1.RollingUpdateDeploymentStrategyType
-		f.Spec.Template.Spec.Ports = []agonesv1.GameServerPort{{HostPort: 5555}}
-		f.Status.ReadyReplicas = 5
-		c, m := newFakeController()
-		gsSet := f.GameServerSet()
-		gsSet.ObjectMeta.Name = "gsSet1"
-		gsSet.ObjectMeta.UID = "4321"
-		gsSet.Spec.Template.Spec.Ports = []agonesv1.GameServerPort{{HostPort: 7777}}
-		gsSet.Spec.Replicas = f.Spec.Replicas
-		gsSet.Spec.Scheduling = f.Spec.Scheduling
-		gsSet.Status.Replicas = 5
-		updated := false
-		created := false
-
-		m.AgonesClient.AddReactor("list", "fleets", func(_ k8stesting.Action) (bool, runtime.Object, error) {
-			return true, &agonesv1.FleetList{Items: []agonesv1.Fleet{*f}}, nil
-		})
-
-		m.AgonesClient.AddReactor("list", "gameserversets", func(_ k8stesting.Action) (bool, runtime.Object, error) {
-			return true, &agonesv1.GameServerSetList{Items: []agonesv1.GameServerSet{*gsSet}}, nil
-		})
-
-		m.AgonesClient.AddReactor("create", "gameserversets", func(action k8stesting.Action) (bool, runtime.Object, error) {
-			created = true
-			ca := action.(k8stesting.CreateAction)
-			gsSet := ca.GetObject().(*agonesv1.GameServerSet)
-			assert.Equal(t, int32(2), gsSet.Spec.Replicas)
-			assert.Equal(t, f.Spec.Template.Spec.Ports[0].HostPort, gsSet.Spec.Template.Spec.Ports[0].HostPort)
-
-			return true, gsSet, nil
-		})
-
-		m.AgonesClient.AddReactor("update", "gameserversets", func(action k8stesting.Action) (bool, runtime.Object, error) {
-			updated = true
-			ua := action.(k8stesting.UpdateAction)
-			// separate update of status subresource
-			if ua.GetSubresource() != "" {
-				assert.Equal(t, ua.GetSubresource(), "status")
-				return true, nil, nil
-			}
-			// update main resource
-			gsSet := ua.GetObject().(*agonesv1.GameServerSet)
-			assert.Equal(t, int32(4), gsSet.Spec.Replicas)
-			assert.Equal(t, "gsSet1", gsSet.ObjectMeta.Name)
-
-			return true, gsSet, nil
-		})
-
-		ctx, cancel := agtesting.StartInformers(m, c.fleetSynced, c.gameServerSetSynced)
-		defer cancel()
-
-		err := c.syncFleet(ctx, "default/fleet-1")
-		assert.Nil(t, err)
-		assert.True(t, updated, "gameserverset should have been updated")
-		assert.True(t, created, "gameserverset should have been created")
-		agtesting.AssertEventContains(t, m.FakeRecorder.Events, "ScalingGameServerSet")
-		agtesting.AssertEventContains(t, m.FakeRecorder.Events, "CreatingGameServerSet")
 	})
 
 	t.Run("fleet marked for deletion shouldn't take any action on gameserver sets", func(t *testing.T) {
@@ -1127,77 +1021,6 @@ func TestControllerRecreateDeployment(t *testing.T) {
 func TestControllerApplyDeploymentStrategy(t *testing.T) {
 	t.Parallel()
 
-	type expected struct {
-		inactiveReplicas int32
-		replicas         int32
-	}
-
-	fixtures := map[string]struct {
-		strategyType         appsv1.DeploymentStrategyType
-		gsSet1StatusReplicas int32
-		gsSet2StatusReplicas int32
-		expected             expected
-	}{
-		string(appsv1.RecreateDeploymentStrategyType): {
-			strategyType:         appsv1.RecreateDeploymentStrategyType,
-			gsSet1StatusReplicas: 0,
-			gsSet2StatusReplicas: 0,
-			expected: expected{
-				inactiveReplicas: 0,
-				replicas:         10,
-			},
-		},
-		string(appsv1.RollingUpdateDeploymentStrategyType): {
-			strategyType:         appsv1.RollingUpdateDeploymentStrategyType,
-			gsSet1StatusReplicas: 10,
-			gsSet2StatusReplicas: 1,
-			expected: expected{
-				inactiveReplicas: 8,
-				replicas:         2,
-			},
-		},
-	}
-
-	for k, v := range fixtures {
-		t.Run(k, func(t *testing.T) {
-			if utilruntime.FeatureEnabled(utilruntime.FeatureRollingUpdateFix) {
-				t.SkipNow()
-			}
-
-			f := defaultFixture()
-			f.Spec.Strategy.Type = v.strategyType
-			f.Spec.Replicas = 10
-
-			gsSet1 := f.GameServerSet()
-			gsSet1.ObjectMeta.Name = "gsSet1"
-			gsSet1.Spec.Replicas = 10
-			gsSet1.Status.Replicas = v.gsSet1StatusReplicas
-
-			gsSet2 := f.GameServerSet()
-			gsSet2.ObjectMeta.Name = "gsSet2"
-			gsSet2.Spec.Replicas = 0
-			gsSet2.Status.Replicas = v.gsSet2StatusReplicas
-
-			c, m := newFakeController()
-
-			updated := false
-			m.AgonesClient.AddReactor("update", "gameserversets", func(action k8stesting.Action) (bool, runtime.Object, error) {
-				updated = true
-				ua := action.(k8stesting.UpdateAction)
-				gsSet := ua.GetObject().(*agonesv1.GameServerSet)
-				assert.Equal(t, gsSet1.ObjectMeta.Name, gsSet.ObjectMeta.Name)
-				assert.Equal(t, v.expected.inactiveReplicas, gsSet.Spec.Replicas)
-
-				return true, gsSet, nil
-			})
-
-			replicas, err := c.applyDeploymentStrategy(context.Background(), f, f.GameServerSet(), []*agonesv1.GameServerSet{gsSet1, gsSet2})
-			require.NoError(t, err)
-			assert.True(t, updated, "update should happen")
-			assert.Equal(t, v.expected.replicas, replicas)
-		})
-	}
-
 	t.Run("a single gameserverset", func(t *testing.T) {
 		f := defaultFixture()
 		f.Spec.Replicas = 10
@@ -1555,13 +1378,13 @@ func TestRollingUpdateOnReady(t *testing.T) {
 				replicas:             75,
 			},
 		},
-		"enough Ready GameServers - scale down rest GameServerSet to Allocated": {
+		"enough Ready GameServers with allocated - scale down rest GameServerSet to 0": {
 			activeStatusReadyReplicas:   70,
 			inactiveStatusReadyReplicas: 5,
 			allocatedReplicas:           5,
 			expected: expected{
 				updated:              true,
-				inactiveSpecReplicas: 5,
+				inactiveSpecReplicas: 0,
 				replicas:             70,
 			},
 		},
@@ -1575,16 +1398,16 @@ func TestRollingUpdateOnReady(t *testing.T) {
 				replicas:             75,
 			},
 		},
-		"scale down rest GameServerSet to > 0": {
-			// 75 - 19 = 56 is minimum number of gameservers
-			// scaling 58 - 56 = -2 gameservers
-			// initial 10 - 2 = 8
+		"active GameServerSet not fully Ready - do not scale down rest GameServerSet": {
+			// Active is only 50/75 Ready, so the new GameServerSet has 25 unavailable
+			// replicas. With RollingUpdateFix the rest is only scaled down once the
+			// active GameServerSet's Ready replicas have caught up, so nothing is scaled here.
 			activeStatusReadyReplicas:   50,
 			inactiveStatusReadyReplicas: 8,
 			allocatedReplicas:           0,
 			expected: expected{
-				updated:              true,
-				inactiveSpecReplicas: 8,
+				updated:              false,
+				inactiveSpecReplicas: 0,
 				replicas:             75,
 			},
 		},
@@ -1717,20 +1540,6 @@ func TestControllerRollingUpdateDeployment(t *testing.T) {
 				updated:              true,
 			},
 		},
-		"attempt to drive replicas over the max surge": {
-			features:                    "RollingUpdateFix=false",
-			fleetSpecReplicas:           100,
-			activeSpecReplicas:          25,
-			activeStatusReplicas:        25,
-			inactiveSpecReplicas:        95,
-			inactiveStatusReplicas:      95,
-			inactiveStatusReadyReplicas: 95,
-			expected: expected{
-				inactiveSpecReplicas: 45,
-				replicas:             30,
-				updated:              true,
-			},
-		},
 		"test smalled numbers of active and allocated": {
 			fleetSpecReplicas:                5,
 			activeSpecReplicas:               0,
@@ -1760,7 +1569,6 @@ func TestControllerRollingUpdateDeployment(t *testing.T) {
 			},
 		},
 		"rolling update does not remove all ready replicas": {
-			features:                         "RollingUpdateFix=true",
 			fleetSpecReplicas:                100,
 			activeSpecReplicas:               0,
 			activeStatusReplicas:             0,
@@ -1775,7 +1583,6 @@ func TestControllerRollingUpdateDeployment(t *testing.T) {
 			},
 		},
 		"rolling update stops scaling fully allocated inactive": {
-			features:                         "RollingUpdateFix=true",
 			fleetSpecReplicas:                100,
 			activeSpecReplicas:               50,
 			activeStatusReplicas:             50,
@@ -1790,7 +1597,6 @@ func TestControllerRollingUpdateDeployment(t *testing.T) {
 			},
 		},
 		"rolling update scales down with fleet spec replicas = 0": {
-			features:                         "RollingUpdateFix=true",
 			fleetSpecReplicas:                0,
 			activeSpecReplicas:               0,
 			activeStatusReplicas:             0,

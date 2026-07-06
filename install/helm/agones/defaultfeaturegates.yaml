@@ -20,6 +20,7 @@
 DisableResyncOnSDKServer: true
 AutopilotPassthroughPort: true
 PortRanges: true
+RollingUpdateFix: true
 
 # Beta features
 
@@ -27,7 +28,6 @@ CountsAndLists: true
 GKEAutopilotExtendedDurationPods: true
 PortPolicyNone: true
 ScheduledAutoscaler: true
-RollingUpdateFix: true
 SidecarContainers: true
 FleetAutoscaleRequestMetaData: true
 

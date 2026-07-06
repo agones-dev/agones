@@ -40,6 +40,9 @@ const (
 	// FeaturePortRanges is a feature flag to enable/disable specific port ranges.
 	FeaturePortRanges Feature = "PortRanges"
 
+	// FeatureRollingUpdateFix is a feature flag to enable/disable fleet controller fixes.
+	FeatureRollingUpdateFix Feature = "RollingUpdateFix"
+
 	////////////////
 	// Beta features
 
@@ -53,9 +56,6 @@ const (
 
 	// FeaturePortPolicyNone is a feature flag to allow setting Port Policy to None.
 	FeaturePortPolicyNone Feature = "PortPolicyNone"
-
-	// FeatureRollingUpdateFix is a feature flag to enable/disable fleet controller fixes.
-	FeatureRollingUpdateFix Feature = "RollingUpdateFix"
 
 	// FeatureScheduledAutoscaler is a feature flag to enable/disable scheduled fleet autoscaling.
 	FeatureScheduledAutoscaler Feature = "ScheduledAutoscaler"
@@ -153,12 +153,12 @@ var (
 		FeatureDisableResyncOnSDKServer: true,
 		FeatureAutopilotPassthroughPort: true,
 		FeaturePortRanges:               true,
+		FeatureRollingUpdateFix:         true,
 
 		// Beta features
 		FeatureCountsAndLists:                   true,
 		FeatureGKEAutopilotExtendedDurationPods: true,
 		FeaturePortPolicyNone:                   true,
-		FeatureRollingUpdateFix:                 true,
 		FeatureScheduledAutoscaler:              true,
 		FeatureFleetAutoscaleRequestMetaData:    true,
 		FeatureSidecarContainers:                true,

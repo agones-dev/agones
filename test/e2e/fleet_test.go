@@ -1886,12 +1886,8 @@ func TestFleetAllocationOverflow(t *testing.T) {
 			return false
 		}, 5*time.Minute, time.Second, "Rolling update did not complete")
 
-		if runtime.FeatureEnabled(runtime.FeatureRollingUpdateFix) {
-			// In the rolling update fix, the old GSS will be scaled to Spec.Replicas=0.
-			assertCount(t, log, flt, 2)
-		} else {
-			assertCount(t, log, flt, 1)
-		}
+		// The old GSS is scaled to Spec.Replicas=0 but not deleted, so two GameServerSets remain.
+		assertCount(t, log, flt, 2)
 	})
 }
 
