@@ -29,7 +29,7 @@ Libraries or applications that implement messaging systems.
 
 ## Monitoring
 
-- [Flowtriq](https://flowtriq.com) - DDoS detection agent that labels attacked GameServers via the Agones SDK sidecar REST API for automated fleet response
+- [Flowtriq](https://flowtriq.com/integrations/agones) - DDoS detection agent that labels attacked GameServers via the Agones SDK sidecar REST API for automated fleet response
 
 ## Allocation
 
