@@ -71,53 +71,24 @@ possible to connect directly to a `GameServer` hosted on Agones as you would on 
 
 If you are unable to do so, the following workarounds are available, and may work on your platform:
 
-## Setting up LoadBalancer Support with MetalLB
+## Setting up LoadBalancer Support with `minikube tunnel`
 
-By default, Minikube doesn't provide LoadBalancer's that are exteranally available without some form of tunneling such as `minikube tunnel`, which means services of type `LoadBalancer` will remain in a "Pending" state. For Agones, LoadBalancer services are often used for the allocator and ping services to provide external access. If you want an external IP for those services without a need to tunnel, you need to install MetalLB.
+By default, Minikube doesn't provide LoadBalancer services that are externally available without some form of tunneling,
+which means services of type `LoadBalancer` will remain in a "Pending" state. For Agones, LoadBalancer services are used
+for the allocator and ping services to provide external access.
 
-### Installing MetalLB
+[`minikube tunnel`](https://minikube.sigs.k8s.io/docs/handbook/accessing/) creates a network route on the host to the
+service CIDR of the cluster, which enables LoadBalancer services to receive external IP addresses and be accessible
+from your host machine.
 
-First, add the MetalLB Helm repository and install it:
-
-```bash
-helm repo add metallb https://metallb.github.io/metallb
-helm repo update
-helm install metallb metallb/metallb --namespace metallb-system --create-namespace
-```
-
-### Configuring MetalLB
-
-After installation, you need to configure MetalLB with an IP address range. Create a configuration file:
+Run it in a terminal after starting Minikube:
 
 ```bash
-# Get the minikube IP to determine the network range
-MINIKUBE_IP=$(minikube ip -p agones)
-NETWORK_PREFIX=$(echo "$MINIKUBE_IP" | cut -d '.' -f 1-3)
-METALLB_IP_RANGE="$NETWORK_PREFIX.50-$NETWORK_PREFIX.250"
-
-# Create MetalLB configuration
-cat <<EOF | kubectl apply -f -
-apiVersion: metallb.io/v1beta1
-kind: IPAddressPool
-metadata:
-  name: default-pool
-  namespace: metallb-system
-spec:
-  addresses:
-  - ${METALLB_IP_RANGE}
----
-apiVersion: metallb.io/v1beta1
-kind: L2Advertisement
-metadata:
-  name: default
-  namespace: metallb-system
-spec:
-  ipAddressPools:
-  - default-pool
-EOF
+minikube tunnel -p agones
 ```
 
-Once MetalLB is installed and configured, LoadBalancer services will receive external IP addresses from the configured range, allowing external access to Agones services.
+You may be prompted for your password, as it requires root privileges to add network routes. Keep this terminal window
+open for as long as you need access to the LoadBalancer services.
 
 ### minikube ip
 
@@ -183,8 +154,8 @@ value to point to the new `GameServer` instance and/or the `${GAMESERVER_CONTAIN
 
 {{% alert title="Warning" color="warning" %}}
 `minikube tunnel` ([docs](https://minikube.sigs.k8s.io/docs/handbook/accessing/))
-does not support UDP ([Github Issue](https://github.com/kubernetes/minikube/issues/12362)) on some combination of
-operating system, platforms and drivers, but is required when using the `Service` workaround.
+does not support UDP ([Github Issue](https://github.com/kubernetes/minikube/issues/12362)) on some combinations of
+operating system, platforms and drivers, which means `GameServer` UDP connectivity may not work through the tunnel.
 {{% /alert %}}
 
 ### Use a different driver

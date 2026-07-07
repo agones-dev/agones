@@ -694,17 +694,23 @@ func isScheduleActive(s *autoscalingv1.SchedulePolicy, currentTime time.Time) bo
 	return false
 }
 
-// getSortedGameServers returns the list of Game Servers for the Fleet in the order in which the
+// getSortedDeletableGameServers returns the list of Game Servers for the Fleet in the order in which the
 // Game Servers would be deleted.
-func getSortedGameServers(f *agonesv1.Fleet, gameServerNamespacedLister listeragonesv1.GameServerNamespaceLister,
+func getSortedDeletableGameServers(f *agonesv1.Fleet, gameServerNamespacedLister listeragonesv1.GameServerNamespaceLister,
 	nodeCounts map[string]gameservers.NodeCount) ([]*agonesv1.GameServer, error) {
 	gsList, err := fleets.ListGameServersByFleetOwner(gameServerNamespacedLister, f)
 	if err != nil {
 		return nil, err
 	}
 
-	gameServers := gssets.SortGameServersByStrategy(f.Spec.Scheduling, gsList, nodeCounts, f.Spec.Priorities)
-	return gameServers, nil
+	deletable := make([]*agonesv1.GameServer, 0, len(gsList))
+	for _, gs := range gsList {
+		if gs.IsDeletable() {
+			deletable = append(deletable, gs)
+		}
+	}
+
+	return gssets.SortGameServersByStrategy(f.Spec.Scheduling, deletable, nodeCounts, f.Spec.Priorities), nil
 }
 
 // isLimited indicates that the calculated scale would be above or below the range defined by
@@ -738,7 +744,7 @@ func scaleDownLimited(f *agonesv1.Fleet, gameServerNamespacedLister listeragones
 	nodeCounts map[string]gameservers.NodeCount, key string, isCounter bool, replicas int32,
 	aggCapacity, maxCapacity int64) (int32, bool, error) {
 	// Game Servers in order of deletion on scale down
-	gameServers, err := getSortedGameServers(f, gameServerNamespacedLister, nodeCounts)
+	gameServers, err := getSortedDeletableGameServers(f, gameServerNamespacedLister, nodeCounts)
 	if err != nil {
 		return 0, false, err
 	}
@@ -809,14 +815,14 @@ func scaleUp(replicas int32, capacity, count, aggCapacity, availableCapacity, ma
 func scaleDown(f *agonesv1.Fleet, gameServerNamespacedLister listeragonesv1.GameServerNamespaceLister,
 	nodeCounts map[string]gameservers.NodeCount, key string, isCounter bool, replicas int32,
 	aggCount, aggCapacity, minCapacity, buffer int64) (int32, bool, error) {
-	// Exit early if we're already at MinCapacity to avoid calling getSortedGameServers if unnecessary
+	// Exit early if we're already at MinCapacity to avoid calling getSortedDeletableGameServers if unnecessary
 	if aggCapacity == minCapacity {
 		return replicas, true, nil
 	}
 
 	// We first need to get the individual game servers in order of deletion on scale down, as any
 	// game server may have a unique value for counts and / or capacity.
-	gameServers, err := getSortedGameServers(f, gameServerNamespacedLister, nodeCounts)
+	gameServers, err := getSortedDeletableGameServers(f, gameServerNamespacedLister, nodeCounts)
 	if err != nil {
 		return 0, false, err
 	}

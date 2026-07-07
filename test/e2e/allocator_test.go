@@ -63,15 +63,8 @@ func TestAllocatorWithDeprecatedRequired(t *testing.T) {
 
 	var flt *agonesv1.Fleet
 	var err error
-	if runtime.FeatureEnabled(runtime.FeaturePlayerAllocationFilter) {
-		flt, err = helper.CreateFleetWithOpts(ctx, framework.Namespace, framework, func(f *agonesv1.Fleet) {
-			f.Spec.Template.Spec.Players = &agonesv1.PlayersSpec{
-				InitialCapacity: 10,
-			}
-		})
-	} else {
-		flt, err = helper.CreateFleet(ctx, framework.Namespace, framework)
-	}
+
+	flt, err = helper.CreateFleet(ctx, framework.Namespace, framework)
 	require.NoError(t, err)
 	defer framework.AgonesClient.AgonesV1().Fleets(framework.Namespace).Delete(ctx, flt.Name, metav1.DeleteOptions{}) // nolint: errcheck
 
@@ -86,68 +79,30 @@ func TestAllocatorWithDeprecatedRequired(t *testing.T) {
 
 	var response *pb.AllocationResponse
 	// wait for the allocation system to come online
-	err = wait.PollUntilContextTimeout(context.Background(), 2*time.Second, 5*time.Minute, true, func(ctx context.Context) (bool, error) {
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		// create the grpc client each time, as we may end up looking at an old cert
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
 		dialOpts, err := helper.CreateRemoteClusterDialOptions(ctx, allocatorClientSecretNamespace, allocatorClientSecretName, tlsCA, framework)
-		if err != nil {
-			return false, err
-		}
+		require.NoError(c, err)
 
 		conn, err := grpc.NewClient(requestURL, dialOpts...)
-		if err != nil {
-			logrus.WithError(err).Info("failing grpc.NewClient")
-			return false, nil
-		}
+		require.NoError(c, err, "failing grpc.NewClient")
 		defer conn.Close() // nolint: errcheck
 
 		grpcClient := pb.NewAllocationServiceClient(conn)
-		response, err = grpcClient.Allocate(context.Background(), request)
-		if err != nil {
-			logrus.WithError(err).Info("failing Allocate request")
-			return false, nil
-		}
+		response, err = grpcClient.Allocate(ctx, request)
+		require.NoError(c, err, "failing Allocate request")
 		helper.ValidateAllocatorResponse(t, response)
 
 		// let's do a re-allocation
-		if runtime.FeatureEnabled(runtime.FeaturePlayerAllocationFilter) {
-			// nolint:staticcheck
-			request.PreferredGameServerSelectors[0].GameServerState = pb.GameServerSelector_ALLOCATED
-			allocatedResponse, err := grpcClient.Allocate(context.Background(), request)
-			require.NoError(t, err)
-			require.Equal(t, response.GameServerName, allocatedResponse.GameServerName)
-			helper.ValidateAllocatorResponse(t, allocatedResponse)
-
-			// do a capacity based allocation
-			logrus.Info("testing capacity allocation filter")
-			// nolint:staticcheck
-			request.PreferredGameServerSelectors[0].Players = &pb.PlayerSelector{
-				MinAvailable: 5,
-				MaxAvailable: 10,
-			}
-			allocatedResponse, err = grpcClient.Allocate(context.Background(), request)
-			require.NoError(t, err)
-			require.Equal(t, response.GameServerName, allocatedResponse.GameServerName)
-			helper.ValidateAllocatorResponse(t, allocatedResponse)
-
-			// do a capacity based allocation that should fail
-			// nolint:staticcheck
-			request.PreferredGameServerSelectors = nil
-			// nolint:staticcheck
-			request.RequiredGameServerSelector.GameServerState = pb.GameServerSelector_ALLOCATED
-			// nolint:staticcheck
-			request.RequiredGameServerSelector.Players = &pb.PlayerSelector{MinAvailable: 99, MaxAvailable: 200}
-
-			allocatedResponse, err = grpcClient.Allocate(context.Background(), request)
-			assert.Nil(t, allocatedResponse)
-			status, ok := status.FromError(err)
-			require.True(t, ok)
-			assert.Equal(t, codes.ResourceExhausted, status.Code())
-		}
-
-		return true, nil
-	})
-
-	require.NoError(t, err)
+		// nolint:staticcheck
+		request.PreferredGameServerSelectors[0].GameServerState = pb.GameServerSelector_ALLOCATED
+		allocatedResponse, err := grpcClient.Allocate(ctx, request)
+		require.NoError(c, err)
+		require.Equal(c, response.GameServerName, allocatedResponse.GetGameServerName())
+		helper.ValidateAllocatorResponse(t, allocatedResponse)
+	}, 5*time.Minute, 2*time.Second)
 }
 
 func TestAllocatorWithSelectors(t *testing.T) {
@@ -159,15 +114,8 @@ func TestAllocatorWithSelectors(t *testing.T) {
 
 	var flt *agonesv1.Fleet
 	var err error
-	if runtime.FeatureEnabled(runtime.FeaturePlayerAllocationFilter) {
-		flt, err = helper.CreateFleetWithOpts(ctx, framework.Namespace, framework, func(f *agonesv1.Fleet) {
-			f.Spec.Template.Spec.Players = &agonesv1.PlayersSpec{
-				InitialCapacity: 10,
-			}
-		})
-	} else {
-		flt, err = helper.CreateFleet(ctx, framework.Namespace, framework)
-	}
+
+	flt, err = helper.CreateFleet(ctx, framework.Namespace, framework)
 	assert.NoError(t, err)
 	defer framework.AgonesClient.AgonesV1().Fleets(framework.Namespace).Delete(ctx, flt.Name, metav1.DeleteOptions{}) // nolint: errcheck
 
@@ -181,63 +129,96 @@ func TestAllocatorWithSelectors(t *testing.T) {
 
 	var response *pb.AllocationResponse
 	// wait for the allocation system to come online
-	err = wait.PollUntilContextTimeout(context.Background(), 2*time.Second, 5*time.Minute, true, func(ctx context.Context) (bool, error) {
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		// create the grpc client each time, as we may end up looking at an old cert
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
 		dialOpts, err := helper.CreateRemoteClusterDialOptions(ctx, allocatorClientSecretNamespace, allocatorClientSecretName, tlsCA, framework)
-		if err != nil {
-			return false, err
-		}
+		require.NoError(c, err)
 
 		conn, err := grpc.NewClient(requestURL, dialOpts...)
-		if err != nil {
-			logrus.WithError(err).Info("failing grpc.NewClient")
-			return false, nil
-		}
+		require.NoError(c, err, "failing grpc.NewClient")
 		defer conn.Close() // nolint: errcheck
 
 		grpcClient := pb.NewAllocationServiceClient(conn)
-		response, err = grpcClient.Allocate(context.Background(), request)
-		if err != nil {
-			logrus.WithError(err).Info("failing Allocate request")
-			return false, nil
-		}
+		response, err = grpcClient.Allocate(ctx, request)
+		require.NoError(c, err, "failing Allocate request")
 		helper.ValidateAllocatorResponse(t, response)
 
 		// let's do a re-allocation
-		if runtime.FeatureEnabled(runtime.FeaturePlayerAllocationFilter) {
-			request.GameServerSelectors[0].GameServerState = pb.GameServerSelector_ALLOCATED
-			allocatedResponse, err := grpcClient.Allocate(context.Background(), request)
-			require.NoError(t, err)
-			require.Equal(t, response.GameServerName, allocatedResponse.GameServerName)
-			helper.ValidateAllocatorResponse(t, allocatedResponse)
-			assert.Equal(t, flt.ObjectMeta.Name, allocatedResponse.Metadata.Labels[agonesv1.FleetNameLabel])
+		request.GameServerSelectors[0].GameServerState = pb.GameServerSelector_ALLOCATED
+		allocatedResponse, err := grpcClient.Allocate(ctx, request)
+		assert.NoError(c, err)
+		assert.Equal(c, response.GameServerName, allocatedResponse.GetGameServerName())
+		helper.ValidateAllocatorResponse(t, allocatedResponse)
+		assert.Equal(c, flt.ObjectMeta.Name, allocatedResponse.GetMetadata().GetLabels()[agonesv1.FleetNameLabel])
 
-			// do a capacity based allocation
-			logrus.Info("testing capacity allocation filter")
-			request.GameServerSelectors[0].Players = &pb.PlayerSelector{
-				MinAvailable: 5,
-				MaxAvailable: 10,
-			}
-			allocatedResponse, err = grpcClient.Allocate(context.Background(), request)
-			require.NoError(t, err)
-			require.Equal(t, response.GameServerName, allocatedResponse.GameServerName)
-			helper.ValidateAllocatorResponse(t, allocatedResponse)
+	}, 5*time.Minute, 2*time.Second)
+}
 
-			// do a capacity based allocation that should fail
-			request.GameServerSelectors[0].GameServerState = pb.GameServerSelector_ALLOCATED
-			request.GameServerSelectors[0].Players = &pb.PlayerSelector{MinAvailable: 99, MaxAvailable: 200}
+func TestAllocatorWithMatchExpressions(t *testing.T) {
+	ctx := context.Background()
 
-			allocatedResponse, err = grpcClient.Allocate(context.Background(), request)
-			assert.Nil(t, allocatedResponse)
-			status, ok := status.FromError(err)
-			require.True(t, ok)
-			assert.Equal(t, codes.ResourceExhausted, status.Code())
+	ip, port := helper.GetAllocatorEndpoint(ctx, t, framework)
+	requestURL := fmt.Sprintf(allocatorReqURLFmt, ip, port)
+	tlsCA := helper.RefreshAllocatorTLSCerts(ctx, t, ip, framework)
+
+	flt, err := helper.CreateFleetWithOpts(ctx, framework.Namespace, framework, func(f *agonesv1.Fleet) {
+		if f.Spec.Template.ObjectMeta.Labels == nil {
+			f.Spec.Template.ObjectMeta.Labels = make(map[string]string)
 		}
-
-		return true, nil
+		f.Spec.Template.ObjectMeta.Labels["tier"] = "staging"
 	})
+	require.NoError(t, err)
+	defer framework.AgonesClient.AgonesV1().Fleets(framework.Namespace).Delete(ctx, flt.Name, metav1.DeleteOptions{}) // nolint: errcheck
+	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
 
-	assert.NoError(t, err)
+	// Allocate using matchExpressions (In operator) — should succeed.
+	request := &pb.AllocationRequest{
+		Namespace: framework.Namespace,
+		GameServerSelectors: []*pb.GameServerSelector{{
+			MatchLabels: map[string]string{agonesv1.FleetNameLabel: flt.ObjectMeta.Name},
+			MatchExpressions: []*pb.LabelMatchExpressions{
+				{Key: "tier", Operator: pb.LabelMatchExpressions_In, Values: []string{"staging", "production"}},
+			},
+		}},
+		Scheduling: pb.AllocationRequest_Packed,
+		Metadata:   &pb.MetaPatch{Labels: map[string]string{"gslabel": "allocatedbytest"}},
+	}
+
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		dialOpts, err := helper.CreateRemoteClusterDialOptions(ctx, allocatorClientSecretNamespace, allocatorClientSecretName, tlsCA, framework)
+		require.NoError(c, err)
+
+		conn, err := grpc.NewClient(requestURL, dialOpts...)
+		require.NoError(c, err, "failing grpc.NewClient")
+		defer conn.Close() // nolint: errcheck
+
+		grpcClient := pb.NewAllocationServiceClient(conn)
+		response, err := grpcClient.Allocate(ctx, request)
+		require.NoError(c, err, "failing Allocate request")
+		helper.ValidateAllocatorResponse(t, response)
+		require.Equal(t, response.Metadata.Labels["tier"], "staging")
+		require.Equal(t, response.Metadata.Labels["gslabel"], "allocatedbytest")
+
+		// Attempt allocation with NotIn on the same label value — should find no match.
+		noMatchRequest := &pb.AllocationRequest{
+			Namespace: framework.Namespace,
+			GameServerSelectors: []*pb.GameServerSelector{{
+				MatchLabels: map[string]string{agonesv1.FleetNameLabel: flt.ObjectMeta.Name},
+				MatchExpressions: []*pb.LabelMatchExpressions{
+					{Key: "tier", Operator: pb.LabelMatchExpressions_NotIn, Values: []string{"staging"}},
+				},
+			}},
+		}
+		noMatchResponse, err := grpcClient.Allocate(ctx, noMatchRequest)
+		require.Nil(c, noMatchResponse)
+		st, ok := status.FromError(err)
+		require.True(c, ok)
+		require.Equal(c, codes.ResourceExhausted, st.Code())
+	}, 5*time.Minute, 2*time.Second)
 }
 
 func TestRestAllocatorWithDeprecatedRequired(t *testing.T) {
@@ -363,33 +344,26 @@ func TestAllocatorWithCountersAndLists(t *testing.T) {
 			},
 		},
 	}
-	err = wait.PollUntilContextTimeout(context.Background(), 2*time.Second, 5*time.Minute, true, func(ctx context.Context) (bool, error) {
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
 		dialOpts, err := helper.CreateRemoteClusterDialOptions(ctx, allocatorClientSecretNamespace, allocatorClientSecretName, tlsCA, framework)
-		if err != nil {
-			return false, err
-		}
+		require.NoError(c, err)
 		conn, err := grpc.NewClient(requestURL, dialOpts...)
-		if err != nil {
-			logrus.WithError(err).Info("failing grpc.NewClient")
-			return false, nil
-		}
+		require.NoError(c, err, "failing grpc.NewClient")
 		defer conn.Close() // nolint: errcheck
 
 		grpcClient := pb.NewAllocationServiceClient(conn)
-		response, err := grpcClient.Allocate(context.Background(), request)
-		if err != nil {
-			return false, nil
-		}
-		assert.Contains(t, response.GetCounters(), "players")
-		assert.Equal(t, int64(10), response.GetCounters()["players"].Capacity.GetValue())
-		assert.Equal(t, int64(1), response.GetCounters()["players"].Count.GetValue())
-		assert.Contains(t, response.GetLists(), "rooms")
-		assert.Equal(t, int64(10), response.GetLists()["rooms"].Capacity.GetValue())
-		assert.EqualValues(t, request.Lists["rooms"].AddValues, response.GetLists()["rooms"].Values)
-		assert.NotEqualValues(t, request.Lists["rooms"].DeleteValues, response.GetLists()["rooms"].Values)
-		return true, nil
-	})
-	require.NoError(t, err)
+		response, err := grpcClient.Allocate(ctx, request)
+		require.NoError(c, err)
+		assert.Contains(c, response.GetCounters(), "players")
+		assert.Equal(c, int64(10), response.GetCounters()["players"].Capacity.GetValue())
+		assert.Equal(c, int64(1), response.GetCounters()["players"].Count.GetValue())
+		assert.Contains(c, response.GetLists(), "rooms")
+		assert.Equal(c, int64(10), response.GetLists()["rooms"].Capacity.GetValue())
+		assert.EqualValues(c, request.Lists["rooms"].AddValues, response.GetLists()["rooms"].Values)
+		assert.NotEqualValues(c, request.Lists["rooms"].DeleteValues, response.GetLists()["rooms"].Values)
+	}, 5*time.Minute, 2*time.Second)
 }
 
 func TestRestAllocatorWithCountersAndLists(t *testing.T) {
@@ -626,29 +600,20 @@ func TestAllocatorCrossNamespace(t *testing.T) {
 	}
 
 	// wait for the allocation system to come online
-	err = wait.PollUntilContextTimeout(context.Background(), 2*time.Second, 5*time.Minute, true, func(ctx context.Context) (bool, error) {
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		// create the grpc client each time, as we may end up looking at an old cert
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
 		dialOpts, err := helper.CreateRemoteClusterDialOptions(ctx, namespaceA, allocatorClientSecretName, tlsCA, framework)
-		if err != nil {
-			return false, err
-		}
+		require.NoError(c, err)
 
 		conn, err := grpc.NewClient(requestURL, dialOpts...)
-		if err != nil {
-			logrus.WithError(err).Info("failing grpc.NewClient")
-			return false, nil
-		}
+		require.NoError(c, err, "failing grpc.NewClient")
 		defer conn.Close() // nolint: errcheck
 
 		grpcClient := pb.NewAllocationServiceClient(conn)
-		response, err := grpcClient.Allocate(context.Background(), request)
-		if err != nil {
-			logrus.WithError(err).Info("failing Allocate request")
-			return false, nil
-		}
+		response, err := grpcClient.Allocate(ctx, request)
+		require.NoError(c, err, "failing Allocate request")
 		helper.ValidateAllocatorResponse(t, response)
-		return true, nil
-	})
-
-	assert.NoError(t, err)
+	}, 5*time.Minute, 2*time.Second)
 }

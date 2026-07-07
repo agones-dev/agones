@@ -208,21 +208,6 @@ func (c *AllocationCache) ListSortedGameServers(gsa *allocationv1.GameServerAllo
 			return true
 		}
 
-		// if player tracking is enabled, prefer game servers with the least amount of room left
-		if runtime.FeatureEnabled(runtime.FeaturePlayerAllocationFilter) {
-			if gs1.Status.Players != nil && gs2.Status.Players != nil {
-				cap1 := gs1.Status.Players.Capacity - gs1.Status.Players.Count
-				cap2 := gs2.Status.Players.Capacity - gs2.Status.Players.Count
-
-				// if they are equal, pass the comparison through.
-				if cap1 < cap2 {
-					return true
-				} else if cap2 < cap1 {
-					return false
-				}
-			}
-		}
-
 		// if we end up here, then break the tie with Counter or List Priority.
 		if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) && (gsa != nil) {
 			if res := gs1.CompareCountAndListPriorities(gsa.Spec.Priorities, gs2); res != nil {

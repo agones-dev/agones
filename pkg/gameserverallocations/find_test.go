@@ -15,7 +15,6 @@
 package gameserverallocations
 
 import (
-	"fmt"
 	"testing"
 
 	"agones.dev/agones/pkg/apis"
@@ -139,40 +138,6 @@ func TestFindGameServerForAllocationPacked(t *testing.T) {
 				assert.Equal(t, ErrNoGameServer, err)
 				assert.Nil(t, gs)
 			},
-			features: fmt.Sprintf("%s=true", runtime.FeaturePlayerAllocationFilter),
-		},
-		"one label with player counts and state (PlayerAllocationFilter)": {
-			list: []agonesv1.GameServer{
-				{ObjectMeta: metav1.ObjectMeta{Name: "gs1", Namespace: defaultNs, Labels: oneLabel}, Status: agonesv1.GameServerStatus{NodeName: "node1", State: agonesv1.GameServerStateReady}},
-				{ObjectMeta: metav1.ObjectMeta{Name: "gs2", Namespace: defaultNs, Labels: oneLabel}, Status: agonesv1.GameServerStatus{NodeName: "node2", State: agonesv1.GameServerStateReady}},
-				{ObjectMeta: metav1.ObjectMeta{Name: "gs3", Namespace: defaultNs, Labels: oneLabel},
-					Status: agonesv1.GameServerStatus{NodeName: "node1", State: agonesv1.GameServerStateAllocated,
-						Players: &agonesv1.PlayerStatus{Count: 10, Capacity: 15}}},
-				{ObjectMeta: metav1.ObjectMeta{Name: "gs4", Namespace: defaultNs, Labels: oneLabel},
-					Status: agonesv1.GameServerStatus{NodeName: "node1", State: agonesv1.GameServerStateAllocated, Players: &agonesv1.PlayerStatus{
-						Count:    3,
-						Capacity: 15,
-					}}},
-			},
-			test: func(t *testing.T, list []*agonesv1.GameServer) {
-				gsa := gsa.DeepCopy()
-				allocated := agonesv1.GameServerStateAllocated
-				gsa.Spec.Selectors[0].GameServerState = &allocated
-				gsa.Spec.Selectors[0].Players = &allocationv1.PlayerSelector{
-					MinAvailable: 1,
-					MaxAvailable: 10,
-				}
-				require.Len(t, list, 4)
-
-				gs, index, err := findGameServerForAllocation(gsa, list)
-				assert.NoError(t, err)
-				require.NotNil(t, gs)
-				assert.Equal(t, "node1", gs.Status.NodeName)
-				assert.Equal(t, "gs3", gs.ObjectMeta.Name)
-				assert.Equal(t, gs, list[index])
-				assert.Equal(t, agonesv1.GameServerStateAllocated, gs.Status.State)
-			},
-			features: fmt.Sprintf("%s=true", runtime.FeaturePlayerAllocationFilter),
 		},
 		"preferred": {
 			list: []agonesv1.GameServer{
@@ -209,7 +174,6 @@ func TestFindGameServerForAllocationPacked(t *testing.T) {
 				assert.Equal(t, gs, list[index])
 				assert.Equal(t, agonesv1.GameServerStateReady, gs.Status.State)
 			},
-			features: fmt.Sprintf("%s=false", runtime.FeaturePlayerAllocationFilter),
 		},
 		"allocation trap": {
 			list: []agonesv1.GameServer{
@@ -231,7 +195,6 @@ func TestFindGameServerForAllocationPacked(t *testing.T) {
 				assert.Equal(t, gs, list[index])
 				assert.Equal(t, agonesv1.GameServerStateReady, gs.Status.State)
 			},
-			features: fmt.Sprintf("%s=false", runtime.FeaturePlayerAllocationFilter),
 		},
 	}
 
