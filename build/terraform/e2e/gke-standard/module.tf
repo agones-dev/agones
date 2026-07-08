@@ -68,7 +68,7 @@ module "gke_cluster" {
 
 resource "google_container_node_pool" "windows_ltsc2022" {
   name       = "win-ltsc2022"
-  cluster    = module.agones.cluster_name
+  cluster    = module.gke_cluster.name
   location   = var.location
   node_count = 2
 

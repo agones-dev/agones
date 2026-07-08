@@ -7,10 +7,19 @@ description: >
   Run `GameServers` on Kubernetes nodes with the Windows operating system.
 ---
 
-{{% alert title="Note" color="info" %}}
-Windows GameServer support is in Beta. Only the SDK sidecar (`sdk-server`)
-runs on Windows nodes. All Agones control-plane components remain Linux-only.
+{{% feature publishVersion="1.60.0" %}}
+{{% alert title="Warning" color="warning" %}}
+Running `GameServers` on Windows nodes is currently Alpha, and any feedback
+would be appreciated.
 {{% /alert %}}
+{{% /feature %}}
+
+{{% feature expiryVersion="1.60.0" %}}
+{{% alert title="Warning" color="warning" %}}
+Running `GameServers` on Windows nodes is currently Alpha, and any feedback
+would be appreciated.
+{{% /alert %}}
+{{% /feature %}}
 
 ## Prerequisites
 
