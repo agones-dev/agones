@@ -66,8 +66,6 @@ steps:
       - ${_TEST_CLUSTER_LOCATION}
       - ${_REGISTRY}
       - ${_GS_TEST_IMAGE}
-    env:
-      - 'E2E_TEST_RUN=TestWindowsCreateConnect'
     id: e2e-windows-smoke
     waitFor:
       - build-e2e
