@@ -36,8 +36,8 @@ const (
 
 	// FeatureAutopilotPassthroughPort is a feature flag that enables/disables Passthrough Port Policy.
 	FeatureAutopilotPassthroughPort Feature = "AutopilotPassthroughPort"
-		// FeaturePortPolicyNone is a feature flag to allow setting Port Policy to None.
-		FeaturePortPolicyNone Feature = "PortPolicyNone"
+	// FeaturePortPolicyNone is a feature flag to allow setting Port Policy to None.
+	FeaturePortPolicyNone Feature = "PortPolicyNone"
 
 	// FeaturePortRanges is a feature flag to enable/disable specific port ranges.
 	FeaturePortRanges Feature = "PortRanges"
@@ -154,14 +154,14 @@ var (
 		// previous version with the feature flag do not fail on parsing an unknown flag.
 		FeatureDisableResyncOnSDKServer: true,
 		FeatureAutopilotPassthroughPort: true,
-			FeaturePortPolicyNone:           true,
+				FeaturePortPolicyNone:                   true,
 		FeaturePortRanges:               true,
 		FeatureRollingUpdateFix:         true,
 
 		// Beta features
 		FeatureCountsAndLists:                   true,
 		FeatureGKEAutopilotExtendedDurationPods: true,
-		FeaturePortPolicyNone:                   true,
+				FeaturePortPolicyNone:                   true,
 		FeatureScheduledAutoscaler:              true,
 		FeatureFleetAutoscaleRequestMetaData:    true,
 		FeatureSidecarContainers:                true,
