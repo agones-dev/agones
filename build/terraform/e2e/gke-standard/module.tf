@@ -76,6 +76,12 @@ resource "google_container_node_pool" "windows_ltsc2022" {
     machine_type = "n2-standard-4"
     image_type   = "WINDOWS_LTSC_CONTAINERD"
     tags         = ["game-server"]
+
+    taint {
+      key    = "node.kubernetes.io/os"
+      value  = "windows"
+      effect = "NO_SCHEDULE"
+    }
   }
 
   management {

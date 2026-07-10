@@ -185,7 +185,7 @@ steps:
     env:
       - 'REPOSITORY=${_REGISTRY}'
       - 'VERSION=${COMMIT_SHA}'
-      - 'WITH_WINDOWS=0'
+      - 'WITH_WINDOWS=1'
       - 'WITH_ARM64=0'
     args: [push]
 

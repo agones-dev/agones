@@ -21,6 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // TestWindowsCreateConnect is a smoke test that verifies a GameServer can be
@@ -30,14 +31,19 @@ import (
 func TestWindowsCreateConnect(t *testing.T) {
 	t.Parallel()
 
-	if framework.CloudProduct == "gke-autopilot" {
-		t.Skip("Windows nodes are not supported on GKE Autopilot")
-	}
+	framework.SkipOnCloudProduct(t, "gke-autopilot", "Windows nodes are not supported on GKE Autopilot")
 
 	gs := framework.DefaultGameServer(framework.Namespace)
 	gs.Spec.Template.Spec.NodeSelector = map[string]string{
 		"kubernetes.io/os": "windows",
 	}
+
+	gs.Spec.Template.Spec.Tolerations = []corev1.Toleration{{
+		Key:      "node.kubernetes.io/os",
+		Operator: corev1.TolerationOpEqual,
+		Value:    "windows",
+		Effect:   corev1.TaintEffectNoSchedule,
+	}}
 	// framework.GameServerImage is multi-arch (linux/amd64 + windows/amd64),
 	// so no separate Windows-tagged image is required - the correct
 	// platform variant is selected automatically based on the node.
