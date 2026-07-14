@@ -28,6 +28,33 @@ import (
 // for standard logging and a 500 response
 type ErrorHandlerFunc func(http.ResponseWriter, *http.Request) error
 
+// sensitiveHeaders lists, in canonical form, the HTTP headers whose values
+// must never be written to logs verbatim, since they routinely carry
+// credentials such as bearer tokens or API keys.
+var sensitiveHeaders = map[string]bool{
+	"Authorization":       true,
+	"Proxy-Authorization": true,
+	"Cookie":              true,
+	"Set-Cookie":          true,
+	"X-Api-Key":           true,
+}
+
+// redactSensitiveHeaders returns a copy of h with the values of any
+// sensitive header replaced by a fixed placeholder. Header names are kept
+// as-is so the resulting map is still useful for debugging which headers
+// were present on a request.
+func redactSensitiveHeaders(h http.Header) http.Header {
+	redacted := make(http.Header, len(h))
+	for name, values := range h {
+		if sensitiveHeaders[http.CanonicalHeaderKey(name)] {
+			redacted[name] = []string{"REDACTED"}
+			continue
+		}
+		redacted[name] = values
+	}
+	return redacted
+}
+
 // FourZeroFour is the standard 404 handler.
 func FourZeroFour(logger *logrus.Entry, w http.ResponseWriter, r *http.Request) {
 	f := ErrorHTTPHandler(logger, func(_ http.ResponseWriter, _ *http.Request) error {
@@ -65,6 +92,6 @@ func LogRequest(logger *logrus.Entry, r *http.Request) *logrus.Entry {
 	return logger.WithField("method", r.Method).
 		WithField("url", r.URL).
 		WithField("host", r.Host).
-		WithField("headers", r.Header).
+		WithField("headers", redactSensitiveHeaders(r.Header)).
 		WithField("requestURI", r.RequestURI)
 }
