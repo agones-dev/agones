@@ -33,7 +33,6 @@ type GameServerStatusApplyConfiguration struct {
 	Addresses     []corev1.NodeAddress                       `json:"addresses,omitempty"`
 	NodeName      *string                                    `json:"nodeName,omitempty"`
 	ReservedUntil *metav1.Time                               `json:"reservedUntil,omitempty"`
-	Players       *PlayerStatusApplyConfiguration            `json:"players,omitempty"`
 	Counters      map[string]CounterStatusApplyConfiguration `json:"counters,omitempty"`
 	Lists         map[string]ListStatusApplyConfiguration    `json:"lists,omitempty"`
 	Eviction      *EvictionApplyConfiguration                `json:"eviction,omitempty"`
@@ -97,14 +96,6 @@ func (b *GameServerStatusApplyConfiguration) WithNodeName(value string) *GameSer
 // If called multiple times, the ReservedUntil field is set to the value of the last call.
 func (b *GameServerStatusApplyConfiguration) WithReservedUntil(value metav1.Time) *GameServerStatusApplyConfiguration {
 	b.ReservedUntil = &value
-	return b
-}
-
-// WithPlayers sets the Players field in the declarative configuration to the given value
-// and returns the receiver, so that objects can be built by chaining "With" function invocations.
-// If called multiple times, the Players field is set to the value of the last call.
-func (b *GameServerStatusApplyConfiguration) WithPlayers(value *PlayerStatusApplyConfiguration) *GameServerStatusApplyConfiguration {
-	b.Players = value
 	return b
 }
 

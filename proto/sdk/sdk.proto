@@ -159,13 +159,6 @@ message GameServer {
             string name = 1;
             int32 port = 2;
         }
-        // [Stage:Alpha]
-        // [FeatureFlag:PlayerTracking]
-        message PlayerStatus {
-            int64 count = 1;
-            int64 capacity = 2;
-            repeated string ids = 3;
-        }
 
         // [Stage:Beta]
         // [FeatureFlag:CountsAndLists]
@@ -185,10 +178,6 @@ message GameServer {
         string address = 2;
         repeated Address addresses = 7;
         repeated Port ports = 3;
-
-        // [Stage:Alpha]
-        // [FeatureFlag:PlayerTracking]
-        PlayerStatus players = 4;
 
         // [Stage:Beta]
         // [FeatureFlag:CountsAndLists]

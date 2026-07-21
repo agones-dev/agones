@@ -98,7 +98,6 @@ func TestMetrics_Endpoint_ExposesAllMetrics(t *testing.T) {
 		setupFleet,
 		setupFleetAutoScalers,
 		setupFleetWithCountersAndLists,
-		setupGameServerPlayerConnect,
 		setupGameServerStateDuration,
 		setupGameServerAllocation,
 	}
@@ -251,27 +250,6 @@ func setupFleetWithCountersAndLists(_ *testing.T, ctrl *fakeController) {
 		},
 	}
 	ctrl.fleetWatch.Modify(flt)
-	ctrl.collect()
-}
-
-func setupGameServerPlayerConnect(t *testing.T, ctrl *fakeController) {
-	gs := gameServerWithFleetAndState("test-fleet", agonesv1.GameServerStateReady)
-	gs.Status.Players = &agonesv1.PlayerStatus{
-		Count: 0,
-	}
-	ctrl.gsWatch.Add(gs)
-	gs = gs.DeepCopy()
-	gs.Status.Players.Count = 1
-	ctrl.gsWatch.Modify(gs)
-
-	require.Eventually(t, func() bool {
-		gs, err := ctrl.gameServerLister.GameServers(gs.ObjectMeta.Namespace).Get(gs.ObjectMeta.Name)
-		if gs == nil || err != nil {
-			return false
-		}
-		assert.NoError(t, err)
-		return gs.Status.Players.Count == 1
-	}, 5*time.Second, time.Second)
 	ctrl.collect()
 }
 

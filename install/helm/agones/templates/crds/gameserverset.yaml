@@ -139,16 +139,6 @@ spec:
                 shutdownReplicas:
                   type: integer
                   minimum: 0
-                players:
-                  type: object
-                  nullable: true
-                  properties:
-                    count:
-                      type: integer
-                      minimum: 0
-                    capacity:
-                      type: integer
-                      minimum: 0
                 counters:
                   type: object
                   title: Map of player, room, session, etc. counters

@@ -32,8 +32,6 @@ SidecarContainers: true
 FleetAutoscaleRequestMetaData: true
 
 # Alpha features
-PlayerAllocationFilter: false
-PlayerTracking: false
 WasmAutoscaler: false
 
 # Dev features

@@ -69,13 +69,6 @@ const (
 	////////////////
 	// Alpha features
 
-	// FeaturePlayerAllocationFilter is a feature flag that enables the ability for Allocations to filter based on
-	// player capacity.
-	FeaturePlayerAllocationFilter Feature = "PlayerAllocationFilter"
-
-	// FeaturePlayerTracking is a feature flag to enable/disable player tracking features.
-	FeaturePlayerTracking Feature = "PlayerTracking"
-
 	// FeatureWasmAutoscaler is a feature flag to enable/disable the script based autoscaler.
 	FeatureWasmAutoscaler Feature = "WasmAutoscaler"
 
@@ -164,9 +157,7 @@ var (
 		FeatureSidecarContainers:                true,
 
 		// Alpha features
-		FeaturePlayerAllocationFilter: false,
-		FeaturePlayerTracking:         false,
-		FeatureWasmAutoscaler:         false,
+		FeatureWasmAutoscaler: false,
 
 		// Dev features
 		FeatureProcessorAllocator: false,

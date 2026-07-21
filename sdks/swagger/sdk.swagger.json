@@ -365,26 +365,6 @@
       },
       "title": "[Stage:Beta]\n[FeatureFlag:CountsAndLists]"
     },
-    "StatusPlayerStatus": {
-      "type": "object",
-      "properties": {
-        "count": {
-          "type": "string",
-          "format": "int64"
-        },
-        "capacity": {
-          "type": "string",
-          "format": "int64"
-        },
-        "ids": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      },
-      "title": "[Stage:Alpha]\n[FeatureFlag:PlayerTracking]"
-    },
     "StatusPort": {
       "type": "object",
       "properties": {
@@ -448,10 +428,6 @@
             "type": "object",
             "$ref": "#/definitions/StatusPort"
           }
-        },
-        "players": {
-          "$ref": "#/definitions/StatusPlayerStatus",
-          "title": "[Stage:Alpha]\n[FeatureFlag:PlayerTracking]"
         },
         "counters": {
           "type": "object",

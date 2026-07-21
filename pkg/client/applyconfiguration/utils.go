@@ -40,8 +40,6 @@ func ForKind(kind schema.GroupVersionKind) interface{} {
 		return &agonesv1.AggregatedCounterStatusApplyConfiguration{}
 	case v1.SchemeGroupVersion.WithKind("AggregatedListStatus"):
 		return &agonesv1.AggregatedListStatusApplyConfiguration{}
-	case v1.SchemeGroupVersion.WithKind("AggregatedPlayerStatus"):
-		return &agonesv1.AggregatedPlayerStatusApplyConfiguration{}
 	case v1.SchemeGroupVersion.WithKind("AllocationOverflow"):
 		return &agonesv1.AllocationOverflowApplyConfiguration{}
 	case v1.SchemeGroupVersion.WithKind("CounterStatus"):
@@ -76,10 +74,6 @@ func ForKind(kind schema.GroupVersionKind) interface{} {
 		return &agonesv1.HealthApplyConfiguration{}
 	case v1.SchemeGroupVersion.WithKind("ListStatus"):
 		return &agonesv1.ListStatusApplyConfiguration{}
-	case v1.SchemeGroupVersion.WithKind("PlayersSpec"):
-		return &agonesv1.PlayersSpecApplyConfiguration{}
-	case v1.SchemeGroupVersion.WithKind("PlayerStatus"):
-		return &agonesv1.PlayerStatusApplyConfiguration{}
 	case v1.SchemeGroupVersion.WithKind("Priority"):
 		return &agonesv1.PriorityApplyConfiguration{}
 	case v1.SchemeGroupVersion.WithKind("SdkServer"):

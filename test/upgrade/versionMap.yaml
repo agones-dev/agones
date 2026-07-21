@@ -135,8 +135,8 @@ data:
           "betaGates": ["CountsAndLists", "GKEAutopilotExtendedDurationPods", "PortPolicyNone", "ScheduledAutoscaler",  "FleetAutoscaleRequestMetaData", "SidecarContainers"]
         },
         "Dev": {
-          "alphaGates": ["PlayerAllocationFilter", "PlayerTracking", "WasmAutoscaler"],
-          "betaGates": ["CountsAndLists", "GKEAutopilotExtendedDurationPods", "ScheduledAutoscaler",  "FleetAutoscaleRequestMetaData", "SidecarContainers"]
+          "alphaGates": ["WasmAutoscaler"],
+          "betaGates": ["CountsAndLists", "GKEAutopilotExtendedDurationPods", "PortPolicyNone", "ScheduledAutoscaler",  "FleetAutoscaleRequestMetaData", "SidecarContainers"]
         }
       }
     }
