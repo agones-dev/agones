@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# [Stage:Beta]
-# [FeatureFlag:PortPolicyNone]
 # - "None" means the `hostPort` is ignored and if defined, the `containerPort` (optional) is used to set the port on the GameServer instance.
 apiVersion: agones.dev/v1
 kind: GameServer
