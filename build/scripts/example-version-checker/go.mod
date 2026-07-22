@@ -1,6 +1,6 @@
 module github.com/agones/agones/build/scripts/example-version-checker
 
-go 1.26
+go 1.26.5
 
 require github.com/go-git/go-git/v5 v5.19.1
 

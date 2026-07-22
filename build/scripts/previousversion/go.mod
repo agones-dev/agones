@@ -1,6 +1,6 @@
 module github.com/agones/agones/build/scripts/previousversion
 
-go 1.26
+go 1.26.5
 
 require (
 	github.com/blang/semver/v4 v4.0.0

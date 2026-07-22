@@ -1,6 +1,6 @@
 module xonotic
 
-go 1.26
+go 1.26.5
 
 require agones.dev/agones v1.54.0
 
