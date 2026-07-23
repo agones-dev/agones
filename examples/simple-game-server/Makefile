@@ -25,6 +25,8 @@
 
 REPOSITORY ?=
 PROD_REPO ?= us-docker.pkg.dev/agones-images/examples
+MINIKUBE ?= minikube
+MINIKUBE_PROFILE ?= agones
 BUILDX_WINDOWS_BUILDER = windows-builder
 # Versions of Windows Server to support, default is Windows Server 2019.
 # For the full list of tags see https://hub.docker.com/_/microsoft-windows-servercore.
@@ -53,6 +55,11 @@ else
 server_tag_linux_amd64 = $(server_tag)-amd64
 server_tag_linux_arm64 = $(server_tag)-arm64
 endif
+
+# Host machine architecture (amd64/arm64), to match the image tag suffixes
+# above, so we know which arch specific image to load into minikube.
+HOST_ARCH := $(shell dpkg --print-architecture)
+server_tag_linux_host = $(server_tag_linux_$(HOST_ARCH))
 
 push_server_manifest = $(server_tag_linux_amd64)
 root_path = $(realpath $(project_path)/../..)
@@ -98,6 +105,14 @@ push-linux-image-amd64: build
 	docker push $(server_tag_linux_amd64)
 push-linux-image-arm64: build
 	$(MAKE) DOCKER_BUILD_ARGS=--push build-linux-image-arm64
+
+# Pushes the host architecture's linux image (built via `make build`) into the
+# "agones" minikube instance, and re-tags it with the production tag (i.e.
+# $(PROD_REPO)/$(server_tag)), so that it can be used by the example
+# gameserver/fleet yaml files without modification.
+minikube-push:
+	$(MINIKUBE) image load $(server_tag_linux_host) -p $(MINIKUBE_PROFILE)
+	$(MINIKUBE) image tag $(server_tag_linux_host) $(PROD_REPO)/$(server_tag) -p $(MINIKUBE_PROFILE)
 
 # Pushes all variants of the Windows images to the container image registry.
 push-windows-images: $(foreach winver, $(WINDOWS_VERSIONS), push-windows-image-$(winver))
