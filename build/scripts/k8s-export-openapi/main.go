@@ -219,8 +219,6 @@ func removeFields(filename string) error {
 	}
 
 	keysToRemove := []string{
-		"x-kubernetes-patch-strategy",
-		"x-kubernetes-patch-merge-key",
 		"x-kubernetes-list-type",
 		"x-kubernetes-group-version-kind",
 		"x-kubernetes-list-map-keys",
