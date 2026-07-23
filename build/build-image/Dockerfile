@@ -28,7 +28,7 @@ RUN gem install fpm && \
 
 # install go
 WORKDIR /usr/local
-ENV GO_VERSION=1.26.0
+ENV GO_VERSION=1.26.5
 ENV GOPATH=/go
 ENV GO111MODULE=on
 RUN ARCH=$(dpkg --print-architecture) && \
