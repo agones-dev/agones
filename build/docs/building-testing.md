@@ -49,6 +49,28 @@ version to your cluster.
 Another would be to run `make lint test-go` to run the golang linter against the Go code, and then run all the unit
 tests.
 
+## Testing changes to the `simple-game-server` example image
+
+The [`simple-game-server`](../../examples/simple-game-server) example is used throughout Agones' own examples,
+fleets and end-to-end tests. If you make changes to it and want to
+test them on Minikube without publishing an image, you can build it and push it straight into your Minikube
+cluster, tagged as if it were the production image, so that the existing yaml files (`fleet.yaml`,
+`gameserver.yaml`, etc.) pick up your changes without any edits.
+
+From the [`examples/simple-game-server`](../../examples/simple-game-server) directory (this has its own `Makefile`,
+separate from the one in `build/`), run:
+
+```bash
+make build-linux-image-$(dpkg --print-architecture) && make minikube-push
+```
+
+This builds the image for your host machine's architecture, loads it into the `agones` Minikube profile (the same
+one created by `make minikube-test-cluster`), and re-tags it to match the production image reference
+(e.g. `us-docker.pkg.dev/agones-images/examples/simple-game-server:<version>`).
+
+This can also be useful if the `simple-game-server` was recently edited, and has yet to be published to the production
+registry.
+
 ## Set Local Make Targets and Variables with `local-includes`
 
 If you want to permanently set `Makefile` variables or add targets to your local setup, all `local-includes/*.mk`
