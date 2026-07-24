@@ -315,6 +315,7 @@ test-build-scripts: $(ensure-build-image)
 	$(GO_TEST) $(agones_package)/build/scripts/...
 	$(DOCKER_RUN) bash -c "cd build/scripts/previousversion && go test -v ."
 	$(DOCKER_RUN) bash -c "cd build/scripts/site-config-update-version && go test -v ."
+	$(DOCKER_RUN) bash -c "cd build/scripts/k8s-export-openapi && go test -v ."
 
 # Runs end-to-end tests on the current configured cluster
 # For minikube user the minikube-test-e2e targets

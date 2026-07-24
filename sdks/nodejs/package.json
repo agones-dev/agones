@@ -10,7 +10,7 @@
     "description": "Game Server SDK for Agones, the open source project for hosting dedicated game servers on Kubernetes",
     "devDependencies": {
         "@biomejs/biome": "^2.3.11",
-        "jasmine": "^5.13.0",
+        "jasmine": "^6.3.0",
         "nyc": "^18.0.0"
     },
     "homepage": "https://agones.dev",
