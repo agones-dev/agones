@@ -1,5 +1,63 @@
 # Changelog
 
+# [v1.59.0](https://github.com/agones-dev/agones/tree/v1.59.0) (2026-06-30)
+
+[Full Changelog](https://github.com/agones-dev/agones/compare/v1.58.0...v1.59.0)
+
+**Breaking changes**
+- Remove player allocation filter api proto by @indurireddy-TF in https://github.com/agones-dev/agones/pull/4624
+
+**Implemented enhancements**
+- feat: track allocations per fleet by @nrwiersma in https://github.com/agones-dev/agones/pull/4513
+- feat: add matchExpressions support to Allocation Service by @markmandel in https://github.com/agones-dev/agones/pull/4630
+
+**Fixed bugs**
+- Fix/nil pointer dereference updatelist by @deezsecc in https://github.com/agones-dev/agones/pull/4611
+- fix: nil pointer panic in webhook and wasm FleetAutoscaler handlers by @markmandel in https://github.com/agones-dev/agones/pull/4596
+- fix: Fix flapping with list-based FleetAutoscaler by @rhysperry111 in https://github.com/agones-dev/agones/pull/4625
+
+**Other**
+- Preparation for Release v1.59.0 by @indurireddy-TF in https://github.com/agones-dev/agones/pull/4579
+- meta: add governance model and update code of conduct to CNCF by @markmandel in https://github.com/agones-dev/agones/pull/4573
+- docs: add KubeStellar Console to Third Party Libraries and Tools by @clubanderson in https://github.com/agones-dev/agones/pull/4538
+- Update crd-client example by @markmandel in https://github.com/agones-dev/agones/pull/4580
+- example: crd-client extra cleanup by @markmandel in https://github.com/agones-dev/agones/pull/4581
+- Update Extism plugin in build by @markmandel in https://github.com/agones-dev/agones/pull/4583
+- build(deps): bump github.com/go-git/go-git/v5 from 5.18.0 to 5.19.1 in /build/scripts/example-version-checker by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4574
+- build: fix ci - pin python grpc-tools by @markmandel in https://github.com/agones-dev/agones/pull/4603
+- build: pin GHA to commit SHAs, add workflow permissions and dependabot by @markmandel in https://github.com/agones-dev/agones/pull/4601
+- build: bump actions/github-script from 6.4.1 to 9.0.0 by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4607
+- build: bump actions/stale from 8.0.0 to 10.3.0 by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4605
+- example: allocation-endpoint update dependencies by @markmandel in https://github.com/agones-dev/agones/pull/4608
+- test: give each TestCounters/TestLists subtest its own GameServer by @markmandel in https://github.com/agones-dev/agones/pull/4610
+- build: bump actions/checkout from 3.6.0 to 6.0.3 by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4612
+- Update supertuxkart example to version 0.24 by @markmandel in https://github.com/agones-dev/agones/pull/4588
+- chore: upgrade website to Docsy 0.15.0 by @Cloud-Architect-Emma in https://github.com/agones-dev/agones/pull/4593
+- Remove PlayerTracking documentation references by @indurireddy-TF in https://github.com/agones-dev/agones/pull/4585
+- build: bump adRise/update-pr-branch from 0.6.0 to 0.11.0 by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4606
+- Implement an AI Usage policy for the contributing guide. by @markmandel in https://github.com/agones-dev/agones/pull/4613
+- build: bump @grpc/grpc-js from 1.14.3 to 1.14.4 in /sdks/nodejs by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4614
+- build: bump uuid from 8.3.2 to removed in /sdks/nodejs in the npm_and_yarn group across 1 directory by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4622
+- build: bump custom-controller to v0.14 with dependency upgrades by @markmandel in https://github.com/agones-dev/agones/pull/4619
+- refactor: remove PlayerTracking and PlayerAllocationFilter examples by @indurireddy-TF in https://github.com/agones-dev/agones/pull/4623
+- build: bump actions/checkout from 6.0.3 to 7.0.0 by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4626
+- Add AGENTS.md for AI coding agents by @ayush-that in https://github.com/agones-dev/agones/pull/4618
+- test: fix allocator e2e tests hanging on unresponsive gRPC server by @markmandel in https://github.com/agones-dev/agones/pull/4628
+- build: replace MetalLB with minikube tunnel for LoadBalancer support by @markmandel in https://github.com/agones-dev/agones/pull/4629
+- build: print debug info on helm install failure by @ayush-that in https://github.com/agones-dev/agones/pull/4632
+- feat: promote PortRanges feature gate from Beta to Stable by @Sivasankaran25 in https://github.com/agones-dev/agones/pull/4609
+- test: Modernise TestFleetAutoScalerRollingUpdate e2e tests by @markmandel in https://github.com/agones-dev/agones/pull/4631
+- build: bump adRise/update-pr-branch from 0.11.0 to 0.11.1 by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4634
+- Issue-4589: Promote RollingUpdateFix feature gate from Beta to Stable by @Oliver-ke in https://github.com/agones-dev/agones/pull/4621
+
+**New Contributors**
+- @clubanderson made their first contribution in https://github.com/agones-dev/agones/pull/4538
+- @deezsecc made their first contribution in https://github.com/agones-dev/agones/pull/4611
+- @Cloud-Architect-Emma made their first contribution in https://github.com/agones-dev/agones/pull/4593
+- @ayush-that made their first contribution in https://github.com/agones-dev/agones/pull/4618
+- @rhysperry111 made their first contribution in https://github.com/agones-dev/agones/pull/4625
+- @Oliver-ke made their first contribution in https://github.com/agones-dev/agones/pull/4621
+
 # [v1.58.0](https://github.com/agones-dev/agones/tree/v1.58.0) (2026-05-19)
 
 [Full Changelog](https://github.com/agones-dev/agones/compare/v1.57.0...v1.58.0)

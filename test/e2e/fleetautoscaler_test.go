@@ -41,7 +41,6 @@ import (
 	"agones.dev/agones/pkg/util/runtime"
 	helper "agones.dev/agones/test/e2e/allochelper"
 	e2e "agones.dev/agones/test/e2e/framework"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -212,9 +211,8 @@ func TestFleetAutoScalerRollingUpdate(t *testing.T) {
 	flt.Spec.Strategy.RollingUpdate.MaxUnavailable = &rollingUpdateCount
 
 	flt, err := fleets.Create(ctx, flt, metav1.CreateOptions{})
-	if assert.Nil(t, err) {
-		defer fleets.Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
-	}
+	require.NoError(t, err)
+	defer fleets.Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
 
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
 
@@ -226,19 +224,14 @@ func TestFleetAutoScalerRollingUpdate(t *testing.T) {
 	fas.Spec.Policy.Buffer.BufferSize = intstr.FromInt(targetScale)
 	fas.Spec.Policy.Buffer.MinReplicas = int32(targetScale)
 	fas, err = fleetautoscalers.Create(ctx, fas, metav1.CreateOptions{})
-	if assert.Nil(t, err) {
-		defer fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
-	} else {
-		// if we could not create the autoscaler, their is no point going further
-		logrus.Error("Failed creating autoscaler, aborting TestAutoscalerBasicFunctions")
-		return
-	}
+	require.NoError(t, err)
+	defer fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(int32(targetScale)))
 
 	// get the Status of the fleetautoscaler
 	fas, err = framework.AgonesClient.AutoscalingV1().FleetAutoscalers(fas.ObjectMeta.Namespace).Get(ctx, fas.Name, metav1.GetOptions{})
 	require.NoError(t, err, "could not get fleetautoscaler")
-	assert.True(t, fas.Status.AbleToScale, "Could not get AbleToScale status")
+	require.True(t, fas.Status.AbleToScale, "Could not get AbleToScale status")
 
 	// check that we are able to scale
 	framework.WaitForFleetAutoScalerCondition(t, fas, func(_ *logrus.Entry, fas *autoscalingv1.FleetAutoscaler) bool {
@@ -248,58 +241,39 @@ func TestFleetAutoScalerRollingUpdate(t *testing.T) {
 	// Change ContainerPort to trigger creating a new GSSet
 	flt, err = framework.AgonesClient.AgonesV1().Fleets(framework.Namespace).Get(ctx, flt.ObjectMeta.Name, metav1.GetOptions{})
 
-	assert.Nil(t, err, "Able to get the Fleet")
+	require.NoError(t, err, "Able to get the Fleet")
 	fltCopy := flt.DeepCopy()
 	fltCopy.Spec.Template.Spec.Ports[0].ContainerPort++
 	logrus.Info("Current fleet replicas count: ", fltCopy.Spec.Replicas)
 
-	// In ticket #1156 we apply new Replicas size 2, which is smaller than 7
-	// And RollingUpdate is broken, scaling immediately from 7 to 2 and then back to 7
-	// Uncomment line below to break this test
-	// fltCopy.Spec.Replicas = 2
-
 	flt, err = framework.AgonesClient.AgonesV1().Fleets(framework.Namespace).Update(ctx, fltCopy, metav1.UpdateOptions{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	selector := labels.SelectorFromSet(labels.Set{agonesv1.FleetNameLabel: flt.ObjectMeta.Name})
-	// Wait till new GSS is created
-	err = wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 30*time.Second, true, func(ctx context.Context) (bool, error) {
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		gssList, err := framework.AgonesClient.AgonesV1().GameServerSets(framework.Namespace).List(ctx,
 			metav1.ListOptions{LabelSelector: selector.String()})
-		if err != nil {
-			return false, err
-		}
-		return len(gssList.Items) == 2, nil
-	})
-	assert.NoError(t, err)
+		require.NoError(c, err)
+		require.Equal(c, 2, len(gssList.Items))
+	}, 30*time.Second, 1*time.Second)
 
-	// Check that total number of gameservers in the system does not goes lower than RollingUpdate
+	// Check that total number of gameservers in the system does not go lower than RollingUpdate
 	// parameters (deleting no more than maxUnavailable servers at a time)
 	// Wait for old GSSet to be deleted
-	err = wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 5*time.Minute, true, func(ctx context.Context) (bool, error) {
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		list, err := framework.AgonesClient.AgonesV1().GameServers(framework.Namespace).List(ctx,
 			metav1.ListOptions{LabelSelector: selector.String()})
-		if err != nil {
-			return false, err
-		}
+		require.NoError(c, err)
+		maxUnavailable, err := intstr.GetScaledValueFromIntOrPercent(flt.Spec.Strategy.RollingUpdate.MaxUnavailable, 100, true)
+		require.NoError(c, err)
+		require.GreaterOrEqual(c, len(list.Items), maxUnavailable)
 
-		maxUnavailable, err := intstr.GetValueFromIntOrPercent(flt.Spec.Strategy.RollingUpdate.MaxUnavailable, 100, true)
-		assert.Nil(t, err)
-		if len(list.Items) < targetScale-maxUnavailable {
-			err = errors.New("New replicas should be not less than (target - maxUnavailable)")
-		}
-		if err != nil {
-			return false, err
-		}
 		gssList, err := framework.AgonesClient.AgonesV1().GameServerSets(framework.Namespace).List(ctx,
 			metav1.ListOptions{LabelSelector: selector.String()})
-		if err != nil {
-			return false, err
-		}
-		return len(gssList.Items) == 1, nil
-	})
+		require.NoError(c, err)
+		require.Equal(c, 1, len(gssList.Items))
 
-	assert.NoError(t, err)
+	}, 5*time.Minute, 1*time.Second)
 }
 
 // TestAutoscalerStressCreate creates many fleetautoscalers with random values

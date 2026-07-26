@@ -69,9 +69,6 @@ func TestStatus(t *testing.T) {
 			expected:      GameServerStatusPort{Name: "test-name", Port: 7777},
 		},
 	}
-	runtime.FeatureTestMutex.Lock()
-	defer runtime.FeatureTestMutex.Unlock()
-	require.NoError(t, runtime.ParseFeatures(string(runtime.FeaturePortPolicyNone)+"=true"))
 
 	for _, tc := range testCases {
 		name := "test-name"
@@ -1498,7 +1495,6 @@ func TestGameServerValidateFeatures(t *testing.T) {
 		},
 		{
 			description: "PortPolicyNone is enabled, PortPolicy field set to None",
-			feature:     fmt.Sprintf("%s=true", runtime.FeaturePortPolicyNone),
 			gs: GameServer{
 				Spec: GameServerSpec{
 					Ports: []GameServerPort{

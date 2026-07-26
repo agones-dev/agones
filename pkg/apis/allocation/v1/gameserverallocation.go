@@ -133,12 +133,6 @@ type GameServerSelector struct {
 	// via Allocation. Defaults to "Ready". The only other option is "Allocated", which can be used in conjunction with
 	// label/annotation/player selectors to retrieve an already Allocated GameServer.
 	GameServerState *agonesv1.GameServerState `json:"gameServerState,omitempty"`
-	// [Stage:Alpha]
-	// [FeatureFlag:PlayerAllocationFilter]
-	// +optional
-	// Players provides a filter on minimum and maximum values for player capacity when retrieving a GameServer
-	// through Allocation. Defaults to no limits.
-	Players *PlayerSelector `json:"players,omitempty"`
 	// [Stage: Beta]
 	// [FeatureFlag:CountsAndLists]
 	// Counters provides filters on minimum and maximum values
@@ -153,12 +147,6 @@ type GameServerSelector struct {
 	// through Allocation. Defaults to no limits.
 	// +optional
 	Lists map[string]ListSelector `json:"lists,omitempty"`
-}
-
-// PlayerSelector is the filter options for a GameServer based on player counts
-type PlayerSelector struct {
-	MinAvailable int64 `json:"minAvailable,omitempty"`
-	MaxAvailable int64 `json:"maxAvailable,omitempty"`
 }
 
 // CounterSelector is the filter options for a GameServer based on the count and/or available capacity.

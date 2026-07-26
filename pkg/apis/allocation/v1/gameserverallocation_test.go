@@ -58,8 +58,6 @@ func TestGameServerAllocationApplyDefaults(t *testing.T) {
 	gsa.ApplyDefaults()
 
 	assert.Equal(t, agonesv1.GameServerStateReady, *gsa.Spec.Required.GameServerState)
-	assert.Equal(t, int64(0), gsa.Spec.Required.Players.MaxAvailable)
-	assert.Equal(t, int64(0), gsa.Spec.Required.Players.MinAvailable)
 	assert.Equal(t, []agonesv1.Priority(nil), gsa.Spec.Priorities)
 	assert.Nil(t, gsa.Spec.Priorities)
 }
@@ -133,16 +131,12 @@ func TestGameServerSelectorApplyDefaults(t *testing.T) {
 	// no defaults
 	s.ApplyDefaults()
 	assert.Equal(t, agonesv1.GameServerStateReady, *s.GameServerState)
-	assert.Equal(t, int64(0), s.Players.MinAvailable)
-	assert.Equal(t, int64(0), s.Players.MaxAvailable)
 	assert.NotNil(t, s.Counters)
 	assert.NotNil(t, s.Lists)
 
 	// Test apply defaults is idempotent -- calling ApplyDefaults more than one time does not change the original result.
 	s.ApplyDefaults()
 	assert.Equal(t, agonesv1.GameServerStateReady, *s.GameServerState)
-	assert.Equal(t, int64(0), s.Players.MinAvailable)
-	assert.Equal(t, int64(0), s.Players.MaxAvailable)
 	assert.NotNil(t, s.Counters)
 	assert.NotNil(t, s.Lists)
 
@@ -150,14 +144,11 @@ func TestGameServerSelectorApplyDefaults(t *testing.T) {
 	// set values
 	s = &GameServerSelector{
 		GameServerState: &state,
-		Players:         &PlayerSelector{MinAvailable: 10, MaxAvailable: 20},
 		Counters:        map[string]CounterSelector{"foo": {MinAvailable: 1, MaxAvailable: 10}},
 		Lists:           map[string]ListSelector{"bar": {MinAvailable: 2}},
 	}
 	s.ApplyDefaults()
 	assert.Equal(t, state, *s.GameServerState)
-	assert.Equal(t, int64(10), s.Players.MinAvailable)
-	assert.Equal(t, int64(20), s.Players.MaxAvailable)
 	assert.Equal(t, int64(0), s.Counters["foo"].MinCount)
 	assert.Equal(t, int64(0), s.Counters["foo"].MaxCount)
 	assert.Equal(t, int64(1), s.Counters["foo"].MinAvailable)
@@ -169,8 +160,6 @@ func TestGameServerSelectorApplyDefaults(t *testing.T) {
 	// Test apply defaults is idempotent -- calling ApplyDefaults more than one time does not change the original result.
 	s.ApplyDefaults()
 	assert.Equal(t, state, *s.GameServerState)
-	assert.Equal(t, int64(10), s.Players.MinAvailable)
-	assert.Equal(t, int64(20), s.Players.MaxAvailable)
 	assert.Equal(t, int64(0), s.Counters["foo"].MinCount)
 	assert.Equal(t, int64(0), s.Counters["foo"].MaxCount)
 	assert.Equal(t, int64(1), s.Counters["foo"].MinAvailable)
@@ -196,10 +185,7 @@ func TestGameServerSelectorValidate(t *testing.T) {
 		want     field.ErrorList
 	}{
 		"valid": {
-			selector: &GameServerSelector{GameServerState: &allocated, Players: &PlayerSelector{
-				MinAvailable: 0,
-				MaxAvailable: 10,
-			}},
+			selector: &GameServerSelector{GameServerState: &allocated},
 		},
 		"nil values": {
 			selector: &GameServerSelector{},
@@ -210,39 +196,6 @@ func TestGameServerSelectorValidate(t *testing.T) {
 			},
 			want: field.ErrorList{
 				field.Invalid(field.NewPath("fieldName.gameServerState"), starting, "GameServerState must be either Allocated or Ready"),
-			},
-		},
-		"invalid min value": {
-			selector: &GameServerSelector{
-				Players: &PlayerSelector{
-					MinAvailable: -10,
-				},
-			},
-			want: field.ErrorList{
-				field.Invalid(field.NewPath("fieldName", "players", "minAvailable"), int64(-10), "must be greater than or equal to 0"),
-			},
-		},
-		"invalid max value": {
-			selector: &GameServerSelector{
-				Players: &PlayerSelector{
-					MinAvailable: -30,
-					MaxAvailable: -20,
-				},
-			},
-			want: field.ErrorList{
-				field.Invalid(field.NewPath("fieldName", "players", "minAvailable"), int64(-30), "must be greater than or equal to 0"),
-				field.Invalid(field.NewPath("fieldName", "players", "maxAvailable"), int64(-20), "must be greater than or equal to 0"),
-			},
-		},
-		"invalid min/max value": {
-			selector: &GameServerSelector{
-				Players: &PlayerSelector{
-					MinAvailable: 10,
-					MaxAvailable: 5,
-				},
-			},
-			want: field.ErrorList{
-				field.Invalid(field.NewPath("fieldName", "players", "minAvailable"), int64(10), "minAvailable cannot be greater than maxAvailable"),
 			},
 		},
 		"invalid label keys": {
@@ -964,14 +917,6 @@ func TestGameServerAllocationValidate(t *testing.T) {
 	// invalid player selection
 	gsa = &GameServerAllocation{
 		Spec: GameServerAllocationSpec{
-			Required: GameServerSelector{
-				Players: &PlayerSelector{
-					MinAvailable: -10,
-				},
-			},
-			Preferred: []GameServerSelector{
-				{Players: &PlayerSelector{MaxAvailable: -10}},
-			},
 			MetaPatch: MetaPatch{
 				Labels: map[string]string{"$$$": "foo"},
 			},
@@ -996,46 +941,16 @@ func TestGameServerAllocationValidate(t *testing.T) {
 func TestGameServerAllocationConverter(t *testing.T) {
 	t.Parallel()
 
-	gsa := &GameServerAllocation{
-		Spec: GameServerAllocationSpec{
-			Scheduling: "Packed",
-			Required: GameServerSelector{
-				Players: &PlayerSelector{
-					MinAvailable: 5,
-					MaxAvailable: 10,
-				},
-			},
-			Preferred: []GameServerSelector{
-				{Players: &PlayerSelector{MinAvailable: 10,
-					MaxAvailable: 20}},
-			},
-		},
+	fields := []string{}
+	for _, err := range allErrs {
+		fields = append(fields, err.Field)
 	}
-	gsaExpected := &GameServerAllocation{
-		Spec: GameServerAllocationSpec{
-			Scheduling: "Packed",
-			Required: GameServerSelector{
-				Players: &PlayerSelector{
-					MinAvailable: 5,
-					MaxAvailable: 10,
-				},
-			},
-			Preferred: []GameServerSelector{
-				{Players: &PlayerSelector{MinAvailable: 10,
-					MaxAvailable: 20}},
-			},
-			Selectors: []GameServerSelector{
-				{Players: &PlayerSelector{MinAvailable: 10,
-					MaxAvailable: 20}},
-				{Players: &PlayerSelector{
-					MinAvailable: 5,
-					MaxAvailable: 10}},
-			},
-		},
-	}
-
-	gsa.Converter()
-	assert.Equal(t, gsaExpected, gsa)
+	assert.ElementsMatch(t, []string{
+		"spec.priorities",
+		"spec.metadata.labels",
+		"spec.lists",
+		"spec.counters",
+	}, fields)
 }
 
 func TestSortKey(t *testing.T) {

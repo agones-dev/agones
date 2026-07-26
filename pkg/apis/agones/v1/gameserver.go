@@ -281,7 +281,7 @@ type Health struct {
 type GameServerPort struct {
 	// Name is the descriptive name of the port
 	Name string `json:"name,omitempty"`
-	// (Alpha, PortRanges feature flag) Range is the port range name from which to select a port when using a
+	// Range is the port range name from which to select a port when using a
 	// 'Dynamic' or 'Passthrough' port policy.
 	// +optional
 	Range string `json:"range,omitempty"`
@@ -779,7 +779,7 @@ func (gs *GameServer) Pod(apiHooks APIHooks, sidecars ...corev1.Container) (*cor
 		var hostPort int32
 		portIdx := 0
 
-		if !runtime.FeatureEnabled(runtime.FeaturePortPolicyNone) || p.PortPolicy != None {
+		if p.PortPolicy != None {
 			hostPort = p.HostPort
 		}
 
@@ -932,7 +932,7 @@ func (gs *GameServer) HasPortPolicy(policy PortPolicy) bool {
 
 // Status returns a GameServerStatusPort for this GameServerPort
 func (p GameServerPort) Status() GameServerStatusPort {
-	if runtime.FeatureEnabled(runtime.FeaturePortPolicyNone) && p.PortPolicy == None {
+	if p.PortPolicy == None {
 		return GameServerStatusPort{Name: p.Name, Port: p.ContainerPort}
 	}
 

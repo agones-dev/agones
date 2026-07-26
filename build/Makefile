@@ -24,7 +24,7 @@
 #
 
 # base version target. This is usually the next release.
-base_version = 1.59.0
+base_version = 1.60.0
 
 #
 # All of the following can be overwritten with environment variables
@@ -69,7 +69,7 @@ KIND_CONTAINER_NAME=$(KIND_PROFILE)-control-plane
 GS_TEST_IMAGE ?= us-docker.pkg.dev/agones-images/examples/simple-game-server:0.43
 
 # Enable all beta feature gates. Keep in sync with `true` (beta) entries in pkg/util/runtime/features.go:featureDefaults
-BETA_FEATURE_GATES ?= "CountsAndLists=true&GKEAutopilotExtendedDurationPods=true&PortPolicyNone=true&PortRanges=true&RollingUpdateFix=true&ScheduledAutoscaler=true&SidecarContainers=true&FleetAutoscaleRequestMetaData=true"
+BETA_FEATURE_GATES ?= "CountsAndLists=true&GKEAutopilotExtendedDurationPods=true&ScheduledAutoscaler=true&SidecarContainers=true&FleetAutoscaleRequestMetaData=true"
 
 
 # Enable all alpha feature gates. Keep in sync with `false` (alpha) entries in pkg/util/runtime/features.go:featureDefaults
@@ -315,6 +315,7 @@ test-build-scripts: $(ensure-build-image)
 	$(GO_TEST) $(agones_package)/build/scripts/...
 	$(DOCKER_RUN) bash -c "cd build/scripts/previousversion && go test -v ."
 	$(DOCKER_RUN) bash -c "cd build/scripts/site-config-update-version && go test -v ."
+	$(DOCKER_RUN) bash -c "cd build/scripts/k8s-export-openapi && go test -v ."
 
 # Runs end-to-end tests on the current configured cluster
 # For minikube user the minikube-test-e2e targets
@@ -465,7 +466,16 @@ install: $(ensure-build-image) install-custom-pull-secret
 		--set agones.allocator.service.loadBalancerIP=$(EXTERNAL_IP) \
 		--set agones.metrics.serviceMonitor.enabled=$(SERVICE_MONITOR) \
 		$(HELM_ARGS) \
-		agones $(mount_path)/install/helm/agones/
+		agones $(mount_path)/install/helm/agones/ \
+	|| { \
+		echo "Agones install via Helm failed. Gathering debug information from the agones-system namespace..."; \
+		$(DOCKER_RUN) bash -c ' \
+			echo "--- helm releases ---"; helm ls --namespace agones-system; \
+			echo "--- pods ---"; kubectl get pods --namespace agones-system -o wide; \
+			echo "--- pod details ---"; kubectl describe pods --namespace agones-system; \
+			echo "--- recent events ---"; kubectl get events --namespace agones-system --sort-by=.lastTimestamp'; \
+		exit 1; \
+	}
 
 update-allocation-certs: NAMESPACE ?= default
 update-allocation-certs: install
