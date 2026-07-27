@@ -54,7 +54,7 @@ Configurable parameters:
 - disk_size - disk size of the node
 - region - the location of the cluster
 - node_count - count of game server nodes for the default node pool (default is "4")
-- feature_gates - a list of alpha and beta version features to enable. For example, "PlayerTracking=true&ContainerPortAllocation=true"
+- feature_gates - a list of alpha and beta version features to enable. For example, "ContainerPortAllocation=true"
 - gameserver_minPort - the lower bound of the port range which gameservers will listen on (default is "7000")
 - gameserver_maxPort - the upper bound of the port range which gameservers will listen on (default is "8000")
 - gameserver_namespaces - a list of namespaces which will be used to run gameservers (default is `["default"]`). For example `["default", "xbox-gameservers", "mobile-gameservers"]`

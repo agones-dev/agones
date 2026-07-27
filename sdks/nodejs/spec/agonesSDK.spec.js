@@ -19,7 +19,6 @@ const grpc = require("@grpc/grpc-js");
 const messages = require("../lib/sdk_pb");
 
 const AgonesSDK = require("../src/agonesSDK");
-const Alpha = require("../src/alpha");
 
 describe("AgonesSDK", () => {
 	let agonesSDK;
@@ -470,12 +469,6 @@ describe("AgonesSDK", () => {
 				expect(agonesSDK.client.reserve).toHaveBeenCalled();
 				expect(error).toEqual("error");
 			}
-		});
-	});
-
-	describe("alpha", () => {
-		it("returns the alpha features class", () => {
-			expect(agonesSDK.alpha).toBeInstanceOf(Alpha);
 		});
 	});
 });

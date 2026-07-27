@@ -22,7 +22,7 @@ mod api {
 use api::sdk_client::SdkClient;
 pub use api::{
     game_server::{
-        status::{PlayerStatus, Port},
+        status::{Port},
         ObjectMeta, Spec, Status,
     },
     GameServer,
@@ -30,7 +30,7 @@ pub use api::{
 
 pub type WatchStream = tonic::Streaming<GameServer>;
 
-use crate::{alpha::Alpha, beta::Beta, errors::Result};
+use crate::{beta::Beta, errors::Result};
 
 #[inline]
 fn empty() -> api::Empty {
@@ -41,7 +41,6 @@ fn empty() -> api::Empty {
 #[derive(Clone)]
 pub struct Sdk {
     client: SdkClient<Channel>,
-    alpha: Alpha,
     beta: Beta,
 }
 
@@ -103,7 +102,6 @@ impl Sdk {
         // will only attempt to connect on first invocation, so won't exit straight away.
         let channel = builder.connect_lazy();
         let mut client = SdkClient::new(channel.clone());
-        let alpha = Alpha::new(channel.clone());
         let beta = Beta::new(channel);
 
         tokio::time::timeout(Duration::from_secs(30), async {
@@ -118,14 +116,9 @@ impl Sdk {
         })
         .await?;
 
-        Ok(Self { client, alpha, beta })
+        Ok(Self { client, beta })
     }
 
-    /// Alpha returns the Alpha SDK
-    #[inline]
-    pub fn alpha(&self) -> &Alpha {
-        &self.alpha
-    }
 
     /// Beta returns the Beta SDK
     #[inline]

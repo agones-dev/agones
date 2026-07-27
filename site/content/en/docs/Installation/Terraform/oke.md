@@ -46,7 +46,7 @@ Configurable parameters:
 - ssh_public_key_path - a path on the local filesystem to the SSH public key
 - node_count - count of game server nodes for the default node pool (default is "3")
 - log_level - possible values: Fatal, Error, Warn, Info, Debug (default is "info")
-- feature_gates - a list of alpha and beta version features to enable. For example, "PlayerTracking=true&ContainerPortAllocation=true"
+- feature_gates - a list of alpha and beta version features to enable. For example, "ContainerPortAllocation=true"
 
 Now you can create an OKE cluster and deploy Agones on OKE:
 ```bash

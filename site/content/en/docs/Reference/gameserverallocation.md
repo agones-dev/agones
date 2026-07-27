@@ -23,7 +23,7 @@ kind: GameServerAllocation
 spec:
   # GameServer selector from which to choose GameServers from.
   # Defaults to all GameServers.
-  # matchLabels, matchExpressions, gameServerState and player filters can be used for filtering.
+  # matchLabels, matchExpressions and gameServerState can be used for filtering.
   # See: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/ for more details on label selectors.
   # An ordered list of GameServer label selectors.
   # If the first selector is not matched, the selection attempts the second selector, and so on.
@@ -31,11 +31,6 @@ spec:
   selectors:
     - matchLabels:
         agones.dev/fleet: green-fleet
-        # [Stage:Alpha]
-        # [FeatureFlag:PlayerAllocationFilter]
-      players:
-        minAvailable: 0
-        maxAvailable: 99
     - matchLabels:
         agones.dev/fleet: blue-fleet
     - matchLabels:
@@ -44,7 +39,7 @@ spec:
         - {key: tier, operator: In, values: [cache]}
       # Specifies which State is the filter to be used when attempting to retrieve a GameServer
       # via Allocation. Defaults to "Ready". The only other option is "Allocated", which can be used in conjunction with
-      # label/annotation/player selectors to retrieve an already Allocated GameServer.
+      # label/annotation selectors to retrieve an already Allocated GameServer.
       gameServerState: Ready
       # [Stage:Beta]
       # [FeatureFlag:CountsAndLists]
@@ -59,13 +54,6 @@ spec:
           containsValue: "x6k8z" # only match GameServers who has this value in the list. Defaults to "", which is all.
           minAvailable: 1 # minimum available (current capacity - current count). Defaults to 0.
           maxAvailable: 10 # maximum available (current capacity - current count) Defaults to 0, which translates to max(int64)
-      # [Stage:Alpha]
-      # [FeatureFlag:PlayerAllocationFilter]
-      # Provides a filter on minimum and maximum values for player capacity when retrieving a GameServer
-      # through Allocation. Defaults to no limits.
-      players:
-        minAvailable: 0
-        maxAvailable: 99
   # defines how GameServers are organised across the cluster.
   # Options include:
   # "Packed" (default) is aimed at dynamic Kubernetes clusters, such as cloud providers, wherein we want to bin pack
@@ -122,7 +110,7 @@ spec:
   # Deprecated, use field selectors instead.
   # GameServer selector from which to choose GameServers from.
   # Defaults to all GameServers.
-  # matchLabels, matchExpressions, gameServerState and player filters can be used for filtering.
+  # matchLabels, matchExpressions and gameServerState can be used for filtering.
   # See: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/ for more details on label selectors.
   # Deprecated, use field selectors instead.
   required:
@@ -132,30 +120,18 @@ spec:
       - {key: tier, operator: In, values: [cache]}
     # Specifies which State is the filter to be used when attempting to retrieve a GameServer
     # via Allocation. Defaults to "Ready". The only other option is "Allocated", which can be used in conjunction with
-    # label/annotation/player selectors to retrieve an already Allocated GameServer.
+    # label/annotation selectors to retrieve an already Allocated GameServer.
     gameServerState: Ready
-    # [Stage:Alpha]
-    # [FeatureFlag:PlayerAllocationFilter]
-    # Provides a filter on minimum and maximum values for player capacity when retrieving a GameServer
-    # through Allocation. Defaults to no limits.
-    players:
-      minAvailable: 0
-      maxAvailable: 99
   # Deprecated, use field selectors instead.
   # An ordered list of preferred GameServer label selectors
   # that are optional to be fulfilled, but will be searched before the `required` selector.
   # If the first selector is not matched, the selection attempts the second selector, and so on.
   # If any of the preferred selectors are matched, the required selector is not considered.
   # This is useful for things like smoke testing of new game servers.
-  # This also support matchExpressions, gameServerState and player filters.
+  # This also support matchExpressions and gameServerState.
   preferred:
     - matchLabels:
         agones.dev/fleet: green-fleet
-      # [Stage:Alpha]
-      # [FeatureFlag:PlayerAllocationFilter]
-      players:
-        minAvailable: 0
-        maxAvailable: 99
     - matchLabels:
         agones.dev/fleet: blue-fleet
   # defines how GameServers are organised across the cluster.
@@ -179,7 +155,7 @@ The `spec` field is the actual `GameServerAllocation` specification, and it is c
 
 - Deprecated, use `selectors` instead. If `selectors` is set, this field will be ignored.
   `required` is a [GameServerSelector][gameserverselector]
-  (matchLabels. matchExpressions, gameServerState and player filters) from which to choose GameServers from.
+  (matchLabels. matchExpressions and gameServerState) from which to choose GameServers from.
 - Deprecated, use `selectors` instead. If `selectors` is set, this field will be ignored.
   `preferred` is an ordered list of preferred [GameServerSelector][gameserverselector]
   that are _optional_ to be fulfilled, but will be searched before the `required` selector.
@@ -195,7 +171,7 @@ The `spec` field is the actual `GameServerAllocation` specification, and it is c
 - `matchExpressions` is a list of label selector requirements. The requirements are ANDed. Optional.
 - `gameServerState` GameServerState specifies which State is the filter to be used when attempting to retrieve a
   GameServer via Allocation. Defaults to "Ready". The only other option is "Allocated", which can be used in
-  conjunction with label/annotation/player selectors to retrieve an already Allocated GameServer.
+  conjunction with label/annotation to retrieve an already Allocated GameServer.
 - `counters` (Beta, "CountsAndLists" feature flag) enables filtering based on game server Counter status, such as
   the minimum and maximum number of active rooms. This helps in selecting game servers based on their current activity
   or capacity. Optional.

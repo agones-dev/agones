@@ -33,7 +33,6 @@ namespace Agones
 		public double RequestTimeoutSec { get; set; }
 
 		internal SDK.SDKClient client;
-		internal readonly Alpha alpha;
 		internal readonly Beta beta;
 		internal readonly GrpcChannel channel;
 		internal AsyncClientStreamingCall<Empty,Empty> healthStream;
@@ -81,19 +80,10 @@ namespace Agones
 			);
 
 			client = sdkClient ?? new SDK.SDKClient(channel);
-			alpha = new Alpha(channel, requestTimeoutSec, cancellationTokenSource, logger);
 			beta = new Beta(channel, requestTimeoutSec, cancellationTokenSource, logger);
 		}
 
-		/// <summary>
-		/// Alpha returns the Alpha SDK
-		/// </summary>
-		/// <returns>Agones alpha SDK</returns>
-		public IAgonesAlphaSDK Alpha()
-		{
-			return alpha;
-		}
-
+	
 		/// <summary>
 		/// Beta returns the AlphBeta SDK
 		/// </summary>

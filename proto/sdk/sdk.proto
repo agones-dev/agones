@@ -150,6 +150,9 @@ message GameServer {
     }
 
     message Status {
+         reserved 4;
+         reserved "players";
+         
         message Address {
             string type = 1;
             string address = 2;

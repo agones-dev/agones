@@ -12,10 +12,6 @@ It will:
 - After the shutdown duration (default 60 seconds), shut the server down
 - Parse options to get help or set the shutdown timeout duration
 
-If alpha features are enabled it will additionally:
-- Set and get the player capacity (this is not enforced)
-- Add, get and remove players, and test if they are present
-
 To learn how to deploy this example service to GKE, please see the tutorial [Build and Run a Simple Gameserver (node.js)](https://agones.dev/site/docs/tutorials/simple-gameserver-nodejs/).
 
 ## Building
@@ -80,16 +76,4 @@ To make run indefinitely use the special timeout value of 0:
 $ make args="--timeout=0" run
 $ docker run --network=host us-docker.pkg.dev/agones-images/examples/nodejs-simple-server:0.10 --timeout=0
 $ npm start -- --timeout=0
-```
-
-To enable alpha features ensure the feature gate is enabled:
-```bash
-$ cd ../../build; make run-sdk-conformance-local TIMEOUT=120 FEATURE_GATES="PlayerTracking=true" TESTS=ready,watch,health,gameserver
-```
-
-Then enable the alpha suite:
-```
-$ make args="--alpha" run
-$ docker run --network=host us-docker.pkg.dev/agones-images/examples/nodejs-simple-server:0.10 --alpha
-$ npm start -- --alpha
 ```
