@@ -136,7 +136,7 @@ github.com/fsnotify/fsnotify/internal
 # github.com/fxamacker/cbor/v2 v2.9.0
 ## explicit; go 1.20
 github.com/fxamacker/cbor/v2
-# github.com/go-logr/logr v1.4.3
+# github.com/go-logr/logr v1.4.4
 ## explicit; go 1.18
 github.com/go-logr/logr
 github.com/go-logr/logr/funcr
@@ -238,8 +238,8 @@ github.com/googleapis/gax-go/v2/internallog/internal
 # github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
 ## explicit; go 1.20
 github.com/gorilla/websocket
-# github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.3
-## explicit; go 1.24.0
+# github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0
+## explicit; go 1.25.0
 github.com/grpc-ecosystem/grpc-gateway/v2/internal/casing
 github.com/grpc-ecosystem/grpc-gateway/v2/internal/codegenerator
 github.com/grpc-ecosystem/grpc-gateway/v2/internal/descriptor
@@ -494,7 +494,7 @@ go.opentelemetry.io/proto/otlp/trace/v1
 # go.yaml.in/yaml/v2 v2.4.2
 ## explicit; go 1.15
 go.yaml.in/yaml/v2
-# go.yaml.in/yaml/v3 v3.0.4
+# go.yaml.in/yaml/v3 v3.0.5
 ## explicit; go 1.16
 go.yaml.in/yaml/v3
 # golang.org/x/crypto v0.54.0
@@ -506,7 +506,7 @@ golang.org/x/crypto/cryptobyte/asn1
 golang.org/x/crypto/hkdf
 golang.org/x/crypto/internal/alias
 golang.org/x/crypto/internal/poly1305
-# golang.org/x/mod v0.37.0
+# golang.org/x/mod v0.38.0
 ## explicit; go 1.25.0
 golang.org/x/mod/internal/lazyregexp
 golang.org/x/mod/module
@@ -547,7 +547,7 @@ golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/windows/registry
-# golang.org/x/telemetry v0.0.0-20260625142307-59b4966ccb57
+# golang.org/x/telemetry v0.0.0-20260717140457-bdb89881bb75
 ## explicit; go 1.25.0
 golang.org/x/telemetry/counter
 golang.org/x/telemetry/internal/counter
@@ -572,7 +572,7 @@ golang.org/x/text/unicode/norm
 # golang.org/x/time v0.9.0
 ## explicit; go 1.18
 golang.org/x/time/rate
-# golang.org/x/tools v0.47.0
+# golang.org/x/tools v0.48.0
 ## explicit; go 1.25.0
 golang.org/x/tools/cmd/goimports
 golang.org/x/tools/go/ast/astutil
@@ -583,6 +583,7 @@ golang.org/x/tools/internal/event/label
 golang.org/x/tools/internal/gocommand
 golang.org/x/tools/internal/gopathwalk
 golang.org/x/tools/internal/imports
+golang.org/x/tools/internal/modindex
 golang.org/x/tools/internal/stdlib
 # gomodules.xyz/jsonpatch/v2 v2.5.0
 ## explicit; go 1.20
@@ -606,7 +607,7 @@ google.golang.org/api/transport/http
 google.golang.org/genproto/googleapis/devtools/cloudtrace/v2
 google.golang.org/genproto/googleapis/monitoring/v3
 google.golang.org/genproto/googleapis/type/calendarperiod
-# google.golang.org/genproto/googleapis/api v0.0.0-20260414002931-afd174a4e478
+# google.golang.org/genproto/googleapis/api v0.0.0-20260724162435-b2f20204f0df
 ## explicit; go 1.25.0
 google.golang.org/genproto/googleapis/api
 google.golang.org/genproto/googleapis/api/annotations
@@ -616,7 +617,7 @@ google.golang.org/genproto/googleapis/api/label
 google.golang.org/genproto/googleapis/api/metric
 google.golang.org/genproto/googleapis/api/monitoredres
 google.golang.org/genproto/googleapis/api/visibility
-# google.golang.org/genproto/googleapis/rpc v0.0.0-20260414002931-afd174a4e478
+# google.golang.org/genproto/googleapis/rpc v0.0.0-20260724162435-b2f20204f0df
 ## explicit; go 1.25.0
 google.golang.org/genproto/googleapis/rpc/code
 google.golang.org/genproto/googleapis/rpc/errdetails
@@ -1254,15 +1255,15 @@ k8s.io/client-go/util/homedir
 k8s.io/client-go/util/keyutil
 k8s.io/client-go/util/retry
 k8s.io/client-go/util/workqueue
-# k8s.io/gengo v0.0.0-20250922181213-ec3ebc5fd46b
+# k8s.io/gengo v0.0.0-20260408192533-25e2208e0dc3
 ## explicit; go 1.13
 k8s.io/gengo/parser
 k8s.io/gengo/types
 # k8s.io/klog v1.0.0
 ## explicit; go 1.12
 k8s.io/klog
-# k8s.io/klog/v2 v2.130.1
-## explicit; go 1.18
+# k8s.io/klog/v2 v2.140.0
+## explicit; go 1.21
 k8s.io/klog/v2
 k8s.io/klog/v2/internal/buffer
 k8s.io/klog/v2/internal/clock
