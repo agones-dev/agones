@@ -50,6 +50,7 @@ properties:
         items:
           type: string
         type: array
+        x-kubernetes-patch-strategy: merge
       generateName:
         description: |-
           GenerateName is an optional prefix, used by the server, to generate a unique name ONLY IF the Name field has not been provided. If this field is used, the name returned to the client will be different than the name passed. This value will also be combined with a unique suffix. The provided value has the same validation rules as the Name field, and may be truncated by the length of the suffix required to make the value unique on the server.
@@ -134,6 +135,8 @@ properties:
           type: object
           x-kubernetes-map-type: atomic
         type: array
+        x-kubernetes-patch-merge-key: uid
+        x-kubernetes-patch-strategy: merge
       resourceVersion:
         description: |-
           An opaque value that represents the internal version of this object that can be used by clients to determine when objects have changed. May be used for optimistic concurrency, change detection, and the watch operation on a resource or set of resources. Clients must treat these values as opaque and passed unmodified back to the server. They may only be valid for a particular resource or set of resources.
@@ -835,6 +838,8 @@ properties:
                   - name
                 type: object
               type: array
+              x-kubernetes-patch-merge-key: name
+              x-kubernetes-patch-strategy: merge
             envFrom:
               description: List of sources to populate environment variables in the container. The keys defined within a source may consist of any printable ASCII characters except '='. When a key exists in multiple sources, the value associated with the last source will take precedence. Values defined by an Env with a duplicate key will take precedence. Cannot be updated.
               items:
@@ -1323,6 +1328,8 @@ properties:
                   - containerPort
                 type: object
               type: array
+              x-kubernetes-patch-merge-key: containerPort
+              x-kubernetes-patch-strategy: merge
             readinessProbe:
               description: "Periodic probe of container service readiness. Container will be removed from service endpoints if the probe fails. Cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes"
               properties:
@@ -1432,7 +1439,7 @@ properties:
                   type: integer
               type: object
             resizePolicy:
-              description: Resources resize policy for the container.
+              description: Resources resize policy for the container. This field cannot be set on ephemeral containers.
               items:
                 properties:
                   resourceName:
@@ -1788,6 +1795,8 @@ properties:
                   - devicePath
                 type: object
               type: array
+              x-kubernetes-patch-merge-key: devicePath
+              x-kubernetes-patch-strategy: merge
             volumeMounts:
               description: Pod volumes to mount into the container's filesystem. Cannot be updated.
               items:
@@ -1837,6 +1846,8 @@ properties:
                   - mountPath
                 type: object
               type: array
+              x-kubernetes-patch-merge-key: mountPath
+              x-kubernetes-patch-strategy: merge
             workingDir:
               description: Container's working directory. If not specified, the container runtime's default will be used, which might be configured in the container image. Cannot be updated.
               type: string
@@ -1844,6 +1855,8 @@ properties:
             - name
           type: object
         type: array
+        x-kubernetes-patch-merge-key: name
+        x-kubernetes-patch-strategy: merge
       dnsConfig:
         description: Specifies the DNS parameters of a pod. Parameters specified here will be merged to the generated DNS configuration based on DNSPolicy.
         properties:
@@ -2005,6 +2018,8 @@ properties:
                   - name
                 type: object
               type: array
+              x-kubernetes-patch-merge-key: name
+              x-kubernetes-patch-strategy: merge
             envFrom:
               description: List of sources to populate environment variables in the container. The keys defined within a source may consist of any printable ASCII characters except '='. When a key exists in multiple sources, the value associated with the last source will take precedence. Values defined by an Env with a duplicate key will take precedence. Cannot be updated.
               items:
@@ -2493,6 +2508,8 @@ properties:
                   - containerPort
                 type: object
               type: array
+              x-kubernetes-patch-merge-key: containerPort
+              x-kubernetes-patch-strategy: merge
             readinessProbe:
               description: Probes are not allowed for ephemeral containers.
               properties:
@@ -2964,6 +2981,8 @@ properties:
                   - devicePath
                 type: object
               type: array
+              x-kubernetes-patch-merge-key: devicePath
+              x-kubernetes-patch-strategy: merge
             volumeMounts:
               description: Pod volumes to mount into the container's filesystem. Subpath mounts are not allowed for ephemeral containers. Cannot be updated.
               items:
@@ -3013,6 +3032,8 @@ properties:
                   - mountPath
                 type: object
               type: array
+              x-kubernetes-patch-merge-key: mountPath
+              x-kubernetes-patch-strategy: merge
             workingDir:
               description: Container's working directory. If not specified, the container runtime's default will be used, which might be configured in the container image. Cannot be updated.
               type: string
@@ -3020,6 +3041,8 @@ properties:
             - name
           type: object
         type: array
+        x-kubernetes-patch-merge-key: name
+        x-kubernetes-patch-strategy: merge
       hostAliases:
         description: HostAliases is an optional list of hosts and IPs that will be injected into the pod's hosts file if specified.
         items:
@@ -3036,6 +3059,8 @@ properties:
             - ip
           type: object
         type: array
+        x-kubernetes-patch-merge-key: ip
+        x-kubernetes-patch-strategy: merge
       hostIPC:
         description: "Use the host's ipc namespace. Optional: Default to false."
         type: boolean
@@ -3067,6 +3092,8 @@ properties:
           type: object
           x-kubernetes-map-type: atomic
         type: array
+        x-kubernetes-patch-merge-key: name
+        x-kubernetes-patch-strategy: merge
       initContainers:
         description: "List of initialization containers belonging to the pod. Init containers are executed in order prior to containers being started. If any init container fails, the pod is considered to have failed and is handled according to its restartPolicy. The name for an init container or normal container must be unique among all containers. Init containers may not have Lifecycle actions, Readiness probes, Liveness probes, or Startup probes. The resourceRequirements of an init container are taken into account during scheduling by finding the highest request/limit for each resource type, and then using the max of that value or the sum of the normal containers. Limits are applied to init containers in a similar fashion. Init containers cannot currently be added or removed. Cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/"
         items:
@@ -3184,6 +3211,8 @@ properties:
                   - name
                 type: object
               type: array
+              x-kubernetes-patch-merge-key: name
+              x-kubernetes-patch-strategy: merge
             envFrom:
               description: List of sources to populate environment variables in the container. The keys defined within a source may consist of any printable ASCII characters except '='. When a key exists in multiple sources, the value associated with the last source will take precedence. Values defined by an Env with a duplicate key will take precedence. Cannot be updated.
               items:
@@ -3672,6 +3701,8 @@ properties:
                   - containerPort
                 type: object
               type: array
+              x-kubernetes-patch-merge-key: containerPort
+              x-kubernetes-patch-strategy: merge
             readinessProbe:
               description: "Periodic probe of container service readiness. Container will be removed from service endpoints if the probe fails. Cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes"
               properties:
@@ -3781,7 +3812,7 @@ properties:
                   type: integer
               type: object
             resizePolicy:
-              description: Resources resize policy for the container.
+              description: Resources resize policy for the container. This field cannot be set on ephemeral containers.
               items:
                 properties:
                   resourceName:
@@ -4137,6 +4168,8 @@ properties:
                   - devicePath
                 type: object
               type: array
+              x-kubernetes-patch-merge-key: devicePath
+              x-kubernetes-patch-strategy: merge
             volumeMounts:
               description: Pod volumes to mount into the container's filesystem. Cannot be updated.
               items:
@@ -4186,6 +4219,8 @@ properties:
                   - mountPath
                 type: object
               type: array
+              x-kubernetes-patch-merge-key: mountPath
+              x-kubernetes-patch-strategy: merge
             workingDir:
               description: Container's working directory. If not specified, the container runtime's default will be used, which might be configured in the container image. Cannot be updated.
               type: string
@@ -4193,6 +4228,8 @@ properties:
             - name
           type: object
         type: array
+        x-kubernetes-patch-merge-key: name
+        x-kubernetes-patch-strategy: merge
       nodeName:
         description: NodeName indicates in which node this pod is scheduled. If empty, this pod is a candidate for scheduling by the scheduler defined in schedulerName. Once this field is set, the kubelet for this node becomes responsible for the lifecycle of this pod. This field should not be used to express a desire for the pod to be scheduled on a specific node. https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodename
         type: string
@@ -4254,7 +4291,7 @@ properties:
         description: |-
           ResourceClaims defines which ResourceClaims must be allocated and reserved before the Pod is allowed to start. The resources will be made available to those containers which consume them by name.
 
-          This is an alpha field and requires enabling the DynamicResourceAllocation feature gate.
+          This is a stable field but requires that the DynamicResourceAllocation feature gate is enabled.
 
           This field is immutable.
         items:
@@ -4282,6 +4319,8 @@ properties:
             - name
           type: object
         type: array
+        x-kubernetes-patch-merge-key: name
+        x-kubernetes-patch-strategy: merge,retainKeys
       resources:
         description: |-
           Resources is the total amount of CPU and Memory resources required by all containers in the pod. It supports specifying Requests and Limits for "cpu", "memory" and "hugepages-" resource names only. ResourceClaims are not supported.
@@ -4353,6 +4392,8 @@ properties:
             - name
           type: object
         type: array
+        x-kubernetes-patch-merge-key: name
+        x-kubernetes-patch-strategy: merge
       securityContext:
         description: "SecurityContext holds pod-level security attributes and common container settings. Optional: Defaults to empty.  See type description for default values of each field."
         properties:
@@ -4556,14 +4597,18 @@ properties:
               type: string
             operator:
               description: |-
-                Operator represents a key's relationship to the value. Valid operators are Exists and Equal. Defaults to Equal. Exists is equivalent to wildcard for value, so that a pod can tolerate all taints of a particular category.
+                Operator represents a key's relationship to the value. Valid operators are Exists, Equal, Lt, and Gt. Defaults to Equal. Exists is equivalent to wildcard for value, so that a pod can tolerate all taints of a particular category. Lt and Gt perform numeric comparisons (requires feature gate TaintTolerationComparisonOperators).
 
                 Possible enum values:
                  - `"Equal"`
                  - `"Exists"`
+                 - `"Gt"`
+                 - `"Lt"`
               enum:
                 - Equal
                 - Exists
+                - Gt
+                - Lt
               type: string
             tolerationSeconds:
               description: TolerationSeconds represents the period of time the toleration (which must be of effect NoExecute, otherwise this field is ignored) tolerates the taint. By default, it is not set, which means tolerate the taint forever (do not evict). Zero and negative values will be treated as 0 (evict immediately) by the system.
@@ -4676,6 +4721,8 @@ properties:
             - whenUnsatisfiable
           type: object
         type: array
+        x-kubernetes-patch-merge-key: topologyKey
+        x-kubernetes-patch-strategy: merge
       volumes:
         description: "List of volumes that can be mounted by containers belonging to the pod. More info: https://kubernetes.io/docs/concepts/storage/volumes"
         items:
@@ -4996,6 +5043,7 @@ properties:
                           items:
                             type: string
                           type: array
+                          x-kubernetes-patch-strategy: merge
                         generateName:
                           description: |-
                             GenerateName is an optional prefix, used by the server, to generate a unique name ONLY IF the Name field has not been provided. If this field is used, the name returned to the client will be different than the name passed. This value will also be combined with a unique suffix. The provided value has the same validation rules as the Name field, and may be truncated by the length of the suffix required to make the value unique on the server.
@@ -5080,6 +5128,8 @@ properties:
                             type: object
                             x-kubernetes-map-type: atomic
                           type: array
+                          x-kubernetes-patch-merge-key: uid
+                          x-kubernetes-patch-strategy: merge
                         resourceVersion:
                           description: |-
                             An opaque value that represents the internal version of this object that can be used by clients to determine when objects have changed. May be used for optimistic concurrency, change detection, and the watch operation on a resource or set of resources. Clients must treat these values as opaque and passed unmodified back to the server. They may only be valid for a particular resource or set of resources.
@@ -5154,7 +5204,7 @@ properties:
                             - name
                           type: object
                         resources:
-                          description: "resources represents the minimum resources the volume should have. If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements that are lower than previous value but must still be higher than capacity recorded in the status field of the claim. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources"
+                          description: "resources represents the minimum resources the volume should have. Users are allowed to specify resource requirements that are lower than previous value but must still be higher than capacity recorded in the status field of the claim. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources"
                           properties:
                             limits:
                               additionalProperties:
@@ -5699,6 +5749,18 @@ properties:
                           signerName:
                             description: Kubelet's generated CSRs will be addressed to this signer.
                             type: string
+                          userAnnotations:
+                            additionalProperties:
+                              type: string
+                            description: |-
+                              userAnnotations allow pod authors to pass additional information to the signer implementation.  Kubernetes does not restrict or validate this metadata in any way.
+
+                              These values are copied verbatim into the `spec.unverifiedUserAnnotations` field of the PodCertificateRequest objects that Kubelet creates.
+
+                              Entries are subject to the same validation as object metadata annotations, with the addition that all keys must be domain-prefixed. No restrictions are placed on values, except an overall size limitation on the entire field.
+
+                              Signers should document the keys and values they support. Signers should deny requests that contain keys they do not recognize.
+                            type: object
                         required:
                           - signerName
                           - keyType
@@ -5936,6 +5998,24 @@ properties:
             - name
           type: object
         type: array
+        x-kubernetes-patch-merge-key: name
+        x-kubernetes-patch-strategy: merge,retainKeys
+      workloadRef:
+        description: WorkloadRef provides a reference to the Workload object that this Pod belongs to. This field is used by the scheduler to identify the PodGroup and apply the correct group scheduling policies. The Workload object referenced by this field may not exist at the time the Pod is created. This field is immutable, but a Workload object with the same name may be recreated with different policies. Doing this during pod scheduling may result in the placement not conforming to the expected policies.
+        properties:
+          name:
+            description: Name defines the name of the Workload object this Pod belongs to. Workload must be in the same namespace as the Pod. If it doesn't match any existing Workload, the Pod will remain unschedulable until a Workload object is created and observed by the kube-scheduler. It must be a DNS subdomain.
+            type: string
+          podGroup:
+            description: PodGroup is the name of the PodGroup within the Workload that this Pod belongs to. If it doesn't match any existing PodGroup within the Workload, the Pod will remain unschedulable until the Workload object is recreated and observed by the kube-scheduler. It must be a DNS label.
+            type: string
+          podGroupReplicaKey:
+            description: PodGroupReplicaKey specifies the replica key of the PodGroup to which this Pod belongs. It is used to distinguish pods belonging to different replicas of the same pod group. The pod group policy is applied separately to each replica. When set, it must be a DNS label.
+            type: string
+        required:
+          - name
+          - podGroup
+        type: object
     required:
       - containers
     type: object

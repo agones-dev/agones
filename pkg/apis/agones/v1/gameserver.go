@@ -535,14 +535,6 @@ func (gss *GameServerSpec) validateFeatureGates(fldPath *field.Path) field.Error
 		}
 	}
 
-	if !runtime.FeatureEnabled(runtime.FeaturePortPolicyNone) {
-		for i, p := range gss.Ports {
-			if p.PortPolicy == None {
-				allErrs = append(allErrs, field.Forbidden(fldPath.Child("ports").Index(i).Child("portPolicy"), fmt.Sprintf("Value cannot be set to %s unless feature flag %s is enabled", None, runtime.FeaturePortPolicyNone)))
-			}
-		}
-	}
-
 	return allErrs
 }
 
@@ -791,7 +783,7 @@ func (gs *GameServer) Pod(apiHooks APIHooks, sidecars ...corev1.Container) (*cor
 		var hostPort int32
 		portIdx := 0
 
-		if !runtime.FeatureEnabled(runtime.FeaturePortPolicyNone) || p.PortPolicy != None {
+		if p.PortPolicy != None {
 			hostPort = p.HostPort
 		}
 
@@ -944,7 +936,7 @@ func (gs *GameServer) HasPortPolicy(policy PortPolicy) bool {
 
 // Status returns a GameServerStatusPort for this GameServerPort
 func (p GameServerPort) Status() GameServerStatusPort {
-	if runtime.FeatureEnabled(runtime.FeaturePortPolicyNone) && p.PortPolicy == None {
+	if p.PortPolicy == None {
 		return GameServerStatusPort{Name: p.Name, Port: p.ContainerPort}
 	}
 

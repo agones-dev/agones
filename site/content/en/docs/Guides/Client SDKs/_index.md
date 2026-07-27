@@ -61,7 +61,15 @@ functions that implement the core responsibilities of the SDK.
 For language specific documentation, have a look at the respective source (linked above), 
 and the {{< ghlink href="examples" >}}examples{{< /ghlink >}}.
 
-Calling any of state changing functions mentioned below does not guarantee that GameServer Custom Resource object would actually change its state right after the call. For instance, it could be moved to the `Shutdown` state elsewhere (for example, when a fleet scales down), which leads to no changes in `GameServer` object. You can verify the result of this call by waiting for the desired state in a callback to WatchGameServer() function.
+{{% alert title="Tip" color="tip" %}}
+Agones, and Kubernetes itself, are built as eventually consistent, self-healing systems, as a result, calls to any 
+of the state changing functions listed below are interval batched asynchronously queued by the SDK Server for both 
+performance and resiliency.
+
+Because of this, state changes **do not** take effect immediately after calling one of these 
+functions. Instead, verify the result by watching for the desired state in a callback to the `WatchGameServer()` 
+function.
+{{% /alert %}}
 
 Functions which changes GameServer state or settings are:
 
