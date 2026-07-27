@@ -68,14 +68,12 @@ var (
 )
 
 const (
-	updateState            Operation     = "updateState"
-	updateLabel            Operation     = "updateLabel"
-	updateAnnotation       Operation     = "updateAnnotation"
-	updatePlayerCapacity   Operation     = "updatePlayerCapacity"
-	updateConnectedPlayers Operation     = "updateConnectedPlayers"
-	updateCounters         Operation     = "updateCounters"
-	updateLists            Operation     = "updateLists"
-	updatePeriod           time.Duration = time.Second
+	updateState      Operation     = "updateState"
+	updateLabel      Operation     = "updateLabel"
+	updateAnnotation Operation     = "updateAnnotation"
+	updateCounters   Operation     = "updateCounters"
+	updateLists      Operation     = "updateLists"
+	updatePeriod     time.Duration = time.Second
 )
 
 var (
@@ -137,7 +135,6 @@ type SDKServer struct {
 	gsWaitForSync       sync.WaitGroup
 	reserveTimer        *time.Timer
 	gsReserveDuration   *time.Duration
-	gsPlayerCapacity    int64
 	gsConnectedPlayers  []string
 	gsCounterUpdates    map[string]counterUpdateRequest
 	gsListUpdates       map[string]listUpdateRequest
