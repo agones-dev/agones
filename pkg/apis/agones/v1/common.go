@@ -48,12 +48,6 @@ const (
 	GameServerPriorityDescending string = "Descending"
 )
 
-// AggregatedPlayerStatus stores total player tracking values
-type AggregatedPlayerStatus struct {
-	Count    int64 `json:"count"`
-	Capacity int64 `json:"capacity"`
-}
-
 // AggregatedCounterStatus stores total and allocated Counter tracking values
 type AggregatedCounterStatus struct {
 	AllocatedCount    int64 `json:"allocatedCount"`

@@ -6579,15 +6579,6 @@ spec:
                              type: integer
                              minimum: 1
                              maximum: 2147483648
-                       players:
-                         type: object
-                         title: Configuration of player capacity
-                         nullable: true
-                         properties:
-                           initialCapacity:
-                             type: integer
-                             title: The initial player capacity of this Game Server
-                             minimum: 0
                        counters:
                          type: object
                          title: Map of player, room, session, etc. counters
@@ -6669,16 +6660,6 @@ spec:
                 allocations:
                   type: integer
                   minimum: 0
-                players:
-                  type: object
-                  nullable: true
-                  properties:
-                    count:
-                      type: integer
-                      minimum: 0
-                    capacity:
-                      type: integer
-                      minimum: 0
                 counters:
                   type: object
                   title: Map of player, room, session, etc. counters
@@ -13637,15 +13618,6 @@ spec:
                      type: integer
                      minimum: 1
                      maximum: 2147483648
-               players:
-                 type: object
-                 title: Configuration of player capacity
-                 nullable: true
-                 properties:
-                   initialCapacity:
-                     type: integer
-                     title: The initial player capacity of this Game Server
-                     minimum: 0
                counters:
                  type: object
                  title: Map of player, room, session, etc. counters
@@ -13756,19 +13728,6 @@ spec:
                  type: string
                  nullable: true
                  format: date-time
-               players:
-                 type: object
-                 nullable: true
-                 properties:
-                   count:
-                     type: integer
-                   capacity:
-                     type: integer
-                   ids:
-                     type: array
-                     nullable: true
-                     items:
-                       type: string
                counters:
                  type: object
                  title: Map of player, room, session, etc. counters
@@ -20292,15 +20251,6 @@ spec:
                               type: integer
                               minimum: 1
                               maximum: 2147483648
-                        players:
-                          type: object
-                          title: Configuration of player capacity
-                          nullable: true
-                          properties:
-                            initialCapacity:
-                              type: integer
-                              title: The initial player capacity of this Game Server
-                              minimum: 0
                         counters:
                           type: object
                           title: Map of player, room, session, etc. counters
@@ -20382,16 +20332,6 @@ spec:
                 shutdownReplicas:
                   type: integer
                   minimum: 0
-                players:
-                  type: object
-                  nullable: true
-                  properties:
-                    count:
-                      type: integer
-                      minimum: 0
-                    capacity:
-                      type: integer
-                      minimum: 0
                 counters:
                   type: object
                   title: Map of player, room, session, etc. counters

@@ -91,7 +91,7 @@ Configurable parameters:
 - network - the name of the VPC network you want your cluster and firewall rules to be connected to (default is "default")
 - subnetwork - the name of the subnetwork in which the cluster's instances are launched. (required when using non default network)
 - log_level - possible values: Fatal, Error, Warn, Info, Debug (default is "info")
-- feature_gates - a list of alpha and beta version features to enable. For example, "PlayerTracking=true&ContainerPortAllocation=true"
+- feature_gates - a list of alpha and beta version features to enable. For example, "ContainerPortAllocation=true"
 - gameserver_minPort - the lower bound of the port range which gameservers will listen on (default is "7000")
 - gameserver_maxPort - the upper bound of the port range which gameservers will listen on (default is "8000")
 - gameserver_namespaces - a list of namespaces which will be used to run gameservers (default is `["default"]`). For example `["default", "xbox-gameservers", "mobile-gameservers"]`

@@ -94,11 +94,6 @@ type GameServerSetStatus struct {
 	AllocatedReplicas int32 `json:"allocatedReplicas"`
 	// ShutdownReplicas is the number of Shutdown GameServers replicas
 	ShutdownReplicas int32 `json:"shutdownReplicas"`
-	// [Stage:Alpha]
-	// [FeatureFlag:PlayerTracking]
-	// Players is the current total player capacity and count for this GameServerSet
-	// +optional
-	Players *AggregatedPlayerStatus `json:"players,omitempty"`
 	// (Beta, CountsAndLists feature flag) Counters provides aggregated Counter capacity and Counter
 	// count for this GameServerSet.
 	// +optional

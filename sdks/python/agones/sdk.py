@@ -23,7 +23,6 @@ from collections.abc import Callable
 import grpc
 
 from agones._generated import sdk_pb2, sdk_pb2_grpc
-from agones.alpha import Alpha
 from agones.beta import Beta
 
 _DEFAULT_HOST = "localhost"
@@ -41,7 +40,6 @@ class AgonesSDK:
         self._client: sdk_pb2_grpc.SDKStub | None = None
         self._health_stream = None
         self._health_queue: queue.Queue | None = None
-        self._alpha: Alpha | None = None
         self._beta: Beta | None = None
 
     def connect(self, timeout: float = _DEFAULT_TIMEOUT) -> None:
@@ -49,7 +47,6 @@ class AgonesSDK:
         self._channel = grpc.insecure_channel(f"{self._host}:{self._port}")
         grpc.channel_ready_future(self._channel).result(timeout=timeout)
         self._client = sdk_pb2_grpc.SDKStub(self._channel)
-        self._alpha = Alpha(self._channel)
         self._beta = Beta(self._channel)
 
     def close(self) -> None:
@@ -140,13 +137,6 @@ class AgonesSDK:
         self._client.SetAnnotation(sdk_pb2.KeyValue(key=key, value=value))
 
     # --- Sub-SDKs ---
-
-    @property
-    def alpha(self) -> Alpha:
-        """Access the Alpha SDK (player tracking)."""
-        if self._alpha is None:
-            raise RuntimeError("SDK not connected. Call connect() first.")
-        return self._alpha
 
     @property
     def beta(self) -> Beta:

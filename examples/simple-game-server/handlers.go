@@ -41,12 +41,6 @@ var responseMap = map[string]responseHandler{
 	"LABEL":                handleLabel,
 	"CRASH":                handleCrash,
 	"ANNOTATION":           handleAnnotation,
-	"PLAYER_CAPACITY":      handlePlayerCapacity,
-	"PLAYER_CONNECT":       handlePlayerConnect,
-	"PLAYER_DISCONNECT":    handlePlayerDisconnect,
-	"PLAYER_CONNECTED":     handlePlayerConnected,
-	"GET_PLAYERS":          handleGetPlayers,
-	"PLAYER_COUNT":         handlePlayerCount,
 	"GET_COUNTER_COUNT":    handleGetCounterCount,
 	"INCREMENT_COUNTER":    handleIncrementCounter,
 	"DECREMENT_COUNTER":    handleDecrementCounter,
@@ -209,107 +203,6 @@ func handleAnnotation(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (resp
 		response = "Invalid ANNOTATION command, must use zero or 2 arguments"
 		responseError = fmt.Errorf("Invalid ANNOTATION command, must use zero or 2 arguments")
 	}
-	return
-}
-
-// handlePlayerCapacity sets the player capacity to the given value
-// or returns the current player capacity as a string
-func handlePlayerCapacity(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (response string, addACK bool, responseError error) {
-	response, addACK = defaultReply(parts)
-	switch len(parts) {
-	case 1:
-		log.Print("Getting Player Capacity")
-		capacity, err := s.Alpha().GetPlayerCapacity()
-		if err != nil {
-			log.Fatalf("could not get capacity: %v", err)
-		}
-		response = strconv.FormatInt(capacity, 10) + "\n"
-		addACK = false
-	case 2:
-		if cap, err := strconv.Atoi(parts[1]); err != nil {
-			response = fmt.Sprintf("%s", err)
-			responseError = err
-		} else {
-			log.Printf("Setting Player Capacity to %d", int64(cap))
-			if err := s.Alpha().SetPlayerCapacity(int64(cap)); err != nil {
-				log.Fatalf("could not set capacity: %v", err)
-			}
-		}
-	default:
-		response = "Invalid PLAYER_CAPACITY, should have 0 or 1 arguments"
-		responseError = fmt.Errorf("Invalid PLAYER_CAPACITY, should have 0 or 1 arguments")
-	}
-	return
-}
-
-// handlePlayerConnect connects a given player
-func handlePlayerConnect(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (response string, addACK bool, responseError error) {
-	response, addACK = defaultReply(parts)
-	if len(parts) < 2 {
-		response = "Invalid PLAYER_CONNECT, should have 1 argument"
-		responseError = fmt.Errorf("Invalid PLAYER_CONNECT, should have 1 argument")
-		return
-	}
-	log.Printf("Connecting Player: %s", parts[1])
-	if _, err := s.Alpha().PlayerConnect(parts[1]); err != nil {
-		log.Fatalf("could not connect player: %v", err)
-	}
-	return
-}
-
-// handlePlayerDisconnect disconnects a given player
-func handlePlayerDisconnect(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (response string, addACK bool, responseError error) {
-	response, addACK = defaultReply(parts)
-	if len(parts) < 2 {
-		response = "Invalid PLAYER_DISCONNECT, should have 1 argument"
-		responseError = fmt.Errorf("Invalid PLAYER_DISCONNECT, should have 1 argument")
-		return
-	}
-	log.Printf("Disconnecting Player: %s", parts[1])
-	if _, err := s.Alpha().PlayerDisconnect(parts[1]); err != nil {
-		log.Fatalf("could not disconnect player: %v", err)
-	}
-	return
-}
-
-// handlePlayerConnected returns a bool as a string if a player is connected
-func handlePlayerConnected(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (response string, addACK bool, responseError error) {
-	if len(parts) < 2 {
-		response = "Invalid PLAYER_CONNECTED, should have 1 argument"
-		responseError = fmt.Errorf("Invalid PLAYER_CONNECTED, should have 1 argument")
-		return
-	}
-	log.Printf("Checking if player %s is connected", parts[1])
-	connected, err := s.Alpha().IsPlayerConnected(parts[1])
-	if err != nil {
-		log.Fatalf("could not retrieve if player is connected: %v", err)
-	}
-	response = strconv.FormatBool(connected) + "\n"
-	addACK = false
-	return
-}
-
-// handleGetPlayers returns a comma delimited list of connected players
-func handleGetPlayers(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (response string, addACK bool, responseError error) {
-	log.Print("Retrieving connected player list")
-	list, err := s.Alpha().GetConnectedPlayers()
-	if err != nil {
-		log.Fatalf("could not retrieve connected players: %s", err)
-	}
-	response = strings.Join(list, ",") + "\n"
-	addACK = false
-	return
-}
-
-// handlePlayerCount returns the count of connected players as a string
-func handlePlayerCount(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (response string, addACK bool, responseError error) {
-	log.Print("Retrieving connected player count")
-	count, err := s.Alpha().GetPlayerCount()
-	if err != nil {
-		log.Fatalf("could not retrieve player count: %s", err)
-	}
-	response = strconv.FormatInt(count, 10) + "\n"
-	addACK = false
 	return
 }
 

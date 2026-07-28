@@ -101,33 +101,6 @@ struct GameServer_Status_PortDefaultTypeInternal {
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT AGONES_EXPORT
     PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 GameServer_Status_PortDefaultTypeInternal _GameServer_Status_Port_default_instance_;
 
-inline constexpr GameServer_Status_PlayerStatus::Impl_::Impl_(
-    ::_pbi::ConstantInitialized) noexcept
-      : _cached_size_{0},
-        ids_{},
-        count_{::int64_t{0}},
-        capacity_{::int64_t{0}} {}
-
-template <typename>
-PROTOBUF_CONSTEXPR GameServer_Status_PlayerStatus::GameServer_Status_PlayerStatus(::_pbi::ConstantInitialized)
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-    : ::google::protobuf::Message(GameServer_Status_PlayerStatus_class_data_.base()),
-#else   // PROTOBUF_CUSTOM_VTABLE
-    : ::google::protobuf::Message(),
-#endif  // PROTOBUF_CUSTOM_VTABLE
-      _impl_(::_pbi::ConstantInitialized()) {
-}
-struct GameServer_Status_PlayerStatusDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR GameServer_Status_PlayerStatusDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
-  ~GameServer_Status_PlayerStatusDefaultTypeInternal() {}
-  union {
-    GameServer_Status_PlayerStatus _instance;
-  };
-};
-
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT AGONES_EXPORT
-    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 GameServer_Status_PlayerStatusDefaultTypeInternal _GameServer_Status_PlayerStatus_default_instance_;
-
 inline constexpr GameServer_Status_ListStatus::Impl_::Impl_(
     ::_pbi::ConstantInitialized) noexcept
       : _cached_size_{0},
@@ -431,8 +404,7 @@ inline constexpr GameServer_Status::Impl_::Impl_(
             ::_pbi::ConstantInitialized()),
         address_(
             &::google::protobuf::internal::fixed_address_empty_string,
-            ::_pbi::ConstantInitialized()),
-        players_{nullptr} {}
+            ::_pbi::ConstantInitialized()) {}
 
 template <typename>
 PROTOBUF_CONSTEXPR GameServer_Status::GameServer_Status(::_pbi::ConstantInitialized)
@@ -569,15 +541,6 @@ const ::uint32_t
         0,
         1,
         0x081, // bitmap
-        PROTOBUF_FIELD_OFFSET(::agones::dev::sdk::GameServer_Status_PlayerStatus, _impl_._has_bits_),
-        6, // hasbit index offset
-        PROTOBUF_FIELD_OFFSET(::agones::dev::sdk::GameServer_Status_PlayerStatus, _impl_.count_),
-        PROTOBUF_FIELD_OFFSET(::agones::dev::sdk::GameServer_Status_PlayerStatus, _impl_.capacity_),
-        PROTOBUF_FIELD_OFFSET(::agones::dev::sdk::GameServer_Status_PlayerStatus, _impl_.ids_),
-        0,
-        1,
-        ~0u,
-        0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::agones::dev::sdk::GameServer_Status_CounterStatus, _impl_._has_bits_),
         5, // hasbit index offset
         PROTOBUF_FIELD_OFFSET(::agones::dev::sdk::GameServer_Status_CounterStatus, _impl_.count_),
@@ -607,19 +570,17 @@ const ::uint32_t
         1,
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::agones::dev::sdk::GameServer_Status, _impl_._has_bits_),
-        10, // hasbit index offset
+        9, // hasbit index offset
         PROTOBUF_FIELD_OFFSET(::agones::dev::sdk::GameServer_Status, _impl_.state_),
         PROTOBUF_FIELD_OFFSET(::agones::dev::sdk::GameServer_Status, _impl_.address_),
         PROTOBUF_FIELD_OFFSET(::agones::dev::sdk::GameServer_Status, _impl_.addresses_),
         PROTOBUF_FIELD_OFFSET(::agones::dev::sdk::GameServer_Status, _impl_.ports_),
-        PROTOBUF_FIELD_OFFSET(::agones::dev::sdk::GameServer_Status, _impl_.players_),
         PROTOBUF_FIELD_OFFSET(::agones::dev::sdk::GameServer_Status, _impl_.counters_),
         PROTOBUF_FIELD_OFFSET(::agones::dev::sdk::GameServer_Status, _impl_.lists_),
         0,
         1,
         ~0u,
         ~0u,
-        2,
         ~0u,
         ~0u,
         0x081, // bitmap
@@ -645,13 +606,12 @@ static const ::_pbi::MigrationSchema
         {59, sizeof(::agones::dev::sdk::GameServer_Spec)},
         {64, sizeof(::agones::dev::sdk::GameServer_Status_Address)},
         {71, sizeof(::agones::dev::sdk::GameServer_Status_Port)},
-        {78, sizeof(::agones::dev::sdk::GameServer_Status_PlayerStatus)},
-        {87, sizeof(::agones::dev::sdk::GameServer_Status_CounterStatus)},
-        {94, sizeof(::agones::dev::sdk::GameServer_Status_ListStatus)},
-        {101, sizeof(::agones::dev::sdk::GameServer_Status_CountersEntry_DoNotUse)},
-        {108, sizeof(::agones::dev::sdk::GameServer_Status_ListsEntry_DoNotUse)},
-        {115, sizeof(::agones::dev::sdk::GameServer_Status)},
-        {132, sizeof(::agones::dev::sdk::GameServer)},
+        {78, sizeof(::agones::dev::sdk::GameServer_Status_CounterStatus)},
+        {85, sizeof(::agones::dev::sdk::GameServer_Status_ListStatus)},
+        {92, sizeof(::agones::dev::sdk::GameServer_Status_CountersEntry_DoNotUse)},
+        {99, sizeof(::agones::dev::sdk::GameServer_Status_ListsEntry_DoNotUse)},
+        {106, sizeof(::agones::dev::sdk::GameServer_Status)},
+        {121, sizeof(::agones::dev::sdk::GameServer)},
 };
 static const ::_pb::Message* PROTOBUF_NONNULL const file_default_instances[] = {
     &::agones::dev::sdk::_Empty_default_instance_._instance,
@@ -664,7 +624,6 @@ static const ::_pb::Message* PROTOBUF_NONNULL const file_default_instances[] = {
     &::agones::dev::sdk::_GameServer_Spec_default_instance_._instance,
     &::agones::dev::sdk::_GameServer_Status_Address_default_instance_._instance,
     &::agones::dev::sdk::_GameServer_Status_Port_default_instance_._instance,
-    &::agones::dev::sdk::_GameServer_Status_PlayerStatus_default_instance_._instance,
     &::agones::dev::sdk::_GameServer_Status_CounterStatus_default_instance_._instance,
     &::agones::dev::sdk::_GameServer_Status_ListStatus_default_instance_._instance,
     &::agones::dev::sdk::_GameServer_Status_CountersEntry_DoNotUse_default_instance_._instance,
@@ -678,7 +637,7 @@ const char descriptor_table_protodef_sdk_2eproto[] ABSL_ATTRIBUTE_SECTION_VARIAB
     "annotations.proto\032.protoc-gen-openapiv2/"
     "options/annotations.proto\"\007\n\005Empty\"&\n\010Ke"
     "yValue\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t\"\033\n\010Du"
-    "ration\022\017\n\007seconds\030\001 \001(\003\"\213\014\n\nGameServer\022:"
+    "ration\022\017\n\007seconds\030\001 \001(\003\"\233\013\n\nGameServer\022:"
     "\n\013object_meta\030\001 \001(\0132%.agones.dev.sdk.Gam"
     "eServer.ObjectMeta\022-\n\004spec\030\002 \001(\0132\037.agone"
     "s.dev.sdk.GameServer.Spec\0221\n\006status\030\003 \001("
@@ -697,48 +656,46 @@ const char descriptor_table_protodef_sdk_2eproto[] ABSL_ATTRIBUTE_SECTION_VARIAB
     ".sdk.GameServer.Spec.Health\032{\n\006Health\022\037\n"
     "\010disabled\030\001 \001(\010B\r\222A\n\242\002\007boolean\022\026\n\016period"
     "_seconds\030\002 \001(\005\022\031\n\021failure_threshold\030\003 \001("
-    "\005\022\035\n\025initial_delay_seconds\030\004 \001(\005\032\212\006\n\006Sta"
+    "\005\022\035\n\025initial_delay_seconds\030\004 \001(\005\032\232\005\n\006Sta"
     "tus\022\r\n\005state\030\001 \001(\t\022\017\n\007address\030\002 \001(\t\022<\n\ta"
     "ddresses\030\007 \003(\0132).agones.dev.sdk.GameServ"
     "er.Status.Address\0225\n\005ports\030\003 \003(\0132&.agone"
-    "s.dev.sdk.GameServer.Status.Port\022\?\n\007play"
-    "ers\030\004 \001(\0132..agones.dev.sdk.GameServer.St"
-    "atus.PlayerStatus\022A\n\010counters\030\005 \003(\0132/.ag"
-    "ones.dev.sdk.GameServer.Status.CountersE"
-    "ntry\022;\n\005lists\030\006 \003(\0132,.agones.dev.sdk.Gam"
-    "eServer.Status.ListsEntry\032(\n\007Address\022\014\n\004"
-    "type\030\001 \001(\t\022\017\n\007address\030\002 \001(\t\032\"\n\004Port\022\014\n\004n"
-    "ame\030\001 \001(\t\022\014\n\004port\030\002 \001(\005\032<\n\014PlayerStatus\022"
-    "\r\n\005count\030\001 \001(\003\022\020\n\010capacity\030\002 \001(\003\022\013\n\003ids\030"
-    "\003 \003(\t\0320\n\rCounterStatus\022\r\n\005count\030\001 \001(\003\022\020\n"
-    "\010capacity\030\002 \001(\003\032.\n\nListStatus\022\020\n\010capacit"
-    "y\030\001 \001(\003\022\016\n\006values\030\002 \003(\t\032`\n\rCountersEntry"
-    "\022\013\n\003key\030\001 \001(\t\022>\n\005value\030\002 \001(\0132/.agones.de"
-    "v.sdk.GameServer.Status.CounterStatus:\0028"
-    "\001\032Z\n\nListsEntry\022\013\n\003key\030\001 \001(\t\022;\n\005value\030\002 "
-    "\001(\0132,.agones.dev.sdk.GameServer.Status.L"
-    "istStatus:\0028\0012\206\006\n\003SDK\022H\n\005Ready\022\025.agones."
-    "dev.sdk.Empty\032\025.agones.dev.sdk.Empty\"\021\202\323"
-    "\344\223\002\013\"\006/ready:\001*\022N\n\010Allocate\022\025.agones.dev"
-    ".sdk.Empty\032\025.agones.dev.sdk.Empty\"\024\202\323\344\223\002"
-    "\016\"\t/allocate:\001*\022N\n\010Shutdown\022\025.agones.dev"
-    ".sdk.Empty\032\025.agones.dev.sdk.Empty\"\024\202\323\344\223\002"
-    "\016\"\t/shutdown:\001*\022L\n\006Health\022\025.agones.dev.s"
-    "dk.Empty\032\025.agones.dev.sdk.Empty\"\022\202\323\344\223\002\014\""
-    "\007/health:\001*(\001\022W\n\rGetGameServer\022\025.agones."
-    "dev.sdk.Empty\032\032.agones.dev.sdk.GameServe"
-    "r\"\023\202\323\344\223\002\r\022\013/gameserver\022a\n\017WatchGameServe"
-    "r\022\025.agones.dev.sdk.Empty\032\032.agones.dev.sd"
-    "k.GameServer\"\031\202\323\344\223\002\023\022\021/watch/gameserver0"
-    "\001\022W\n\010SetLabel\022\030.agones.dev.sdk.KeyValue\032"
-    "\025.agones.dev.sdk.Empty\"\032\202\323\344\223\002\024\032\017/metadat"
-    "a/label:\001*\022a\n\rSetAnnotation\022\030.agones.dev"
-    ".sdk.KeyValue\032\025.agones.dev.sdk.Empty\"\037\202\323"
-    "\344\223\002\031\032\024/metadata/annotation:\001*\022O\n\007Reserve"
-    "\022\030.agones.dev.sdk.Duration\032\025.agones.dev."
-    "sdk.Empty\"\023\202\323\344\223\002\r\"\010/reserve:\001*BOZ\005./sdk\222"
-    "AE\022\034\n\tsdk.proto2\017version not set*\001\0012\020app"
-    "lication/json:\020application/jsonb\006proto3"
+    "s.dev.sdk.GameServer.Status.Port\022A\n\010coun"
+    "ters\030\005 \003(\0132/.agones.dev.sdk.GameServer.S"
+    "tatus.CountersEntry\022;\n\005lists\030\006 \003(\0132,.ago"
+    "nes.dev.sdk.GameServer.Status.ListsEntry"
+    "\032(\n\007Address\022\014\n\004type\030\001 \001(\t\022\017\n\007address\030\002 \001"
+    "(\t\032\"\n\004Port\022\014\n\004name\030\001 \001(\t\022\014\n\004port\030\002 \001(\005\0320"
+    "\n\rCounterStatus\022\r\n\005count\030\001 \001(\003\022\020\n\010capaci"
+    "ty\030\002 \001(\003\032.\n\nListStatus\022\020\n\010capacity\030\001 \001(\003"
+    "\022\016\n\006values\030\002 \003(\t\032`\n\rCountersEntry\022\013\n\003key"
+    "\030\001 \001(\t\022>\n\005value\030\002 \001(\0132/.agones.dev.sdk.G"
+    "ameServer.Status.CounterStatus:\0028\001\032Z\n\nLi"
+    "stsEntry\022\013\n\003key\030\001 \001(\t\022;\n\005value\030\002 \001(\0132,.a"
+    "gones.dev.sdk.GameServer.Status.ListStat"
+    "us:\0028\001J\004\010\004\020\005R\007players2\206\006\n\003SDK\022H\n\005Ready\022\025"
+    ".agones.dev.sdk.Empty\032\025.agones.dev.sdk.E"
+    "mpty\"\021\202\323\344\223\002\013\"\006/ready:\001*\022N\n\010Allocate\022\025.ag"
+    "ones.dev.sdk.Empty\032\025.agones.dev.sdk.Empt"
+    "y\"\024\202\323\344\223\002\016\"\t/allocate:\001*\022N\n\010Shutdown\022\025.ag"
+    "ones.dev.sdk.Empty\032\025.agones.dev.sdk.Empt"
+    "y\"\024\202\323\344\223\002\016\"\t/shutdown:\001*\022L\n\006Health\022\025.agon"
+    "es.dev.sdk.Empty\032\025.agones.dev.sdk.Empty\""
+    "\022\202\323\344\223\002\014\"\007/health:\001*(\001\022W\n\rGetGameServer\022\025"
+    ".agones.dev.sdk.Empty\032\032.agones.dev.sdk.G"
+    "ameServer\"\023\202\323\344\223\002\r\022\013/gameserver\022a\n\017WatchG"
+    "ameServer\022\025.agones.dev.sdk.Empty\032\032.agone"
+    "s.dev.sdk.GameServer\"\031\202\323\344\223\002\023\022\021/watch/gam"
+    "eserver0\001\022W\n\010SetLabel\022\030.agones.dev.sdk.K"
+    "eyValue\032\025.agones.dev.sdk.Empty\"\032\202\323\344\223\002\024\032\017"
+    "/metadata/label:\001*\022a\n\rSetAnnotation\022\030.ag"
+    "ones.dev.sdk.KeyValue\032\025.agones.dev.sdk.E"
+    "mpty\"\037\202\323\344\223\002\031\032\024/metadata/annotation:\001*\022O\n"
+    "\007Reserve\022\030.agones.dev.sdk.Duration\032\025.ago"
+    "nes.dev.sdk.Empty\"\023\202\323\344\223\002\r\"\010/reserve:\001*BO"
+    "Z\005./sdk\222AE\022\034\n\tsdk.proto2\017version not set"
+    "*\001\0012\020application/json:\020application/jsonb"
+    "\006proto3"
 };
 static const ::_pbi::DescriptorTable* PROTOBUF_NONNULL const
     descriptor_table_sdk_2eproto_deps[2] = {
@@ -749,13 +706,13 @@ static ::absl::once_flag descriptor_table_sdk_2eproto_once;
 PROTOBUF_CONSTINIT const ::_pbi::DescriptorTable descriptor_table_sdk_2eproto = {
     false,
     false,
-    2599,
+    2487,
     descriptor_table_protodef_sdk_2eproto,
     "sdk.proto",
     &descriptor_table_sdk_2eproto_once,
     descriptor_table_sdk_2eproto_deps,
     2,
-    17,
+    16,
     schemas,
     file_default_instances,
     TableStruct_sdk_2eproto::offsets,
@@ -3439,351 +3396,6 @@ void GameServer_Status_Port::InternalSwap(GameServer_Status_Port* PROTOBUF_RESTR
 }
 // ===================================================================
 
-class GameServer_Status_PlayerStatus::_Internal {
- public:
-  using HasBits =
-      decltype(::std::declval<GameServer_Status_PlayerStatus>()._impl_._has_bits_);
-  static constexpr ::int32_t kHasBitsOffset =
-      8 * PROTOBUF_FIELD_OFFSET(GameServer_Status_PlayerStatus, _impl_._has_bits_);
-};
-
-GameServer_Status_PlayerStatus::GameServer_Status_PlayerStatus(::google::protobuf::Arena* PROTOBUF_NULLABLE arena)
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-    : ::google::protobuf::Message(arena, GameServer_Status_PlayerStatus_class_data_.base()) {
-#else   // PROTOBUF_CUSTOM_VTABLE
-    : ::google::protobuf::Message(arena) {
-#endif  // PROTOBUF_CUSTOM_VTABLE
-  SharedCtor(arena);
-  // @@protoc_insertion_point(arena_constructor:agones.dev.sdk.GameServer.Status.PlayerStatus)
-}
-PROTOBUF_NDEBUG_INLINE GameServer_Status_PlayerStatus::Impl_::Impl_(
-    ::google::protobuf::internal::InternalVisibility visibility,
-    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
-    const ::agones::dev::sdk::GameServer_Status_PlayerStatus& from_msg)
-      : _has_bits_{from._has_bits_},
-        _cached_size_{0},
-        ids_{visibility, arena, from.ids_} {}
-
-GameServer_Status_PlayerStatus::GameServer_Status_PlayerStatus(
-    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena,
-    const GameServer_Status_PlayerStatus& from)
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-    : ::google::protobuf::Message(arena, GameServer_Status_PlayerStatus_class_data_.base()) {
-#else   // PROTOBUF_CUSTOM_VTABLE
-    : ::google::protobuf::Message(arena) {
-#endif  // PROTOBUF_CUSTOM_VTABLE
-  GameServer_Status_PlayerStatus* const _this = this;
-  (void)_this;
-  _internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
-      from._internal_metadata_);
-  new (&_impl_) Impl_(internal_visibility(), arena, from._impl_, from);
-  ::memcpy(reinterpret_cast<char *>(&_impl_) +
-               offsetof(Impl_, count_),
-           reinterpret_cast<const char *>(&from._impl_) +
-               offsetof(Impl_, count_),
-           offsetof(Impl_, capacity_) -
-               offsetof(Impl_, count_) +
-               sizeof(Impl_::capacity_));
-
-  // @@protoc_insertion_point(copy_constructor:agones.dev.sdk.GameServer.Status.PlayerStatus)
-}
-PROTOBUF_NDEBUG_INLINE GameServer_Status_PlayerStatus::Impl_::Impl_(
-    ::google::protobuf::internal::InternalVisibility visibility,
-    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena)
-      : _cached_size_{0},
-        ids_{visibility, arena} {}
-
-inline void GameServer_Status_PlayerStatus::SharedCtor(::_pb::Arena* PROTOBUF_NULLABLE arena) {
-  new (&_impl_) Impl_(internal_visibility(), arena);
-  ::memset(reinterpret_cast<char *>(&_impl_) +
-               offsetof(Impl_, count_),
-           0,
-           offsetof(Impl_, capacity_) -
-               offsetof(Impl_, count_) +
-               sizeof(Impl_::capacity_));
-}
-GameServer_Status_PlayerStatus::~GameServer_Status_PlayerStatus() {
-  // @@protoc_insertion_point(destructor:agones.dev.sdk.GameServer.Status.PlayerStatus)
-  SharedDtor(*this);
-}
-inline void GameServer_Status_PlayerStatus::SharedDtor(MessageLite& self) {
-  GameServer_Status_PlayerStatus& this_ = static_cast<GameServer_Status_PlayerStatus&>(self);
-  this_._internal_metadata_.Delete<::google::protobuf::UnknownFieldSet>();
-  ABSL_DCHECK(this_.GetArena() == nullptr);
-  this_._impl_.~Impl_();
-}
-
-inline void* PROTOBUF_NONNULL GameServer_Status_PlayerStatus::PlacementNew_(
-    const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
-    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena) {
-  return ::new (mem) GameServer_Status_PlayerStatus(arena);
-}
-constexpr auto GameServer_Status_PlayerStatus::InternalNewImpl_() {
-  constexpr auto arena_bits = ::google::protobuf::internal::EncodePlacementArenaOffsets({
-      PROTOBUF_FIELD_OFFSET(GameServer_Status_PlayerStatus, _impl_.ids_) +
-          decltype(GameServer_Status_PlayerStatus::_impl_.ids_)::
-              InternalGetArenaOffset(
-                  ::google::protobuf::Message::internal_visibility()),
-  });
-  if (arena_bits.has_value()) {
-    return ::google::protobuf::internal::MessageCreator::ZeroInit(
-        sizeof(GameServer_Status_PlayerStatus), alignof(GameServer_Status_PlayerStatus), *arena_bits);
-  } else {
-    return ::google::protobuf::internal::MessageCreator(&GameServer_Status_PlayerStatus::PlacementNew_,
-                                 sizeof(GameServer_Status_PlayerStatus),
-                                 alignof(GameServer_Status_PlayerStatus));
-  }
-}
-constexpr auto GameServer_Status_PlayerStatus::InternalGenerateClassData_() {
-  return ::google::protobuf::internal::ClassDataFull{
-      ::google::protobuf::internal::ClassData{
-          &_GameServer_Status_PlayerStatus_default_instance_._instance,
-          &_table_.header,
-          nullptr,  // OnDemandRegisterArenaDtor
-          nullptr,  // IsInitialized
-          &GameServer_Status_PlayerStatus::MergeImpl,
-          ::google::protobuf::Message::GetNewImpl<GameServer_Status_PlayerStatus>(),
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-          &GameServer_Status_PlayerStatus::SharedDtor,
-          ::google::protobuf::Message::GetClearImpl<GameServer_Status_PlayerStatus>(), &GameServer_Status_PlayerStatus::ByteSizeLong,
-              &GameServer_Status_PlayerStatus::_InternalSerialize,
-#endif  // PROTOBUF_CUSTOM_VTABLE
-          PROTOBUF_FIELD_OFFSET(GameServer_Status_PlayerStatus, _impl_._cached_size_),
-          false,
-      },
-      &GameServer_Status_PlayerStatus::kDescriptorMethods,
-      &descriptor_table_sdk_2eproto,
-      nullptr,  // tracker
-  };
-}
-
-PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 const
-    ::google::protobuf::internal::ClassDataFull GameServer_Status_PlayerStatus_class_data_ =
-        GameServer_Status_PlayerStatus::InternalGenerateClassData_();
-
-PROTOBUF_ATTRIBUTE_WEAK const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL
-GameServer_Status_PlayerStatus::GetClassData() const {
-  ::google::protobuf::internal::PrefetchToLocalCache(&GameServer_Status_PlayerStatus_class_data_);
-  ::google::protobuf::internal::PrefetchToLocalCache(GameServer_Status_PlayerStatus_class_data_.tc_table);
-  return GameServer_Status_PlayerStatus_class_data_.base();
-}
-PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<2, 3, 0, 57, 2>
-GameServer_Status_PlayerStatus::_table_ = {
-  {
-    PROTOBUF_FIELD_OFFSET(GameServer_Status_PlayerStatus, _impl_._has_bits_),
-    0, // no _extensions_
-    3, 24,  // max_field_number, fast_idx_mask
-    offsetof(decltype(_table_), field_lookup_table),
-    4294967288,  // skipmap
-    offsetof(decltype(_table_), field_entries),
-    3,  // num_field_entries
-    0,  // num_aux_entries
-    offsetof(decltype(_table_), field_names),  // no aux_entries
-    GameServer_Status_PlayerStatus_class_data_.base(),
-    nullptr,  // post_loop_handler
-    ::_pbi::TcParser::GenericFallback,  // fallback
-    #ifdef PROTOBUF_PREFETCH_PARSE_TABLE
-    ::_pbi::TcParser::GetTable<::agones::dev::sdk::GameServer_Status_PlayerStatus>(),  // to_prefetch
-    #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
-  }, {{
-    {::_pbi::TcParser::MiniParse, {}},
-    // int64 count = 1;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(GameServer_Status_PlayerStatus, _impl_.count_), 0>(),
-     {8, 0, 0, PROTOBUF_FIELD_OFFSET(GameServer_Status_PlayerStatus, _impl_.count_)}},
-    // int64 capacity = 2;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(GameServer_Status_PlayerStatus, _impl_.capacity_), 1>(),
-     {16, 1, 0, PROTOBUF_FIELD_OFFSET(GameServer_Status_PlayerStatus, _impl_.capacity_)}},
-    // repeated string ids = 3;
-    {::_pbi::TcParser::FastUR1,
-     {26, 63, 0, PROTOBUF_FIELD_OFFSET(GameServer_Status_PlayerStatus, _impl_.ids_)}},
-  }}, {{
-    65535, 65535
-  }}, {{
-    // int64 count = 1;
-    {PROTOBUF_FIELD_OFFSET(GameServer_Status_PlayerStatus, _impl_.count_), _Internal::kHasBitsOffset + 0, 0,
-    (0 | ::_fl::kFcOptional | ::_fl::kInt64)},
-    // int64 capacity = 2;
-    {PROTOBUF_FIELD_OFFSET(GameServer_Status_PlayerStatus, _impl_.capacity_), _Internal::kHasBitsOffset + 1, 0,
-    (0 | ::_fl::kFcOptional | ::_fl::kInt64)},
-    // repeated string ids = 3;
-    {PROTOBUF_FIELD_OFFSET(GameServer_Status_PlayerStatus, _impl_.ids_), -1, 0,
-    (0 | ::_fl::kFcRepeated | ::_fl::kUtf8String | ::_fl::kRepSString)},
-  }},
-  // no aux_entries
-  {{
-    "\55\0\0\3\0\0\0\0"
-    "agones.dev.sdk.GameServer.Status.PlayerStatus"
-    "ids"
-  }},
-};
-PROTOBUF_NOINLINE void GameServer_Status_PlayerStatus::Clear() {
-// @@protoc_insertion_point(message_clear_start:agones.dev.sdk.GameServer.Status.PlayerStatus)
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  ::uint32_t cached_has_bits = 0;
-  // Prevent compiler warnings about cached_has_bits being unused
-  (void) cached_has_bits;
-
-  _impl_.ids_.Clear();
-  cached_has_bits = _impl_._has_bits_[0];
-  if ((cached_has_bits & 0x00000003u) != 0) {
-    ::memset(&_impl_.count_, 0, static_cast<::size_t>(
-        reinterpret_cast<char*>(&_impl_.capacity_) -
-        reinterpret_cast<char*>(&_impl_.count_)) + sizeof(_impl_.capacity_));
-  }
-  _impl_._has_bits_.Clear();
-  _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
-}
-
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-::uint8_t* PROTOBUF_NONNULL GameServer_Status_PlayerStatus::_InternalSerialize(
-    const ::google::protobuf::MessageLite& base, ::uint8_t* PROTOBUF_NONNULL target,
-    ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) {
-  const GameServer_Status_PlayerStatus& this_ = static_cast<const GameServer_Status_PlayerStatus&>(base);
-#else   // PROTOBUF_CUSTOM_VTABLE
-::uint8_t* PROTOBUF_NONNULL GameServer_Status_PlayerStatus::_InternalSerialize(
-    ::uint8_t* PROTOBUF_NONNULL target,
-    ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
-  const GameServer_Status_PlayerStatus& this_ = *this;
-#endif  // PROTOBUF_CUSTOM_VTABLE
-  // @@protoc_insertion_point(serialize_to_array_start:agones.dev.sdk.GameServer.Status.PlayerStatus)
-  ::uint32_t cached_has_bits = 0;
-  (void)cached_has_bits;
-
-  // int64 count = 1;
-  if ((this_._impl_._has_bits_[0] & 0x00000001u) != 0) {
-    if (this_._internal_count() != 0) {
-      target =
-          ::google::protobuf::internal::WireFormatLite::WriteInt64ToArrayWithField<1>(
-              stream, this_._internal_count(), target);
-    }
-  }
-
-  // int64 capacity = 2;
-  if ((this_._impl_._has_bits_[0] & 0x00000002u) != 0) {
-    if (this_._internal_capacity() != 0) {
-      target =
-          ::google::protobuf::internal::WireFormatLite::WriteInt64ToArrayWithField<2>(
-              stream, this_._internal_capacity(), target);
-    }
-  }
-
-  // repeated string ids = 3;
-  for (int i = 0, n = this_._internal_ids_size(); i < n; ++i) {
-    const auto& s = this_._internal_ids().Get(i);
-    ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
-        s.data(), static_cast<int>(s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "agones.dev.sdk.GameServer.Status.PlayerStatus.ids");
-    target = stream->WriteString(3, s, target);
-  }
-
-  if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
-    target =
-        ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
-            this_._internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance), target, stream);
-  }
-  // @@protoc_insertion_point(serialize_to_array_end:agones.dev.sdk.GameServer.Status.PlayerStatus)
-  return target;
-}
-
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-::size_t GameServer_Status_PlayerStatus::ByteSizeLong(const MessageLite& base) {
-  const GameServer_Status_PlayerStatus& this_ = static_cast<const GameServer_Status_PlayerStatus&>(base);
-#else   // PROTOBUF_CUSTOM_VTABLE
-::size_t GameServer_Status_PlayerStatus::ByteSizeLong() const {
-  const GameServer_Status_PlayerStatus& this_ = *this;
-#endif  // PROTOBUF_CUSTOM_VTABLE
-  // @@protoc_insertion_point(message_byte_size_start:agones.dev.sdk.GameServer.Status.PlayerStatus)
-  ::size_t total_size = 0;
-
-  ::uint32_t cached_has_bits = 0;
-  // Prevent compiler warnings about cached_has_bits being unused
-  (void)cached_has_bits;
-
-  ::_pbi::Prefetch5LinesFrom7Lines(&this_);
-   {
-    // repeated string ids = 3;
-    {
-      total_size +=
-          1 * ::google::protobuf::internal::FromIntSize(this_._internal_ids().size());
-      for (int i = 0, n = this_._internal_ids().size(); i < n; ++i) {
-        total_size += ::google::protobuf::internal::WireFormatLite::StringSize(
-            this_._internal_ids().Get(i));
-      }
-    }
-  }
-  cached_has_bits = this_._impl_._has_bits_[0];
-  if ((cached_has_bits & 0x00000003u) != 0) {
-    // int64 count = 1;
-    if ((cached_has_bits & 0x00000001u) != 0) {
-      if (this_._internal_count() != 0) {
-        total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(
-            this_._internal_count());
-      }
-    }
-    // int64 capacity = 2;
-    if ((cached_has_bits & 0x00000002u) != 0) {
-      if (this_._internal_capacity() != 0) {
-        total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(
-            this_._internal_capacity());
-      }
-    }
-  }
-  return this_.MaybeComputeUnknownFieldsSize(total_size,
-                                             &this_._impl_._cached_size_);
-}
-
-void GameServer_Status_PlayerStatus::MergeImpl(::google::protobuf::MessageLite& to_msg, const ::google::protobuf::MessageLite& from_msg) {
-  auto* const _this = static_cast<GameServer_Status_PlayerStatus*>(&to_msg);
-  auto& from = static_cast<const GameServer_Status_PlayerStatus&>(from_msg);
-  // @@protoc_insertion_point(class_specific_merge_from_start:agones.dev.sdk.GameServer.Status.PlayerStatus)
-  ABSL_DCHECK_NE(&from, _this);
-  ::uint32_t cached_has_bits = 0;
-  (void) cached_has_bits;
-
-  _this->_internal_mutable_ids()->MergeFrom(from._internal_ids());
-  cached_has_bits = from._impl_._has_bits_[0];
-  if ((cached_has_bits & 0x00000003u) != 0) {
-    if ((cached_has_bits & 0x00000001u) != 0) {
-      if (from._internal_count() != 0) {
-        _this->_impl_.count_ = from._impl_.count_;
-      }
-    }
-    if ((cached_has_bits & 0x00000002u) != 0) {
-      if (from._internal_capacity() != 0) {
-        _this->_impl_.capacity_ = from._impl_.capacity_;
-      }
-    }
-  }
-  _this->_impl_._has_bits_[0] |= cached_has_bits;
-  _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(from._internal_metadata_);
-}
-
-void GameServer_Status_PlayerStatus::CopyFrom(const GameServer_Status_PlayerStatus& from) {
-// @@protoc_insertion_point(class_specific_copy_from_start:agones.dev.sdk.GameServer.Status.PlayerStatus)
-  if (&from == this) return;
-  Clear();
-  MergeFrom(from);
-}
-
-
-void GameServer_Status_PlayerStatus::InternalSwap(GameServer_Status_PlayerStatus* PROTOBUF_RESTRICT PROTOBUF_NONNULL other) {
-  using ::std::swap;
-  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-  swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
-  _impl_.ids_.InternalSwap(&other->_impl_.ids_);
-  ::google::protobuf::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(GameServer_Status_PlayerStatus, _impl_.capacity_)
-      + sizeof(GameServer_Status_PlayerStatus::_impl_.capacity_)
-      - PROTOBUF_FIELD_OFFSET(GameServer_Status_PlayerStatus, _impl_.count_)>(
-          reinterpret_cast<char*>(&_impl_.count_),
-          reinterpret_cast<char*>(&other->_impl_.count_));
-}
-
-::google::protobuf::Metadata GameServer_Status_PlayerStatus::GetMetadata() const {
-  return ::google::protobuf::Message::GetMetadataImpl(GetClassData()->full());
-}
-// ===================================================================
-
 class GameServer_Status_CounterStatus::_Internal {
  public:
   using HasBits =
@@ -4599,10 +4211,6 @@ GameServer_Status::GameServer_Status(
   _internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
       from._internal_metadata_);
   new (&_impl_) Impl_(internal_visibility(), arena, from._impl_, from);
-  ::uint32_t cached_has_bits = _impl_._has_bits_[0];
-  _impl_.players_ = ((cached_has_bits & 0x00000004u) != 0)
-                ? ::google::protobuf::Message::CopyConstruct(arena, *from._impl_.players_)
-                : nullptr;
 
   // @@protoc_insertion_point(copy_constructor:agones.dev.sdk.GameServer.Status)
 }
@@ -4619,7 +4227,6 @@ PROTOBUF_NDEBUG_INLINE GameServer_Status::Impl_::Impl_(
 
 inline void GameServer_Status::SharedCtor(::_pb::Arena* PROTOBUF_NULLABLE arena) {
   new (&_impl_) Impl_(internal_visibility(), arena);
-  _impl_.players_ = {};
 }
 GameServer_Status::~GameServer_Status() {
   // @@protoc_insertion_point(destructor:agones.dev.sdk.GameServer.Status)
@@ -4631,7 +4238,6 @@ inline void GameServer_Status::SharedDtor(MessageLite& self) {
   ABSL_DCHECK(this_.GetArena() == nullptr);
   this_._impl_.state_.Destroy();
   this_._impl_.address_.Destroy();
-  delete this_._impl_.players_;
   this_._impl_.~Impl_();
 }
 
@@ -4710,17 +4316,17 @@ GameServer_Status::GetClassData() const {
   return GameServer_Status_class_data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<3, 7, 7, 66, 2>
+const ::_pbi::TcParseTable<3, 6, 6, 66, 2>
 GameServer_Status::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(GameServer_Status, _impl_._has_bits_),
     0, // no _extensions_
     7, 56,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294967168,  // skipmap
+    4294967176,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    7,  // num_field_entries
-    7,  // num_aux_entries
+    6,  // num_field_entries
+    6,  // num_aux_entries
     offsetof(decltype(_table_), aux_entries),
     GameServer_Status_class_data_.base(),
     nullptr,  // post_loop_handler
@@ -4739,14 +4345,12 @@ GameServer_Status::_table_ = {
     // repeated .agones.dev.sdk.GameServer.Status.Port ports = 3;
     {::_pbi::TcParser::FastMtR1,
      {26, 63, 0, PROTOBUF_FIELD_OFFSET(GameServer_Status, _impl_.ports_)}},
-    // .agones.dev.sdk.GameServer.Status.PlayerStatus players = 4;
-    {::_pbi::TcParser::FastMtS1,
-     {34, 2, 1, PROTOBUF_FIELD_OFFSET(GameServer_Status, _impl_.players_)}},
+    {::_pbi::TcParser::MiniParse, {}},
     {::_pbi::TcParser::MiniParse, {}},
     {::_pbi::TcParser::MiniParse, {}},
     // repeated .agones.dev.sdk.GameServer.Status.Address addresses = 7;
     {::_pbi::TcParser::FastMtR1,
-     {58, 63, 2, PROTOBUF_FIELD_OFFSET(GameServer_Status, _impl_.addresses_)}},
+     {58, 63, 1, PROTOBUF_FIELD_OFFSET(GameServer_Status, _impl_.addresses_)}},
   }}, {{
     65535, 65535
   }}, {{
@@ -4759,22 +4363,18 @@ GameServer_Status::_table_ = {
     // repeated .agones.dev.sdk.GameServer.Status.Port ports = 3;
     {PROTOBUF_FIELD_OFFSET(GameServer_Status, _impl_.ports_), -1, 0,
     (0 | ::_fl::kFcRepeated | ::_fl::kMessage | ::_fl::kTvTable)},
-    // .agones.dev.sdk.GameServer.Status.PlayerStatus players = 4;
-    {PROTOBUF_FIELD_OFFSET(GameServer_Status, _impl_.players_), _Internal::kHasBitsOffset + 2, 1,
-    (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
     // map<string, .agones.dev.sdk.GameServer.Status.CounterStatus> counters = 5;
-    {PROTOBUF_FIELD_OFFSET(GameServer_Status, _impl_.counters_), -1, 3,
+    {PROTOBUF_FIELD_OFFSET(GameServer_Status, _impl_.counters_), -1, 2,
     (0 | ::_fl::kFcRepeated | ::_fl::kMap)},
     // map<string, .agones.dev.sdk.GameServer.Status.ListStatus> lists = 6;
-    {PROTOBUF_FIELD_OFFSET(GameServer_Status, _impl_.lists_), -1, 5,
+    {PROTOBUF_FIELD_OFFSET(GameServer_Status, _impl_.lists_), -1, 4,
     (0 | ::_fl::kFcRepeated | ::_fl::kMap)},
     // repeated .agones.dev.sdk.GameServer.Status.Address addresses = 7;
-    {PROTOBUF_FIELD_OFFSET(GameServer_Status, _impl_.addresses_), -1, 2,
+    {PROTOBUF_FIELD_OFFSET(GameServer_Status, _impl_.addresses_), -1, 1,
     (0 | ::_fl::kFcRepeated | ::_fl::kMessage | ::_fl::kTvTable)},
   }},
   {{
       {::_pbi::TcParser::GetTable<::agones::dev::sdk::GameServer_Status_Port>()},
-      {::_pbi::TcParser::GetTable<::agones::dev::sdk::GameServer_Status_PlayerStatus>()},
       {::_pbi::TcParser::GetTable<::agones::dev::sdk::GameServer_Status_Address>()},
       {::_pbi::TcParser::GetMapAuxInfo(1, 0, 0,
                                        9, 11,
@@ -4786,7 +4386,7 @@ GameServer_Status::_table_ = {
       {::_pbi::TcParser::GetTable<::agones::dev::sdk::GameServer_Status_ListStatus>()},
   }},
   {{
-    "\40\5\7\0\0\10\5\0"
+    "\40\5\7\0\10\5\0\0"
     "agones.dev.sdk.GameServer.Status"
     "state"
     "address"
@@ -4806,16 +4406,12 @@ PROTOBUF_NOINLINE void GameServer_Status::Clear() {
   _impl_.lists_.Clear();
   _impl_.addresses_.Clear();
   cached_has_bits = _impl_._has_bits_[0];
-  if ((cached_has_bits & 0x00000007u) != 0) {
+  if ((cached_has_bits & 0x00000003u) != 0) {
     if ((cached_has_bits & 0x00000001u) != 0) {
       _impl_.state_.ClearNonDefaultToEmpty();
     }
     if ((cached_has_bits & 0x00000002u) != 0) {
       _impl_.address_.ClearNonDefaultToEmpty();
-    }
-    if ((cached_has_bits & 0x00000004u) != 0) {
-      ABSL_DCHECK(_impl_.players_ != nullptr);
-      _impl_.players_->Clear();
     }
   }
   _impl_._has_bits_.Clear();
@@ -4866,14 +4462,6 @@ PROTOBUF_NOINLINE void GameServer_Status::Clear() {
         ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
             3, repfield, repfield.GetCachedSize(),
             target, stream);
-  }
-
-  cached_has_bits = this_._impl_._has_bits_[0];
-  // .agones.dev.sdk.GameServer.Status.PlayerStatus players = 4;
-  if ((cached_has_bits & 0x00000004u) != 0) {
-    target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
-        4, *this_._impl_.players_, this_._impl_.players_->GetCachedSize(), target,
-        stream);
   }
 
   // map<string, .agones.dev.sdk.GameServer.Status.CounterStatus> counters = 5;
@@ -5002,7 +4590,7 @@ PROTOBUF_NOINLINE void GameServer_Status::Clear() {
     }
   }
   cached_has_bits = this_._impl_._has_bits_[0];
-  if ((cached_has_bits & 0x00000007u) != 0) {
+  if ((cached_has_bits & 0x00000003u) != 0) {
     // string state = 1;
     if ((cached_has_bits & 0x00000001u) != 0) {
       if (!this_._internal_state().empty()) {
@@ -5017,11 +4605,6 @@ PROTOBUF_NOINLINE void GameServer_Status::Clear() {
                                         this_._internal_address());
       }
     }
-    // .agones.dev.sdk.GameServer.Status.PlayerStatus players = 4;
-    if ((cached_has_bits & 0x00000004u) != 0) {
-      total_size += 1 +
-                    ::google::protobuf::internal::WireFormatLite::MessageSize(*this_._impl_.players_);
-    }
   }
   return this_.MaybeComputeUnknownFieldsSize(total_size,
                                              &this_._impl_._cached_size_);
@@ -5030,7 +4613,6 @@ PROTOBUF_NOINLINE void GameServer_Status::Clear() {
 void GameServer_Status::MergeImpl(::google::protobuf::MessageLite& to_msg, const ::google::protobuf::MessageLite& from_msg) {
   auto* const _this = static_cast<GameServer_Status*>(&to_msg);
   auto& from = static_cast<const GameServer_Status&>(from_msg);
-  ::google::protobuf::Arena* arena = _this->GetArena();
   // @@protoc_insertion_point(class_specific_merge_from_start:agones.dev.sdk.GameServer.Status)
   ABSL_DCHECK_NE(&from, _this);
   ::uint32_t cached_has_bits = 0;
@@ -5043,7 +4625,7 @@ void GameServer_Status::MergeImpl(::google::protobuf::MessageLite& to_msg, const
   _this->_internal_mutable_addresses()->MergeFrom(
       from._internal_addresses());
   cached_has_bits = from._impl_._has_bits_[0];
-  if ((cached_has_bits & 0x00000007u) != 0) {
+  if ((cached_has_bits & 0x00000003u) != 0) {
     if ((cached_has_bits & 0x00000001u) != 0) {
       if (!from._internal_state().empty()) {
         _this->_internal_set_state(from._internal_state());
@@ -5060,14 +4642,6 @@ void GameServer_Status::MergeImpl(::google::protobuf::MessageLite& to_msg, const
         if (_this->_impl_.address_.IsDefault()) {
           _this->_internal_set_address("");
         }
-      }
-    }
-    if ((cached_has_bits & 0x00000004u) != 0) {
-      ABSL_DCHECK(from._impl_.players_ != nullptr);
-      if (_this->_impl_.players_ == nullptr) {
-        _this->_impl_.players_ = ::google::protobuf::Message::CopyConstruct(arena, *from._impl_.players_);
-      } else {
-        _this->_impl_.players_->MergeFrom(*from._impl_.players_);
       }
     }
   }
@@ -5095,7 +4669,6 @@ void GameServer_Status::InternalSwap(GameServer_Status* PROTOBUF_RESTRICT PROTOB
   _impl_.addresses_.InternalSwap(&other->_impl_.addresses_);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.state_, &other->_impl_.state_, arena);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.address_, &other->_impl_.address_, arena);
-  swap(_impl_.players_, other->_impl_.players_);
 }
 
 ::google::protobuf::Metadata GameServer_Status::GetMetadata() const {

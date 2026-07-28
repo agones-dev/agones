@@ -39,7 +39,6 @@ type SDK struct {
 	client sdk.SDKClient
 	ctx    context.Context
 	health sdk.SDK_HealthClient
-	alpha  *Alpha
 	beta   *Beta
 }
 
@@ -79,14 +78,8 @@ func NewSDK() (*SDK, error) {
 	}
 	s.client = sdk.NewSDKClient(conn)
 	s.health, err = s.client.Health(s.ctx)
-	s.alpha = newAlpha(conn)
 	s.beta = newBeta(conn)
 	return s, errors.Wrap(err, "could not set up health check")
-}
-
-// Alpha returns the Alpha SDK.
-func (s *SDK) Alpha() *Alpha {
-	return s.alpha
 }
 
 // Beta returns the Beta SDK.

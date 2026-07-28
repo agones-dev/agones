@@ -98,11 +98,6 @@ type FleetStatus struct {
 	AllocatedReplicas int32 `json:"allocatedReplicas"`
 	// Allocations is a counter of the number of allocations observed.
 	Allocations int64 `json:"allocations"`
-	// [Stage:Alpha]
-	// [FeatureFlag:PlayerTracking]
-	// Players are the current total player capacity and count for this Fleet
-	// +optional
-	Players *AggregatedPlayerStatus `json:"players,omitempty"`
 	// (Beta, CountsAndLists feature flag) Counters provides aggregated Counter capacity and Counter
 	// count for this Fleet.
 	// +optional

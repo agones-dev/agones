@@ -140,8 +140,6 @@ func TestIsBeingDeleted(t *testing.T) {
 func TestGameServerApplyDefaults(t *testing.T) {
 	t.Parallel()
 
-	ten := int64(10)
-
 	defaultGameServerAnd := func(f func(gss *GameServerSpec)) GameServer {
 		gs := GameServer{
 			Spec: GameServerSpec{
@@ -157,19 +155,18 @@ func TestGameServerApplyDefaults(t *testing.T) {
 		return gs
 	}
 	type expected struct {
-		container           string
-		protocol            corev1.Protocol
-		state               GameServerState
-		policy              PortPolicy
-		portRange           string
-		health              Health
-		scheduling          apis.SchedulingStrategy
-		sdkServer           SdkServer
-		alphaPlayerCapacity *int64
-		counterSpec         map[string]CounterStatus
-		listSpec            map[string]ListStatus
-		evictionSafeSpec    EvictionSafe
-		evictionSafeStatus  EvictionSafe
+		container          string
+		protocol           corev1.Protocol
+		state              GameServerState
+		policy             PortPolicy
+		portRange          string
+		health             Health
+		scheduling         apis.SchedulingStrategy
+		sdkServer          SdkServer
+		counterSpec        map[string]CounterStatus
+		listSpec           map[string]ListStatus
+		evictionSafeSpec   EvictionSafe
+		evictionSafeStatus EvictionSafe
 	}
 	wantDefaultAnd := func(f func(e *expected)) expected {
 		e := expected{
@@ -205,15 +202,6 @@ func TestGameServerApplyDefaults(t *testing.T) {
 		"set basic defaults on a very simple gameserver": {
 			gameServer: defaultGameServerAnd(func(_ *GameServerSpec) {}),
 			expected:   wantDefaultAnd(func(_ *expected) {}),
-		},
-		"PlayerTracking=true": {
-			featureFlags: string(runtime.FeaturePlayerTracking) + "=true",
-			gameServer: defaultGameServerAnd(func(gss *GameServerSpec) {
-				gss.Players = &PlayersSpec{InitialCapacity: 10}
-			}),
-			expected: wantDefaultAnd(func(e *expected) {
-				e.alphaPlayerCapacity = &ten
-			}),
 		},
 		"CountsAndLists=true, Counters": {
 			featureFlags: string(runtime.FeatureCountsAndLists) + "=true",
@@ -428,12 +416,6 @@ func TestGameServerApplyDefaults(t *testing.T) {
 			assert.Equal(t, test.expected.scheduling, test.gameServer.Spec.Scheduling)
 			assert.Equal(t, test.expected.health, test.gameServer.Spec.Health)
 			assert.Equal(t, test.expected.sdkServer, test.gameServer.Spec.SdkServer)
-			if test.expected.alphaPlayerCapacity != nil {
-				assert.Equal(t, *test.expected.alphaPlayerCapacity, test.gameServer.Status.Players.Capacity)
-			} else {
-				assert.Nil(t, test.gameServer.Spec.Players)
-				assert.Nil(t, test.gameServer.Status.Players)
-			}
 			if len(test.expected.evictionSafeSpec) > 0 {
 				assert.Equal(t, test.expected.evictionSafeSpec, spec.Eviction.Safe)
 			} else {
@@ -1433,38 +1415,6 @@ func TestGameServerValidateFeatures(t *testing.T) {
 						Spec: corev1.PodSpec{Containers: []corev1.Container{
 							{Name: "testing", Image: "testing/image"},
 						}},
-					},
-				},
-			},
-		},
-		{
-			description: "PlayerTracking is disabled, Players field specified",
-			feature:     fmt.Sprintf("%s=false", runtime.FeaturePlayerTracking),
-			gs: GameServer{
-				Spec: GameServerSpec{
-					Container: "testing",
-					Players:   &PlayersSpec{InitialCapacity: 10},
-					Template: corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "testing", Image: "testing/image"}}},
-					},
-				},
-			},
-			want: field.ErrorList{
-				field.Forbidden(
-					field.NewPath("spec", "players"),
-					"Value cannot be set unless feature flag PlayerTracking is enabled",
-				),
-			},
-		},
-		{
-			description: "PlayerTracking is enabled, Players field specified",
-			feature:     fmt.Sprintf("%s=true", runtime.FeaturePlayerTracking),
-			gs: GameServer{
-				Spec: GameServerSpec{
-					Container: "testing",
-					Players:   &PlayersSpec{InitialCapacity: 10},
-					Template: corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "testing", Image: "testing/image"}}},
 					},
 				},
 			},

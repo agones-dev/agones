@@ -32,7 +32,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -54,7 +53,6 @@ import (
 	listersv1 "agones.dev/agones/pkg/client/listers/agones/v1"
 	"agones.dev/agones/pkg/gameserverallocations"
 	"agones.dev/agones/pkg/sdk"
-	"agones.dev/agones/pkg/sdk/alpha"
 	"agones.dev/agones/pkg/sdk/beta"
 	"agones.dev/agones/pkg/util/logfields"
 	"agones.dev/agones/pkg/util/runtime"
@@ -70,20 +68,17 @@ var (
 )
 
 const (
-	updateState            Operation     = "updateState"
-	updateLabel            Operation     = "updateLabel"
-	updateAnnotation       Operation     = "updateAnnotation"
-	updatePlayerCapacity   Operation     = "updatePlayerCapacity"
-	updateConnectedPlayers Operation     = "updateConnectedPlayers"
-	updateCounters         Operation     = "updateCounters"
-	updateLists            Operation     = "updateLists"
-	updatePeriod           time.Duration = time.Second
+	updateState      Operation     = "updateState"
+	updateLabel      Operation     = "updateLabel"
+	updateAnnotation Operation     = "updateAnnotation"
+	updateCounters   Operation     = "updateCounters"
+	updateLists      Operation     = "updateLists"
+	updatePeriod     time.Duration = time.Second
 )
 
 var (
-	_ sdk.SDKServer   = &SDKServer{}
-	_ alpha.SDKServer = &SDKServer{}
-	_ beta.SDKServer  = &SDKServer{}
+	_ sdk.SDKServer  = &SDKServer{}
+	_ beta.SDKServer = &SDKServer{}
 )
 
 type counterUpdateRequest struct {
@@ -140,7 +135,6 @@ type SDKServer struct {
 	gsWaitForSync       sync.WaitGroup
 	reserveTimer        *time.Timer
 	gsReserveDuration   *time.Duration
-	gsPlayerCapacity    int64
 	gsConnectedPlayers  []string
 	gsCounterUpdates    map[string]counterUpdateRequest
 	gsListUpdates       map[string]listUpdateRequest
@@ -269,16 +263,6 @@ func (s *SDKServer) Run(ctx context.Context) error {
 		s.gsUpdateMutex.Unlock()
 	}
 
-	// populate player tracking values
-	if runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		s.gsUpdateMutex.Lock()
-		if gs.Status.Players != nil {
-			s.gsPlayerCapacity = gs.Status.Players.Capacity
-			s.gsConnectedPlayers = gs.Status.Players.IDs
-		}
-		s.gsUpdateMutex.Unlock()
-	}
-
 	// then start the http endpoints
 	s.logger.Debug("Starting SDKServer http health check...")
 	go func() {
@@ -342,10 +326,6 @@ func (s *SDKServer) syncGameServer(ctx context.Context, key string) error {
 		return s.updateLabels(ctx)
 	case updateAnnotation:
 		return s.updateAnnotations(ctx)
-	case updatePlayerCapacity:
-		return s.updatePlayerCapacity(ctx)
-	case updateConnectedPlayers:
-		return s.updateConnectedPlayers(ctx)
 	case updateCounters:
 		return s.updateCounter(ctx)
 	case updateLists:
@@ -716,142 +696,6 @@ func (s *SDKServer) stopReserveTimer() {
 		s.reserveTimer.Stop()
 	}
 	s.gsReserveDuration = nil
-}
-
-// PlayerConnect should be called when a player connects.
-// [Stage:Alpha]
-// [FeatureFlag:PlayerTracking]
-func (s *SDKServer) PlayerConnect(_ context.Context, id *alpha.PlayerID) (*alpha.Bool, error) {
-	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return &alpha.Bool{Bool: false}, errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
-	}
-	s.logger.WithField("playerID", id.PlayerID).Debug("Player Connected")
-
-	s.gsUpdateMutex.Lock()
-	defer s.gsUpdateMutex.Unlock()
-
-	// the player is already connected, return false.
-	for _, playerID := range s.gsConnectedPlayers {
-		if playerID == id.PlayerID {
-			return &alpha.Bool{Bool: false}, nil
-		}
-	}
-
-	if int64(len(s.gsConnectedPlayers)) >= s.gsPlayerCapacity {
-		return &alpha.Bool{Bool: false}, errors.New("players are already at capacity")
-	}
-
-	// let's retain the original order, as it should be a smaller patch on data change
-	s.gsConnectedPlayers = append(s.gsConnectedPlayers, id.PlayerID)
-	s.workerqueue.EnqueueAfter(cache.ExplicitKey(string(updateConnectedPlayers)), updatePeriod)
-
-	return &alpha.Bool{Bool: true}, nil
-}
-
-// PlayerDisconnect should be called when a player disconnects.
-// [Stage:Alpha]
-// [FeatureFlag:PlayerTracking]
-func (s *SDKServer) PlayerDisconnect(_ context.Context, id *alpha.PlayerID) (*alpha.Bool, error) {
-	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return &alpha.Bool{Bool: false}, errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
-	}
-	s.logger.WithField("playerID", id.PlayerID).Debug("Player Disconnected")
-
-	s.gsUpdateMutex.Lock()
-	defer s.gsUpdateMutex.Unlock()
-
-	found := -1
-	for i, playerID := range s.gsConnectedPlayers {
-		if playerID == id.PlayerID {
-			found = i
-			break
-		}
-	}
-	if found == -1 {
-		return &alpha.Bool{Bool: false}, nil
-	}
-
-	// let's retain the original order, as it should be a smaller patch on data change
-	s.gsConnectedPlayers = append(s.gsConnectedPlayers[:found], s.gsConnectedPlayers[found+1:]...)
-	s.workerqueue.EnqueueAfter(cache.ExplicitKey(string(updateConnectedPlayers)), updatePeriod)
-
-	return &alpha.Bool{Bool: true}, nil
-}
-
-// IsPlayerConnected returns if the playerID is currently connected to the GameServer.
-// This is always accurate, even if the value hasn’t been updated to the GameServer status yet.
-// [Stage:Alpha]
-// [FeatureFlag:PlayerTracking]
-func (s *SDKServer) IsPlayerConnected(_ context.Context, id *alpha.PlayerID) (*alpha.Bool, error) {
-	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return &alpha.Bool{Bool: false}, errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
-	}
-	s.gsUpdateMutex.RLock()
-	defer s.gsUpdateMutex.RUnlock()
-
-	result := &alpha.Bool{Bool: false}
-
-	for _, playerID := range s.gsConnectedPlayers {
-		if playerID == id.PlayerID {
-			result.Bool = true
-			break
-		}
-	}
-
-	return result, nil
-}
-
-// GetConnectedPlayers returns the list of the currently connected player ids.
-// This is always accurate, even if the value hasn’t been updated to the GameServer status yet.
-// [Stage:Alpha]
-// [FeatureFlag:PlayerTracking]
-func (s *SDKServer) GetConnectedPlayers(_ context.Context, _ *alpha.Empty) (*alpha.PlayerIDList, error) {
-	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
-	}
-	s.gsUpdateMutex.RLock()
-	defer s.gsUpdateMutex.RUnlock()
-
-	return &alpha.PlayerIDList{List: s.gsConnectedPlayers}, nil
-}
-
-// GetPlayerCount returns the current player count.
-// [Stage:Alpha]
-// [FeatureFlag:PlayerTracking]
-func (s *SDKServer) GetPlayerCount(_ context.Context, _ *alpha.Empty) (*alpha.Count, error) {
-	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
-	}
-	s.gsUpdateMutex.RLock()
-	defer s.gsUpdateMutex.RUnlock()
-	return &alpha.Count{Count: int64(len(s.gsConnectedPlayers))}, nil
-}
-
-// SetPlayerCapacity to change the game server's player capacity.
-// [Stage:Alpha]
-// [FeatureFlag:PlayerTracking]
-func (s *SDKServer) SetPlayerCapacity(_ context.Context, count *alpha.Count) (*alpha.Empty, error) {
-	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
-	}
-	s.gsUpdateMutex.Lock()
-	s.gsPlayerCapacity = count.Count
-	s.gsUpdateMutex.Unlock()
-	s.workerqueue.Enqueue(cache.ExplicitKey(string(updatePlayerCapacity)))
-
-	return &alpha.Empty{}, nil
-}
-
-// GetPlayerCapacity returns the current player capacity, as set by SDK.SetPlayerCapacity()
-// [Stage:Alpha]
-// [FeatureFlag:PlayerTracking]
-func (s *SDKServer) GetPlayerCapacity(_ context.Context, _ *alpha.Empty) (*alpha.Count, error) {
-	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
-	}
-	s.gsUpdateMutex.RLock()
-	defer s.gsUpdateMutex.RUnlock()
-	return &alpha.Count{Count: s.gsPlayerCapacity}, nil
 }
 
 // GetCounter returns a Counter. Returns error if the counter does not exist.
@@ -1500,64 +1344,6 @@ func (s *SDKServer) healthy() bool {
 	s.healthMutex.RLock()
 	defer s.healthMutex.RUnlock()
 	return s.healthFailureCount < s.health.FailureThreshold
-}
-
-// updatePlayerCapacity updates the Player Capacity field in the GameServer's Status.
-func (s *SDKServer) updatePlayerCapacity(ctx context.Context) error {
-	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
-	}
-	s.logger.WithField("capacity", s.gsPlayerCapacity).Debug("updating player capacity")
-	gs, err := s.gameServer()
-	if err != nil {
-		return err
-	}
-
-	gsCopy := gs.DeepCopy()
-
-	s.gsUpdateMutex.RLock()
-	gsCopy.Status.Players.Capacity = s.gsPlayerCapacity
-	s.gsUpdateMutex.RUnlock()
-
-	gs, err = s.patchGameServer(ctx, gs, gsCopy)
-	if err == nil {
-		s.recorder.Event(gs, corev1.EventTypeNormal, "PlayerCapacity", fmt.Sprintf("Set to %d", gs.Status.Players.Capacity))
-	}
-
-	return err
-}
-
-// updateConnectedPlayers updates the Player IDs and Count fields in the GameServer's Status.
-func (s *SDKServer) updateConnectedPlayers(ctx context.Context) error {
-	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
-	}
-	gs, err := s.gameServer()
-	if err != nil {
-		return err
-	}
-
-	gsCopy := gs.DeepCopy()
-	same := false
-	s.gsUpdateMutex.RLock()
-	s.logger.WithField("playerIDs", s.gsConnectedPlayers).Debug("updating connected players")
-	same = apiequality.Semantic.DeepEqual(gsCopy.Status.Players.IDs, s.gsConnectedPlayers)
-	gsCopy.Status.Players.IDs = s.gsConnectedPlayers
-	gsCopy.Status.Players.Count = int64(len(s.gsConnectedPlayers))
-	s.gsUpdateMutex.RUnlock()
-	// if there is no change, then don't update
-	// since it's possible this could fire quite a lot, let's reduce the
-	// amount of requests as much as possible.
-	if same {
-		return nil
-	}
-
-	gs, err = s.patchGameServer(ctx, gs, gsCopy)
-	if err == nil {
-		s.recorder.Event(gs, corev1.EventTypeNormal, "PlayerCount", fmt.Sprintf("Set to %d", gs.Status.Players.Count))
-	}
-
-	return err
 }
 
 // NewSDKServerContext returns a Context that cancels when SIGTERM or os.Interrupt

@@ -678,24 +678,6 @@ func computeStatus(gsSet *agonesv1.GameServerSet, list []*agonesv1.GameServer) a
 		}
 	}
 
-	if runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		// to make this code simpler, while the feature gate is in place,
-		// we will loop around the gs list twice.
-		status.Players = &agonesv1.AggregatedPlayerStatus{}
-		// TODO: integrate this extra loop into the above for loop when PlayerTracking moves to GA
-		for _, gs := range list {
-			if gs.ObjectMeta.DeletionTimestamp.IsZero() &&
-				(gs.Status.State == agonesv1.GameServerStateReady ||
-					gs.Status.State == agonesv1.GameServerStateReserved ||
-					gs.Status.State == agonesv1.GameServerStateAllocated) {
-				if gs.Status.Players != nil {
-					status.Players.Capacity += gs.Status.Players.Capacity
-					status.Players.Count += gs.Status.Players.Count
-				}
-			}
-		}
-	}
-
 	return status
 }
 

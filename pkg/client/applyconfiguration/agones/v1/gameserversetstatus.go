@@ -26,7 +26,6 @@ type GameServerSetStatusApplyConfiguration struct {
 	ReservedReplicas  *int32                                               `json:"reservedReplicas,omitempty"`
 	AllocatedReplicas *int32                                               `json:"allocatedReplicas,omitempty"`
 	ShutdownReplicas  *int32                                               `json:"shutdownReplicas,omitempty"`
-	Players           *AggregatedPlayerStatusApplyConfiguration            `json:"players,omitempty"`
 	Counters          map[string]AggregatedCounterStatusApplyConfiguration `json:"counters,omitempty"`
 	Lists             map[string]AggregatedListStatusApplyConfiguration    `json:"lists,omitempty"`
 }
@@ -74,14 +73,6 @@ func (b *GameServerSetStatusApplyConfiguration) WithAllocatedReplicas(value int3
 // If called multiple times, the ShutdownReplicas field is set to the value of the last call.
 func (b *GameServerSetStatusApplyConfiguration) WithShutdownReplicas(value int32) *GameServerSetStatusApplyConfiguration {
 	b.ShutdownReplicas = &value
-	return b
-}
-
-// WithPlayers sets the Players field in the declarative configuration to the given value
-// and returns the receiver, so that objects can be built by chaining "With" function invocations.
-// If called multiple times, the Players field is set to the value of the last call.
-func (b *GameServerSetStatusApplyConfiguration) WithPlayers(value *AggregatedPlayerStatusApplyConfiguration) *GameServerSetStatusApplyConfiguration {
-	b.Players = value
 	return b
 }
 

@@ -32,7 +32,6 @@ type GameServerSpecApplyConfiguration struct {
 	Scheduling *apis.SchedulingStrategy                   `json:"scheduling,omitempty"`
 	SdkServer  *SdkServerApplyConfiguration               `json:"sdkServer,omitempty"`
 	Template   *corev1.PodTemplateSpec                    `json:"template,omitempty"`
-	Players    *PlayersSpecApplyConfiguration             `json:"players,omitempty"`
 	Counters   map[string]CounterStatusApplyConfiguration `json:"counters,omitempty"`
 	Lists      map[string]ListStatusApplyConfiguration    `json:"lists,omitempty"`
 	Eviction   *EvictionApplyConfiguration                `json:"eviction,omitempty"`
@@ -94,14 +93,6 @@ func (b *GameServerSpecApplyConfiguration) WithSdkServer(value *SdkServerApplyCo
 // If called multiple times, the Template field is set to the value of the last call.
 func (b *GameServerSpecApplyConfiguration) WithTemplate(value corev1.PodTemplateSpec) *GameServerSpecApplyConfiguration {
 	b.Template = &value
-	return b
-}
-
-// WithPlayers sets the Players field in the declarative configuration to the given value
-// and returns the receiver, so that objects can be built by chaining "With" function invocations.
-// If called multiple times, the Players field is set to the value of the last call.
-func (b *GameServerSpecApplyConfiguration) WithPlayers(value *PlayersSpecApplyConfiguration) *GameServerSpecApplyConfiguration {
-	b.Players = value
 	return b
 }
 
