@@ -24,7 +24,13 @@ import (
 
 // EvictionApplyConfiguration represents a declarative configuration of the Eviction type for use
 // with apply.
+//
+// Eviction specifies the eviction tolerance of the GameServer
 type EvictionApplyConfiguration struct {
+	// Game server supports termination via SIGTERM:
+	// - Always: Allow eviction for both Cluster Autoscaler and node drain for upgrades
+	// - OnUpgrade: Allow eviction for upgrades alone
+	// - Never (default): Pod should run to completion
 	Safe *agonesv1.EvictionSafe `json:"safe,omitempty"`
 }
 

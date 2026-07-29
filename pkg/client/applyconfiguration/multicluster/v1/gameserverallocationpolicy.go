@@ -26,6 +26,8 @@ import (
 
 // GameServerAllocationPolicyApplyConfiguration represents a declarative configuration of the GameServerAllocationPolicy type for use
 // with apply.
+//
+// GameServerAllocationPolicy is the Schema for the gameserverallocationpolicies API
 type GameServerAllocationPolicyApplyConfiguration struct {
 	metav1.TypeMetaApplyConfiguration    `json:",inline"`
 	*metav1.ObjectMetaApplyConfiguration `json:"metadata,omitempty"`
@@ -42,6 +44,7 @@ func GameServerAllocationPolicy(name, namespace string) *GameServerAllocationPol
 	b.WithAPIVersion("multicluster.agones.dev/v1")
 	return b
 }
+
 func (b GameServerAllocationPolicyApplyConfiguration) IsApplyConfiguration() {}
 
 // WithKind sets the Kind field in the declarative configuration to the given value

@@ -35,4 +35,4 @@ options:
   dynamic_substitutions: true
 substitutions:
   _REPOSITORY: us-docker.pkg.dev/${PROJECT_ID}/examples
-timeout: 7200s
+timeout: 14400s

@@ -24,9 +24,16 @@ import (
 
 // BetweenApplyConfiguration represents a declarative configuration of the Between type for use
 // with apply.
+//
+// Between defines the time period that the policy is eligible to be applied.
 type BetweenApplyConfiguration struct {
+	// Start is the datetime that the policy is eligible to be applied.
+	// This field must conform to RFC3339 format. If this field not set or is in the past, the policy is eligible to be applied
+	// as soon as the fleet autoscaler is running.
 	Start *metav1.Time `json:"start,omitempty"`
-	End   *metav1.Time `json:"end,omitempty"`
+	// End is the datetime that the policy is no longer eligible to be applied.
+	// This field must conform to RFC3339 format. If not set, the policy is always eligible to be applied, after the start time above.
+	End *metav1.Time `json:"end,omitempty"`
 }
 
 // BetweenApplyConfiguration constructs a declarative configuration of the Between type for use with

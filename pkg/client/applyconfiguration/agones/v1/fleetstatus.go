@@ -20,15 +20,30 @@ package v1
 
 // FleetStatusApplyConfiguration represents a declarative configuration of the FleetStatus type for use
 // with apply.
+//
+// FleetStatus is the status of a Fleet
 type FleetStatusApplyConfiguration struct {
-	Replicas          *int32                                               `json:"replicas,omitempty"`
-	ReadyReplicas     *int32                                               `json:"readyReplicas,omitempty"`
-	ReservedReplicas  *int32                                               `json:"reservedReplicas,omitempty"`
-	AllocatedReplicas *int32                                               `json:"allocatedReplicas,omitempty"`
-	Allocations       *int64                                               `json:"allocations,omitempty"`
-	Players           *AggregatedPlayerStatusApplyConfiguration            `json:"players,omitempty"`
-	Counters          map[string]AggregatedCounterStatusApplyConfiguration `json:"counters,omitempty"`
-	Lists             map[string]AggregatedListStatusApplyConfiguration    `json:"lists,omitempty"`
+	// Replicas the total number of current GameServer replicas
+	Replicas *int32 `json:"replicas,omitempty"`
+	// ReadyReplicas are the number of Ready GameServer replicas
+	ReadyReplicas *int32 `json:"readyReplicas,omitempty"`
+	// ReservedReplicas are the total number of Reserved GameServer replicas in this fleet.
+	// Reserved instances won't be deleted on scale down, but won't cause an autoscaler to scale up.
+	ReservedReplicas *int32 `json:"reservedReplicas,omitempty"`
+	// AllocatedReplicas are the number of Allocated GameServer replicas
+	AllocatedReplicas *int32 `json:"allocatedReplicas,omitempty"`
+	// Allocations is a counter of the number of allocations observed.
+	Allocations *int64 `json:"allocations,omitempty"`
+	// [Stage:Alpha]
+	// [FeatureFlag:PlayerTracking]
+	// Players are the current total player capacity and count for this Fleet
+	Players *AggregatedPlayerStatusApplyConfiguration `json:"players,omitempty"`
+	// (Beta, CountsAndLists feature flag) Counters provides aggregated Counter capacity and Counter
+	// count for this Fleet.
+	Counters map[string]AggregatedCounterStatusApplyConfiguration `json:"counters,omitempty"`
+	// (Beta, CountsAndLists feature flag) Lists provides aggregated List capacityv and List values
+	// for this Fleet.
+	Lists map[string]AggregatedListStatusApplyConfiguration `json:"lists,omitempty"`
 }
 
 // FleetStatusApplyConfiguration constructs a declarative configuration of the FleetStatus type for use with

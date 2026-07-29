@@ -26,17 +26,25 @@ import (
 
 // GameServerStatusApplyConfiguration represents a declarative configuration of the GameServerStatus type for use
 // with apply.
+//
+// GameServerStatus is the status for a GameServer resource
 type GameServerStatusApplyConfiguration struct {
-	State         *agonesv1.GameServerState                  `json:"state,omitempty"`
-	Ports         []GameServerStatusPortApplyConfiguration   `json:"ports,omitempty"`
-	Address       *string                                    `json:"address,omitempty"`
-	Addresses     []corev1.NodeAddress                       `json:"addresses,omitempty"`
-	NodeName      *string                                    `json:"nodeName,omitempty"`
-	ReservedUntil *metav1.Time                               `json:"reservedUntil,omitempty"`
-	Players       *PlayerStatusApplyConfiguration            `json:"players,omitempty"`
-	Counters      map[string]CounterStatusApplyConfiguration `json:"counters,omitempty"`
-	Lists         map[string]ListStatusApplyConfiguration    `json:"lists,omitempty"`
-	Eviction      *EvictionApplyConfiguration                `json:"eviction,omitempty"`
+	// GameServerState is the current state of a GameServer, e.g. Creating, Starting, Ready, etc
+	State   *agonesv1.GameServerState                `json:"state,omitempty"`
+	Ports   []GameServerStatusPortApplyConfiguration `json:"ports,omitempty"`
+	Address *string                                  `json:"address,omitempty"`
+	// Addresses is the array of addresses at which the GameServer can be reached; copy of Node.Status.addresses.
+	Addresses     []corev1.NodeAddress `json:"addresses,omitempty"`
+	NodeName      *string              `json:"nodeName,omitempty"`
+	ReservedUntil *metav1.Time         `json:"reservedUntil,omitempty"`
+	// [Stage:Alpha]
+	// [FeatureFlag:PlayerTracking]
+	Players *PlayerStatusApplyConfiguration `json:"players,omitempty"`
+	// (Beta, CountsAndLists feature flag) Counters and Lists provides the configuration for generic tracking features.
+	Counters map[string]CounterStatusApplyConfiguration `json:"counters,omitempty"`
+	Lists    map[string]ListStatusApplyConfiguration    `json:"lists,omitempty"`
+	// Eviction specifies the eviction tolerance of the GameServer.
+	Eviction *EvictionApplyConfiguration `json:"eviction,omitempty"`
 }
 
 // GameServerStatusApplyConfiguration constructs a declarative configuration of the GameServerStatus type for use with

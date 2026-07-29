@@ -24,8 +24,12 @@ import (
 
 // ChainEntryApplyConfiguration represents a declarative configuration of the ChainEntry type for use
 // with apply.
+//
+// ChainEntry defines a single entry in the ChainPolicy.
 type ChainEntryApplyConfiguration struct {
-	ID                                      *string `json:"id,omitempty"`
+	// ID is the unique identifier for a ChainEntry. If not set the identifier will be set to the index of chain entry.
+	ID *string `json:"id,omitempty"`
+	// Policy is the name of the policy to be applied. Required field.
 	FleetAutoscalerPolicyApplyConfiguration `json:",inline"`
 }
 
