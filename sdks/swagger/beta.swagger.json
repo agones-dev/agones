@@ -63,10 +63,7 @@
                   "title": "countDiff tracks if a Counter Update Request is CountIncrement (positive), CountDecrement\n(negative), 0 if a CountSet or CapacitySet request"
                 }
               },
-              "title": "The requested update to make to the Counter",
-              "required": [
-                "counterUpdateRequest"
-              ]
+              "title": "The requested update to make to the Counter"
             }
           }
         ],
@@ -142,10 +139,7 @@
                   "title": "The array of items in the List [\"v1\", \"v2\", …]"
                 }
               },
-              "title": "The List to update",
-              "required": [
-                "list"
-              ]
+              "title": "The List to update"
             }
           }
         ],
