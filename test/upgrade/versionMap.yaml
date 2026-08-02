@@ -40,7 +40,7 @@ data:
         ],
         "1.36": [
           "Dev"
-        ],
+        ]
       },
       "agonesVersionFeatureGates": {
         "1.40.0": {

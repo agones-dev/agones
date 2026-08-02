@@ -26,7 +26,7 @@ RUN git clone --recurse-submodules -b v1.83.0 --depth 1 --shallow-submodules htt
     cd /var/local/git/grpc && \
     mkdir -p cmake/build && \
     cd cmake/build && \
-     export CMAKE_BUILD_PARALLEL_LEVEL=$(nproc) && \
+    export CMAKE_BUILD_PARALLEL_LEVEL=$(nproc) && \
     # BoringSSL (gRPC >= v1.81) redirects a defaulted CMAKE_INSTALL_PREFIX to
     # ${CMAKE_SOURCE_DIR}/install, so pass it explicitly to keep protoc et al in /usr/local.
     cmake -DCMAKE_BUILD_TYPE=Release -DgRPC_INSTALL=ON -DgRPC_BUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX=/usr/local ../.. && \
