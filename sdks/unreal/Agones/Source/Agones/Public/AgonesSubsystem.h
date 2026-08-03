@@ -31,19 +31,7 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FAllocateDelegate, const FEmptyResponse&, Resp
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FGameServerDelegate, const FGameServerResponse&, Response);
 
-DECLARE_DYNAMIC_DELEGATE_OneParam(FGetConnectedPlayersDelegate, const FConnectedPlayersResponse&, Response);
-
-DECLARE_DYNAMIC_DELEGATE_OneParam(FGetPlayerCapacityDelegate, const FCountResponse&, Response);
-
-DECLARE_DYNAMIC_DELEGATE_OneParam(FGetPlayerCountDelegate, const FCountResponse&, Response);
-
 DECLARE_DYNAMIC_DELEGATE_OneParam(FHealthDelegate, const FEmptyResponse&, Response);
-
-DECLARE_DYNAMIC_DELEGATE_OneParam(FIsPlayerConnectedDelegate, const FConnectedResponse&, Response);
-
-DECLARE_DYNAMIC_DELEGATE_OneParam(FPlayerConnectDelegate, const FConnectedResponse&, Response);
-
-DECLARE_DYNAMIC_DELEGATE_OneParam(FPlayerDisconnectDelegate, const FDisconnectResponse&, Response);
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FReadyDelegate, const FEmptyResponse&, Response);
 
@@ -52,8 +40,6 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FReserveDelegate, const FEmptyResponse&, Respo
 DECLARE_DYNAMIC_DELEGATE_OneParam(FSetAnnotationDelegate, const FEmptyResponse&, Response);
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FSetLabelDelegate, const FEmptyResponse&, Response);
-
-DECLARE_DYNAMIC_DELEGATE_OneParam(FSetPlayerCapacityDelegate, const FEmptyResponse&, Response);
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FGetCounterDelegate, const FCounterResponse&, Response);
 
@@ -266,68 +252,6 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Agones | Lifecycle")
 	void Shutdown(FShutdownDelegate SuccessDelegate, FAgonesErrorDelegate ErrorDelegate);
-
-	/**
-	 * \brief [Alpha] GetConnectedPlayers returns the list of the currently connected player ids.
-	 * \param SuccessDelegate - Called on Successful call.
-	 * \param ErrorDelegate - Called on Unsuccessful call.
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Agones | Alpha | Player Tracking")
-	void GetConnectedPlayers(FGetConnectedPlayersDelegate SuccessDelegate, FAgonesErrorDelegate ErrorDelegate);
-
-	/**
-	 * \brief [Alpha] GetPlayerCapacity gets the last player capacity that was set through the SDK.
-	 * \param SuccessDelegate - Called on Successful call.
-	 * \param ErrorDelegate - Called on Unsuccessful call.
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Agones | Alpha | Player Tracking")
-	void GetPlayerCapacity(FGetPlayerCapacityDelegate SuccessDelegate, FAgonesErrorDelegate ErrorDelegate);
-
-	/**
-	 * \brief [Alpha] GetPlayerCount returns the current player count
-	 * \param SuccessDelegate - Called on Successful call.
-	 * \param ErrorDelegate - Called on Unsuccessful call.
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Agones | Alpha | Player Tracking")
-	void GetPlayerCount(FGetPlayerCountDelegate SuccessDelegate, FAgonesErrorDelegate ErrorDelegate);
-
-	/**
-	 * \brief [Alpha] IsPlayerConnected returns if the playerID is currently connected to the GameServer.
-	 * \param PlayerId - PlayerID of player to check.
-	 * \param SuccessDelegate - Called on Successful call.
-	 * \param ErrorDelegate - Called on Unsuccessful call.
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Agones | Alpha | Player Tracking")
-	void IsPlayerConnected(FString PlayerId, FIsPlayerConnectedDelegate SuccessDelegate, FAgonesErrorDelegate ErrorDelegate);
-
-	/**
-	 * \brief [Alpha] PlayerConnect increases the SDK’s stored player count by one, and appends this playerID to status.players.id.
-	 * \param PlayerId - PlayerID of connecting player.
-	 * \param SuccessDelegate - Called on Successful call.
-	 * \param ErrorDelegate - Called on Unsuccessful call.
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Agones | Alpha | Player Tracking")
-	void PlayerConnect(FString PlayerId, FPlayerConnectDelegate SuccessDelegate, FAgonesErrorDelegate ErrorDelegate);
-
-	/**
-	 * \brief [Alpha] PlayerDisconnect Decreases the SDK’s stored player count by one, and removes the playerID from
-	 * status.players.id.
-	 *
-	 * \param PlayerId - PlayerID of disconnecting player.
-	 * \param SuccessDelegate - Called on Successful call.
-	 * \param ErrorDelegate - Called on Unsuccessful call.
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Agones | Alpha | Player Tracking")
-	void PlayerDisconnect(FString PlayerId, FPlayerDisconnectDelegate SuccessDelegate, FAgonesErrorDelegate ErrorDelegate);
-
-	/**
-	 * \brief [Alpha] SetPlayerCapacity changes the player capacity to a new value.
-	 * \param Count - Capacity of game server.
-	 * \param SuccessDelegate - Called on Successful call.
-	 * \param ErrorDelegate - Called on Unsuccessful call.
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Agones | Alpha | Player Tracking")
-	void SetPlayerCapacity(int64 Count, FSetPlayerCapacityDelegate SuccessDelegate, FAgonesErrorDelegate ErrorDelegate);
 
 	/**
 	 * \brief [Beta] GetCounter return counter (count and capacity) associated with a Key.
