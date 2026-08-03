@@ -24,9 +24,13 @@ import (
 
 // FleetAutoscalerSyncApplyConfiguration represents a declarative configuration of the FleetAutoscalerSync type for use
 // with apply.
+//
+// FleetAutoscalerSync describes when to sync a fleet
 type FleetAutoscalerSyncApplyConfiguration struct {
-	Type          *autoscalingv1.FleetAutoscalerSyncType `json:"type,omitempty"`
-	FixedInterval *FixedIntervalSyncApplyConfiguration   `json:"fixedInterval,omitempty"`
+	// Type of autoscaling sync.
+	Type *autoscalingv1.FleetAutoscalerSyncType `json:"type,omitempty"`
+	// FixedInterval config params. Present only if FleetAutoscalerSyncType = FixedInterval.
+	FixedInterval *FixedIntervalSyncApplyConfiguration `json:"fixedInterval,omitempty"`
 }
 
 // FleetAutoscalerSyncApplyConfiguration constructs a declarative configuration of the FleetAutoscalerSync type for use with

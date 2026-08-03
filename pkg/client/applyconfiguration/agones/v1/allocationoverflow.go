@@ -20,8 +20,14 @@ package v1
 
 // AllocationOverflowApplyConfiguration represents a declarative configuration of the AllocationOverflow type for use
 // with apply.
+//
+// AllocationOverflow specifies what labels and/or annotations to apply on Allocated GameServers
+// if the desired number of the underlying `GameServerSet` drops below the number of Allocated GameServers
+// attached to it.
 type AllocationOverflowApplyConfiguration struct {
-	Labels      map[string]string `json:"labels,omitempty"`
+	// Labels to be applied to the `GameServer`
+	Labels map[string]string `json:"labels,omitempty"`
+	// Annotations to be applied to the `GameServer`
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
 

@@ -24,10 +24,27 @@ import (
 
 // BufferPolicyApplyConfiguration represents a declarative configuration of the BufferPolicy type for use
 // with apply.
+//
+// BufferPolicy controls the desired behavior of the buffer policy.
 type BufferPolicyApplyConfiguration struct {
-	MaxReplicas *int32              `json:"maxReplicas,omitempty"`
-	MinReplicas *int32              `json:"minReplicas,omitempty"`
-	BufferSize  *intstr.IntOrString `json:"bufferSize,omitempty"`
+	// MaxReplicas is the maximum amount of replicas that the fleet may have.
+	// It must be bigger than both MinReplicas and BufferSize
+	MaxReplicas *int32 `json:"maxReplicas,omitempty"`
+	// MinReplicas is the minimum amount of replicas that the fleet must have
+	// If zero, it is ignored.
+	// If non zero, it must be smaller than MaxReplicas and bigger than BufferSize
+	MinReplicas *int32 `json:"minReplicas,omitempty"`
+	// BufferSize defines how many replicas the autoscaler tries to have ready all the time
+	// Value can be an absolute number (ex: 5) or a percentage of desired gs instances (ex: 15%)
+	// Absolute number is calculated from percentage by rounding up.
+	// Example: when this is set to 20%, the autoscaler will make sure that 20%
+	// of the fleet's game server replicas are ready. When this is set to 20,
+	// the autoscaler will make sure that there are 20 available game servers
+	// Must be bigger than 0
+	// Note: by "ready" we understand in this case "non-allocated"; this is done to ensure robustness
+	// and computation stability in different edge case (fleet just created, not enough
+	// capacity in the cluster etc)
+	BufferSize *intstr.IntOrString `json:"bufferSize,omitempty"`
 }
 
 // BufferPolicyApplyConfiguration constructs a declarative configuration of the BufferPolicy type for use with

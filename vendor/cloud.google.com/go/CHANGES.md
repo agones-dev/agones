@@ -1,5 +1,213 @@
 # Changes
 
+
+
+## [0.123.0](https://github.com/googleapis/google-cloud-go/compare/v0.122.0...v0.123.0) (2025-09-18)
+
+
+### Features
+
+* **internal/stategen:** Populate the latest googleapis commit ([#12880](https://github.com/googleapis/google-cloud-go/issues/12880)) ([7b017a0](https://github.com/googleapis/google-cloud-go/commit/7b017a083ddd322b21faf413a329ba870a98db96))
+* **librariangen:** Implement the build command ([#12817](https://github.com/googleapis/google-cloud-go/issues/12817)) ([14734c8](https://github.com/googleapis/google-cloud-go/commit/14734c875103f97748857b9b0472fd0b2658663f))
+
+
+### Bug Fixes
+
+* **internal/librariangen:** Add link to source commit in release notes ([#12881](https://github.com/googleapis/google-cloud-go/issues/12881)) ([1c06cc6](https://github.com/googleapis/google-cloud-go/commit/1c06cc6109a84941c367896575b187b79befc3af))
+* **internal/librariangen:** Fix CHANGES.md headers ([#12849](https://github.com/googleapis/google-cloud-go/issues/12849)) ([baf515d](https://github.com/googleapis/google-cloud-go/commit/baf515dfe0d94f36c9dc232f6b55e9828b268eb0))
+* **internal/librariangen:** Remove go mod init/tidy from postprocessor ([#12832](https://github.com/googleapis/google-cloud-go/issues/12832)) ([1fe506a](https://github.com/googleapis/google-cloud-go/commit/1fe506a37e68497b6da4587d409b79e7b4d2a113))
+* **internal/librariangen:** Test for error path with flags ([#12830](https://github.com/googleapis/google-cloud-go/issues/12830)) ([f0da7b2](https://github.com/googleapis/google-cloud-go/commit/f0da7b22488b4d9f6232d227d3e196d8d2b92858))
+* **internal/postprocessor:** Add dlp to skip-module-scan-paths ([#12857](https://github.com/googleapis/google-cloud-go/issues/12857)) ([45a7d9b](https://github.com/googleapis/google-cloud-go/commit/45a7d9b4b9083d1bcaca89c3d86878ba77c230e3))
+* **librariangen:** Honor original container contract ([#12846](https://github.com/googleapis/google-cloud-go/issues/12846)) ([71c8fd3](https://github.com/googleapis/google-cloud-go/commit/71c8fd368667f74426aa31b6c50def8151482480))
+* **librariangen:** Improvements to release-init ([#12842](https://github.com/googleapis/google-cloud-go/issues/12842)) ([0db677a](https://github.com/googleapis/google-cloud-go/commit/0db677a93fe16b9a62bb69a3cea7bc45d5aaec36))
+* **stategen:** Specify an appropriate tag format for google-cloud-go ([#12835](https://github.com/googleapis/google-cloud-go/issues/12835)) ([ffcff33](https://github.com/googleapis/google-cloud-go/commit/ffcff33a0c3fad720a31083672c4cf2498af719f))
+
+## [0.122.0](https://github.com/googleapis/google-cloud-go/compare/v0.121.6...v0.122.0) (2025-09-04)
+
+
+### Features
+
+* **internal/librariangen:** Add release-init command ([#12751](https://github.com/googleapis/google-cloud-go/issues/12751)) ([52e84cc](https://github.com/googleapis/google-cloud-go/commit/52e84cc9a11077eb3c50a0b5fc9aa26361d63b47))
+
+
+### Bug Fixes
+
+* **internal/godocfx:** Better support for v2 modules ([#12797](https://github.com/googleapis/google-cloud-go/issues/12797)) ([4bc8785](https://github.com/googleapis/google-cloud-go/commit/4bc878597a5e6bd97cf3ee2174f6df7fbdd2d47b))
+* **internal/godocfx:** Module detection when tidy errors ([#12801](https://github.com/googleapis/google-cloud-go/issues/12801)) ([83d46cd](https://github.com/googleapis/google-cloud-go/commit/83d46cdc5ed7cfbb94038e7fa1f787adfe532c74))
+* **internal/librariangen:** Fix goimports errors ([#12765](https://github.com/googleapis/google-cloud-go/issues/12765)) ([83bdaa4](https://github.com/googleapis/google-cloud-go/commit/83bdaa4ce4e42f8b4a29e2055fc4894d8c6b1e2c))
+
+## [0.121.6](https://github.com/googleapis/google-cloud-go/compare/v0.121.5...v0.121.6) (2025-08-14)
+
+
+### Bug Fixes
+
+* **internal/librariangen:** Fix Dockerfile permissions for go mod tidy ([#12704](https://github.com/googleapis/google-cloud-go/issues/12704)) ([0e70a0b](https://github.com/googleapis/google-cloud-go/commit/0e70a0b6afccc016c67337f340e2755fe7a476ca))
+
+## [0.121.5](https://github.com/googleapis/google-cloud-go/compare/v0.121.4...v0.121.5) (2025-08-12)
+
+
+### Bug Fixes
+
+* **internal/librariangen:** Get README title from service config yaml ([#12676](https://github.com/googleapis/google-cloud-go/issues/12676)) ([b3b8f70](https://github.com/googleapis/google-cloud-go/commit/b3b8f70a15ae477885f3ecc92e01ae37b7505de3))
+* **internal/librariangen:** Update source_paths to source_roots in generate-request.json ([#12691](https://github.com/googleapis/google-cloud-go/issues/12691)) ([2adb6f9](https://github.com/googleapis/google-cloud-go/commit/2adb6f9a67f21fba32371fb4b3dcfb7204309560))
+
+## [0.121.4](https://github.com/googleapis/google-cloud-go/compare/v0.121.3...v0.121.4) (2025-07-17)
+
+
+### Bug Fixes
+
+* **geminidataanalytics:** Correct resource reference type for `parent` field in `data_chat_service.proto` ([98ba6f0](https://github.com/googleapis/google-cloud-go/commit/98ba6f06e69685bca510ca85c12124434f9ba1e8))
+* **internal/postprocessor:** Add git ([#12524](https://github.com/googleapis/google-cloud-go/issues/12524)) ([82030ee](https://github.com/googleapis/google-cloud-go/commit/82030eec5d66f25ebc3fee1fda4b45ced370fc2b))
+
+## [0.121.3](https://github.com/googleapis/google-cloud-go/compare/v0.121.2...v0.121.3) (2025-06-25)
+
+
+### Documentation
+
+* **impersonate:** Address TODO in impersonate/example_test.go ([#12401](https://github.com/googleapis/google-cloud-go/issues/12401)) ([dd096ec](https://github.com/googleapis/google-cloud-go/commit/dd096ec81944e785b9245fda7e7b46e9908cfe8f))
+
+## [0.121.2](https://github.com/googleapis/google-cloud-go/compare/v0.121.1...v0.121.2) (2025-05-21)
+
+
+### Documentation
+
+* **internal/generated:** Remove outdated pubsub snippets ([#12284](https://github.com/googleapis/google-cloud-go/issues/12284)) ([0338a40](https://github.com/googleapis/google-cloud-go/commit/0338a40d70206317d319e69911be0321fbb54e3f))
+
+## [0.121.1](https://github.com/googleapis/google-cloud-go/compare/v0.121.0...v0.121.1) (2025-05-13)
+
+
+### Bug Fixes
+
+* **civil:** Add support for civil.Date, civil.Time and civil.DateTime arguments to their respective Scan methods ([#12240](https://github.com/googleapis/google-cloud-go/issues/12240)) ([7127ce9](https://github.com/googleapis/google-cloud-go/commit/7127ce9992f890667f2c8f75c924136b0e94f115)), refs [#12060](https://github.com/googleapis/google-cloud-go/issues/12060)
+
+## [0.121.0](https://github.com/googleapis/google-cloud-go/compare/v0.120.1...v0.121.0) (2025-04-28)
+
+
+### Features
+
+* **debugger:** Remove debugger/apiv2 client ([#12050](https://github.com/googleapis/google-cloud-go/issues/12050)) ([af8641e](https://github.com/googleapis/google-cloud-go/commit/af8641e7d011349afa774b668b30a95b007fd076))
+
+## [0.120.1](https://github.com/googleapis/google-cloud-go/compare/v0.120.0...v0.120.1) (2025-04-14)
+
+
+### Bug Fixes
+
+* **readme:** Update authentication section ([#11918](https://github.com/googleapis/google-cloud-go/issues/11918)) ([2fda860](https://github.com/googleapis/google-cloud-go/commit/2fda86031820ad7d29322f03ad6f34871ad5ff59))
+
+## [0.120.0](https://github.com/googleapis/google-cloud-go/compare/v0.119.0...v0.120.0) (2025-03-20)
+
+
+### Features
+
+* **civil:** Implement database/sql.Scanner|Valuer ([#1145](https://github.com/googleapis/google-cloud-go/issues/1145)) ([#11808](https://github.com/googleapis/google-cloud-go/issues/11808)) ([cbe4419](https://github.com/googleapis/google-cloud-go/commit/cbe4419c17f677c05f3f52c2080861adce705db4))
+
+
+### Bug Fixes
+
+* **third_party/pkgsite:** Increase comment size limit ([#11877](https://github.com/googleapis/google-cloud-go/issues/11877)) ([587b5cc](https://github.com/googleapis/google-cloud-go/commit/587b5ccc684ad99cb9eeba897304b7143564d423))
+
+## [0.119.0](https://github.com/googleapis/google-cloud-go/compare/v0.118.3...v0.119.0) (2025-03-11)
+
+
+### Features
+
+* **main:** Add support for listening on custom host to internal/testutil ([#11780](https://github.com/googleapis/google-cloud-go/issues/11780)) ([9608a09](https://github.com/googleapis/google-cloud-go/commit/9608a09a5d41778c7bb93792b5d5128d7081d4a6)), refs [#11586](https://github.com/googleapis/google-cloud-go/issues/11586)
+
+## [0.118.3](https://github.com/googleapis/google-cloud-go/compare/v0.118.2...v0.118.3) (2025-02-20)
+
+
+### Bug Fixes
+
+* **main:** Bump github.com/envoyproxy/go-control-plane/envoy to v1.32.4 ([#11591](https://github.com/googleapis/google-cloud-go/issues/11591)) ([d52451a](https://github.com/googleapis/google-cloud-go/commit/d52451aa22fb7120e37b43161d3d3103c19e5943))
+
+## [0.118.2](https://github.com/googleapis/google-cloud-go/compare/v0.118.1...v0.118.2) (2025-02-06)
+
+
+### Bug Fixes
+
+* **internal/godocfx:** Don't save timestamps until modules are successfully processed ([#11563](https://github.com/googleapis/google-cloud-go/issues/11563)) ([8f38b3d](https://github.com/googleapis/google-cloud-go/commit/8f38b3d912354027c30977b5adc928e0c6eff7a9))
+* **internal/godocfx:** Retry go get with explicit envoy dependency ([#11564](https://github.com/googleapis/google-cloud-go/issues/11564)) ([a06a6a5](https://github.com/googleapis/google-cloud-go/commit/a06a6a5542939b6239e1ec2c944eb1aae56745d9))
+
+## [0.118.1](https://github.com/googleapis/google-cloud-go/compare/v0.118.0...v0.118.1) (2025-01-30)
+
+
+### Bug Fixes
+
+* **main:** Remove OpenCensus dependency ([6243d91](https://github.com/googleapis/google-cloud-go/commit/6243d910b2bb502211d8308f9cc7723829d9f844))
+
+## [0.118.0](https://github.com/googleapis/google-cloud-go/compare/v0.117.0...v0.118.0) (2025-01-02)
+
+
+### Features
+
+* **civil:** Add AddMonths, AddYears and Weekday methods to Date ([#11340](https://github.com/googleapis/google-cloud-go/issues/11340)) ([d45f1a0](https://github.com/googleapis/google-cloud-go/commit/d45f1a01ebff868418aa14fe762ef7d1334f797d))
+
+## [0.117.0](https://github.com/googleapis/google-cloud-go/compare/v0.116.0...v0.117.0) (2024-12-16)
+
+
+### Features
+
+* **internal/trace:** Remove previously deprecated OpenCensus support ([#11230](https://github.com/googleapis/google-cloud-go/issues/11230)) ([40cf125](https://github.com/googleapis/google-cloud-go/commit/40cf1251c9d73be435585ce204a63588446c72b1)), refs [#10287](https://github.com/googleapis/google-cloud-go/issues/10287)
+* **transport:** Remove deprecated EXPERIMENTAL OpenCensus trace context propagation ([#11239](https://github.com/googleapis/google-cloud-go/issues/11239)) ([0d1ac87](https://github.com/googleapis/google-cloud-go/commit/0d1ac87174ed8526ea47d71a80e641ffbd687a6c)), refs [#10287](https://github.com/googleapis/google-cloud-go/issues/10287) [#11230](https://github.com/googleapis/google-cloud-go/issues/11230)
+
+## [0.116.0](https://github.com/googleapis/google-cloud-go/compare/v0.115.1...v0.116.0) (2024-10-09)
+
+
+### Features
+
+* **genai:** Add tokenizer package ([#10699](https://github.com/googleapis/google-cloud-go/issues/10699)) ([214af16](https://github.com/googleapis/google-cloud-go/commit/214af1604bf3837f68e96dbf81c1331b90c9375f))
+
+## [0.115.1](https://github.com/googleapis/google-cloud-go/compare/v0.115.0...v0.115.1) (2024-08-13)
+
+
+### Bug Fixes
+
+* **cloud.google.com/go:** Bump google.golang.org/grpc@v1.64.1 ([8ecc4e9](https://github.com/googleapis/google-cloud-go/commit/8ecc4e9622e5bbe9b90384d5848ab816027226c5))
+
+## [0.115.0](https://github.com/googleapis/google-cloud-go/compare/v0.114.0...v0.115.0) (2024-06-12)
+
+
+### Features
+
+* **internal/trace:** Deprecate OpenCensus support ([#10287](https://github.com/googleapis/google-cloud-go/issues/10287)) ([430ce8a](https://github.com/googleapis/google-cloud-go/commit/430ce8adea2d0be43461e2ca783b7c17794e983f)), refs [#2205](https://github.com/googleapis/google-cloud-go/issues/2205) [#8655](https://github.com/googleapis/google-cloud-go/issues/8655)
+
+
+### Bug Fixes
+
+* **internal/postprocessor:** Use approved image tag ([#10341](https://github.com/googleapis/google-cloud-go/issues/10341)) ([a388fe5](https://github.com/googleapis/google-cloud-go/commit/a388fe5cf075d0af986861c70dcb7b9f97c31019))
+
+## [0.114.0](https://github.com/googleapis/google-cloud-go/compare/v0.113.0...v0.114.0) (2024-05-23)
+
+
+### Features
+
+* **civil:** Add Compare method to Date, Time, and DateTime ([#10193](https://github.com/googleapis/google-cloud-go/issues/10193)) ([c2920d7](https://github.com/googleapis/google-cloud-go/commit/c2920d7c9007a11d9232c628fba5496197deeba4))
+
+
+### Bug Fixes
+
+* **internal/postprocessor:** Add scopes to all appropriate commit lines ([#10192](https://github.com/googleapis/google-cloud-go/issues/10192)) ([c21399b](https://github.com/googleapis/google-cloud-go/commit/c21399bdc362c6c646c2c0f8c2c55903898e0eab))
+
+## [0.113.0](https://github.com/googleapis/google-cloud-go/compare/v0.112.2...v0.113.0) (2024-05-08)
+
+
+### Features
+
+* **civil:** Add Compare method to Date, Time, and DateTime ([#10010](https://github.com/googleapis/google-cloud-go/issues/10010)) ([34455c1](https://github.com/googleapis/google-cloud-go/commit/34455c15d62b089f3281ff4c663245e72b257f37))
+
+
+### Bug Fixes
+
+* **all:** Bump x/net to v0.24.0 ([#10000](https://github.com/googleapis/google-cloud-go/issues/10000)) ([ba31ed5](https://github.com/googleapis/google-cloud-go/commit/ba31ed5fda2c9664f2e1cf972469295e63deb5b4))
+* **debugger:** Add internaloption.WithDefaultEndpointTemplate ([3b41408](https://github.com/googleapis/google-cloud-go/commit/3b414084450a5764a0248756e95e13383a645f90))
+* **internal/aliasfix:** Handle import paths correctly ([#10097](https://github.com/googleapis/google-cloud-go/issues/10097)) ([fafaf0d](https://github.com/googleapis/google-cloud-go/commit/fafaf0d0a293096559a4655ea61062cb896f1568))
+* **rpcreplay:** Properly unmarshal dynamic message ([#9774](https://github.com/googleapis/google-cloud-go/issues/9774)) ([53ccb20](https://github.com/googleapis/google-cloud-go/commit/53ccb20d925ccb00f861958d9658b55738097dc6)), refs [#9773](https://github.com/googleapis/google-cloud-go/issues/9773)
+
+
+### Documentation
+
+* **testing:** Switch deprecated WithInsecure to WithTransportCredentials ([#10091](https://github.com/googleapis/google-cloud-go/issues/10091)) ([2b576ab](https://github.com/googleapis/google-cloud-go/commit/2b576abd1c3bfca2f962de0e024524f72d3652c0))
+
 ## [0.112.2](https://github.com/googleapis/google-cloud-go/compare/v0.112.1...v0.112.2) (2024-03-27)
 
 

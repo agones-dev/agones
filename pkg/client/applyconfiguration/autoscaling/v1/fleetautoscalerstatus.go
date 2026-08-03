@@ -25,12 +25,24 @@ import (
 
 // FleetAutoscalerStatusApplyConfiguration represents a declarative configuration of the FleetAutoscalerStatus type for use
 // with apply.
+//
+// FleetAutoscalerStatus defines the current status of a FleetAutoscaler
 type FleetAutoscalerStatusApplyConfiguration struct {
-	CurrentReplicas   *int32                                   `json:"currentReplicas,omitempty"`
-	DesiredReplicas   *int32                                   `json:"desiredReplicas,omitempty"`
-	LastScaleTime     *metav1.Time                             `json:"lastScaleTime,omitempty"`
-	AbleToScale       *bool                                    `json:"ableToScale,omitempty"`
-	ScalingLimited    *bool                                    `json:"scalingLimited,omitempty"`
+	// CurrentReplicas is the current number of gameserver replicas
+	// of the fleet managed by this autoscaler, as last seen by the autoscaler
+	CurrentReplicas *int32 `json:"currentReplicas,omitempty"`
+	// DesiredReplicas is the desired number of gameserver replicas
+	// of the fleet managed by this autoscaler, as last calculated by the autoscaler
+	DesiredReplicas *int32 `json:"desiredReplicas,omitempty"`
+	// lastScaleTime is the last time the FleetAutoscaler scaled the attached fleet,
+	LastScaleTime *metav1.Time `json:"lastScaleTime,omitempty"`
+	// AbleToScale indicates that we can access the target fleet
+	AbleToScale *bool `json:"ableToScale,omitempty"`
+	// ScalingLimited indicates that the calculated scale would be above or below the range
+	// defined by MinReplicas and MaxReplicas, and has thus been capped.
+	ScalingLimited *bool `json:"scalingLimited,omitempty"`
+	// LastAppliedPolicy is the ID of the last applied policy in the ChainPolicy.
+	// Used to track policy transitions for logging purposes.
 	LastAppliedPolicy *autoscalingv1.FleetAutoscalerPolicyType `json:"lastAppliedPolicy,omitempty"`
 }
 

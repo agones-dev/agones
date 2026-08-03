@@ -20,10 +20,22 @@ package v1
 
 // ActivePeriodApplyConfiguration represents a declarative configuration of the ActivePeriod type for use
 // with apply.
+//
+// ActivePeriod defines the time period that the policy is applied.
 type ActivePeriodApplyConfiguration struct {
-	Timezone  *string `json:"timezone,omitempty"`
+	// Timezone to be used for the startCron field. If not set, startCron is defaulted to the UTC timezone.
+	Timezone *string `json:"timezone,omitempty"`
+	// StartCron defines when the policy should be applied.
+	// If not set, the policy is always to be applied within the start and end time.
+	// This field must conform to UNIX cron syntax.
 	StartCron *string `json:"startCron,omitempty"`
-	Duration  *string `json:"duration,omitempty"`
+	// Duration is the length of time that the policy is applied.
+	// If not set, the duration is indefinite.
+	// A duration string is a possibly signed sequence of decimal numbers,
+	// (e.g. "300ms", "-1.5h" or "2h45m").
+	// The representation limits the largest representable duration to approximately 290 years.
+	// Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+	Duration *string `json:"duration,omitempty"`
 }
 
 // ActivePeriodApplyConfiguration constructs a declarative configuration of the ActivePeriod type for use with

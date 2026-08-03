@@ -20,6 +20,8 @@ package v1
 
 // PlayerStatusApplyConfiguration represents a declarative configuration of the PlayerStatus type for use
 // with apply.
+//
+// PlayerStatus stores the current player capacity values
 type PlayerStatusApplyConfiguration struct {
 	Count    *int64   `json:"count,omitempty"`
 	Capacity *int64   `json:"capacity,omitempty"`

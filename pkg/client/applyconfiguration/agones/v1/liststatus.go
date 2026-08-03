@@ -20,6 +20,8 @@ package v1
 
 // ListStatusApplyConfiguration represents a declarative configuration of the ListStatus type for use
 // with apply.
+//
+// ListStatus stores the current list values and maximum capacity
 type ListStatusApplyConfiguration struct {
 	Capacity *int64   `json:"capacity,omitempty"`
 	Values   []string `json:"values,omitempty"`

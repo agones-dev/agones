@@ -20,10 +20,15 @@ package v1
 
 // SchedulePolicyApplyConfiguration represents a declarative configuration of the SchedulePolicy type for use
 // with apply.
+//
+// SchedulePolicy controls the desired behavior of the Schedule autoscaler policy.
 type SchedulePolicyApplyConfiguration struct {
-	Between      *BetweenApplyConfiguration               `json:"between,omitempty"`
-	ActivePeriod *ActivePeriodApplyConfiguration          `json:"activePeriod,omitempty"`
-	Policy       *FleetAutoscalerPolicyApplyConfiguration `json:"policy,omitempty"`
+	// Between defines the time period that the policy is eligible to be applied.
+	Between *BetweenApplyConfiguration `json:"between,omitempty"`
+	// ActivePeriod defines the time period that the policy is applied.
+	ActivePeriod *ActivePeriodApplyConfiguration `json:"activePeriod,omitempty"`
+	// Policy is the name of the policy to be applied. Required field.
+	Policy *FleetAutoscalerPolicyApplyConfiguration `json:"policy,omitempty"`
 }
 
 // SchedulePolicyApplyConfiguration constructs a declarative configuration of the SchedulePolicy type for use with
