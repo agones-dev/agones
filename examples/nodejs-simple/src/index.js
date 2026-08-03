@@ -18,7 +18,7 @@ const {setTimeout} = require('timers/promises');
 const DEFAULT_TIMEOUT = 60;
 const MAX_TIMEOUT = 2147483;
 
-const connect = async (timeout, enableAlpha, enableBeta) => {
+const connect = async (timeout, enableBeta) => {
 	let agonesSDK = new AgonesSDK();
 
 	let lifetimeInterval;
@@ -44,11 +44,6 @@ const connect = async (timeout, enableAlpha, enableBeta) => {
 	state: ${result.status.state}
 	labels: ${result.objectMeta.labelsMap.join(' & ')}
 	annotations: ${result.objectMeta.annotationsMap.join(' & ')}`;
-			if (enableAlpha) {
-				output += `
-	players: ${result.status.players.count}/${result.status.players.capacity} [${result.status.players.idsList}]`;
-			}
-			console.log(output);
 		}, (error) => {
 			console.error('Watch ERROR', error);
 			clearInterval(healthInterval);
@@ -76,11 +71,6 @@ const connect = async (timeout, enableAlpha, enableBeta) => {
 		console.log('Reserving for 10 seconds');
 		await agonesSDK.reserve(10);
 		await setTimeout(15000);
-
-		if (enableAlpha) {
-			console.log('Running alpha suite');
-			await runAlphaSuite(agonesSDK);
-		}
 
 		if (enableBeta) {
 			console.log('Running beta suite');
@@ -115,61 +105,6 @@ const connect = async (timeout, enableAlpha, enableBeta) => {
 		clearInterval(lifetimeInterval);
 		process.exit(0);
 	}
-};
-
-const runAlphaSuite = async (agonesSDK) => {
-	await setTimeout(5000);
-	console.log('Setting capacity');
-	await agonesSDK.alpha.setPlayerCapacity(64);
-
-	await setTimeout(5000);
-	console.log('Getting capacity');
-	let result = await agonesSDK.alpha.getPlayerCapacity();
-	console.log(`result: ${result}`);
-
-	await setTimeout(5000);
-	console.log('Connecting a player');
-	result = await agonesSDK.alpha.playerConnect('firstPlayerID');
-	console.log(`result: ${result}`);
-
-	await setTimeout(5000);
-	console.log('Connecting a duplicate player');
-	result = await agonesSDK.alpha.playerConnect('firstPlayerID');
-	console.log(`result: ${result}`);
-
-	await setTimeout(5000);
-	console.log('Connecting another player');
-	await agonesSDK.alpha.playerConnect('secondPlayerID');
-
-	await setTimeout(5000);
-	console.log('Getting player count');
-	result = await agonesSDK.alpha.getPlayerCount();
-	console.log(`result: ${result}`);
-
-	await setTimeout(5000);
-	console.log('Finding if firstPlayerID connected');
-	result = await agonesSDK.alpha.isPlayerConnected('firstPlayerID');
-	console.log(`result: ${result}`);
-
-	await setTimeout(5000);
-	console.log('Getting connected players');
-	result = await agonesSDK.alpha.getConnectedPlayers();
-	console.log(`result: ${result}`);
-
-	await setTimeout(5000);
-	console.log('Disconnecting a player');
-	result = await agonesSDK.alpha.playerDisconnect('firstPlayerID');
-	console.log(`result: ${result}`);
-
-	await setTimeout(5000);
-	console.log('Disconnecting the same player');
-	result = await agonesSDK.alpha.playerDisconnect('firstPlayerID');
-	console.log(`result: ${result}`);
-
-	await setTimeout(5000);
-	console.log('Setting counter capacity');
-	result = await agonesSDK.alpha.setCounterCapacity('testCounter', 10);
-	console.log(`result: ${result}`);
 };
 
 const runBetaSuite = async (agonesSDK) => {
@@ -236,7 +171,6 @@ const runBetaSuite = async (agonesSDK) => {
 
 let args = process.argv.slice(2);
 let timeout = DEFAULT_TIMEOUT;
-let enableAlpha = false;
 let enableBeta = false;
 
 for (let arg of args) {
@@ -246,7 +180,6 @@ for (let arg of args) {
 		
 Options:
 	--timeout=...\t\tshutdown timeout in seconds. Use 0 to never shut down
-	--alpha\t\t\tenable alpha features
 	--beta\t\t\tenable beta features`);
 		return;
 	}
@@ -264,10 +197,6 @@ Options:
 		}
 	}
 
-	if (argName === '--alpha') {
-		console.log('Enabling alpha features!');
-		enableAlpha = true;
-	}
 
 	if (argName === '--beta') {
 		console.log('Enabling beta features!');
@@ -275,4 +204,4 @@ Options:
 	}
 }
 
-connect(timeout, enableAlpha, enableBeta);
+connect(timeout,enableBeta);

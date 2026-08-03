@@ -38,21 +38,12 @@ func main() {
 	log.SetPrefix("[wrapper] ")
 	input := flag.String("i", "", "the command and arguments to execute the server binary")
 
-	// Since player tracking is not on by default, it is behind this flag.
-	// If it is off, still log messages about players, but don't actually call the player tracking functions.
-	enablePlayerTracking := flag.Bool("player-tracking", false, "If true, player tracking will be enabled.")
 	flag.Parse()
 
 	log.Println("Connecting to Agones with the SDK")
 	s, err := sdk.NewSDK()
 	if err != nil {
 		log.Fatalf("could not connect to SDK: %v", err)
-	}
-
-	if *enablePlayerTracking {
-		if err = s.Alpha().SetPlayerCapacity(8); err != nil {
-			log.Fatalf("could not set play count: %v", err)
-		}
 	}
 
 	log.Println("Starting health checking")
@@ -121,26 +112,10 @@ func main() {
 				log.Print("could not determine player")
 				break
 			}
-			if *enablePlayerTracking {
-				result, err := s.Alpha().PlayerConnect(*player)
-				if err != nil {
-					log.Print(err)
-				} else {
-					log.Print(result)
-				}
-			}
 		case "PLAYERLEAVE":
 			if player == nil {
 				log.Print("could not determine player")
 				break
-			}
-			if *enablePlayerTracking {
-				result, err := s.Alpha().PlayerDisconnect(*player)
-				if err != nil {
-					log.Print(err)
-				} else {
-					log.Print(result)
-				}
 			}
 		case "SHUTDOWN":
 			if err := s.Shutdown(); err != nil {
