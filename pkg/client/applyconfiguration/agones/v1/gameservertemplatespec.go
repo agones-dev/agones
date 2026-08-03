@@ -26,6 +26,8 @@ import (
 
 // GameServerTemplateSpecApplyConfiguration represents a declarative configuration of the GameServerTemplateSpec type for use
 // with apply.
+//
+// GameServerTemplateSpec is a template for GameServers
 type GameServerTemplateSpecApplyConfiguration struct {
 	*metav1.ObjectMetaApplyConfiguration `json:"metadata,omitempty"`
 	Spec                                 *GameServerSpecApplyConfiguration `json:"spec,omitempty"`

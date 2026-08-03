@@ -77,6 +77,9 @@ func (ll *LeaseLock) Update(ctx context.Context, ler LeaderElectionRecord) error
 	ll.lease.Spec = LeaderElectionRecordToLeaseSpec(&ler)
 
 	if ll.Labels != nil {
+		if ll.lease.Labels == nil {
+			ll.lease.Labels = map[string]string{}
+		}
 		// Only overwrite the labels that are specifically set
 		for k, v := range ll.Labels {
 			ll.lease.Labels[k] = v
@@ -102,7 +105,7 @@ func (ll *LeaseLock) RecordEvent(s string) {
 	// Populate the type meta, so we don't have to get it from the schema
 	subject.Kind = "Lease"
 	subject.APIVersion = coordinationv1.SchemeGroupVersion.String()
-	ll.LockConfig.EventRecorder.Eventf(subject, corev1.EventTypeNormal, "LeaderElection", events)
+	ll.LockConfig.EventRecorder.Eventf(subject, corev1.EventTypeNormal, "LeaderElection", "%s", events)
 }
 
 // Describe is used to convert details on current resource lock

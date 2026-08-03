@@ -20,11 +20,18 @@ package v1
 
 // WasmPolicyApplyConfiguration represents a declarative configuration of the WasmPolicy type for use
 // with apply.
+//
+// WasmPolicy controls the desired behavior of the Wasm policy.
+// It contains the configuration for the WebAssembly module used for autoscaling.
 type WasmPolicyApplyConfiguration struct {
-	Function *string                     `json:"function,omitempty"`
-	Config   map[string]string           `json:"config,omitempty"`
-	From     *WasmFromApplyConfiguration `json:"from,omitempty"`
-	Hash     *string                     `json:"hash,omitempty"`
+	// Function is the exported function to call in the wasm module, defaults to 'scale'
+	Function *string `json:"function,omitempty"`
+	// Config values to pass to the wasm program on startup
+	Config map[string]string `json:"config,omitempty"`
+	// WasmFrom defines the source of the Wasm module
+	From *WasmFromApplyConfiguration `json:"from,omitempty"`
+	// Hash of the Wasm module, used to verify the integrity of the module
+	Hash *string `json:"hash,omitempty"`
 }
 
 // WasmPolicyApplyConfiguration constructs a declarative configuration of the WasmPolicy type for use with

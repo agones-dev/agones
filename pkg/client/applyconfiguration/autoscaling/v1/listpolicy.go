@@ -24,11 +24,23 @@ import (
 
 // ListPolicyApplyConfiguration represents a declarative configuration of the ListPolicy type for use
 // with apply.
+//
+// ListPolicy controls the desired behavior of the List autoscaler policy.
 type ListPolicyApplyConfiguration struct {
-	Key         *string             `json:"key,omitempty"`
-	MaxCapacity *int64              `json:"maxCapacity,omitempty"`
-	MinCapacity *int64              `json:"minCapacity,omitempty"`
-	BufferSize  *intstr.IntOrString `json:"bufferSize,omitempty"`
+	// Key is the name of the List. Required field.
+	Key *string `json:"key,omitempty"`
+	// MaxCapacity is the maximum aggregate List total capacity across the fleet.
+	// MaxCapacity must be bigger than both MinCapacity and BufferSize. Required field.
+	MaxCapacity *int64 `json:"maxCapacity,omitempty"`
+	// MinCapacity is the minimum aggregate List total capacity across the fleet.
+	// If zero, it is ignored.
+	// If non zero, it must be smaller than MaxCapacity and bigger than BufferSize.
+	MinCapacity *int64 `json:"minCapacity,omitempty"`
+	// BufferSize is the size of a buffer based on the List capacity that is available over the
+	// current aggregate List length in the Fleet (available capacity). It can be specified either
+	// as an absolute value (i.e. 5) or percentage format (i.e. 5%).
+	// Must be bigger than 0. Required field.
+	BufferSize *intstr.IntOrString `json:"bufferSize,omitempty"`
 }
 
 // ListPolicyApplyConfiguration constructs a declarative configuration of the ListPolicy type for use with

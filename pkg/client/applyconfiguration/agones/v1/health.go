@@ -20,10 +20,16 @@ package v1
 
 // HealthApplyConfiguration represents a declarative configuration of the Health type for use
 // with apply.
+//
+// Health configures health checking on the GameServer
 type HealthApplyConfiguration struct {
-	Disabled            *bool  `json:"disabled,omitempty"`
-	PeriodSeconds       *int32 `json:"periodSeconds,omitempty"`
-	FailureThreshold    *int32 `json:"failureThreshold,omitempty"`
+	// Disabled is whether health checking is disabled or not
+	Disabled *bool `json:"disabled,omitempty"`
+	// PeriodSeconds is the number of seconds each health ping has to occur in
+	PeriodSeconds *int32 `json:"periodSeconds,omitempty"`
+	// FailureThreshold how many failures in a row constitutes unhealthy
+	FailureThreshold *int32 `json:"failureThreshold,omitempty"`
+	// InitialDelaySeconds initial delay before checking health
 	InitialDelaySeconds *int32 `json:"initialDelaySeconds,omitempty"`
 }
 

@@ -20,12 +20,21 @@ package v1
 
 // ClusterConnectionInfoApplyConfiguration represents a declarative configuration of the ClusterConnectionInfo type for use
 // with apply.
+//
+// ClusterConnectionInfo defines the connection information for a cluster
 type ClusterConnectionInfoApplyConfiguration struct {
-	ClusterName         *string  `json:"clusterName,omitempty"`
+	// Optional: the name of the targeted cluster
+	ClusterName *string `json:"clusterName,omitempty"`
+	// The endpoints for the allocator service in the targeted cluster.
+	// If the AllocationEndpoints is not set, the allocation happens on local cluster.
+	// If there are multiple endpoints any of the endpoints that can handle allocation request should suffice
 	AllocationEndpoints []string `json:"allocationEndpoints,omitempty"`
-	SecretName          *string  `json:"secretName,omitempty"`
-	Namespace           *string  `json:"namespace,omitempty"`
-	ServerCA            []byte   `json:"serverCa,omitempty"`
+	// The name of the secret that contains TLS client certificates to connect the allocator server in the targeted cluster
+	SecretName *string `json:"secretName,omitempty"`
+	// The cluster namespace from which to allocate gameservers
+	Namespace *string `json:"namespace,omitempty"`
+	// The PEM encoded server CA, used by the allocator client to authenticate the remote server.
+	ServerCA []byte `json:"serverCa,omitempty"`
 }
 
 // ClusterConnectionInfoApplyConfiguration constructs a declarative configuration of the ClusterConnectionInfo type for use with

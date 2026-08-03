@@ -25,17 +25,32 @@ import (
 
 // GameServerSpecApplyConfiguration represents a declarative configuration of the GameServerSpec type for use
 // with apply.
+//
+// GameServerSpec is the spec for a GameServer resource
 type GameServerSpecApplyConfiguration struct {
-	Container  *string                                    `json:"container,omitempty"`
-	Ports      []GameServerPortApplyConfiguration         `json:"ports,omitempty"`
-	Health     *HealthApplyConfiguration                  `json:"health,omitempty"`
-	Scheduling *apis.SchedulingStrategy                   `json:"scheduling,omitempty"`
-	SdkServer  *SdkServerApplyConfiguration               `json:"sdkServer,omitempty"`
-	Template   *corev1.PodTemplateSpec                    `json:"template,omitempty"`
-	Players    *PlayersSpecApplyConfiguration             `json:"players,omitempty"`
-	Counters   map[string]CounterStatusApplyConfiguration `json:"counters,omitempty"`
-	Lists      map[string]ListStatusApplyConfiguration    `json:"lists,omitempty"`
-	Eviction   *EvictionApplyConfiguration                `json:"eviction,omitempty"`
+	// Container specifies which Pod container is the game server. Only required if there is more than one
+	// container defined
+	Container *string `json:"container,omitempty"`
+	// Ports are the array of ports that can be exposed via the game server
+	Ports []GameServerPortApplyConfiguration `json:"ports,omitempty"`
+	// Health configures health checking
+	Health *HealthApplyConfiguration `json:"health,omitempty"`
+	// Scheduling strategy. Defaults to "Packed"
+	Scheduling *apis.SchedulingStrategy `json:"scheduling,omitempty"`
+	// SdkServer specifies parameters for the Agones SDK Server sidecar container
+	SdkServer *SdkServerApplyConfiguration `json:"sdkServer,omitempty"`
+	// Template describes the Pod that will be created for the GameServer
+	Template *corev1.PodTemplateSpec `json:"template,omitempty"`
+	// (Alpha, PlayerTracking feature flag) Players provides the configuration for player tracking features.
+	Players *PlayersSpecApplyConfiguration `json:"players,omitempty"`
+	// (Beta, CountsAndLists feature flag) Counters provides the configuration for tracking of int64 values against a GameServer.
+	// Keys must be declared at GameServer creation time.
+	Counters map[string]CounterStatusApplyConfiguration `json:"counters,omitempty"`
+	// (Beta, CountsAndLists feature flag) Lists provides the configuration for tracking of lists of up to 1000 values against a GameServer.
+	// Keys must be declared at GameServer creation time.
+	Lists map[string]ListStatusApplyConfiguration `json:"lists,omitempty"`
+	// Eviction specifies the eviction tolerance of the GameServer. Defaults to "Never".
+	Eviction *EvictionApplyConfiguration `json:"eviction,omitempty"`
 }
 
 // GameServerSpecApplyConfiguration constructs a declarative configuration of the GameServerSpec type for use with

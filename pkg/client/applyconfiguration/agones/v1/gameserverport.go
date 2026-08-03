@@ -25,14 +25,31 @@ import (
 
 // GameServerPortApplyConfiguration represents a declarative configuration of the GameServerPort type for use
 // with apply.
+//
+// GameServerPort defines a set of Ports that
+// are to be exposed via the GameServer
 type GameServerPortApplyConfiguration struct {
-	Name          *string              `json:"name,omitempty"`
-	Range         *string              `json:"range,omitempty"`
-	PortPolicy    *agonesv1.PortPolicy `json:"portPolicy,omitempty"`
-	Container     *string              `json:"container,omitempty"`
-	ContainerPort *int32               `json:"containerPort,omitempty"`
-	HostPort      *int32               `json:"hostPort,omitempty"`
-	Protocol      *corev1.Protocol     `json:"protocol,omitempty"`
+	// Name is the descriptive name of the port
+	Name *string `json:"name,omitempty"`
+	// Range is the port range name from which to select a port when using a
+	// 'Dynamic' or 'Passthrough' port policy.
+	Range *string `json:"range,omitempty"`
+	// PortPolicy defines the policy for how the HostPort is populated.
+	// Dynamic port will allocate a HostPort within the selected MIN_PORT and MAX_PORT range passed to the controller
+	// at installation time.
+	// When `Static` portPolicy is specified, `HostPort` is required, to specify the port that game clients will
+	// connect to
+	// `Passthrough` dynamically sets the `containerPort` to the same value as the dynamically selected hostPort.
+	// `None` portPolicy ignores `HostPort` and the `containerPort` (optional) is used to set the port on the GameServer instance.
+	PortPolicy *agonesv1.PortPolicy `json:"portPolicy,omitempty"`
+	// Container is the name of the container or sidecar container on which to open the port. Defaults to the game server container.
+	Container *string `json:"container,omitempty"`
+	// ContainerPort is the port that is being opened on the specified container's process
+	ContainerPort *int32 `json:"containerPort,omitempty"`
+	// HostPort the port exposed on the host for clients to connect to
+	HostPort *int32 `json:"hostPort,omitempty"`
+	// Protocol is the network protocol being used. Defaults to UDP. TCP and TCPUDP are other options.
+	Protocol *corev1.Protocol `json:"protocol,omitempty"`
 }
 
 // GameServerPortApplyConfiguration constructs a declarative configuration of the GameServerPort type for use with

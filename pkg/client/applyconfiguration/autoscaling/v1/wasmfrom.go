@@ -20,7 +20,10 @@ package v1
 
 // WasmFromApplyConfiguration represents a declarative configuration of the WasmFrom type for use
 // with apply.
+//
+// WasmFrom defines the source of the Wasm module
 type WasmFromApplyConfiguration struct {
+	// URL is the URL of the Wasm module to use for autoscaling.
 	URL *URLConfigurationApplyConfiguration `json:"url,omitempty"`
 }
 
