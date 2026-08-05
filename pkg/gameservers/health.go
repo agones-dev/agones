@@ -156,13 +156,45 @@ func (hc *HealthController) evictedPod(pod *corev1.Pod) bool {
 // failedContainer checks each container, and determines if the main gameserver
 // container has failed
 func (hc *HealthController) failedContainer(pod *corev1.Pod) bool {
-	// return false, since there is no gameserver restart before ready. When this graduates, you can delete this
-	// whole function.
+	container := pod.Annotations[agonesv1.GameServerContainerAnnotation]
+
+	// With SidecarContainers enabled we defer to Pod status rather than tracking restarts
+	// ourselves, since Kubernetes owns the container lifecycle. failedPod() is expected to
+	// catch a dead game container via the Failed phase.
+	//
+	// That holds only when the game container is the last container to exit: a Pod reaches
+	// the Failed phase once *every* container has terminated. A GameServer Pod that also
+	// runs a long-lived non-sidecar container — a log shipper or metrics/heap-dump uploader,
+	// for example — stays in the Running phase after the game container dies, so
+	// failedPod() never fires, and with this function short-circuiting to false the
+	// GameServer is never moved to Unhealthy. It remains Ready or Allocated indefinitely
+	// while serving nothing, and Allocated ones keep receiving players.
+	//
+	// GameServer Pods are created with RestartPolicy: Never (see
+	// agonesv1.GameServer.Pod()), so a terminated game container can never come back.
+	// Report it as failed rather than waiting for a Pod phase transition that will not
+	// happen.
 	if runtime.FeatureEnabled(runtime.FeatureSidecarContainers) {
+		if pod.Spec.RestartPolicy != corev1.RestartPolicyNever {
+			// Kubernetes may still restart the container; leave the lifecycle to it.
+			return false
+		}
+
+		for _, cs := range pod.Status.ContainerStatuses {
+			if cs.Name == container {
+				if cs.State.Terminated != nil {
+					hc.baseLogger.WithField("gs", pod.ObjectMeta.Name).
+						WithField("containerStatuses", pod.Status.ContainerStatuses).
+						WithField("container", container).
+						Debug("Game server container terminated and cannot restart")
+					return true
+				}
+				return false
+			}
+		}
 		return false
 	}
 
-	container := pod.Annotations[agonesv1.GameServerContainerAnnotation]
 	for _, cs := range pod.Status.ContainerStatuses {
 		if cs.Name == container {
 			// sometimes on a restart, the cs.State can be running and the last state will be merged
@@ -276,9 +308,15 @@ func (hc *HealthController) skipUnhealthyGameContainer(gs *agonesv1.GameServer, 
 		return false, nil
 	}
 
-	// if Sidecar is enabled, always return false, since there is no skip - it's just whatever K8s/Agones wants tso do.
+	// if Sidecar is enabled, there is no skip once the GameServer is past Ready - it's just
+	// whatever K8s/Agones wants to do. Before Ready we still skip on a game container
+	// failure, matching the non-sidecar path below: a container that dies during startup is
+	// left to normal Kubernetes handling rather than immediately failing the GameServer.
 	// on move to stable, this function can be deleted.
 	if runtime.FeatureEnabled(runtime.FeatureSidecarContainers) {
+		if gs.IsBeforeReady() {
+			return hc.failedContainer(pod), nil
+		}
 		return false, nil
 	}
 
