@@ -26,6 +26,8 @@ import (
 
 // FleetApplyConfiguration represents a declarative configuration of the Fleet type for use
 // with apply.
+//
+// Fleet is the data structure for a Fleet resource
 type FleetApplyConfiguration struct {
 	metav1.TypeMetaApplyConfiguration    `json:",inline"`
 	*metav1.ObjectMetaApplyConfiguration `json:"metadata,omitempty"`
@@ -43,6 +45,7 @@ func Fleet(name, namespace string) *FleetApplyConfiguration {
 	b.WithAPIVersion("agones.dev/v1")
 	return b
 }
+
 func (b FleetApplyConfiguration) IsApplyConfiguration() {}
 
 // WithKind sets the Kind field in the declarative configuration to the given value

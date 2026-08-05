@@ -608,8 +608,8 @@ func TestGameServerValidate(t *testing.T) {
 					Type:     field.ErrorTypeInvalid,
 					Field:    field.NewPath("spec", "template", "metadata", "labels").String(),
 					BadValue: longNameLen64,
-					Detail:   "name part must be no more than 63 characters",
-					Origin:   "labelKey",
+					Detail:   "name part must be no more than 63 bytes",
+					Origin:   "format=k8s-label-key",
 				},
 			},
 		},
@@ -638,7 +638,7 @@ func TestGameServerValidate(t *testing.T) {
 			},
 			applyDefaults: false,
 			want: field.ErrorList{
-				field.Invalid(field.NewPath("spec", "template", "metadata", "labels"), longNameLen64, "must be no more than 63 characters"),
+				field.Invalid(field.NewPath("spec", "template", "metadata", "labels"), longNameLen64, "must be no more than 63 bytes").WithOrigin("format=k8s-label-value"),
 			},
 		},
 		{
@@ -666,7 +666,7 @@ func TestGameServerValidate(t *testing.T) {
 			},
 			applyDefaults: false,
 			want: field.ErrorList{
-				field.Invalid(field.NewPath("spec", "template", "metadata", "annotations"), longNameLen64, "name part must be no more than 63 characters"),
+				field.Invalid(field.NewPath("spec", "template", "metadata", "annotations"), longNameLen64, "name part must be no more than 63 bytes").WithOrigin("format=k8s-label-key"),
 			},
 		},
 		{
@@ -694,7 +694,7 @@ func TestGameServerValidate(t *testing.T) {
 			},
 			applyDefaults: false,
 			want: field.ErrorList{
-				field.Invalid(field.NewPath("spec", "template", "metadata", "annotations"), "agones.dev/short±Name", "name part must consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character (e.g. 'MyName',  or 'my.name',  or '123-abc', regex used for validation is '([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9]')"),
+				field.Invalid(field.NewPath("spec", "template", "metadata", "annotations"), "agones.dev/short±Name", "name part must consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character (e.g. 'MyName',  or 'my.name',  or '123-abc', regex used for validation is '([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9]')").WithOrigin("format=k8s-label-key"),
 			},
 		},
 		{

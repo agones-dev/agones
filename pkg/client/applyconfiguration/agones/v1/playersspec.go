@@ -20,6 +20,8 @@ package v1
 
 // PlayersSpecApplyConfiguration represents a declarative configuration of the PlayersSpec type for use
 // with apply.
+//
+// PlayersSpec tracks the initial player capacity
 type PlayersSpecApplyConfiguration struct {
 	InitialCapacity *int64 `json:"initialCapacity,omitempty"`
 }

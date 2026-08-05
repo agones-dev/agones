@@ -20,6 +20,9 @@ package v1
 
 // GameServerStatusPortApplyConfiguration represents a declarative configuration of the GameServerStatusPort type for use
 // with apply.
+//
+// GameServerStatusPort shows the port that was allocated to a
+// GameServer.
 type GameServerStatusPortApplyConfiguration struct {
 	Name *string `json:"name,omitempty"`
 	Port *int32  `json:"port,omitempty"`

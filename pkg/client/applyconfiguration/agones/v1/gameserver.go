@@ -26,6 +26,12 @@ import (
 
 // GameServerApplyConfiguration represents a declarative configuration of the GameServer type for use
 // with apply.
+//
+// GameServer is the data structure for a GameServer resource.
+// It is worth noting that while there is a `GameServerStatus` Status entry for the `GameServer`, it is not
+// defined as a subresource - unlike `Fleet` and other Agones resources.
+// This is so that we can retain the ability to change multiple aspects of a `GameServer` in a single atomic operation,
+// which is particularly useful for operations such as allocation.
 type GameServerApplyConfiguration struct {
 	metav1.TypeMetaApplyConfiguration    `json:",inline"`
 	*metav1.ObjectMetaApplyConfiguration `json:"metadata,omitempty"`
@@ -43,6 +49,7 @@ func GameServer(name, namespace string) *GameServerApplyConfiguration {
 	b.WithAPIVersion("agones.dev/v1")
 	return b
 }
+
 func (b GameServerApplyConfiguration) IsApplyConfiguration() {}
 
 // WithKind sets the Kind field in the declarative configuration to the given value

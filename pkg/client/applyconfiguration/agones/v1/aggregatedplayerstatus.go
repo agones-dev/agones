@@ -20,6 +20,8 @@ package v1
 
 // AggregatedPlayerStatusApplyConfiguration represents a declarative configuration of the AggregatedPlayerStatus type for use
 // with apply.
+//
+// AggregatedPlayerStatus stores total player tracking values
 type AggregatedPlayerStatusApplyConfiguration struct {
 	Count    *int64 `json:"count,omitempty"`
 	Capacity *int64 `json:"capacity,omitempty"`

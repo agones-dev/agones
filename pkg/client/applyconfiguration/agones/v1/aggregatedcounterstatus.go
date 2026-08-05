@@ -20,6 +20,8 @@ package v1
 
 // AggregatedCounterStatusApplyConfiguration represents a declarative configuration of the AggregatedCounterStatus type for use
 // with apply.
+//
+// AggregatedCounterStatus stores total and allocated Counter tracking values
 type AggregatedCounterStatusApplyConfiguration struct {
 	AllocatedCount    *int64 `json:"allocatedCount,omitempty"`
 	AllocatedCapacity *int64 `json:"allocatedCapacity,omitempty"`

@@ -41,7 +41,8 @@ variable "kubernetes_versions" {
     "1.33" = ["us-central1", "RAPID"]
     "1.34" = ["us-east1", "RAPID"]
     "1.35" = ["us-west1", "RAPID"]
-    //"1.36" = ["us-west1", "RAPID"]
+    "1.36" = ["us-east4", "RAPID"]
+    //"1.37" = ["us-east1", "RAPID"]
     // Before merge: When adding Kubernetes version 1.{N}, first uncomment the line above. Come back
     // to these instructions after the update PR merges.
     //

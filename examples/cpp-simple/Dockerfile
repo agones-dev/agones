@@ -22,14 +22,14 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /project
 
 # Install gRPC and dependencies
-RUN git clone --recurse-submodules -b v1.80.0 --depth 1 --shallow-submodules https://github.com/grpc/grpc /var/local/git/grpc && \
+RUN git clone --recurse-submodules -b v1.83.0 --depth 1 --shallow-submodules https://github.com/grpc/grpc /var/local/git/grpc && \
     cd /var/local/git/grpc && \
     mkdir -p cmake/build && \
     cd cmake/build && \
     export CMAKE_BUILD_PARALLEL_LEVEL=$(nproc) && \
-    cmake -DCMAKE_BUILD_TYPE=Release \
-      -DgRPC_INSTALL=ON \
-      -DgRPC_BUILD_TESTS=OFF ../.. && \
+    # BoringSSL (gRPC >= v1.81) redirects a defaulted CMAKE_INSTALL_PREFIX to
+    # ${CMAKE_SOURCE_DIR}/install, so pass it explicitly to keep protoc et al in /usr/local.
+    cmake -DCMAKE_BUILD_TYPE=Release -DgRPC_INSTALL=ON -DgRPC_BUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX=/usr/local ../.. && \
     make -j$(nproc) && make install
 
 # Install Agones SDK
