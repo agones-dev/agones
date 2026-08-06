@@ -1527,9 +1527,6 @@ func TestPlayerConnectAndDisconnect(t *testing.T) {
 }
 
 func TestCounters(t *testing.T) {
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		t.SkipNow()
-	}
 	t.Parallel()
 	ctx := context.Background()
 
@@ -1671,9 +1668,6 @@ func TestCounters(t *testing.T) {
 }
 
 func TestLists(t *testing.T) {
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		t.SkipNow()
-	}
 	t.Parallel()
 	ctx := context.Background()
 
@@ -1916,9 +1910,6 @@ func TestGameServerSlowStart(t *testing.T) {
 }
 
 func TestGameServerPatch(t *testing.T) {
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		t.SkipNow()
-	}
 	t.Parallel()
 	ctx := context.Background()
 

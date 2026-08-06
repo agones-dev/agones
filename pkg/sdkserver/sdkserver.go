@@ -184,11 +184,9 @@ func NewSDKServer(gameServerName, namespace string, kubeClient kubernetes.Interf
 		gsStateChannel:     make(chan agonesv1.GameServerState, 2),
 	}
 
-	if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		// Once FeatureCountsAndLists is in GA, move this into SDKServer creation above.
-		s.gsCounterUpdates = map[string]counterUpdateRequest{}
-		s.gsListUpdates = map[string]listUpdateRequest{}
-	}
+	// Once FeatureCountsAndLists is in GA, move this into SDKServer creation above.
+	s.gsCounterUpdates = map[string]counterUpdateRequest{}
+	s.gsListUpdates = map[string]listUpdateRequest{}
 
 	s.informerFactory = factory
 	s.logger = runtime.NewLoggerWithType(s).WithField("gsKey", namespace+"/"+gameServerName)
@@ -858,10 +856,6 @@ func (s *SDKServer) GetPlayerCapacity(_ context.Context, _ *alpha.Empty) (*alpha
 // [Stage:Beta]
 // [FeatureFlag:CountsAndLists]
 func (s *SDKServer) GetCounter(_ context.Context, in *beta.GetCounterRequest) (*beta.Counter, error) {
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
-	}
-
 	s.logger.WithField("name", in.Name).Debug("Getting Counter")
 
 	gs, err := s.gameServer()
@@ -909,10 +903,6 @@ func (s *SDKServer) GetCounter(_ context.Context, in *beta.GetCounterRequest) (*
 // [Stage:Beta]
 // [FeatureFlag:CountsAndLists]
 func (s *SDKServer) UpdateCounter(_ context.Context, in *beta.UpdateCounterRequest) (*beta.Counter, error) {
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
-	}
-
 	if in.CounterUpdateRequest == nil {
 		return nil, errors.Errorf("invalid argument. CounterUpdateRequest: %v cannot be nil", in.CounterUpdateRequest)
 	}
@@ -1083,9 +1073,6 @@ func (s *SDKServer) updateCounter(ctx context.Context) error {
 // [Stage:Beta]
 // [FeatureFlag:CountsAndLists]
 func (s *SDKServer) GetList(_ context.Context, in *beta.GetListRequest) (*beta.List, error) {
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
-	}
 	if in == nil {
 		return nil, errors.Errorf("GetListRequest cannot be nil")
 	}
@@ -1135,9 +1122,6 @@ func (s *SDKServer) GetList(_ context.Context, in *beta.GetListRequest) (*beta.L
 // [Stage:Beta]
 // [FeatureFlag:CountsAndLists]
 func (s *SDKServer) UpdateList(ctx context.Context, in *beta.UpdateListRequest) (*beta.List, error) {
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
-	}
 	if in == nil {
 		return nil, errors.Errorf("UpdateListRequest cannot be nil")
 	}
@@ -1229,9 +1213,6 @@ func (s *SDKServer) UpdateList(ctx context.Context, in *beta.UpdateListRequest) 
 // [Stage:Beta]
 // [FeatureFlag:CountsAndLists]
 func (s *SDKServer) AddListValue(ctx context.Context, in *beta.AddListValueRequest) (*beta.List, error) {
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
-	}
 	if in == nil {
 		return nil, errors.Errorf("AddListValueRequest cannot be nil")
 	}
@@ -1270,9 +1251,6 @@ func (s *SDKServer) AddListValue(ctx context.Context, in *beta.AddListValueReque
 // [Stage:Beta]
 // [FeatureFlag:CountsAndLists]
 func (s *SDKServer) RemoveListValue(ctx context.Context, in *beta.RemoveListValueRequest) (*beta.List, error) {
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
-	}
 	if in == nil {
 		return nil, errors.Errorf("RemoveListValueRequest cannot be nil")
 	}

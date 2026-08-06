@@ -866,9 +866,6 @@ func generateLocalCert(parentCert *x509.Certificate, parentPrivKey *rsa.PrivateK
 }
 
 func TestCounterAutoscaler(t *testing.T) {
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		t.SkipNow()
-	}
 	t.Parallel()
 
 	ctx := context.Background()
@@ -1025,9 +1022,6 @@ func TestCounterAutoscaler(t *testing.T) {
 
 // nolint:dupl  // Linter errors on lines are duplicate of TestListAutoscalerWithNoReplicas
 func TestCounterAutoscalerWithNoReplicas(t *testing.T) {
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		t.SkipNow()
-	}
 	t.Parallel()
 
 	ctx := context.Background()
@@ -1106,9 +1100,6 @@ func TestCounterAutoscalerWithNoReplicas(t *testing.T) {
 }
 
 func TestCounterAutoscalerAllocated(t *testing.T) {
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		t.SkipNow()
-	}
 	t.Parallel()
 
 	ctx := context.Background()
@@ -1206,10 +1197,6 @@ func TestCounterAutoscalerAllocated(t *testing.T) {
 
 // Related to the issue about the fleet autoscaler policy not namespaced: https://github.com/agones-dev/agones/issues/3954
 func TestCounterAutoscalerAllocatedMultipleNamespaces(t *testing.T) {
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		t.SkipNow()
-	}
-
 	ctx := context.Background()
 	client := framework.AgonesClient.AgonesV1()
 	log := e2e.TestLogger(t)
@@ -1404,9 +1391,6 @@ func TestCounterAutoscalerAllocatedMultipleNamespaces(t *testing.T) {
 }
 
 func TestListAutoscaler(t *testing.T) {
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		t.SkipNow()
-	}
 	t.Parallel()
 
 	ctx := context.Background()
@@ -1571,9 +1555,6 @@ func TestListAutoscaler(t *testing.T) {
 
 // nolint:dupl  // Linter errors on lines are duplicate of TestCounterAutoscalerWithNoReplicas
 func TestListAutoscalerWithNoReplicas(t *testing.T) {
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		t.SkipNow()
-	}
 	t.Parallel()
 
 	ctx := context.Background()
@@ -1652,9 +1633,6 @@ func TestListAutoscalerWithNoReplicas(t *testing.T) {
 }
 
 func TestListAutoscalerAllocated(t *testing.T) {
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		t.SkipNow()
-	}
 	t.Parallel()
 
 	ctx := context.Background()
@@ -1769,9 +1747,6 @@ func TestListAutoscalerAllocated(t *testing.T) {
 }
 
 func TestListAutoscalerWithSDKMethods(t *testing.T) {
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		t.SkipNow()
-	}
 	t.Parallel()
 
 	ctx := context.Background()

@@ -15,7 +15,6 @@
 package v1
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
@@ -71,7 +70,6 @@ func TestFleetGameServerSetGameServer(t *testing.T) {
 	runtime.FeatureTestMutex.Lock()
 	defer runtime.FeatureTestMutex.Unlock()
 
-	runtime.Must(runtime.ParseFeatures(fmt.Sprintf("%s=true", runtime.FeatureCountsAndLists)))
 	gsSet = f.GameServerSet()
 	assert.Nil(t, gsSet.Spec.AllocationOverflow)
 
