@@ -15,11 +15,11 @@
 package runtime
 
 import (
+	"fmt"
 	"net/url"
 	"strconv"
 	"sync"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
@@ -223,19 +223,19 @@ func ParseFeatures(queryString string) error {
 
 	values, err := url.ParseQuery(queryString)
 	if err != nil {
-		return errors.Wrap(err, "error parsing query string for feature gates")
+		return fmt.Errorf("error parsing query string for feature gates: %w", err)
 	}
 
 	for k := range values {
 		f := Feature(k)
 
 		if _, ok := featureDefaults[f]; !ok {
-			return errors.Errorf("Feature Gate %q is not a valid Feature Gate", f)
+			return fmt.Errorf("Feature Gate %q is not a valid Feature Gate", f)
 		}
 
 		b, err := strconv.ParseBool(values.Get(k))
 		if err != nil {
-			return errors.Wrapf(err, "error parsing bool value from flag %s ", k)
+			return fmt.Errorf("error parsing bool value from flag %s: %w", k, err)
 		}
 		features[f] = b
 	}

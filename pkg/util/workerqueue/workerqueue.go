@@ -19,13 +19,13 @@ package workerqueue
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
 	"agones.dev/agones/pkg/util/logfields"
 	"agones.dev/agones/pkg/util/runtime"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	k8serror "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -58,9 +58,8 @@ func (l *traceError) Error() string {
 
 // isTraceError returns if the error is a trace error or not
 func isTraceError(err error) bool {
-	cause := errors.Cause(err)
-	_, ok := cause.(*traceError)
-	return ok
+	var te *traceError
+	return errors.As(err, &te)
 }
 
 // Handler is the handler for processing the work queue
@@ -122,7 +121,7 @@ func (wq *WorkerQueue) Enqueue(obj interface{}) {
 	var key string
 	var err error
 	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
-		err = errors.Wrap(err, "Error creating key for object")
+		err = fmt.Errorf("Error creating key for object: %w", err)
 		runtime.HandleError(wq.logger.WithField("obj", obj), err)
 		return
 	}
@@ -137,7 +136,7 @@ func (wq *WorkerQueue) EnqueueImmediately(obj interface{}) {
 	var key string
 	var err error
 	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
-		err = errors.Wrap(err, "Error creating key for object")
+		err = fmt.Errorf("Error creating key for object: %w", err)
 		runtime.HandleError(wq.logger.WithField("obj", obj), err)
 		return
 	}
@@ -150,7 +149,7 @@ func (wq *WorkerQueue) EnqueueAfter(obj interface{}, duration time.Duration) {
 	var key string
 	var err error
 	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
-		err = errors.Wrap(err, "Error creating key for object")
+		err = fmt.Errorf("Error creating key for object: %w", err)
 		runtime.HandleError(wq.logger.WithField("obj", obj), err)
 		return
 	}
@@ -181,7 +180,7 @@ func (wq *WorkerQueue) processNextWorkItem(ctx context.Context) bool {
 	var key string
 	var ok bool
 	if key, ok = obj.(string); !ok {
-		runtime.HandleError(wq.logger.WithField(wq.keyName, obj), errors.Errorf("expected string in queue, but got %T", obj))
+		runtime.HandleError(wq.logger.WithField(wq.keyName, obj), fmt.Errorf("expected string in queue, but got %T", obj))
 		// this is a bad entry, we don't want to reprocess
 		wq.queue.Forget(obj)
 		return true
@@ -190,7 +189,7 @@ func (wq *WorkerQueue) processNextWorkItem(ctx context.Context) bool {
 	if err := wq.SyncHandler(ctx, key); err != nil {
 		// Conflicts are expected, so only show them in debug operations.
 		// Also check is traceError for other expected errors.
-		if k8serror.IsConflict(errors.Cause(err)) || isTraceError(err) {
+		if k8serror.IsConflict(err) || isTraceError(err) {
 			wq.logger.WithField(wq.keyName, obj).Trace(err)
 		} else {
 			runtime.HandleError(wq.logger.WithField(wq.keyName, obj), err)
