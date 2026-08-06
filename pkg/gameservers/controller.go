@@ -64,7 +64,13 @@ const (
 	sdkserverSidecarName  = "agones-gameserver-sidecar"
 	grpcPortEnvVar        = "AGONES_SDK_GRPC_PORT"
 	httpPortEnvVar        = "AGONES_SDK_HTTP_PORT"
+	goMaxProcsEnvVar      = "GOMAXPROCS"
+	goMemLimitEnvVar      = "GOMEMLIMIT"
 	passthroughPortEnvVar = "PASSTHROUGH"
+
+	sidecarGoMaxProcs                  = "1"
+	sidecarGoMemLimitRequestPercentage = 90
+	bytesPerMebibyte                   = 1024 * 1024
 )
 
 // Extensions struct contains what is needed to bind webhook handlers
@@ -763,6 +769,10 @@ func (c *Controller) sidecar(gs *agonesv1.GameServer) corev1.Container {
 				Name:  "REQUESTS_RATE_LIMIT",
 				Value: c.sidecarRequestsRateLimit.String(),
 			},
+			{
+				Name:  goMaxProcsEnvVar,
+				Value: sidecarGoMaxProcs,
+			},
 		},
 		Resources: corev1.ResourceRequirements{},
 		LivenessProbe: &corev1.Probe{
@@ -775,6 +785,18 @@ func (c *Controller) sidecar(gs *agonesv1.GameServer) corev1.Container {
 			InitialDelaySeconds: 3,
 			PeriodSeconds:       3,
 		},
+	}
+
+	if !c.sidecarMemoryRequest.IsZero() {
+		goMemLimitBytes := c.sidecarMemoryRequest.Value() * sidecarGoMemLimitRequestPercentage / 100
+		goMemLimitMiB := goMemLimitBytes / bytesPerMebibyte
+		if goMemLimitMiB < 1 {
+			goMemLimitMiB = 1
+		}
+		sidecar.Env = append(sidecar.Env, corev1.EnvVar{
+			Name:  goMemLimitEnvVar,
+			Value: fmt.Sprintf("%dMiB", goMemLimitMiB),
+		})
 	}
 
 	if gs.Spec.SdkServer.GRPCPort != 0 {

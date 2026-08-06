@@ -1621,14 +1621,19 @@ func TestControllerCreateGameServerPod(t *testing.T) {
 			assert.Equal(t, sidecarContainer.Resources.Requests.Cpu(), &c.sidecarCPURequest)
 			assert.Equal(t, sidecarContainer.Resources.Limits.Memory(), &c.sidecarMemoryLimit)
 			assert.Equal(t, sidecarContainer.Resources.Requests.Memory(), &c.sidecarMemoryRequest)
-			assert.Len(t, sidecarContainer.Env, 5, "5 env vars")
+			assert.Len(t, sidecarContainer.Env, 7, "7 env vars")
 			assert.Equal(t, "GAMESERVER_NAME", sidecarContainer.Env[0].Name)
 			assert.Equal(t, fixture.ObjectMeta.Name, sidecarContainer.Env[0].Value)
 			assert.Equal(t, "POD_NAMESPACE", sidecarContainer.Env[1].Name)
 			assert.Equal(t, "FEATURE_GATES", sidecarContainer.Env[2].Name)
 			assert.Equal(t, "LOG_LEVEL", sidecarContainer.Env[3].Name)
 			assert.Equal(t, "REQUESTS_RATE_LIMIT", sidecarContainer.Env[4].Name)
+			assert.Equal(t, goMaxProcsEnvVar, sidecarContainer.Env[5].Name)
+			assert.Equal(t, goMemLimitEnvVar, sidecarContainer.Env[6].Name)
 			assert.Equal(t, "500ms", sidecarContainer.Env[4].Value)
+			assert.Equal(t, sidecarGoMaxProcs, sidecarContainer.Env[5].Value)
+			goMemLimitBytes := c.sidecarMemoryRequest.Value() * sidecarGoMemLimitRequestPercentage / 100
+			assert.Equal(t, strconv.FormatInt(goMemLimitBytes, 10), sidecarContainer.Env[6].Value)
 			assert.Equal(t, string(fixture.Spec.SdkServer.LogLevel), sidecarContainer.Env[3].Value)
 			assert.Equal(t, *sidecarContainer.SecurityContext.AllowPrivilegeEscalation, false)
 			assert.Equal(t, *sidecarContainer.SecurityContext.RunAsNonRoot, true)
@@ -2525,6 +2530,77 @@ func TestControllerAddSDKServerEnvVars(t *testing.T) {
 		assert.Contains(t, pod.Spec.Containers[0].Env, corev1.EnvVar{Name: grpcPortEnvVar, Value: strconv.Itoa(int(gs.Spec.SdkServer.GRPCPort))})
 		assert.Contains(t, pod.Spec.Containers[0].Env, corev1.EnvVar{Name: httpPortEnvVar, Value: strconv.Itoa(int(gs.Spec.SdkServer.HTTPPort))})
 	})
+}
+
+func TestControllerSidecarGoRuntimeResourceHints(t *testing.T) {
+	t.Parallel()
+
+	fixtures := map[string]struct {
+		memoryRequest resource.Quantity
+		expectedEnv   map[string]string
+	}{
+		"with memory request": {
+			memoryRequest: resource.MustParse("100Mi"),
+			expectedEnv: map[string]string{
+				goMaxProcsEnvVar: sidecarGoMaxProcs,
+				goMemLimitEnvVar: "90MiB",
+			},
+		},
+		"with GiB memory request": {
+			memoryRequest: resource.MustParse("1Gi"),
+			expectedEnv: map[string]string{
+				goMaxProcsEnvVar: sidecarGoMaxProcs,
+				goMemLimitEnvVar: "921MiB",
+			},
+		},
+		"with non-whole MiB memory request": {
+			memoryRequest: resource.MustParse("100500Ki"),
+			expectedEnv: map[string]string{
+				goMaxProcsEnvVar: sidecarGoMaxProcs,
+				goMemLimitEnvVar: "88MiB",
+			},
+		},
+		"with small memory request": {
+			memoryRequest: resource.MustParse("1"),
+			expectedEnv: map[string]string{
+				goMaxProcsEnvVar: sidecarGoMaxProcs,
+				goMemLimitEnvVar: "1MiB",
+			},
+		},
+		"without memory request": {
+			memoryRequest: resource.Quantity{},
+			expectedEnv: map[string]string{
+				goMaxProcsEnvVar: sidecarGoMaxProcs,
+			},
+		},
+	}
+
+	for name, tc := range fixtures {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			c, _ := newFakeController()
+			c.sidecarMemoryRequest = tc.memoryRequest
+			gs := &agonesv1.GameServer{
+				ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "default"},
+				Spec:       newSingleContainerSpec(),
+			}
+			gs.ApplyDefaults()
+
+			sidecar := c.sidecar(gs)
+			env := map[string]string{}
+			for _, e := range sidecar.Env {
+				env[e.Name] = e.Value
+			}
+
+			for name, value := range tc.expectedEnv {
+				assert.Equal(t, value, env[name])
+			}
+			if _, ok := tc.expectedEnv[goMemLimitEnvVar]; !ok {
+				assert.NotContains(t, env, goMemLimitEnvVar)
+			}
+		})
+	}
 }
 
 // testNoChange runs a test with a state that doesn't exist, to ensure a handler
