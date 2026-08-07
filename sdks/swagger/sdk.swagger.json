@@ -6,7 +6,8 @@
   },
   "tags": [
     {
-      "name": "SDK"
+      "name": "SDK",
+      "description": "SDK service to be used in the GameServer SDK to the Pod Sidecar"
     }
   ],
   "schemes": [
