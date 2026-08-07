@@ -14,7 +14,6 @@
 
 const grpc = require("@grpc/grpc-js");
 
-const Alpha = require("./alpha");
 const Beta = require("./beta");
 
 const messages = require("../lib/sdk_pb");
@@ -28,7 +27,6 @@ class AgonesSDK {
 		this.client = new services.agones.dev.sdk.SDK(address, credentials);
 		this.healthStream = undefined;
 		this.streams = [];
-		this.alpha = new Alpha(address, credentials);
 		this.beta = new Beta(address, credentials);
 	}
 

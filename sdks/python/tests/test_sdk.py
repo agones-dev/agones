@@ -26,7 +26,6 @@ class TestAgonesSDK(unittest.TestCase):
     def setUp(self):
         self.sdk = AgonesSDK()
         self.sdk._client = MagicMock()
-        self.sdk._alpha = MagicMock()
         self.sdk._beta = MagicMock()
 
     def test_default_host_and_port(self):
@@ -122,11 +121,6 @@ class TestAgonesSDK(unittest.TestCase):
         self.assertIsNotNone(self.sdk._health_queue)
         self.sdk.close()
         self.assertIsNone(self.sdk._health_queue)
-
-    def test_alpha_not_connected_raises(self):
-        sdk = AgonesSDK()
-        with self.assertRaises(RuntimeError):
-            _ = sdk.alpha
 
     def test_beta_not_connected_raises(self):
         sdk = AgonesSDK()

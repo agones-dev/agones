@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import Alpha from "./alpha";
 
 type Seconds = number;
 
@@ -55,8 +54,6 @@ type GameServer = {
 
 export declare class AgonesSDK {
 	constructor();
-
-	alpha: Alpha;
 
 	get port(): string;
 

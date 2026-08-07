@@ -23,42 +23,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../..', 'sdks/pyt
 
 from agones import AgonesSDK
 
-
-def run_player_tracking(alpha):
-    print("python: Setting player capacity...")
-    alpha.set_player_capacity(10)
-
-    capacity = alpha.get_player_capacity()
-    print(f"python: Player capacity: {capacity}")
-
-    player_id = "1234"
-    print("python: Increasing the player count...")
-    added = alpha.player_connect(player_id)
-    if not added:
-        raise RuntimeError("Failed to add player")
-    print("python: Added player")
-
-    connected = alpha.is_player_connected(player_id)
-    if not connected:
-        raise RuntimeError(f"{player_id} is not connected")
-    print(f"python: {player_id} is connected")
-
-    players = alpha.get_connected_players()
-    print(f"python: Connected players: {players}")
-
-    count = alpha.get_player_count()
-    print(f"python: Current player count: {count}")
-
-    print("python: Decreasing the player count...")
-    removed = alpha.player_disconnect(player_id)
-    if not removed:
-        raise RuntimeError("Failed to remove player")
-    print("python: Removed player")
-
-    count = alpha.get_player_count()
-    print(f"python: Current player count: {count}")
-
-
 def run_counts_and_lists(beta):
     counter = "rooms"
     print("python: Getting Counter count...")
@@ -152,8 +116,6 @@ def main():
     print("python: ...Allocated")
 
     feature_gates = os.environ.get("FEATURE_GATES", "")
-    if "PlayerTracking=true" in feature_gates:
-        run_player_tracking(sdk.alpha)
     if "CountsAndLists=true" in feature_gates:
         run_counts_and_lists(sdk.beta)
 
