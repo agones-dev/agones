@@ -24,11 +24,23 @@ import (
 
 // CounterPolicyApplyConfiguration represents a declarative configuration of the CounterPolicy type for use
 // with apply.
+//
+// CounterPolicy controls the desired behavior of the Counter autoscaler policy.
 type CounterPolicyApplyConfiguration struct {
-	Key         *string             `json:"key,omitempty"`
-	MaxCapacity *int64              `json:"maxCapacity,omitempty"`
-	MinCapacity *int64              `json:"minCapacity,omitempty"`
-	BufferSize  *intstr.IntOrString `json:"bufferSize,omitempty"`
+	// Key is the name of the Counter. Required field.
+	Key *string `json:"key,omitempty"`
+	// MaxCapacity is the maximum aggregate Counter total capacity across the fleet.
+	// MaxCapacity must be bigger than both MinCapacity and BufferSize. Required field.
+	MaxCapacity *int64 `json:"maxCapacity,omitempty"`
+	// MinCapacity is the minimum aggregate Counter total capacity across the fleet.
+	// If zero, MinCapacity is ignored.
+	// If non zero, MinCapacity must be smaller than MaxCapacity and bigger than BufferSize.
+	MinCapacity *int64 `json:"minCapacity,omitempty"`
+	// BufferSize is the size of a buffer of counted items that are available in the Fleet (available
+	// capacity). Value can be an absolute number (ex: 5) or a percentage of desired gs instances
+	// (ex: 5%). An absolute number is calculated from percentage by rounding up.
+	// Must be bigger than 0. Required field.
+	BufferSize *intstr.IntOrString `json:"bufferSize,omitempty"`
 }
 
 // CounterPolicyApplyConfiguration constructs a declarative configuration of the CounterPolicy type for use with

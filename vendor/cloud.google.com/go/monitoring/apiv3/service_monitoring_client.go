@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"cloud.google.com/go/monitoring/apiv3/v2/monitoringpb"
-	"github.com/golang/protobuf/proto"
 	gax "github.com/googleapis/gax-go/v2"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
@@ -32,6 +31,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/proto"
 )
 
 var newServiceMonitoringClientHook clientHook

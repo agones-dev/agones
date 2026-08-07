@@ -20,9 +20,17 @@ package v1
 
 // PriorityApplyConfiguration represents a declarative configuration of the Priority type for use
 // with apply.
+//
+// Priority is a sorting option for GameServers with Counters or Lists based on the available capacity,
+// i.e. the current Capacity value, minus either the Count value or List length.
 type PriorityApplyConfiguration struct {
-	Type  *string `json:"type,omitempty"`
-	Key   *string `json:"key,omitempty"`
+	// Type: Sort by a "Counter" or a "List".
+	Type *string `json:"type,omitempty"`
+	// Key: The name of the Counter or List. If not found on the GameServer, has no impact.
+	Key *string `json:"key,omitempty"`
+	// Order: Sort by "Ascending" or "Descending". "Descending" a bigger available capacity is preferred.
+	// "Ascending" would be smaller available capacity is preferred.
+	// The default sort order is "Ascending"
 	Order *string `json:"order,omitempty"`
 }
 

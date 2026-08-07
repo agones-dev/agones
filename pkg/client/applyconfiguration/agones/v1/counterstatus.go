@@ -20,6 +20,8 @@ package v1
 
 // CounterStatusApplyConfiguration represents a declarative configuration of the CounterStatus type for use
 // with apply.
+//
+// CounterStatus stores the current counter values and maximum capacity
 type CounterStatusApplyConfiguration struct {
 	Count    *int64 `json:"count,omitempty"`
 	Capacity *int64 `json:"capacity,omitempty"`

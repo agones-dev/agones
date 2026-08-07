@@ -163,8 +163,7 @@ func CheckResponseWithBody(res *http.Response, body []byte) error {
 		return nil
 	}
 
-	jerr := new(errorReply)
-	err := json.Unmarshal(body, jerr)
+	jerr, err := errorReplyFromBody(body)
 	if err == nil && jerr.Error != nil {
 		if jerr.Error.Code == 0 {
 			jerr.Error.Code = res.StatusCode
@@ -179,6 +178,21 @@ func CheckResponseWithBody(res *http.Response, body []byte) error {
 		Body:   string(body),
 		Header: res.Header,
 	}
+}
+
+// errorReplyFromBody attempts to get the error from body. The body
+// may be a JSON object or JSON array, or may be something else.
+func errorReplyFromBody(body []byte) (*errorReply, error) {
+	jerr := new(errorReply)
+	if len(body) > 0 && body[0] == '[' {
+		// Attempt JSON array
+		jsonArr := []*errorReply{jerr}
+		err := json.Unmarshal(body, &jsonArr)
+		return jerr, err
+	}
+	// Attempt JSON object
+	err := json.Unmarshal(body, jerr)
+	return jerr, err
 }
 
 // IsNotModified reports whether err is the result of the
@@ -319,6 +333,20 @@ func ChunkRetryDeadline(deadline time.Duration) MediaOption {
 	return chunkRetryDeadlineOption(deadline)
 }
 
+type enableAutoChecksumOption struct{}
+
+func (d enableAutoChecksumOption) setOptions(o *MediaOptions) {
+	o.EnableAutoChecksum = true
+}
+
+// EnableAutoChecksum returns a MediaOption that enables automatic checksum
+// calculation, which is only supported for resumable multi-chunk uploads.
+// The computed checksum is sent on the final upload request to the server.
+// Writes are rejected in the event of a checksum mismatch.
+func EnableAutoChecksum() MediaOption {
+	return enableAutoChecksumOption{}
+}
+
 // MediaOptions stores options for customizing media upload.  It is not used by developers directly.
 type MediaOptions struct {
 	ContentType           string
@@ -326,6 +354,7 @@ type MediaOptions struct {
 	ChunkSize             int
 	ChunkRetryDeadline    time.Duration
 	ChunkTransferTimeout  time.Duration
+	EnableAutoChecksum    bool
 }
 
 // ProcessMediaOptions stores options from opts in a MediaOptions.

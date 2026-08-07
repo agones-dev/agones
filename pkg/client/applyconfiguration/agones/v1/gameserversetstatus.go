@@ -20,15 +20,29 @@ package v1
 
 // GameServerSetStatusApplyConfiguration represents a declarative configuration of the GameServerSetStatus type for use
 // with apply.
+//
+// GameServerSetStatus is the status of a GameServerSet
 type GameServerSetStatusApplyConfiguration struct {
-	Replicas          *int32                                               `json:"replicas,omitempty"`
-	ReadyReplicas     *int32                                               `json:"readyReplicas,omitempty"`
-	ReservedReplicas  *int32                                               `json:"reservedReplicas,omitempty"`
-	AllocatedReplicas *int32                                               `json:"allocatedReplicas,omitempty"`
-	ShutdownReplicas  *int32                                               `json:"shutdownReplicas,omitempty"`
-	Players           *AggregatedPlayerStatusApplyConfiguration            `json:"players,omitempty"`
-	Counters          map[string]AggregatedCounterStatusApplyConfiguration `json:"counters,omitempty"`
-	Lists             map[string]AggregatedListStatusApplyConfiguration    `json:"lists,omitempty"`
+	// Replicas is the total number of current GameServer replicas
+	Replicas *int32 `json:"replicas,omitempty"`
+	// ReadyReplicas is the number of Ready GameServer replicas
+	ReadyReplicas *int32 `json:"readyReplicas,omitempty"`
+	// ReservedReplicas is the number of Reserved GameServer replicas
+	ReservedReplicas *int32 `json:"reservedReplicas,omitempty"`
+	// AllocatedReplicas is the number of Allocated GameServer replicas
+	AllocatedReplicas *int32 `json:"allocatedReplicas,omitempty"`
+	// ShutdownReplicas is the number of Shutdown GameServers replicas
+	ShutdownReplicas *int32 `json:"shutdownReplicas,omitempty"`
+	// [Stage:Alpha]
+	// [FeatureFlag:PlayerTracking]
+	// Players is the current total player capacity and count for this GameServerSet
+	Players *AggregatedPlayerStatusApplyConfiguration `json:"players,omitempty"`
+	// (Beta, CountsAndLists feature flag) Counters provides aggregated Counter capacity and Counter
+	// count for this GameServerSet.
+	Counters map[string]AggregatedCounterStatusApplyConfiguration `json:"counters,omitempty"`
+	// (Beta, CountsAndLists feature flag) Lists provides aggregated List capacity and List values
+	// for this GameServerSet.
+	Lists map[string]AggregatedListStatusApplyConfiguration `json:"lists,omitempty"`
 }
 
 // GameServerSetStatusApplyConfiguration constructs a declarative configuration of the GameServerSetStatus type for use with

@@ -31,7 +31,9 @@ RUN git clone --recurse-submodules -b $GRPC_RELEASE_TAG --depth 1 --shallow-subm
     mkdir -p cmake/build && \
     cd cmake/build && \
     export CMAKE_BUILD_PARALLEL_LEVEL=$(nproc) && \
-    cmake -DCMAKE_BUILD_TYPE=Release -DgRPC_INSTALL=ON -DgRPC_BUILD_TESTS=OFF ../.. && \
+    # BoringSSL (gRPC >= v1.81) redirects a defaulted CMAKE_INSTALL_PREFIX to
+    # ${CMAKE_SOURCE_DIR}/install, so pass it explicitly to keep protoc et al in /usr/local.
+    cmake -DCMAKE_BUILD_TYPE=Release -DgRPC_INSTALL=ON -DgRPC_BUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX=/usr/local ../.. && \
     make -j$(nproc) && make install
 
 WORKDIR /go/src/agones.dev/agones

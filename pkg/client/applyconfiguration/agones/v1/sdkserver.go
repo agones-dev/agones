@@ -24,10 +24,15 @@ import (
 
 // SdkServerApplyConfiguration represents a declarative configuration of the SdkServer type for use
 // with apply.
+//
+// SdkServer specifies parameters for the Agones SDK Server sidecar container
 type SdkServerApplyConfiguration struct {
+	// LogLevel for SDK server (sidecar) logs. Defaults to "Info"
 	LogLevel *agonesv1.SdkServerLogLevel `json:"logLevel,omitempty"`
-	GRPCPort *int32                      `json:"grpcPort,omitempty"`
-	HTTPPort *int32                      `json:"httpPort,omitempty"`
+	// GRPCPort is the port on which the SDK Server binds the gRPC server to accept incoming connections
+	GRPCPort *int32 `json:"grpcPort,omitempty"`
+	// HTTPPort is the port on which the SDK Server binds the HTTP gRPC gateway server to accept incoming connections
+	HTTPPort *int32 `json:"httpPort,omitempty"`
 }
 
 // SdkServerApplyConfiguration constructs a declarative configuration of the SdkServer type for use with

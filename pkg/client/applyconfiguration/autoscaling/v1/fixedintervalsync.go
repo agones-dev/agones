@@ -20,7 +20,10 @@ package v1
 
 // FixedIntervalSyncApplyConfiguration represents a declarative configuration of the FixedIntervalSync type for use
 // with apply.
+//
+// FixedIntervalSync controls the desired behavior of the fixed interval based sync.
 type FixedIntervalSyncApplyConfiguration struct {
+	// Seconds defines how often we run fleet autoscaling in seconds
 	Seconds *int32 `json:"seconds,omitempty"`
 }
 

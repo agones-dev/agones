@@ -26,6 +26,8 @@ import (
 
 // FleetAutoscalerApplyConfiguration represents a declarative configuration of the FleetAutoscaler type for use
 // with apply.
+//
+// FleetAutoscaler is the data structure for a FleetAutoscaler resource
 type FleetAutoscalerApplyConfiguration struct {
 	metav1.TypeMetaApplyConfiguration    `json:",inline"`
 	*metav1.ObjectMetaApplyConfiguration `json:"metadata,omitempty"`
@@ -43,6 +45,7 @@ func FleetAutoscaler(name, namespace string) *FleetAutoscalerApplyConfiguration 
 	b.WithAPIVersion("autoscaling.agones.dev/v1")
 	return b
 }
+
 func (b FleetAutoscalerApplyConfiguration) IsApplyConfiguration() {}
 
 // WithKind sets the Kind field in the declarative configuration to the given value
