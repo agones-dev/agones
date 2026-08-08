@@ -80,6 +80,9 @@ const (
 	updatePeriod           time.Duration = time.Second
 )
 
+// defaultNamespace is the Kubernetes namespace assumed when none is configured.
+const defaultNamespace = "default"
+
 var (
 	_ sdk.SDKServer   = &SDKServer{}
 	_ alpha.SDKServer = &SDKServer{}
@@ -1601,7 +1604,7 @@ func (s *SDKServer) gsListUpdatesLen() int {
 func (s *SDKServer) GsListsMaxItems(ctx context.Context) error {
 
 	var labelsName string
-	if s.namespace == "default" {
+	if s.namespace == defaultNamespace {
 		labelsName = "fleet-example"
 	} else {
 		gs, err := s.gameServerGetter.GameServers(s.namespace).Get(

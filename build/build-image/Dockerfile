@@ -78,7 +78,7 @@ RUN echo "source <(helm completion bash)" >> /root/.bashrc
 
 # install golang-ci linter
 # CGO disabled to avoid the linker depending on gold (deprecated in debian:trixie)
-RUN CGO_ENABLED=0 go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
+RUN CGO_ENABLED=0 go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
 
 # Install yamllint
 RUN apt-get update && \

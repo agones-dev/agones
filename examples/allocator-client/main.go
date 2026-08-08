@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package main implements a client that requests a GameServer allocation from
+// the Agones allocator service over mTLS.
 package main
 
 import (
@@ -68,7 +70,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer conn.Close()
+	defer conn.Close() //nolint:errcheck // nothing actionable if closing the connection fails
 
 	grpcClient := pb.NewAllocationServiceClient(conn)
 	response, err := grpcClient.Allocate(context.Background(), request)

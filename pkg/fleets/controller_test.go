@@ -24,7 +24,6 @@ import (
 
 	"agones.dev/agones/pkg/apis"
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
-	v1 "agones.dev/agones/pkg/apis/agones/v1"
 	applyconfigurations "agones.dev/agones/pkg/client/applyconfiguration/agones/v1"
 	agonesv1clientset "agones.dev/agones/pkg/client/clientset/versioned/typed/agones/v1"
 	agonesv1client "agones.dev/agones/pkg/client/listers/agones/v1"
@@ -1770,12 +1769,12 @@ type fakeGSSListerWithErr struct {
 }
 
 // GameServerSetLister interface implementation
-func (fgsl *fakeGSSListerWithErr) List(_ labels.Selector) (ret []*v1.GameServerSet, err error) {
+func (fgsl *fakeGSSListerWithErr) List(_ labels.Selector) (ret []*agonesv1.GameServerSet, err error) {
 	return nil, errors.New("random-err")
 }
 
 // GameServerSetLister interface implementation
-func (fgsl *fakeGSSListerWithErr) Get(_ string) (ret *v1.GameServerSet, err error) {
+func (fgsl *fakeGSSListerWithErr) Get(_ string) (ret *agonesv1.GameServerSet, err error) {
 	return nil, errors.New("random-err")
 }
 
@@ -1790,15 +1789,15 @@ func (ffg *fakeFleetsGetterWithErr) Fleets(_ string) agonesv1clientset.FleetInte
 	return &fakeFleetsGetterWithErr{}
 }
 
-func (ffg *fakeFleetsGetterWithErr) Create(_ context.Context, _ *v1.Fleet, _ metav1.CreateOptions) (*v1.Fleet, error) {
+func (ffg *fakeFleetsGetterWithErr) Create(_ context.Context, _ *agonesv1.Fleet, _ metav1.CreateOptions) (*agonesv1.Fleet, error) {
 	panic("not implemented")
 }
 
-func (ffg *fakeFleetsGetterWithErr) Update(_ context.Context, _ *v1.Fleet, _ metav1.UpdateOptions) (*v1.Fleet, error) {
+func (ffg *fakeFleetsGetterWithErr) Update(_ context.Context, _ *agonesv1.Fleet, _ metav1.UpdateOptions) (*agonesv1.Fleet, error) {
 	panic("not implemented")
 }
 
-func (ffg *fakeFleetsGetterWithErr) UpdateStatus(_ context.Context, _ *v1.Fleet, _ metav1.UpdateOptions) (*v1.Fleet, error) {
+func (ffg *fakeFleetsGetterWithErr) UpdateStatus(_ context.Context, _ *agonesv1.Fleet, _ metav1.UpdateOptions) (*agonesv1.Fleet, error) {
 	panic("not implemented")
 }
 
@@ -1810,11 +1809,11 @@ func (ffg *fakeFleetsGetterWithErr) DeleteCollection(_ context.Context, _ metav1
 	panic("not implemented")
 }
 
-func (ffg *fakeFleetsGetterWithErr) Get(_ context.Context, _ string, _ metav1.GetOptions) (*v1.Fleet, error) {
+func (ffg *fakeFleetsGetterWithErr) Get(_ context.Context, _ string, _ metav1.GetOptions) (*agonesv1.Fleet, error) {
 	return nil, errors.New("err-from-fleet-getter")
 }
 
-func (ffg *fakeFleetsGetterWithErr) List(_ context.Context, _ metav1.ListOptions) (*v1.FleetList, error) {
+func (ffg *fakeFleetsGetterWithErr) List(_ context.Context, _ metav1.ListOptions) (*agonesv1.FleetList, error) {
 	panic("not implemented")
 }
 
@@ -1822,15 +1821,15 @@ func (ffg *fakeFleetsGetterWithErr) Watch(_ context.Context, _ metav1.ListOption
 	panic("not implemented")
 }
 
-func (ffg *fakeFleetsGetterWithErr) Patch(_ context.Context, _ string, _ types.PatchType, _ []byte, _ metav1.PatchOptions, _ ...string) (result *v1.Fleet, err error) {
+func (ffg *fakeFleetsGetterWithErr) Patch(_ context.Context, _ string, _ types.PatchType, _ []byte, _ metav1.PatchOptions, _ ...string) (result *agonesv1.Fleet, err error) {
 	panic("not implemented")
 }
 
-func (ffg *fakeFleetsGetterWithErr) Apply(_ context.Context, _ *applyconfigurations.FleetApplyConfiguration, _ metav1.ApplyOptions) (*v1.Fleet, error) {
+func (ffg *fakeFleetsGetterWithErr) Apply(_ context.Context, _ *applyconfigurations.FleetApplyConfiguration, _ metav1.ApplyOptions) (*agonesv1.Fleet, error) {
 	panic("not implemented")
 }
 
-func (ffg *fakeFleetsGetterWithErr) ApplyStatus(_ context.Context, _ *applyconfigurations.FleetApplyConfiguration, _ metav1.ApplyOptions) (*v1.Fleet, error) {
+func (ffg *fakeFleetsGetterWithErr) ApplyStatus(_ context.Context, _ *applyconfigurations.FleetApplyConfiguration, _ metav1.ApplyOptions) (*agonesv1.Fleet, error) {
 	panic("not implemented")
 }
 
@@ -1845,7 +1844,7 @@ func (ffg *fakeFleetsGetterWithErr) UpdateScale(_ context.Context, _ string, _ *
 type fakeFleetListerWithErr struct{}
 
 // FleetLister interface implementation
-func (ffl *fakeFleetListerWithErr) List(_ labels.Selector) (ret []*v1.Fleet, err error) {
+func (ffl *fakeFleetListerWithErr) List(_ labels.Selector) (ret []*agonesv1.Fleet, err error) {
 	return nil, errors.New("err-from-fleet-lister")
 }
 
@@ -1856,10 +1855,10 @@ func (ffl *fakeFleetListerWithErr) Fleets(_ string) agonesv1client.FleetNamespac
 type fakeFleetNamespaceListerWithErr struct{}
 
 // FleetNamespaceLister interface implementation
-func (ffnl *fakeFleetNamespaceListerWithErr) List(_ labels.Selector) (ret []*v1.Fleet, err error) {
+func (ffnl *fakeFleetNamespaceListerWithErr) List(_ labels.Selector) (ret []*agonesv1.Fleet, err error) {
 	return nil, errors.New("err-from-namespace-lister")
 }
 
-func (ffnl *fakeFleetNamespaceListerWithErr) Get(_ string) (*v1.Fleet, error) {
+func (ffnl *fakeFleetNamespaceListerWithErr) Get(_ string) (*agonesv1.Fleet, error) {
 	return nil, errors.New("err-from-namespace-lister")
 }

@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package main implements an example dedicated game server that integrates
+// GenAI endpoints, either chatting with a connected TCP client or driving an
+// autonomous chat between two endpoints.
 package main
 
 import (
@@ -50,8 +53,8 @@ func main() {
 	numChats := flag.Int("NumChats", 1, "Number of back and forth chats between the sim and genAI")
 	genAiNpc := flag.Bool("GenAiNpc", false, "Set to true if the GenAIEndpoint is the npc-chat-api endpoint")
 	simNpc := flag.Bool("SimNpc", false, "Set to true if the SimEndpoint is the npc-chat-api endpoint")
-	fromId := flag.Int("FromID", 2, "Entity sending messages to the npc-chat-api. Ignored when autonomous, which uses random FromID")
-	toId := flag.Int("ToID", 1, "Entity receiving messages on the npc-chat-api (the NPC's ID)")
+	fromID := flag.Int("FromID", 2, "Entity sending messages to the npc-chat-api. Ignored when autonomous, which uses random FromID")
+	toID := flag.Int("ToID", 1, "Entity receiving messages on the npc-chat-api (the NPC's ID)")
 	concurrentPlayers := flag.Int("ConcurrentPlayers", 1, "Number of concurrent players.")
 
 	flag.Parse()
@@ -100,16 +103,16 @@ func main() {
 	if fid := os.Getenv("FROM_ID"); fid != "" {
 		num, err := strconv.Atoi(fid)
 		if err != nil {
-			log.Fatalf("Could not parse FromId: %v", err)
+			log.Fatalf("Could not parse FromID: %v", err)
 		}
-		fromId = &num
+		fromID = &num
 	}
 	if tid := os.Getenv("TO_ID"); tid != "" {
 		num, err := strconv.Atoi(tid)
 		if err != nil {
-			log.Fatalf("Could not parse ToId: %v", err)
+			log.Fatalf("Could not parse ToID: %v", err)
 		}
-		toId = &num
+		toID = &num
 	}
 	if cp := os.Getenv("CONCURRENT_PLAYERS"); cp != "" {
 		num, err := strconv.Atoi(cp)
@@ -126,7 +129,7 @@ func main() {
 	}
 
 	log.Print("Starting Health Ping")
-	go doHealth(s, sigCtx)
+	go doHealth(sigCtx, s)
 
 	log.Print("Marking this server as ready")
 	if err := s.Ready(); err != nil {
@@ -139,8 +142,8 @@ func main() {
 
 	// Start up TCP listener so the user can interact with the GenAI endpoint manually
 	if *simEndpoint == "" {
-		log.Printf("Creating GenAI Client at endpoint %s (from_id=%d, to_id=%d)", *genAiEndpoint, *fromId, *toId)
-		genAiConn := initClient(*genAiEndpoint, *genAiContext, "GenAI", *genAiNpc, *fromId, *toId)
+		log.Printf("Creating GenAI Client at endpoint %s (from_id=%d, to_id=%d)", *genAiEndpoint, *fromID, *toID)
+		genAiConn := initClient(*genAiEndpoint, *genAiContext, "GenAI", *genAiNpc, *fromID, *toID)
 		go tcpListener(*port, genAiConn)
 		<-sigCtx.Done()
 	} else {
@@ -156,11 +159,11 @@ func main() {
 					name := fmt.Sprintf("Sim%08x", fid)
 					log.Printf("=== New player %s (id %d) ===", name, fid)
 
-					log.Printf("Creating GenAI Client at endpoint %s (from_id=%d, to_id=%d)", *genAiEndpoint, fid, *toId)
-					genAiConn := initClient(*genAiEndpoint, *genAiContext, "GenAI", *genAiNpc, fid, *toId)
+					log.Printf("Creating GenAI Client at endpoint %s (from_id=%d, to_id=%d)", *genAiEndpoint, fid, *toID)
+					genAiConn := initClient(*genAiEndpoint, *genAiContext, "GenAI", *genAiNpc, fid, *toID)
 
 					log.Printf("%s: Creating client at endpoint %s, sending prompt: %s", name, *simEndpoint, *prompt)
-					simConn := initClient(*simEndpoint, *simContext, name, *simNpc, *toId, *toId)
+					simConn := initClient(*simEndpoint, *simContext, name, *simNpc, *toID, *toID)
 
 					chatHistory := []Message{{Author: simConn.name, Content: *prompt}}
 					autonomousChat(*prompt, genAiConn, simConn, *numChats, *stopPhrase, chatHistory)
@@ -178,10 +181,10 @@ func main() {
 	os.Exit(0)
 }
 
-func initClient(endpoint string, context string, name string, npc bool, fromID int, toID int) *connection {
+func initClient(endpoint string, promptContext string, name string, npc bool, fromID int, toID int) *connection {
 	// TODO: create option for a client certificate
 	client := &http.Client{}
-	return &connection{client: client, endpoint: endpoint, context: context, name: name, npc: npc, fromId: fromID, toId: toID}
+	return &connection{client: client, endpoint: endpoint, context: promptContext, name: name, npc: npc, fromID: fromID, toID: toID}
 }
 
 type connection struct {
@@ -190,8 +193,8 @@ type connection struct {
 	context  string
 	name     string // Human readable name for the connection
 	npc      bool   // True if the endpoint is the NPC API
-	fromId   int    // For use with NPC API, sender ID
-	toId     int    // For use with NPC API, receiver ID
+	fromID   int    // For use with NPC API, sender ID
+	toID     int    // For use with NPC API, receiver ID
 	// TODO: create options for routes off the base URL
 }
 
@@ -205,8 +208,8 @@ type GenAIRequest struct {
 // For use with NPC API
 type NPCRequest struct {
 	Msg    string `json:"message,omitempty"`
-	FromId int    `json:"from_id,omitempty"`
-	ToId   int    `json:"to_id,omitempty"`
+	FromID int    `json:"from_id,omitempty"`
+	ToID   int    `json:"to_id,omitempty"`
 }
 
 // Expected format for the NPC endpoint response
@@ -228,8 +231,8 @@ func handleGenAIRequest(prompt string, clientConn *connection, chatHistory []Mes
 	if clientConn.npc {
 		npcRequest := NPCRequest{
 			Msg:    prompt,
-			FromId: clientConn.fromId,
-			ToId:   clientConn.toId,
+			FromID: clientConn.fromID,
+			ToID:   clientConn.toID,
 		}
 		jsonStr, err = json.Marshal(npcRequest)
 	} else {
@@ -275,15 +278,16 @@ func handleGenAIRequest(prompt string, clientConn *connection, chatHistory []Mes
 		return "", fmt.Errorf("unable to post request: %v", err)
 	}
 
+	defer resp.Body.Close() //nolint:errcheck // nothing actionable if closing the response body fails
+
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("unable to read response body: %v", err)
 	}
-	defer resp.Body.Close()
 	body := string(responseBody)
 
 	if resp.StatusCode != 200 {
-		err = fmt.Errorf("Status: %s, Body: %s", resp.Status, body)
+		err = fmt.Errorf("status: %s, body: %s", resp.Status, body)
 	}
 	return string(responseBody) + "\n", err
 }
@@ -296,7 +300,7 @@ func autonomousChat(prompt string, conn1 *connection, conn2 *connection, numChat
 
 	startTime := time.Now()
 	response, err := handleGenAIRequest(prompt, conn1, chatHistory)
-	latency := time.Now().Sub(startTime)
+	latency := time.Since(startTime)
 	if err != nil {
 		log.Printf("ERROR: Could not send request (stopping this chat): %v", err)
 		return
@@ -316,7 +320,7 @@ func autonomousChat(prompt string, conn1 *connection, conn2 *connection, numChat
 	chat := Message{Author: conn1.name, Content: response}
 	chatHistory = append(chatHistory, chat)
 
-	numChats -= 1
+	numChats--
 
 	if strings.Contains(response, stopPhase) {
 		if numChats > 1 {
@@ -336,11 +340,12 @@ func tcpListener(port string, genAiConn *connection) {
 	if err != nil {
 		log.Fatalf("Could not start TCP server: %v", err)
 	}
-	defer ln.Close() // nolint: errcheck
-
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
+			// Closed explicitly rather than by defer: log.Fatalf exits the
+			// process, so a deferred close would never run.
+			ln.Close() //nolint:errcheck // the process is about to exit
 			log.Fatalf("Unable to accept incoming TCP connection: %v", err)
 		}
 		go tcpHandleConnection(conn, genAiConn)
@@ -371,10 +376,10 @@ func tcpHandleConnection(conn net.Conn, genAiConn *connection) {
 }
 
 // doHealth sends the regular Health Pings
-func doHealth(sdk *sdk.SDK, ctx context.Context) {
+func doHealth(ctx context.Context, s *sdk.SDK) {
 	tick := time.Tick(2 * time.Second)
 	for {
-		err := sdk.Health()
+		err := s.Health()
 		if err != nil {
 			log.Fatalf("Could not send health ping, %v", err)
 		}

@@ -31,7 +31,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	k8sv1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
@@ -132,7 +131,7 @@ func (mc *MigrationController) loggerForGameServer(gs *agonesv1.GameServer) *log
 	return mc.loggerForGameServerKey(gsName).WithField("gs", gs)
 }
 
-func (mc *MigrationController) isMigratingGameServerPod(pod *k8sv1.Pod) (*agonesv1.GameServer, *k8sv1.Node, bool, error) {
+func (mc *MigrationController) isMigratingGameServerPod(pod *corev1.Pod) (*agonesv1.GameServer, *corev1.Node, bool, error) {
 	if pod.Spec.NodeName == "" || !pod.ObjectMeta.DeletionTimestamp.IsZero() || !isGameServerPod(pod) {
 		return nil, nil, false, nil
 	}
@@ -231,7 +230,7 @@ func (mc *MigrationController) syncGameServer(ctx context.Context, key string) e
 	return nil
 }
 
-func (mc *MigrationController) anyAddressMatch(node *k8sv1.Node, gs *agonesv1.GameServer) bool {
+func (mc *MigrationController) anyAddressMatch(node *corev1.Node, gs *agonesv1.GameServer) bool {
 	var nodeAddresses []string
 	for _, a := range node.Status.Addresses {
 		if a.Address == gs.Status.Address {

@@ -247,13 +247,13 @@ func (s *GameServerSelector) Matches(gs *agonesv1.GameServer) bool {
 
 	if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
 		// Only check for matches if there are CounterSelectors or ListSelectors
-		if (s.Counters != nil) && (len(s.Counters) != 0) {
-			if !(s.matchCounters(gs)) {
+		if len(s.Counters) != 0 {
+			if !s.matchCounters(gs) {
 				return false
 			}
 		}
-		if (s.Lists != nil) && (len(s.Lists) != 0) {
-			if !(s.matchLists(gs)) {
+		if len(s.Lists) != 0 {
+			if !s.matchLists(gs) {
 				return false
 			}
 		}
@@ -376,7 +376,7 @@ func (s *GameServerSelector) Validate(fldPath *field.Path) field.ErrorList {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("labelSelector"), s.LabelSelector, fmt.Sprintf("Error converting label selector: %s", err)))
 	}
 
-	if s.GameServerState != nil && !(*s.GameServerState == agonesv1.GameServerStateAllocated || *s.GameServerState == agonesv1.GameServerStateReady) {
+	if s.GameServerState != nil && *s.GameServerState != agonesv1.GameServerStateAllocated && *s.GameServerState != agonesv1.GameServerStateReady {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("gameServerState"), *s.GameServerState, "GameServerState must be either Allocated or Ready"))
 	}
 
