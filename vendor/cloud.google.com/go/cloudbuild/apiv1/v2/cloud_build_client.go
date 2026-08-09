@@ -1,4 +1,4 @@
-// Copyright 2024 Google LLC
+// Copyright 2025 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
+	"log/slog"
 	"math"
 	"net/http"
 	"net/url"
@@ -33,7 +33,6 @@ import (
 	lroauto "cloud.google.com/go/longrunning/autogen"
 	longrunningpb "cloud.google.com/go/longrunning/autogen/longrunningpb"
 	gax "github.com/googleapis/gax-go/v2"
-	"google.golang.org/api/googleapi"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 	"google.golang.org/api/option/internaloption"
@@ -49,24 +48,25 @@ var newClientHook clientHook
 
 // CallOptions contains the retry settings for each method of Client.
 type CallOptions struct {
-	CreateBuild           []gax.CallOption
-	GetBuild              []gax.CallOption
-	ListBuilds            []gax.CallOption
-	CancelBuild           []gax.CallOption
-	RetryBuild            []gax.CallOption
-	ApproveBuild          []gax.CallOption
-	CreateBuildTrigger    []gax.CallOption
-	GetBuildTrigger       []gax.CallOption
-	ListBuildTriggers     []gax.CallOption
-	DeleteBuildTrigger    []gax.CallOption
-	UpdateBuildTrigger    []gax.CallOption
-	RunBuildTrigger       []gax.CallOption
-	ReceiveTriggerWebhook []gax.CallOption
-	CreateWorkerPool      []gax.CallOption
-	GetWorkerPool         []gax.CallOption
-	DeleteWorkerPool      []gax.CallOption
-	UpdateWorkerPool      []gax.CallOption
-	ListWorkerPools       []gax.CallOption
+	CreateBuild              []gax.CallOption
+	GetBuild                 []gax.CallOption
+	ListBuilds               []gax.CallOption
+	CancelBuild              []gax.CallOption
+	RetryBuild               []gax.CallOption
+	ApproveBuild             []gax.CallOption
+	CreateBuildTrigger       []gax.CallOption
+	GetBuildTrigger          []gax.CallOption
+	ListBuildTriggers        []gax.CallOption
+	DeleteBuildTrigger       []gax.CallOption
+	UpdateBuildTrigger       []gax.CallOption
+	RunBuildTrigger          []gax.CallOption
+	ReceiveTriggerWebhook    []gax.CallOption
+	CreateWorkerPool         []gax.CallOption
+	GetWorkerPool            []gax.CallOption
+	DeleteWorkerPool         []gax.CallOption
+	UpdateWorkerPool         []gax.CallOption
+	ListWorkerPools          []gax.CallOption
+	GetDefaultServiceAccount []gax.CallOption
 }
 
 func defaultGRPCClientOptions() []option.ClientOption {
@@ -78,6 +78,7 @@ func defaultGRPCClientOptions() []option.ClientOption {
 		internaloption.WithDefaultAudience("https://cloudbuild.googleapis.com/"),
 		internaloption.WithDefaultScopes(DefaultAuthScopes()...),
 		internaloption.EnableJwtWithScope(),
+		internaloption.EnableNewAuthLibrary(),
 		option.WithGRPCDialOption(grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(math.MaxInt32))),
 	}
@@ -205,6 +206,7 @@ func defaultCallOptions() *CallOptions {
 				})
 			}),
 		},
+		GetDefaultServiceAccount: []gax.CallOption{},
 	}
 }
 
@@ -323,6 +325,7 @@ func defaultRESTCallOptions() *CallOptions {
 					http.StatusGatewayTimeout)
 			}),
 		},
+		GetDefaultServiceAccount: []gax.CallOption{},
 	}
 }
 
@@ -356,6 +359,7 @@ type internalClient interface {
 	UpdateWorkerPool(context.Context, *cloudbuildpb.UpdateWorkerPoolRequest, ...gax.CallOption) (*UpdateWorkerPoolOperation, error)
 	UpdateWorkerPoolOperation(name string) *UpdateWorkerPoolOperation
 	ListWorkerPools(context.Context, *cloudbuildpb.ListWorkerPoolsRequest, ...gax.CallOption) *WorkerPoolIterator
+	GetDefaultServiceAccount(context.Context, *cloudbuildpb.GetDefaultServiceAccountRequest, ...gax.CallOption) (*cloudbuildpb.DefaultServiceAccount, error)
 }
 
 // Client is a client for interacting with Cloud Build API.
@@ -482,8 +486,8 @@ func (c *Client) RetryBuildOperation(name string) *RetryBuildOperation {
 
 // ApproveBuild approves or rejects a pending build.
 //
-// If approved, the returned LRO will be analogous to the LRO returned from
-// a CreateBuild call.
+// If approved, the returned long-running operation (LRO) will be analogous to
+// the LRO returned from a CreateBuild call.
 //
 // If rejected, the returned LRO will be immediately done.
 func (c *Client) ApproveBuild(ctx context.Context, req *cloudbuildpb.ApproveBuildRequest, opts ...gax.CallOption) (*ApproveBuildOperation, error) {
@@ -497,36 +501,26 @@ func (c *Client) ApproveBuildOperation(name string) *ApproveBuildOperation {
 }
 
 // CreateBuildTrigger creates a new BuildTrigger.
-//
-// This API is experimental.
 func (c *Client) CreateBuildTrigger(ctx context.Context, req *cloudbuildpb.CreateBuildTriggerRequest, opts ...gax.CallOption) (*cloudbuildpb.BuildTrigger, error) {
 	return c.internalClient.CreateBuildTrigger(ctx, req, opts...)
 }
 
 // GetBuildTrigger returns information about a BuildTrigger.
-//
-// This API is experimental.
 func (c *Client) GetBuildTrigger(ctx context.Context, req *cloudbuildpb.GetBuildTriggerRequest, opts ...gax.CallOption) (*cloudbuildpb.BuildTrigger, error) {
 	return c.internalClient.GetBuildTrigger(ctx, req, opts...)
 }
 
 // ListBuildTriggers lists existing BuildTriggers.
-//
-// This API is experimental.
 func (c *Client) ListBuildTriggers(ctx context.Context, req *cloudbuildpb.ListBuildTriggersRequest, opts ...gax.CallOption) *BuildTriggerIterator {
 	return c.internalClient.ListBuildTriggers(ctx, req, opts...)
 }
 
 // DeleteBuildTrigger deletes a BuildTrigger by its project ID and trigger ID.
-//
-// This API is experimental.
 func (c *Client) DeleteBuildTrigger(ctx context.Context, req *cloudbuildpb.DeleteBuildTriggerRequest, opts ...gax.CallOption) error {
 	return c.internalClient.DeleteBuildTrigger(ctx, req, opts...)
 }
 
 // UpdateBuildTrigger updates a BuildTrigger by its project ID and trigger ID.
-//
-// This API is experimental.
 func (c *Client) UpdateBuildTrigger(ctx context.Context, req *cloudbuildpb.UpdateBuildTriggerRequest, opts ...gax.CallOption) (*cloudbuildpb.BuildTrigger, error) {
 	return c.internalClient.UpdateBuildTrigger(ctx, req, opts...)
 }
@@ -597,6 +591,11 @@ func (c *Client) ListWorkerPools(ctx context.Context, req *cloudbuildpb.ListWork
 	return c.internalClient.ListWorkerPools(ctx, req, opts...)
 }
 
+// GetDefaultServiceAccount returns the DefaultServiceAccount used by the project.
+func (c *Client) GetDefaultServiceAccount(ctx context.Context, req *cloudbuildpb.GetDefaultServiceAccountRequest, opts ...gax.CallOption) (*cloudbuildpb.DefaultServiceAccount, error) {
+	return c.internalClient.GetDefaultServiceAccount(ctx, req, opts...)
+}
+
 // gRPCClient is a client for interacting with Cloud Build API over gRPC transport.
 //
 // Methods, except Close, may be called concurrently. However, fields must not be modified concurrently with method calls.
@@ -617,6 +616,8 @@ type gRPCClient struct {
 
 	// The x-goog-* metadata to be sent with each request.
 	xGoogHeaders []string
+
+	logger *slog.Logger
 }
 
 // NewClient creates a new cloud build client based on gRPC.
@@ -650,6 +651,7 @@ func NewClient(ctx context.Context, opts ...option.ClientOption) (*Client, error
 		connPool:    connPool,
 		client:      cloudbuildpb.NewCloudBuildClient(connPool),
 		CallOptions: &client.CallOptions,
+		logger:      internaloption.GetLogger(opts),
 	}
 	c.setGoogleClientInfo()
 
@@ -682,8 +684,10 @@ func (c *gRPCClient) Connection() *grpc.ClientConn {
 // use by Google-written clients.
 func (c *gRPCClient) setGoogleClientInfo(keyval ...string) {
 	kv := append([]string{"gl-go", gax.GoVersion}, keyval...)
-	kv = append(kv, "gapic", getVersionClient(), "gax", gax.Version, "grpc", grpc.Version)
-	c.xGoogHeaders = []string{"x-goog-api-client", gax.XGoogHeader(kv...)}
+	kv = append(kv, "gapic", getVersionClient(), "gax", gax.Version, "grpc", grpc.Version, "pb", protoVersion)
+	c.xGoogHeaders = []string{
+		"x-goog-api-client", gax.XGoogHeader(kv...),
+	}
 }
 
 // Close closes the connection to the API service. The user should invoke this when
@@ -710,6 +714,8 @@ type restClient struct {
 
 	// Points back to the CallOptions field of the containing Client
 	CallOptions **CallOptions
+
+	logger *slog.Logger
 }
 
 // NewRESTClient creates a new cloud build rest client.
@@ -734,6 +740,7 @@ func NewRESTClient(ctx context.Context, opts ...option.ClientOption) (*Client, e
 		endpoint:    endpoint,
 		httpClient:  httpClient,
 		CallOptions: &callOpts,
+		logger:      internaloption.GetLogger(opts),
 	}
 	c.setGoogleClientInfo()
 
@@ -758,6 +765,7 @@ func defaultRESTClientOptions() []option.ClientOption {
 		internaloption.WithDefaultUniverseDomain("googleapis.com"),
 		internaloption.WithDefaultAudience("https://cloudbuild.googleapis.com/"),
 		internaloption.WithDefaultScopes(DefaultAuthScopes()...),
+		internaloption.EnableNewAuthLibrary(),
 	}
 }
 
@@ -766,8 +774,10 @@ func defaultRESTClientOptions() []option.ClientOption {
 // use by Google-written clients.
 func (c *restClient) setGoogleClientInfo(keyval ...string) {
 	kv := append([]string{"gl-go", gax.GoVersion}, keyval...)
-	kv = append(kv, "gapic", getVersionClient(), "gax", gax.Version, "rest", "UNKNOWN")
-	c.xGoogHeaders = []string{"x-goog-api-client", gax.XGoogHeader(kv...)}
+	kv = append(kv, "gapic", getVersionClient(), "gax", gax.Version, "rest", "UNKNOWN", "pb", protoVersion)
+	c.xGoogHeaders = []string{
+		"x-goog-api-client", gax.XGoogHeader(kv...),
+	}
 }
 
 // Close closes the connection to the API service. The user should invoke this when
@@ -802,7 +812,7 @@ func (c *gRPCClient) CreateBuild(ctx context.Context, req *cloudbuildpb.CreateBu
 	var resp *longrunningpb.Operation
 	err := gax.Invoke(ctx, func(ctx context.Context, settings gax.CallSettings) error {
 		var err error
-		resp, err = c.client.CreateBuild(ctx, req, settings.GRPC...)
+		resp, err = executeRPC(ctx, c.client.CreateBuild, req, settings.GRPC, c.logger, "CreateBuild")
 		return err
 	}, opts...)
 	if err != nil {
@@ -831,7 +841,7 @@ func (c *gRPCClient) GetBuild(ctx context.Context, req *cloudbuildpb.GetBuildReq
 	var resp *cloudbuildpb.Build
 	err := gax.Invoke(ctx, func(ctx context.Context, settings gax.CallSettings) error {
 		var err error
-		resp, err = c.client.GetBuild(ctx, req, settings.GRPC...)
+		resp, err = executeRPC(ctx, c.client.GetBuild, req, settings.GRPC, c.logger, "GetBuild")
 		return err
 	}, opts...)
 	if err != nil {
@@ -869,7 +879,7 @@ func (c *gRPCClient) ListBuilds(ctx context.Context, req *cloudbuildpb.ListBuild
 		}
 		err := gax.Invoke(ctx, func(ctx context.Context, settings gax.CallSettings) error {
 			var err error
-			resp, err = c.client.ListBuilds(ctx, req, settings.GRPC...)
+			resp, err = executeRPC(ctx, c.client.ListBuilds, req, settings.GRPC, c.logger, "ListBuilds")
 			return err
 		}, opts...)
 		if err != nil {
@@ -913,7 +923,7 @@ func (c *gRPCClient) CancelBuild(ctx context.Context, req *cloudbuildpb.CancelBu
 	var resp *cloudbuildpb.Build
 	err := gax.Invoke(ctx, func(ctx context.Context, settings gax.CallSettings) error {
 		var err error
-		resp, err = c.client.CancelBuild(ctx, req, settings.GRPC...)
+		resp, err = executeRPC(ctx, c.client.CancelBuild, req, settings.GRPC, c.logger, "CancelBuild")
 		return err
 	}, opts...)
 	if err != nil {
@@ -940,7 +950,7 @@ func (c *gRPCClient) RetryBuild(ctx context.Context, req *cloudbuildpb.RetryBuil
 	var resp *longrunningpb.Operation
 	err := gax.Invoke(ctx, func(ctx context.Context, settings gax.CallSettings) error {
 		var err error
-		resp, err = c.client.RetryBuild(ctx, req, settings.GRPC...)
+		resp, err = executeRPC(ctx, c.client.RetryBuild, req, settings.GRPC, c.logger, "RetryBuild")
 		return err
 	}, opts...)
 	if err != nil {
@@ -969,7 +979,7 @@ func (c *gRPCClient) ApproveBuild(ctx context.Context, req *cloudbuildpb.Approve
 	var resp *longrunningpb.Operation
 	err := gax.Invoke(ctx, func(ctx context.Context, settings gax.CallSettings) error {
 		var err error
-		resp, err = c.client.ApproveBuild(ctx, req, settings.GRPC...)
+		resp, err = executeRPC(ctx, c.client.ApproveBuild, req, settings.GRPC, c.logger, "ApproveBuild")
 		return err
 	}, opts...)
 	if err != nil {
@@ -998,7 +1008,7 @@ func (c *gRPCClient) CreateBuildTrigger(ctx context.Context, req *cloudbuildpb.C
 	var resp *cloudbuildpb.BuildTrigger
 	err := gax.Invoke(ctx, func(ctx context.Context, settings gax.CallSettings) error {
 		var err error
-		resp, err = c.client.CreateBuildTrigger(ctx, req, settings.GRPC...)
+		resp, err = executeRPC(ctx, c.client.CreateBuildTrigger, req, settings.GRPC, c.logger, "CreateBuildTrigger")
 		return err
 	}, opts...)
 	if err != nil {
@@ -1025,7 +1035,7 @@ func (c *gRPCClient) GetBuildTrigger(ctx context.Context, req *cloudbuildpb.GetB
 	var resp *cloudbuildpb.BuildTrigger
 	err := gax.Invoke(ctx, func(ctx context.Context, settings gax.CallSettings) error {
 		var err error
-		resp, err = c.client.GetBuildTrigger(ctx, req, settings.GRPC...)
+		resp, err = executeRPC(ctx, c.client.GetBuildTrigger, req, settings.GRPC, c.logger, "GetBuildTrigger")
 		return err
 	}, opts...)
 	if err != nil {
@@ -1063,7 +1073,7 @@ func (c *gRPCClient) ListBuildTriggers(ctx context.Context, req *cloudbuildpb.Li
 		}
 		err := gax.Invoke(ctx, func(ctx context.Context, settings gax.CallSettings) error {
 			var err error
-			resp, err = c.client.ListBuildTriggers(ctx, req, settings.GRPC...)
+			resp, err = executeRPC(ctx, c.client.ListBuildTriggers, req, settings.GRPC, c.logger, "ListBuildTriggers")
 			return err
 		}, opts...)
 		if err != nil {
@@ -1106,7 +1116,7 @@ func (c *gRPCClient) DeleteBuildTrigger(ctx context.Context, req *cloudbuildpb.D
 	opts = append((*c.CallOptions).DeleteBuildTrigger[0:len((*c.CallOptions).DeleteBuildTrigger):len((*c.CallOptions).DeleteBuildTrigger)], opts...)
 	err := gax.Invoke(ctx, func(ctx context.Context, settings gax.CallSettings) error {
 		var err error
-		_, err = c.client.DeleteBuildTrigger(ctx, req, settings.GRPC...)
+		_, err = executeRPC(ctx, c.client.DeleteBuildTrigger, req, settings.GRPC, c.logger, "DeleteBuildTrigger")
 		return err
 	}, opts...)
 	return err
@@ -1130,7 +1140,7 @@ func (c *gRPCClient) UpdateBuildTrigger(ctx context.Context, req *cloudbuildpb.U
 	var resp *cloudbuildpb.BuildTrigger
 	err := gax.Invoke(ctx, func(ctx context.Context, settings gax.CallSettings) error {
 		var err error
-		resp, err = c.client.UpdateBuildTrigger(ctx, req, settings.GRPC...)
+		resp, err = executeRPC(ctx, c.client.UpdateBuildTrigger, req, settings.GRPC, c.logger, "UpdateBuildTrigger")
 		return err
 	}, opts...)
 	if err != nil {
@@ -1157,7 +1167,7 @@ func (c *gRPCClient) RunBuildTrigger(ctx context.Context, req *cloudbuildpb.RunB
 	var resp *longrunningpb.Operation
 	err := gax.Invoke(ctx, func(ctx context.Context, settings gax.CallSettings) error {
 		var err error
-		resp, err = c.client.RunBuildTrigger(ctx, req, settings.GRPC...)
+		resp, err = executeRPC(ctx, c.client.RunBuildTrigger, req, settings.GRPC, c.logger, "RunBuildTrigger")
 		return err
 	}, opts...)
 	if err != nil {
@@ -1177,7 +1187,7 @@ func (c *gRPCClient) ReceiveTriggerWebhook(ctx context.Context, req *cloudbuildp
 	var resp *cloudbuildpb.ReceiveTriggerWebhookResponse
 	err := gax.Invoke(ctx, func(ctx context.Context, settings gax.CallSettings) error {
 		var err error
-		resp, err = c.client.ReceiveTriggerWebhook(ctx, req, settings.GRPC...)
+		resp, err = executeRPC(ctx, c.client.ReceiveTriggerWebhook, req, settings.GRPC, c.logger, "ReceiveTriggerWebhook")
 		return err
 	}, opts...)
 	if err != nil {
@@ -1204,7 +1214,7 @@ func (c *gRPCClient) CreateWorkerPool(ctx context.Context, req *cloudbuildpb.Cre
 	var resp *longrunningpb.Operation
 	err := gax.Invoke(ctx, func(ctx context.Context, settings gax.CallSettings) error {
 		var err error
-		resp, err = c.client.CreateWorkerPool(ctx, req, settings.GRPC...)
+		resp, err = executeRPC(ctx, c.client.CreateWorkerPool, req, settings.GRPC, c.logger, "CreateWorkerPool")
 		return err
 	}, opts...)
 	if err != nil {
@@ -1233,7 +1243,7 @@ func (c *gRPCClient) GetWorkerPool(ctx context.Context, req *cloudbuildpb.GetWor
 	var resp *cloudbuildpb.WorkerPool
 	err := gax.Invoke(ctx, func(ctx context.Context, settings gax.CallSettings) error {
 		var err error
-		resp, err = c.client.GetWorkerPool(ctx, req, settings.GRPC...)
+		resp, err = executeRPC(ctx, c.client.GetWorkerPool, req, settings.GRPC, c.logger, "GetWorkerPool")
 		return err
 	}, opts...)
 	if err != nil {
@@ -1260,7 +1270,7 @@ func (c *gRPCClient) DeleteWorkerPool(ctx context.Context, req *cloudbuildpb.Del
 	var resp *longrunningpb.Operation
 	err := gax.Invoke(ctx, func(ctx context.Context, settings gax.CallSettings) error {
 		var err error
-		resp, err = c.client.DeleteWorkerPool(ctx, req, settings.GRPC...)
+		resp, err = executeRPC(ctx, c.client.DeleteWorkerPool, req, settings.GRPC, c.logger, "DeleteWorkerPool")
 		return err
 	}, opts...)
 	if err != nil {
@@ -1289,7 +1299,7 @@ func (c *gRPCClient) UpdateWorkerPool(ctx context.Context, req *cloudbuildpb.Upd
 	var resp *longrunningpb.Operation
 	err := gax.Invoke(ctx, func(ctx context.Context, settings gax.CallSettings) error {
 		var err error
-		resp, err = c.client.UpdateWorkerPool(ctx, req, settings.GRPC...)
+		resp, err = executeRPC(ctx, c.client.UpdateWorkerPool, req, settings.GRPC, c.logger, "UpdateWorkerPool")
 		return err
 	}, opts...)
 	if err != nil {
@@ -1329,7 +1339,7 @@ func (c *gRPCClient) ListWorkerPools(ctx context.Context, req *cloudbuildpb.List
 		}
 		err := gax.Invoke(ctx, func(ctx context.Context, settings gax.CallSettings) error {
 			var err error
-			resp, err = c.client.ListWorkerPools(ctx, req, settings.GRPC...)
+			resp, err = executeRPC(ctx, c.client.ListWorkerPools, req, settings.GRPC, c.logger, "ListWorkerPools")
 			return err
 		}, opts...)
 		if err != nil {
@@ -1353,6 +1363,33 @@ func (c *gRPCClient) ListWorkerPools(ctx context.Context, req *cloudbuildpb.List
 	it.pageInfo.Token = req.GetPageToken()
 
 	return it
+}
+
+func (c *gRPCClient) GetDefaultServiceAccount(ctx context.Context, req *cloudbuildpb.GetDefaultServiceAccountRequest, opts ...gax.CallOption) (*cloudbuildpb.DefaultServiceAccount, error) {
+	routingHeaders := ""
+	routingHeadersMap := make(map[string]string)
+	if reg := regexp.MustCompile("projects/[^/]+/locations/(?P<location>[^/]+)/defaultServiceAccount"); reg.MatchString(req.GetName()) && len(url.QueryEscape(reg.FindStringSubmatch(req.GetName())[1])) > 0 {
+		routingHeadersMap["location"] = url.QueryEscape(reg.FindStringSubmatch(req.GetName())[1])
+	}
+	for headerName, headerValue := range routingHeadersMap {
+		routingHeaders = fmt.Sprintf("%s%s=%s&", routingHeaders, headerName, headerValue)
+	}
+	routingHeaders = strings.TrimSuffix(routingHeaders, "&")
+	hds := []string{"x-goog-request-params", routingHeaders}
+
+	hds = append(c.xGoogHeaders, hds...)
+	ctx = gax.InsertMetadataIntoOutgoingContext(ctx, hds...)
+	opts = append((*c.CallOptions).GetDefaultServiceAccount[0:len((*c.CallOptions).GetDefaultServiceAccount):len((*c.CallOptions).GetDefaultServiceAccount)], opts...)
+	var resp *cloudbuildpb.DefaultServiceAccount
+	err := gax.Invoke(ctx, func(ctx context.Context, settings gax.CallSettings) error {
+		var err error
+		resp, err = executeRPC(ctx, c.client.GetDefaultServiceAccount, req, settings.GRPC, c.logger, "GetDefaultServiceAccount")
+		return err
+	}, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
 }
 
 // CreateBuild starts a build with the specified configuration.
@@ -1410,21 +1447,10 @@ func (c *restClient) CreateBuild(ctx context.Context, req *cloudbuildpb.CreateBu
 		httpReq = httpReq.WithContext(ctx)
 		httpReq.Header = headers
 
-		httpRsp, err := c.httpClient.Do(httpReq)
+		buf, err := executeHTTPRequest(ctx, c.httpClient, httpReq, c.logger, jsonReq, "CreateBuild")
 		if err != nil {
 			return err
 		}
-		defer httpRsp.Body.Close()
-
-		if err = googleapi.CheckResponse(httpRsp); err != nil {
-			return err
-		}
-
-		buf, err := io.ReadAll(httpRsp.Body)
-		if err != nil {
-			return err
-		}
-
 		if err := unm.Unmarshal(buf, resp); err != nil {
 			return err
 		}
@@ -1490,17 +1516,7 @@ func (c *restClient) GetBuild(ctx context.Context, req *cloudbuildpb.GetBuildReq
 		httpReq = httpReq.WithContext(ctx)
 		httpReq.Header = headers
 
-		httpRsp, err := c.httpClient.Do(httpReq)
-		if err != nil {
-			return err
-		}
-		defer httpRsp.Body.Close()
-
-		if err = googleapi.CheckResponse(httpRsp); err != nil {
-			return err
-		}
-
-		buf, err := io.ReadAll(httpRsp.Body)
+		buf, err := executeHTTPRequest(ctx, c.httpClient, httpReq, c.logger, nil, "GetBuild")
 		if err != nil {
 			return err
 		}
@@ -1571,21 +1587,10 @@ func (c *restClient) ListBuilds(ctx context.Context, req *cloudbuildpb.ListBuild
 			}
 			httpReq.Header = headers
 
-			httpRsp, err := c.httpClient.Do(httpReq)
+			buf, err := executeHTTPRequest(ctx, c.httpClient, httpReq, c.logger, nil, "ListBuilds")
 			if err != nil {
 				return err
 			}
-			defer httpRsp.Body.Close()
-
-			if err = googleapi.CheckResponse(httpRsp); err != nil {
-				return err
-			}
-
-			buf, err := io.ReadAll(httpRsp.Body)
-			if err != nil {
-				return err
-			}
-
 			if err := unm.Unmarshal(buf, resp); err != nil {
 				return err
 			}
@@ -1663,17 +1668,7 @@ func (c *restClient) CancelBuild(ctx context.Context, req *cloudbuildpb.CancelBu
 		httpReq = httpReq.WithContext(ctx)
 		httpReq.Header = headers
 
-		httpRsp, err := c.httpClient.Do(httpReq)
-		if err != nil {
-			return err
-		}
-		defer httpRsp.Body.Close()
-
-		if err = googleapi.CheckResponse(httpRsp); err != nil {
-			return err
-		}
-
-		buf, err := io.ReadAll(httpRsp.Body)
+		buf, err := executeHTTPRequest(ctx, c.httpClient, httpReq, c.logger, jsonReq, "CancelBuild")
 		if err != nil {
 			return err
 		}
@@ -1765,21 +1760,10 @@ func (c *restClient) RetryBuild(ctx context.Context, req *cloudbuildpb.RetryBuil
 		httpReq = httpReq.WithContext(ctx)
 		httpReq.Header = headers
 
-		httpRsp, err := c.httpClient.Do(httpReq)
+		buf, err := executeHTTPRequest(ctx, c.httpClient, httpReq, c.logger, jsonReq, "RetryBuild")
 		if err != nil {
 			return err
 		}
-		defer httpRsp.Body.Close()
-
-		if err = googleapi.CheckResponse(httpRsp); err != nil {
-			return err
-		}
-
-		buf, err := io.ReadAll(httpRsp.Body)
-		if err != nil {
-			return err
-		}
-
 		if err := unm.Unmarshal(buf, resp); err != nil {
 			return err
 		}
@@ -1799,8 +1783,8 @@ func (c *restClient) RetryBuild(ctx context.Context, req *cloudbuildpb.RetryBuil
 
 // ApproveBuild approves or rejects a pending build.
 //
-// If approved, the returned LRO will be analogous to the LRO returned from
-// a CreateBuild call.
+// If approved, the returned long-running operation (LRO) will be analogous to
+// the LRO returned from a CreateBuild call.
 //
 // If rejected, the returned LRO will be immediately done.
 func (c *restClient) ApproveBuild(ctx context.Context, req *cloudbuildpb.ApproveBuildRequest, opts ...gax.CallOption) (*ApproveBuildOperation, error) {
@@ -1849,21 +1833,10 @@ func (c *restClient) ApproveBuild(ctx context.Context, req *cloudbuildpb.Approve
 		httpReq = httpReq.WithContext(ctx)
 		httpReq.Header = headers
 
-		httpRsp, err := c.httpClient.Do(httpReq)
+		buf, err := executeHTTPRequest(ctx, c.httpClient, httpReq, c.logger, jsonReq, "ApproveBuild")
 		if err != nil {
 			return err
 		}
-		defer httpRsp.Body.Close()
-
-		if err = googleapi.CheckResponse(httpRsp); err != nil {
-			return err
-		}
-
-		buf, err := io.ReadAll(httpRsp.Body)
-		if err != nil {
-			return err
-		}
-
 		if err := unm.Unmarshal(buf, resp); err != nil {
 			return err
 		}
@@ -1882,8 +1855,6 @@ func (c *restClient) ApproveBuild(ctx context.Context, req *cloudbuildpb.Approve
 }
 
 // CreateBuildTrigger creates a new BuildTrigger.
-//
-// This API is experimental.
 func (c *restClient) CreateBuildTrigger(ctx context.Context, req *cloudbuildpb.CreateBuildTriggerRequest, opts ...gax.CallOption) (*cloudbuildpb.BuildTrigger, error) {
 	m := protojson.MarshalOptions{AllowPartial: true, UseEnumNumbers: true}
 	body := req.GetTrigger()
@@ -1935,17 +1906,7 @@ func (c *restClient) CreateBuildTrigger(ctx context.Context, req *cloudbuildpb.C
 		httpReq = httpReq.WithContext(ctx)
 		httpReq.Header = headers
 
-		httpRsp, err := c.httpClient.Do(httpReq)
-		if err != nil {
-			return err
-		}
-		defer httpRsp.Body.Close()
-
-		if err = googleapi.CheckResponse(httpRsp); err != nil {
-			return err
-		}
-
-		buf, err := io.ReadAll(httpRsp.Body)
+		buf, err := executeHTTPRequest(ctx, c.httpClient, httpReq, c.logger, jsonReq, "CreateBuildTrigger")
 		if err != nil {
 			return err
 		}
@@ -1963,8 +1924,6 @@ func (c *restClient) CreateBuildTrigger(ctx context.Context, req *cloudbuildpb.C
 }
 
 // GetBuildTrigger returns information about a BuildTrigger.
-//
-// This API is experimental.
 func (c *restClient) GetBuildTrigger(ctx context.Context, req *cloudbuildpb.GetBuildTriggerRequest, opts ...gax.CallOption) (*cloudbuildpb.BuildTrigger, error) {
 	baseUrl, err := url.Parse(c.endpoint)
 	if err != nil {
@@ -2009,17 +1968,7 @@ func (c *restClient) GetBuildTrigger(ctx context.Context, req *cloudbuildpb.GetB
 		httpReq = httpReq.WithContext(ctx)
 		httpReq.Header = headers
 
-		httpRsp, err := c.httpClient.Do(httpReq)
-		if err != nil {
-			return err
-		}
-		defer httpRsp.Body.Close()
-
-		if err = googleapi.CheckResponse(httpRsp); err != nil {
-			return err
-		}
-
-		buf, err := io.ReadAll(httpRsp.Body)
+		buf, err := executeHTTPRequest(ctx, c.httpClient, httpReq, c.logger, nil, "GetBuildTrigger")
 		if err != nil {
 			return err
 		}
@@ -2037,8 +1986,6 @@ func (c *restClient) GetBuildTrigger(ctx context.Context, req *cloudbuildpb.GetB
 }
 
 // ListBuildTriggers lists existing BuildTriggers.
-//
-// This API is experimental.
 func (c *restClient) ListBuildTriggers(ctx context.Context, req *cloudbuildpb.ListBuildTriggersRequest, opts ...gax.CallOption) *BuildTriggerIterator {
 	it := &BuildTriggerIterator{}
 	req = proto.Clone(req).(*cloudbuildpb.ListBuildTriggersRequest)
@@ -2086,21 +2033,10 @@ func (c *restClient) ListBuildTriggers(ctx context.Context, req *cloudbuildpb.Li
 			}
 			httpReq.Header = headers
 
-			httpRsp, err := c.httpClient.Do(httpReq)
+			buf, err := executeHTTPRequest(ctx, c.httpClient, httpReq, c.logger, nil, "ListBuildTriggers")
 			if err != nil {
 				return err
 			}
-			defer httpRsp.Body.Close()
-
-			if err = googleapi.CheckResponse(httpRsp); err != nil {
-				return err
-			}
-
-			buf, err := io.ReadAll(httpRsp.Body)
-			if err != nil {
-				return err
-			}
-
 			if err := unm.Unmarshal(buf, resp); err != nil {
 				return err
 			}
@@ -2131,8 +2067,6 @@ func (c *restClient) ListBuildTriggers(ctx context.Context, req *cloudbuildpb.Li
 }
 
 // DeleteBuildTrigger deletes a BuildTrigger by its project ID and trigger ID.
-//
-// This API is experimental.
 func (c *restClient) DeleteBuildTrigger(ctx context.Context, req *cloudbuildpb.DeleteBuildTriggerRequest, opts ...gax.CallOption) error {
 	baseUrl, err := url.Parse(c.endpoint)
 	if err != nil {
@@ -2174,21 +2108,12 @@ func (c *restClient) DeleteBuildTrigger(ctx context.Context, req *cloudbuildpb.D
 		httpReq = httpReq.WithContext(ctx)
 		httpReq.Header = headers
 
-		httpRsp, err := c.httpClient.Do(httpReq)
-		if err != nil {
-			return err
-		}
-		defer httpRsp.Body.Close()
-
-		// Returns nil if there is no error, otherwise wraps
-		// the response code and body into a non-nil error
-		return googleapi.CheckResponse(httpRsp)
+		_, err = executeHTTPRequest(ctx, c.httpClient, httpReq, c.logger, nil, "DeleteBuildTrigger")
+		return err
 	}, opts...)
 }
 
 // UpdateBuildTrigger updates a BuildTrigger by its project ID and trigger ID.
-//
-// This API is experimental.
 func (c *restClient) UpdateBuildTrigger(ctx context.Context, req *cloudbuildpb.UpdateBuildTriggerRequest, opts ...gax.CallOption) (*cloudbuildpb.BuildTrigger, error) {
 	m := protojson.MarshalOptions{AllowPartial: true, UseEnumNumbers: true}
 	body := req.GetTrigger()
@@ -2206,11 +2131,11 @@ func (c *restClient) UpdateBuildTrigger(ctx context.Context, req *cloudbuildpb.U
 	params := url.Values{}
 	params.Add("$alt", "json;enum-encoding=int")
 	if req.GetUpdateMask() != nil {
-		updateMask, err := protojson.Marshal(req.GetUpdateMask())
+		field, err := protojson.Marshal(req.GetUpdateMask())
 		if err != nil {
 			return nil, err
 		}
-		params.Add("updateMask", string(updateMask[1:len(updateMask)-1]))
+		params.Add("updateMask", string(field[1:len(field)-1]))
 	}
 
 	baseUrl.RawQuery = params.Encode()
@@ -2244,17 +2169,7 @@ func (c *restClient) UpdateBuildTrigger(ctx context.Context, req *cloudbuildpb.U
 		httpReq = httpReq.WithContext(ctx)
 		httpReq.Header = headers
 
-		httpRsp, err := c.httpClient.Do(httpReq)
-		if err != nil {
-			return err
-		}
-		defer httpRsp.Body.Close()
-
-		if err = googleapi.CheckResponse(httpRsp); err != nil {
-			return err
-		}
-
-		buf, err := io.ReadAll(httpRsp.Body)
+		buf, err := executeHTTPRequest(ctx, c.httpClient, httpReq, c.logger, jsonReq, "UpdateBuildTrigger")
 		if err != nil {
 			return err
 		}
@@ -2328,21 +2243,10 @@ func (c *restClient) RunBuildTrigger(ctx context.Context, req *cloudbuildpb.RunB
 		httpReq = httpReq.WithContext(ctx)
 		httpReq.Header = headers
 
-		httpRsp, err := c.httpClient.Do(httpReq)
+		buf, err := executeHTTPRequest(ctx, c.httpClient, httpReq, c.logger, jsonReq, "RunBuildTrigger")
 		if err != nil {
 			return err
 		}
-		defer httpRsp.Body.Close()
-
-		if err = googleapi.CheckResponse(httpRsp); err != nil {
-			return err
-		}
-
-		buf, err := io.ReadAll(httpRsp.Body)
-		if err != nil {
-			return err
-		}
-
 		if err := unm.Unmarshal(buf, resp); err != nil {
 			return err
 		}
@@ -2407,17 +2311,7 @@ func (c *restClient) ReceiveTriggerWebhook(ctx context.Context, req *cloudbuildp
 		httpReq = httpReq.WithContext(ctx)
 		httpReq.Header = headers
 
-		httpRsp, err := c.httpClient.Do(httpReq)
-		if err != nil {
-			return err
-		}
-		defer httpRsp.Body.Close()
-
-		if err = googleapi.CheckResponse(httpRsp); err != nil {
-			return err
-		}
-
-		buf, err := io.ReadAll(httpRsp.Body)
+		buf, err := executeHTTPRequest(ctx, c.httpClient, httpReq, c.logger, jsonReq, "ReceiveTriggerWebhook")
 		if err != nil {
 			return err
 		}
@@ -2486,21 +2380,10 @@ func (c *restClient) CreateWorkerPool(ctx context.Context, req *cloudbuildpb.Cre
 		httpReq = httpReq.WithContext(ctx)
 		httpReq.Header = headers
 
-		httpRsp, err := c.httpClient.Do(httpReq)
+		buf, err := executeHTTPRequest(ctx, c.httpClient, httpReq, c.logger, jsonReq, "CreateWorkerPool")
 		if err != nil {
 			return err
 		}
-		defer httpRsp.Body.Close()
-
-		if err = googleapi.CheckResponse(httpRsp); err != nil {
-			return err
-		}
-
-		buf, err := io.ReadAll(httpRsp.Body)
-		if err != nil {
-			return err
-		}
-
 		if err := unm.Unmarshal(buf, resp); err != nil {
 			return err
 		}
@@ -2560,17 +2443,7 @@ func (c *restClient) GetWorkerPool(ctx context.Context, req *cloudbuildpb.GetWor
 		httpReq = httpReq.WithContext(ctx)
 		httpReq.Header = headers
 
-		httpRsp, err := c.httpClient.Do(httpReq)
-		if err != nil {
-			return err
-		}
-		defer httpRsp.Body.Close()
-
-		if err = googleapi.CheckResponse(httpRsp); err != nil {
-			return err
-		}
-
-		buf, err := io.ReadAll(httpRsp.Body)
+		buf, err := executeHTTPRequest(ctx, c.httpClient, httpReq, c.logger, nil, "GetWorkerPool")
 		if err != nil {
 			return err
 		}
@@ -2637,21 +2510,10 @@ func (c *restClient) DeleteWorkerPool(ctx context.Context, req *cloudbuildpb.Del
 		httpReq = httpReq.WithContext(ctx)
 		httpReq.Header = headers
 
-		httpRsp, err := c.httpClient.Do(httpReq)
+		buf, err := executeHTTPRequest(ctx, c.httpClient, httpReq, c.logger, nil, "DeleteWorkerPool")
 		if err != nil {
 			return err
 		}
-		defer httpRsp.Body.Close()
-
-		if err = googleapi.CheckResponse(httpRsp); err != nil {
-			return err
-		}
-
-		buf, err := io.ReadAll(httpRsp.Body)
-		if err != nil {
-			return err
-		}
-
 		if err := unm.Unmarshal(buf, resp); err != nil {
 			return err
 		}
@@ -2687,11 +2549,11 @@ func (c *restClient) UpdateWorkerPool(ctx context.Context, req *cloudbuildpb.Upd
 	params := url.Values{}
 	params.Add("$alt", "json;enum-encoding=int")
 	if req.GetUpdateMask() != nil {
-		updateMask, err := protojson.Marshal(req.GetUpdateMask())
+		field, err := protojson.Marshal(req.GetUpdateMask())
 		if err != nil {
 			return nil, err
 		}
-		params.Add("updateMask", string(updateMask[1:len(updateMask)-1]))
+		params.Add("updateMask", string(field[1:len(field)-1]))
 	}
 	if req.GetValidateOnly() {
 		params.Add("validateOnly", fmt.Sprintf("%v", req.GetValidateOnly()))
@@ -2727,21 +2589,10 @@ func (c *restClient) UpdateWorkerPool(ctx context.Context, req *cloudbuildpb.Upd
 		httpReq = httpReq.WithContext(ctx)
 		httpReq.Header = headers
 
-		httpRsp, err := c.httpClient.Do(httpReq)
+		buf, err := executeHTTPRequest(ctx, c.httpClient, httpReq, c.logger, jsonReq, "UpdateWorkerPool")
 		if err != nil {
 			return err
 		}
-		defer httpRsp.Body.Close()
-
-		if err = googleapi.CheckResponse(httpRsp); err != nil {
-			return err
-		}
-
-		buf, err := io.ReadAll(httpRsp.Body)
-		if err != nil {
-			return err
-		}
-
 		if err := unm.Unmarshal(buf, resp); err != nil {
 			return err
 		}
@@ -2804,21 +2655,10 @@ func (c *restClient) ListWorkerPools(ctx context.Context, req *cloudbuildpb.List
 			}
 			httpReq.Header = headers
 
-			httpRsp, err := c.httpClient.Do(httpReq)
+			buf, err := executeHTTPRequest(ctx, c.httpClient, httpReq, c.logger, nil, "ListWorkerPools")
 			if err != nil {
 				return err
 			}
-			defer httpRsp.Body.Close()
-
-			if err = googleapi.CheckResponse(httpRsp); err != nil {
-				return err
-			}
-
-			buf, err := io.ReadAll(httpRsp.Body)
-			if err != nil {
-				return err
-			}
-
 			if err := unm.Unmarshal(buf, resp); err != nil {
 				return err
 			}
@@ -2846,6 +2686,65 @@ func (c *restClient) ListWorkerPools(ctx context.Context, req *cloudbuildpb.List
 	it.pageInfo.Token = req.GetPageToken()
 
 	return it
+}
+
+// GetDefaultServiceAccount returns the DefaultServiceAccount used by the project.
+func (c *restClient) GetDefaultServiceAccount(ctx context.Context, req *cloudbuildpb.GetDefaultServiceAccountRequest, opts ...gax.CallOption) (*cloudbuildpb.DefaultServiceAccount, error) {
+	baseUrl, err := url.Parse(c.endpoint)
+	if err != nil {
+		return nil, err
+	}
+	baseUrl.Path += fmt.Sprintf("/v1/%v", req.GetName())
+
+	params := url.Values{}
+	params.Add("$alt", "json;enum-encoding=int")
+
+	baseUrl.RawQuery = params.Encode()
+
+	// Build HTTP headers from client and context metadata.
+	routingHeaders := ""
+	routingHeadersMap := make(map[string]string)
+	if reg := regexp.MustCompile("projects/[^/]+/locations/(?P<location>[^/]+)/defaultServiceAccount"); reg.MatchString(req.GetName()) && len(url.QueryEscape(reg.FindStringSubmatch(req.GetName())[1])) > 0 {
+		routingHeadersMap["location"] = url.QueryEscape(reg.FindStringSubmatch(req.GetName())[1])
+	}
+	for headerName, headerValue := range routingHeadersMap {
+		routingHeaders = fmt.Sprintf("%s%s=%s&", routingHeaders, headerName, headerValue)
+	}
+	routingHeaders = strings.TrimSuffix(routingHeaders, "&")
+	hds := []string{"x-goog-request-params", routingHeaders}
+
+	hds = append(c.xGoogHeaders, hds...)
+	hds = append(hds, "Content-Type", "application/json")
+	headers := gax.BuildHeaders(ctx, hds...)
+	opts = append((*c.CallOptions).GetDefaultServiceAccount[0:len((*c.CallOptions).GetDefaultServiceAccount):len((*c.CallOptions).GetDefaultServiceAccount)], opts...)
+	unm := protojson.UnmarshalOptions{AllowPartial: true, DiscardUnknown: true}
+	resp := &cloudbuildpb.DefaultServiceAccount{}
+	e := gax.Invoke(ctx, func(ctx context.Context, settings gax.CallSettings) error {
+		if settings.Path != "" {
+			baseUrl.Path = settings.Path
+		}
+		httpReq, err := http.NewRequest("GET", baseUrl.String(), nil)
+		if err != nil {
+			return err
+		}
+		httpReq = httpReq.WithContext(ctx)
+		httpReq.Header = headers
+
+		buf, err := executeHTTPRequest(ctx, c.httpClient, httpReq, c.logger, nil, "GetDefaultServiceAccount")
+		if err != nil {
+			return err
+		}
+
+		if err := unm.Unmarshal(buf, resp); err != nil {
+			return err
+		}
+
+		return nil
+	}, opts...)
+	if e != nil {
+		return nil, e
+	}
+	return resp, nil
 }
 
 // ApproveBuildOperation returns a new ApproveBuildOperation from a given name.

@@ -20,7 +20,7 @@
 #   \__, |_| \_\_|    \____|   |_|\___/ \___/|_|_|_| |_|\__, |
 #   |___/                                               |___/
 
-grpc_release_tag = v1.80.0
+grpc_release_tag = v1.83.0
 
 build_sdk_base_version = $(call sha,$(build_path)/build-sdk-images/tool/base/Dockerfile)_$(grpc_release_tag)
 build_sdk_base_tag = agones-build-sdk-base:$(build_sdk_base_version)
@@ -261,5 +261,6 @@ test-gen-all-sdk-grpc:
 		echo "$$diff_output"; \
 		echo "Changes in ../test/sdk:"; \
 		echo "$$diff_output_test_sdk"; \
+		echo "\n\n>>> Error: Generated SDK gRPC code is out of date. Please run 'make gen-all-sdk-grpc' to regenerate it and commit the changes.\n\n"; \
 		exit 1; \
 	fi

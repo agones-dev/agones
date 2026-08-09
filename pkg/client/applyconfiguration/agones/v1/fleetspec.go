@@ -25,13 +25,32 @@ import (
 
 // FleetSpecApplyConfiguration represents a declarative configuration of the FleetSpec type for use
 // with apply.
+//
+// FleetSpec is the spec for a Fleet
 type FleetSpecApplyConfiguration struct {
-	Replicas           *int32                                    `json:"replicas,omitempty"`
-	AllocationOverflow *AllocationOverflowApplyConfiguration     `json:"allocationOverflow,omitempty"`
-	Strategy           *appsv1.DeploymentStrategy                `json:"strategy,omitempty"`
-	Scheduling         *apis.SchedulingStrategy                  `json:"scheduling,omitempty"`
-	Priorities         []PriorityApplyConfiguration              `json:"priorities,omitempty"`
-	Template           *GameServerTemplateSpecApplyConfiguration `json:"template,omitempty"`
+	// Replicas are the number of GameServers that should be in this set. Defaults to 0.
+	Replicas *int32 `json:"replicas,omitempty"`
+	// Labels and/or Annotations to apply to overflowing GameServers when the number of Allocated GameServers is more
+	// than the desired replicas on the underlying `GameServerSet`
+	AllocationOverflow *AllocationOverflowApplyConfiguration `json:"allocationOverflow,omitempty"`
+	// Deployment strategy
+	Strategy *appsv1.DeploymentStrategy `json:"strategy,omitempty"`
+	// Scheduling strategy. Defaults to "Packed".
+	Scheduling *apis.SchedulingStrategy `json:"scheduling,omitempty"`
+	// [Stage: Beta]
+	// [FeatureFlag:CountsAndLists]
+	// `Priorities` configuration alters scale down logic in Fleets based on the configured available capacity order under that key.
+	//
+	// Priority of sorting is in descending importance. I.e. The position 0 `priority` entry is checked first.
+	//
+	// For `Packed` strategy scale down, this priority list will be the tie-breaker within the node, to ensure optimal
+	// infrastructure usage while also allowing some custom prioritisation of `GameServers`.
+	//
+	// For `Distributed` strategy scale down, the entire `Fleet` will be sorted by this priority list to provide the
+	// order of `GameServers` to delete on scale down.
+	Priorities []PriorityApplyConfiguration `json:"priorities,omitempty"`
+	// Template the GameServer template to apply for this Fleet
+	Template *GameServerTemplateSpecApplyConfiguration `json:"template,omitempty"`
 }
 
 // FleetSpecApplyConfiguration constructs a declarative configuration of the FleetSpec type for use with

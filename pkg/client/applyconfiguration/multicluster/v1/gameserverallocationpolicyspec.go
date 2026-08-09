@@ -20,6 +20,8 @@ package v1
 
 // GameServerAllocationPolicySpecApplyConfiguration represents a declarative configuration of the GameServerAllocationPolicySpec type for use
 // with apply.
+//
+// GameServerAllocationPolicySpec defines the desired state of GameServerAllocationPolicy
 type GameServerAllocationPolicySpecApplyConfiguration struct {
 	Priority       *int32                                   `json:"priority,omitempty"`
 	Weight         *int                                     `json:"weight,omitempty"`

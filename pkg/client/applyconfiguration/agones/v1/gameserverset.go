@@ -26,6 +26,10 @@ import (
 
 // GameServerSetApplyConfiguration represents a declarative configuration of the GameServerSet type for use
 // with apply.
+//
+// GameServerSet is the data structure for a set of GameServers.
+// This matches philosophically with the relationship between
+// Deployments and ReplicaSets
 type GameServerSetApplyConfiguration struct {
 	metav1.TypeMetaApplyConfiguration    `json:",inline"`
 	*metav1.ObjectMetaApplyConfiguration `json:"metadata,omitempty"`
@@ -43,6 +47,7 @@ func GameServerSet(name, namespace string) *GameServerSetApplyConfiguration {
 	b.WithAPIVersion("agones.dev/v1")
 	return b
 }
+
 func (b GameServerSetApplyConfiguration) IsApplyConfiguration() {}
 
 // WithKind sets the Kind field in the declarative configuration to the given value
