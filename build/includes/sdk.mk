@@ -261,5 +261,6 @@ test-gen-all-sdk-grpc:
 		echo "$$diff_output"; \
 		echo "Changes in ../test/sdk:"; \
 		echo "$$diff_output_test_sdk"; \
+		echo "\n\n>>> Error: Generated SDK gRPC code is out of date. Please run 'make gen-all-sdk-grpc' to regenerate it and commit the changes.\n\n"; \
 		exit 1; \
 	fi
