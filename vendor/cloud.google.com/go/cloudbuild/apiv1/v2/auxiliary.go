@@ -1,4 +1,4 @@
-// Copyright 2024 Google LLC
+// Copyright 2025 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -483,7 +483,7 @@ type BuildIterator struct {
 	InternalFetch func(pageSize int, pageToken string) (results []*cloudbuildpb.Build, nextPageToken string, err error)
 }
 
-// PageInfo supports pagination. See the google.golang.org/api/iterator package for details.
+// PageInfo supports pagination. See the [google.golang.org/api/iterator] package for details.
 func (it *BuildIterator) PageInfo() *iterator.PageInfo {
 	return it.pageInfo
 }
@@ -530,7 +530,7 @@ type BuildTriggerIterator struct {
 	InternalFetch func(pageSize int, pageToken string) (results []*cloudbuildpb.BuildTrigger, nextPageToken string, err error)
 }
 
-// PageInfo supports pagination. See the google.golang.org/api/iterator package for details.
+// PageInfo supports pagination. See the [google.golang.org/api/iterator] package for details.
 func (it *BuildTriggerIterator) PageInfo() *iterator.PageInfo {
 	return it.pageInfo
 }
@@ -577,7 +577,7 @@ type WorkerPoolIterator struct {
 	InternalFetch func(pageSize int, pageToken string) (results []*cloudbuildpb.WorkerPool, nextPageToken string, err error)
 }
 
-// PageInfo supports pagination. See the google.golang.org/api/iterator package for details.
+// PageInfo supports pagination. See the [google.golang.org/api/iterator] package for details.
 func (it *WorkerPoolIterator) PageInfo() *iterator.PageInfo {
 	return it.pageInfo
 }

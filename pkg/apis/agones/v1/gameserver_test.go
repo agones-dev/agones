@@ -69,9 +69,6 @@ func TestStatus(t *testing.T) {
 			expected:      GameServerStatusPort{Name: "test-name", Port: 7777},
 		},
 	}
-	runtime.FeatureTestMutex.Lock()
-	defer runtime.FeatureTestMutex.Unlock()
-	require.NoError(t, runtime.ParseFeatures(string(runtime.FeaturePortPolicyNone)+"=true"))
 
 	for _, tc := range testCases {
 		name := "test-name"
@@ -611,8 +608,8 @@ func TestGameServerValidate(t *testing.T) {
 					Type:     field.ErrorTypeInvalid,
 					Field:    field.NewPath("spec", "template", "metadata", "labels").String(),
 					BadValue: longNameLen64,
-					Detail:   "name part must be no more than 63 characters",
-					Origin:   "labelKey",
+					Detail:   "name part must be no more than 63 bytes",
+					Origin:   "format=k8s-label-key",
 				},
 			},
 		},
@@ -641,7 +638,7 @@ func TestGameServerValidate(t *testing.T) {
 			},
 			applyDefaults: false,
 			want: field.ErrorList{
-				field.Invalid(field.NewPath("spec", "template", "metadata", "labels"), longNameLen64, "must be no more than 63 characters"),
+				field.Invalid(field.NewPath("spec", "template", "metadata", "labels"), longNameLen64, "must be no more than 63 bytes").WithOrigin("format=k8s-label-value"),
 			},
 		},
 		{
@@ -669,7 +666,7 @@ func TestGameServerValidate(t *testing.T) {
 			},
 			applyDefaults: false,
 			want: field.ErrorList{
-				field.Invalid(field.NewPath("spec", "template", "metadata", "annotations"), longNameLen64, "name part must be no more than 63 characters"),
+				field.Invalid(field.NewPath("spec", "template", "metadata", "annotations"), longNameLen64, "name part must be no more than 63 bytes").WithOrigin("format=k8s-label-key"),
 			},
 		},
 		{
@@ -697,7 +694,7 @@ func TestGameServerValidate(t *testing.T) {
 			},
 			applyDefaults: false,
 			want: field.ErrorList{
-				field.Invalid(field.NewPath("spec", "template", "metadata", "annotations"), "agones.dev/short±Name", "name part must consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character (e.g. 'MyName',  or 'my.name',  or '123-abc', regex used for validation is '([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9]')"),
+				field.Invalid(field.NewPath("spec", "template", "metadata", "annotations"), "agones.dev/short±Name", "name part must consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character (e.g. 'MyName',  or 'my.name',  or '123-abc', regex used for validation is '([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9]')").WithOrigin("format=k8s-label-key"),
 			},
 		},
 		{
@@ -1537,34 +1534,7 @@ func TestGameServerValidateFeatures(t *testing.T) {
 			},
 		},
 		{
-			description: "PortPolicyNone is disabled, PortPolicy field set to None",
-			feature:     fmt.Sprintf("%s=false", runtime.FeaturePortPolicyNone),
-			gs: GameServer{
-				Spec: GameServerSpec{
-					Ports: []GameServerPort{
-						{
-							Name:          "main",
-							ContainerPort: 7777,
-							PortPolicy:    None,
-						},
-					},
-					Container: "testing",
-					Lists:     map[string]ListStatus{},
-					Template: corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "testing", Image: "testing/image"}}},
-					},
-				},
-			},
-			want: field.ErrorList{
-				field.Forbidden(
-					field.NewPath("spec.ports[0].portPolicy"),
-					"Value cannot be set to None unless feature flag PortPolicyNone is enabled",
-				),
-			},
-		},
-		{
 			description: "PortPolicyNone is enabled, PortPolicy field set to None",
-			feature:     fmt.Sprintf("%s=true", runtime.FeaturePortPolicyNone),
 			gs: GameServer{
 				Spec: GameServerSpec{
 					Ports: []GameServerPort{

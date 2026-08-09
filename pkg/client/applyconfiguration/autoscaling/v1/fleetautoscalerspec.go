@@ -20,10 +20,14 @@ package v1
 
 // FleetAutoscalerSpecApplyConfiguration represents a declarative configuration of the FleetAutoscalerSpec type for use
 // with apply.
+//
+// FleetAutoscalerSpec is the spec for a Fleet Scaler
 type FleetAutoscalerSpecApplyConfiguration struct {
-	FleetName *string                                  `json:"fleetName,omitempty"`
-	Policy    *FleetAutoscalerPolicyApplyConfiguration `json:"policy,omitempty"`
-	Sync      *FleetAutoscalerSyncApplyConfiguration   `json:"sync,omitempty"`
+	FleetName *string `json:"fleetName,omitempty"`
+	// Autoscaling policy
+	Policy *FleetAutoscalerPolicyApplyConfiguration `json:"policy,omitempty"`
+	// Sync defines when FleetAutoscalers runs autoscaling
+	Sync *FleetAutoscalerSyncApplyConfiguration `json:"sync,omitempty"`
 }
 
 // FleetAutoscalerSpecApplyConfiguration constructs a declarative configuration of the FleetAutoscalerSpec type for use with

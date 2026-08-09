@@ -28,7 +28,7 @@ RUN gem install fpm && \
 
 # install go
 WORKDIR /usr/local
-ENV GO_VERSION=1.26.0
+ENV GO_VERSION=1.26.5
 ENV GOPATH=/go
 ENV GO111MODULE=on
 RUN ARCH=$(dpkg --print-architecture) && \
@@ -53,7 +53,7 @@ RUN go install golang.org/x/tools/cmd/goimports@latest && \
     go install golang.org/x/pkgsite/cmd/pkgsite@latest
 
 # the kubernetes version for the file
-ENV KUBERNETES_VER=1.34.6
+ENV KUBERNETES_VER=1.35.6
 
 # overwrite kubectl as we want a specific version
 RUN ARCH=$(dpkg --print-architecture) && \

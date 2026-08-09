@@ -55,6 +55,11 @@
                 "GetBuildTrigger"
               ]
             },
+            "GetDefaultServiceAccount": {
+              "methods": [
+                "GetDefaultServiceAccount"
+              ]
+            },
             "GetWorkerPool": {
               "methods": [
                 "GetWorkerPool"
@@ -148,6 +153,11 @@
             "GetBuildTrigger": {
               "methods": [
                 "GetBuildTrigger"
+              ]
+            },
+            "GetDefaultServiceAccount": {
+              "methods": [
+                "GetDefaultServiceAccount"
               ]
             },
             "GetWorkerPool": {

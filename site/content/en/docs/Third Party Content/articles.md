@@ -8,6 +8,10 @@ weight: 20
 
 ## Case Studies
 
+### 2026
+
+- Jul 28 - [Colopl's FESTIBATTLE Infrastructure Architecture: Dedicated Game Servers with Agones on Kubernetes](https://architecture.cncf.io/architectures/colopl/)
+
 ### 2025
 
 - Sept 10 [Bandai Namco and Google Cloud Partner to Launch 'DRAGON BALL GEKISHIN SQUADRA,' a New Cross-Platform Multiplayer Action Game](https://www.googlecloudpresscorner.com/2025-09-10-Bandai-Namco-and-Google-Cloud-Partner-to-Launch-DRAGON-BALL-GEKISHIN-SQUADRA,-a-New-Cross-Platform-Multiplayer-Action-Game,1)

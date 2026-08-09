@@ -20,7 +20,7 @@ RUN apt-get --allow-releaseinfo-change update && \
 
 # install go
 WORKDIR /usr/local
-ENV GO_VERSION=1.26.0
+ENV GO_VERSION=1.26.5
 ENV GO111MODULE=on
 ENV GOPATH /go
 RUN ARCH=$(dpkg --print-architecture) && \

@@ -24,15 +24,33 @@ import (
 
 // FleetAutoscalerPolicyApplyConfiguration represents a declarative configuration of the FleetAutoscalerPolicy type for use
 // with apply.
+//
+// FleetAutoscalerPolicy describes how to scale a fleet
 type FleetAutoscalerPolicyApplyConfiguration struct {
-	Type     *autoscalingv1.FleetAutoscalerPolicyType `json:"type,omitempty"`
-	Buffer   *BufferPolicyApplyConfiguration          `json:"buffer,omitempty"`
-	Webhook  *URLConfigurationApplyConfiguration      `json:"webhook,omitempty"`
-	Counter  *CounterPolicyApplyConfiguration         `json:"counter,omitempty"`
-	List     *ListPolicyApplyConfiguration            `json:"list,omitempty"`
-	Schedule *SchedulePolicyApplyConfiguration        `json:"schedule,omitempty"`
-	Chain    *autoscalingv1.ChainPolicy               `json:"chain,omitempty"`
-	Wasm     *WasmPolicyApplyConfiguration            `json:"wasm,omitempty"`
+	// Type of autoscaling policy.
+	Type *autoscalingv1.FleetAutoscalerPolicyType `json:"type,omitempty"`
+	// Buffer policy config params. Present only if FleetAutoscalerPolicyType = Buffer.
+	Buffer *BufferPolicyApplyConfiguration `json:"buffer,omitempty"`
+	// Webhook policy config params. Present only if FleetAutoscalerPolicyType = Webhook.
+	Webhook *URLConfigurationApplyConfiguration `json:"webhook,omitempty"`
+	// [Stage:Beta]
+	// [FeatureFlag:CountsAndLists]
+	// Counter policy config params. Present only if FleetAutoscalerPolicyType = Counter.
+	Counter *CounterPolicyApplyConfiguration `json:"counter,omitempty"`
+	// [Stage:Beta]
+	// [FeatureFlag:CountsAndLists]
+	// List policy config params. Present only if FleetAutoscalerPolicyType = List.
+	List *ListPolicyApplyConfiguration `json:"list,omitempty"`
+	// [Stage:Beta]
+	// [FeatureFlag:ScheduledAutoscaler]
+	// Schedule policy config params. Present only if FleetAutoscalerPolicyType = Schedule.
+	Schedule *SchedulePolicyApplyConfiguration `json:"schedule,omitempty"`
+	// [Stage:Beta]
+	// [FeatureFlag:ScheduledAutoscaler]
+	// Chain policy config params. Present only if FleetAutoscalerPolicyType = Chain.
+	Chain *autoscalingv1.ChainPolicy `json:"chain,omitempty"`
+	// Wasm policy config params. Present only if FleetAutoscalerPolicyType = Wasm.
+	Wasm *WasmPolicyApplyConfiguration `json:"wasm,omitempty"`
 }
 
 // FleetAutoscalerPolicyApplyConfiguration constructs a declarative configuration of the FleetAutoscalerPolicy type for use with

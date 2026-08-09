@@ -20,6 +20,8 @@ package v1
 
 // AggregatedListStatusApplyConfiguration represents a declarative configuration of the AggregatedListStatus type for use
 // with apply.
+//
+// AggregatedListStatus stores total and allocated List tracking values
 type AggregatedListStatusApplyConfiguration struct {
 	AllocatedCount    *int64 `json:"allocatedCount,omitempty"`
 	AllocatedCapacity *int64 `json:"allocatedCapacity,omitempty"`

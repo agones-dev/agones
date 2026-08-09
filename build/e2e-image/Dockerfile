@@ -13,7 +13,7 @@ RUN apt-get update && \
 
 # install go
 WORKDIR /usr/local
-ENV GO_VERSION=1.26.0
+ENV GO_VERSION=1.26.5
 ENV GOPATH /go
 ENV GO111MODULE=on
 RUN ARCH=$(dpkg --print-architecture) && \
@@ -23,7 +23,7 @@ RUN ARCH=$(dpkg --print-architecture) && \
 ENV PATH /usr/local/go/bin:/go/bin:$PATH
 
 # install kubectl without gcloud as we want the last version
-ENV KUBECTL_VER 1.34.6
+ENV KUBECTL_VER 1.35.6
 RUN ARCH=$(dpkg --print-architecture) && \
     curl -LO https://dl.k8s.io/release/v${KUBECTL_VER}/bin/linux/${ARCH}/kubectl && \
     chmod go+rx ./kubectl && \
