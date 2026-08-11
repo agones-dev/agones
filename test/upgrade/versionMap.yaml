@@ -30,15 +30,18 @@ data:
           "1.57.0",
           "1.58.0",
           "1.59.0",
+          "1.60.0",
           "Dev"
         ],
         "1.35": [
           "1.57.0",
           "1.58.0",
           "1.59.0",
+          "1.60.0",
           "Dev"
         ],
         "1.36": [
+          "1.60.0",
           "Dev"
         ]
       },
@@ -122,6 +125,10 @@ data:
         "1.59.0": {
           "alphaGates": ["PlayerAllocationFilter", "PlayerTracking", "WasmAutoscaler"],
           "betaGates": ["CountsAndLists", "GKEAutopilotExtendedDurationPods", "PortPolicyNone", "ScheduledAutoscaler",  "FleetAutoscaleRequestMetaData", "SidecarContainers"]
+        },
+        "1.60.0": {
+          "alphaGates": ["PlayerAllocationFilter", "PlayerTracking", "WasmAutoscaler"],
+          "betaGates": ["CountsAndLists", "GKEAutopilotExtendedDurationPods", "ScheduledAutoscaler",  "FleetAutoscaleRequestMetaData", "SidecarContainers"]
         },
         "Dev": {
           "alphaGates": ["PlayerAllocationFilter", "PlayerTracking", "WasmAutoscaler"],
