@@ -216,7 +216,6 @@ func TestGameServerApplyDefaults(t *testing.T) {
 			}),
 		},
 		"CountsAndLists=true, Counters": {
-			featureFlags: string(runtime.FeatureCountsAndLists) + "=true",
 			gameServer: defaultGameServerAnd(func(gss *GameServerSpec) {
 				gss.Counters = make(map[string]CounterStatus)
 				gss.Counters["games"] = CounterStatus{Count: 1, Capacity: 100}
@@ -227,7 +226,6 @@ func TestGameServerApplyDefaults(t *testing.T) {
 			}),
 		},
 		"CountsAndLists=true, Lists": {
-			featureFlags: string(runtime.FeatureCountsAndLists) + "=true",
 			gameServer: defaultGameServerAnd(func(gss *GameServerSpec) {
 				gss.Lists = make(map[string]ListStatus)
 				gss.Lists["players"] = ListStatus{Capacity: 100, Values: []string{"foo", "bar"}}
@@ -1470,29 +1468,17 @@ func TestGameServerValidateFeatures(t *testing.T) {
 			},
 		},
 		{
-			description: "CountsAndLists is disabled, Counters field specified",
-			feature:     fmt.Sprintf("%s=false", runtime.FeatureCountsAndLists),
+			description: "PortPolicyNone is disabled, PortPolicy field set to None",
+			feature:     fmt.Sprintf("%s=false", runtime.FeaturePortPolicyNone),
 			gs: GameServer{
 				Spec: GameServerSpec{
-					Container: "testing",
-					Counters:  map[string]CounterStatus{},
-					Template: corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "testing", Image: "testing/image"}}},
+					Ports: []GameServerPort{
+						{
+							Name:          "main",
+							ContainerPort: 7777,
+							PortPolicy:    None,
+						},
 					},
-				},
-			},
-			want: field.ErrorList{
-				field.Forbidden(
-					field.NewPath("spec", "counters"),
-					"Value cannot be set unless feature flag CountsAndLists is enabled",
-				),
-			},
-		},
-		{
-			description: "CountsAndLists is disabled, Lists field specified",
-			feature:     fmt.Sprintf("%s=false", runtime.FeatureCountsAndLists),
-			gs: GameServer{
-				Spec: GameServerSpec{
 					Container: "testing",
 					Lists:     map[string]ListStatus{},
 					Template: corev1.PodTemplateSpec{
@@ -1502,35 +1488,9 @@ func TestGameServerValidateFeatures(t *testing.T) {
 			},
 			want: field.ErrorList{
 				field.Forbidden(
-					field.NewPath("spec", "lists"),
-					"Value cannot be set unless feature flag CountsAndLists is enabled",
+					field.NewPath("spec.ports[0].portPolicy"),
+					"Value cannot be set to None unless feature flag PortPolicyNone is enabled",
 				),
-			},
-		},
-		{
-			description: "CountsAndLists is enabled, Counters field specified",
-			feature:     fmt.Sprintf("%s=true", runtime.FeatureCountsAndLists),
-			gs: GameServer{
-				Spec: GameServerSpec{
-					Container: "testing",
-					Counters:  map[string]CounterStatus{},
-					Template: corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "testing", Image: "testing/image"}}},
-					},
-				},
-			},
-		},
-		{
-			description: "CountsAndLists is enabled, Lists field specified",
-			feature:     fmt.Sprintf("%s=true", runtime.FeatureCountsAndLists),
-			gs: GameServer{
-				Spec: GameServerSpec{
-					Container: "testing",
-					Lists:     map[string]ListStatus{},
-					Template: corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "testing", Image: "testing/image"}}},
-					},
-				},
 			},
 		},
 		{

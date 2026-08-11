@@ -612,10 +612,6 @@ func TestLocalSDKServerPlayerConnectAndDisconnect(t *testing.T) {
 func TestLocalSDKServerGetCounter(t *testing.T) {
 	t.Parallel()
 
-	runtime.FeatureTestMutex.Lock()
-	defer runtime.FeatureTestMutex.Unlock()
-	require.NoError(t, runtime.ParseFeatures(string(runtime.FeatureCountsAndLists)+"=true"))
-
 	counters := map[string]agonesv1.CounterStatus{
 		"sessions": {Count: int64(1), Capacity: int64(100)},
 	}
@@ -686,7 +682,6 @@ func TestLocalSDKServerUpdateCounter(t *testing.T) {
 
 	runtime.FeatureTestMutex.Lock()
 	defer runtime.FeatureTestMutex.Unlock()
-	require.NoError(t, runtime.ParseFeatures(string(runtime.FeatureCountsAndLists)+"=true"))
 
 	counters := map[string]agonesv1.CounterStatus{
 		"sessions": {Count: 1, Capacity: 100},
@@ -838,7 +833,6 @@ func TestLocalSDKServerGetList(t *testing.T) {
 
 	runtime.FeatureTestMutex.Lock()
 	defer runtime.FeatureTestMutex.Unlock()
-	require.NoError(t, runtime.ParseFeatures(string(runtime.FeatureCountsAndLists)+"=true"))
 
 	lists := map[string]agonesv1.ListStatus{
 		"games": {Capacity: int64(100), Values: []string{"game1", "game2"}},
@@ -910,7 +904,6 @@ func TestLocalSDKServerUpdateList(t *testing.T) {
 
 	runtime.FeatureTestMutex.Lock()
 	defer runtime.FeatureTestMutex.Unlock()
-	require.NoError(t, runtime.ParseFeatures(string(runtime.FeatureCountsAndLists)+"=true"))
 
 	lists := map[string]agonesv1.ListStatus{
 		"players":  {Capacity: 1000},
@@ -1108,10 +1101,6 @@ func TestLocalSDKServerUpdateList(t *testing.T) {
 func TestLocalSDKServerAddListValue(t *testing.T) {
 	t.Parallel()
 
-	runtime.FeatureTestMutex.Lock()
-	defer runtime.FeatureTestMutex.Unlock()
-	require.NoError(t, runtime.ParseFeatures(string(runtime.FeatureCountsAndLists)+"=true"))
-
 	lists := map[string]agonesv1.ListStatus{
 		"lemmings": {Capacity: int64(100), Values: []string{"lemming1", "lemming2"}},
 		"hacks":    {Capacity: int64(2), Values: []string{"hack1", "hack2"}},
@@ -1202,7 +1191,6 @@ func TestLocalSDKServerRemoveListValue(t *testing.T) {
 
 	runtime.FeatureTestMutex.Lock()
 	defer runtime.FeatureTestMutex.Unlock()
-	require.NoError(t, runtime.ParseFeatures(string(runtime.FeatureCountsAndLists)+"=true"))
 
 	lists := map[string]agonesv1.ListStatus{
 		"players": {Capacity: int64(100), Values: []string{"player1", "player2"}},

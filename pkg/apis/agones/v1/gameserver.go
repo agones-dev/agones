@@ -498,9 +498,6 @@ func (gs *GameServer) applyEvictionStatus() {
 }
 
 func (gs *GameServer) applyCountsListsStatus() {
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return
-	}
 	if gs.Spec.Counters != nil {
 		countersCopy := make(map[string]CounterStatus, len(gs.Spec.Counters))
 		for key, val := range gs.Spec.Counters {
@@ -526,12 +523,11 @@ func (gss *GameServerSpec) validateFeatureGates(fldPath *field.Path) field.Error
 		}
 	}
 
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		if gss.Counters != nil {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("counters"), fmt.Sprintf("Value cannot be set unless feature flag %s is enabled", runtime.FeatureCountsAndLists)))
-		}
-		if gss.Lists != nil {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("lists"), fmt.Sprintf("Value cannot be set unless feature flag %s is enabled", runtime.FeatureCountsAndLists)))
+	if !runtime.FeatureEnabled(runtime.FeaturePortPolicyNone) {
+		for i, p := range gss.Ports {
+			if p.PortPolicy == None {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("ports").Index(i).Child("portPolicy"), fmt.Sprintf("Value cannot be set to %s unless feature flag %s is enabled", None, runtime.FeaturePortPolicyNone)))
+			}
 		}
 	}
 
