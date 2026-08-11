@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"math"
 	"net/textproto"
 	"os"
@@ -345,15 +346,22 @@ func nestedQueryParams(message *descriptor.Message, field *descriptor.Field, pre
 			}
 		}
 
+		// verify if the field is deprecated, either via proto or annotation
+		protoDeprecated := field.GetOptions().GetDeprecated() && reg.GetEnableFieldDeprecation()
+		annotationDeprecated := getFieldConfiguration(reg, field).GetDeprecated()
+		deprecated := protoDeprecated || annotationDeprecated
+
 		param := openapiParameterObject{
 			Description: desc,
 			In:          "query",
 			Default:     schema.Default,
+			XExample:    schema.Example,
 			Type:        schema.Type,
 			Items:       schema.Items,
 			Format:      schema.Format,
 			Pattern:     schema.Pattern,
 			Required:    required,
+			Deprecated:  deprecated,
 			UniqueItems: schema.UniqueItems,
 			extensions:  schema.extensions,
 			Enum:        schema.Enum,
@@ -451,6 +459,12 @@ func findServicesMessagesAndEnumerations(s []*descriptor.Service, reg *descripto
 					continue
 				}
 
+				// Only process methods with HTTP bindings (exposed via HTTP annotations)
+				// This prevents unused message definitions from appearing in the OpenAPI document
+				if len(meth.Bindings) == 0 {
+					continue
+				}
+
 				swgReqName, ok := fullyQualifiedNameToOpenAPIName(meth.RequestType.FQMN(), reg)
 				if !ok {
 					grpclog.Errorf("couldn't resolve OpenAPI name for FQMN %q", meth.RequestType.FQMN())
@@ -507,9 +521,100 @@ func findNestedMessagesAndEnumerations(message *descriptor.Message, reg *descrip
 	}
 }
 
+// collectReferencedNamesForCache scans services and messages to collect all
+// FQMNs/FQENs that will be referenced, WITHOUT using the naming cache.
+// This allows us to build the cache with the correct filtered names BEFORE
+// any code tries to use it.
+func collectReferencedNamesForCache(services []*descriptor.Service, messages []*descriptor.Message, reg *descriptor.Registry) map[string]bool {
+	refs := make(map[string]bool)
+
+	// Scan services FIRST so collectNestedTypeFQNs fully traverses
+	// message graphs without being short-circuited by pre-populated entries.
+	for _, svc := range services {
+		if !isVisible(getServiceVisibilityOption(svc), reg) {
+			continue
+		}
+		for _, meth := range svc.Methods {
+			if !isVisible(getMethodVisibilityOption(meth), reg) {
+				continue
+			}
+			if len(meth.Bindings) == 0 {
+				continue
+			}
+
+			// Add method FQN (needed for body:"*" with path params)
+			refs[meth.FQMN()] = true
+
+			// Add request/response types
+			refs[meth.RequestType.FQMN()] = true
+			refs[meth.ResponseType.FQMN()] = true
+
+			// Recursively add nested types
+			collectNestedTypeFQNs(meth.RequestType, reg, refs)
+			collectNestedTypeFQNs(meth.ResponseType, reg, refs)
+		}
+	}
+
+	// Add messages from the current file AFTER service scanning.
+	// This must come after the service loop's collectNestedTypeFQNs calls,
+	// otherwise pre-populated message entries cause the traversal to
+	// short-circuit and miss nested types like enums inside referenced messages.
+	// We also traverse each message's nested types here because
+	// renderMessagesAsDefinition renders ALL messages from the file, not just
+	// those reachable from service methods. Without this, cross-package types
+	// referenced by non-service messages would be missing from the naming cache.
+	for _, msg := range messages {
+		refs[msg.FQMN()] = true
+		collectNestedTypeFQNs(msg, reg, refs)
+	}
+
+	// Add google.rpc.Status if default errors enabled
+	if !reg.GetDisableDefaultErrors() {
+		refs[".google.rpc.Status"] = true
+		// Also add nested types of Status
+		if statusMsg, err := reg.LookupMsg("google.rpc", "Status"); err == nil {
+			collectNestedTypeFQNs(statusMsg, reg, refs)
+		}
+	}
+
+	return refs
+}
+
+// collectNestedTypeFQNs recursively collects FQMNs/FQENs for all nested types
+// of a message. Does NOT use the naming cache.
+func collectNestedTypeFQNs(message *descriptor.Message, reg *descriptor.Registry, refs map[string]bool) {
+	for _, field := range message.Fields {
+		if !isVisible(getFieldVisibilityOption(field), reg) {
+			continue
+		}
+		fieldType := field.GetTypeName()
+		if fieldType == "" {
+			continue // primitive type
+		}
+		if refs[fieldType] {
+			continue // already visited
+		}
+		refs[fieldType] = true
+
+		// If it's a message, recurse
+		if msg, err := reg.LookupMsg("", fieldType); err == nil {
+			collectNestedTypeFQNs(msg, reg, refs)
+		}
+		// Enums don't have nested types, no recursion needed
+	}
+}
+
 func skipRenderingRef(refName string) bool {
 	_, ok := wktSchemas[refName]
 	return ok
+}
+
+// isEmptyObjectSchema reports whether schema is an object carrying no
+// information: type "object" with no properties and no additional properties.
+func isEmptyObjectSchema(schema openapiSchemaObject) bool {
+	return schema.Type == "object" &&
+		(schema.Properties == nil || len(*schema.Properties) == 0) &&
+		schema.AdditionalProperties == nil
 }
 
 func renderMessageAsDefinition(msg *descriptor.Message, reg *descriptor.Registry, customRefs refMap, pathParams []descriptor.Parameter) (openapiSchemaObject, error) {
@@ -607,11 +712,38 @@ func renderMessageAsDefinition(msg *descriptor.Message, reg *descriptor.Registry
 		}
 
 		if fieldSchema.Required != nil {
-			schema.Required = getUniqueFields(schema.Required, fieldSchema.Required)
-			schema.Required = append(schema.Required, fieldSchema.Required...)
-			// To avoid populating both the field schema require and message schema require, unset the field schema require.
-			// See issue #2635.
-			fieldSchema.Required = nil
+			// Only hoist required fields to parent if there are no path params inside this field.
+			if len(subPathParams) == 0 {
+				schema.Required = getUniqueFields(schema.Required, fieldSchema.Required)
+				schema.Required = append(schema.Required, fieldSchema.Required...)
+				// To avoid populating both the field schema require and message schema require, unset the field schema require.
+				// See issue #2635.
+				fieldSchema.Required = nil
+			} else {
+				// When there are path params, we need to separate field-level required from nested required.
+				// The field name itself (if required) should be in parent's required, but nested field names
+				// should stay in the nested schema's required.
+				fieldName := f.GetName()
+				if reg.GetUseJSONNamesForFields() {
+					fieldName = f.GetJsonName()
+				}
+				// Check if the field name is in the fieldSchema.Required (it would be if the field is marked REQUIRED)
+				var nestedRequired []string
+				fieldIsRequired := false
+				for _, req := range fieldSchema.Required {
+					if req == fieldName {
+						fieldIsRequired = true
+					} else {
+						nestedRequired = append(nestedRequired, req)
+					}
+				}
+				// Add the field name to parent's required if the field itself is required
+				if fieldIsRequired && find(schema.Required, fieldName) == -1 {
+					schema.Required = append(schema.Required, fieldName)
+				}
+				// Keep only the nested required fields in the field schema
+				fieldSchema.Required = nestedRequired
+			}
 		}
 
 		if reg.GetUseAllOfForRefs() {
@@ -619,20 +751,32 @@ func renderMessageAsDefinition(msg *descriptor.Message, reg *descriptor.Registry
 				// Per the JSON Reference syntax: Any members other than "$ref" in a JSON Reference object SHALL be ignored.
 				// https://tools.ietf.org/html/draft-pbryan-zyp-json-ref-03#section-3
 				// However, use allOf to specify Title/Description/Example/readOnly fields.
-				if fieldSchema.Title != "" || fieldSchema.Description != "" || len(fieldSchema.Example) > 0 || fieldSchema.ReadOnly {
+				if fieldSchema.Title != "" || fieldSchema.Description != "" || len(fieldSchema.Example) > 0 || fieldSchema.ReadOnly || fieldSchema.XNullable || len(fieldSchema.extensions) > 0 {
 					fieldSchema = openapiSchemaObject{
 						Title:       fieldSchema.Title,
 						Description: fieldSchema.Description,
 						schemaCore: schemaCore{
-							Example: fieldSchema.Example,
+							Example:   fieldSchema.Example,
+							XNullable: fieldSchema.XNullable,
 						},
-						ReadOnly: fieldSchema.ReadOnly,
-						AllOf:    []allOfEntry{{Ref: fieldSchema.Ref}},
+						ReadOnly:   fieldSchema.ReadOnly,
+						extensions: fieldSchema.extensions,
+						AllOf:      []allOfEntry{{Ref: fieldSchema.Ref}},
 					}
 				} else {
 					fieldSchema = openapiSchemaObject{schemaCore: schemaCore{Ref: fieldSchema.Ref}}
 				}
 			}
+		}
+
+		// If this field's only sub-fields are bound to path parameters, it
+		// renders as an empty object that carries no information. Omit it from
+		// the body schema rather than emitting `{"type":"object"}`. See #2624.
+		if len(subPathParams) > 0 && isEmptyObjectSchema(fieldSchema) {
+			if idx := find(schema.Required, reg.FieldName(f)); idx != -1 {
+				schema.Required = append(schema.Required[:idx], schema.Required[idx+1:]...)
+			}
+			continue
 		}
 
 		kv := keyVal{Value: fieldSchema}
@@ -670,8 +814,13 @@ func renderFieldAsDefinition(f *descriptor.Field, reg *descriptor.Registry, refs
 	if len(comments) > 0 {
 		// Use title and description from field instead of nested message if present.
 		paragraphs := strings.Split(comments, paragraphDeliminator)
-		schema.Title = strings.TrimSpace(paragraphs[0])
-		schema.Description = strings.TrimSpace(strings.Join(paragraphs[1:], paragraphDeliminator))
+		firstParagraph := strings.TrimSpace(paragraphs[0])
+		if !strings.Contains(firstParagraph, "\n") {
+			schema.Title = firstParagraph
+			schema.Description = strings.TrimSpace(strings.Join(paragraphs[1:], paragraphDeliminator))
+		} else {
+			schema.Description = strings.TrimSpace(comments)
+		}
 	}
 
 	// to handle case where path param is present inside the field of descriptorpb.FieldDescriptorProto_TYPE_MESSAGE type
@@ -707,7 +856,11 @@ func transformAnyForJSON(schema *openapiSchemaObject, useJSONNames bool) {
 }
 
 func renderMessagesAsDefinition(messages messageMap, d openapiDefinitionsObject, reg *descriptor.Registry, customRefs refMap, pathParams []descriptor.Parameter) error {
-	for name, msg := range messages {
+	// Sort keys so that when two messages flatten to the same OpenAPI definition
+	// name the winner is deterministic (last in sorted order wins) rather than
+	// varying with Go's random map iteration order.
+	for _, name := range slices.Sorted(maps.Keys(messages)) {
+		msg := messages[name]
 		swgName, ok := fullyQualifiedNameToOpenAPIName(msg.FQMN(), reg)
 		if !ok {
 			return fmt.Errorf("can't resolve OpenAPI name from %q", msg.FQMN())
@@ -718,6 +871,9 @@ func renderMessagesAsDefinition(messages messageMap, d openapiDefinitionsObject,
 
 		if opt := msg.GetOptions(); opt != nil && opt.MapEntry != nil && *opt.MapEntry {
 			continue
+		}
+		if _, exists := d[swgName]; exists {
+			grpclog.Warningf("Collision: multiple messages map to OpenAPI definition name %q; the definition will be overwritten", swgName)
 		}
 		var err error
 		d[swgName], err = renderMessageAsDefinition(msg, reg, customRefs, pathParams)
@@ -832,8 +988,13 @@ func schemaOfFieldBase(f *descriptor.Field, reg *descriptor.Registry, refs refMa
 
 	switch aggregate {
 	case array:
-		if _, ok := wktSchemas[fd.GetTypeName()]; !ok && fd.GetType() == descriptorpb.FieldDescriptorProto_TYPE_MESSAGE {
-			core.Type = "object"
+		// Only set core.Type = "object" for MESSAGE types with $ref if the flag is not set.
+		// When omitArrayItemTypeWhenRefSibling is true, we omit "type: object" to avoid
+		// no-$ref-siblings violations in OpenAPI v2, since $ref already implies the type is object.
+		if !reg.GetOmitArrayItemTypeWhenRefSibling() {
+			if _, ok := wktSchemas[fd.GetTypeName()]; !ok && fd.GetType() == descriptorpb.FieldDescriptorProto_TYPE_MESSAGE {
+				core.Type = "object"
+			}
 		}
 		ret = openapiSchemaObject{
 			schemaCore: schemaCore{
@@ -938,7 +1099,8 @@ func primitiveSchema(t descriptorpb.FieldDescriptorProto_Type) (ftype, format st
 
 // renderEnumerationsAsDefinition inserts enums into the definitions object.
 func renderEnumerationsAsDefinition(enums enumMap, d openapiDefinitionsObject, reg *descriptor.Registry, customRefs refMap) {
-	for _, enum := range enums {
+	for _, key := range slices.Sorted(maps.Keys(enums)) {
+		enum := enums[key]
 		swgName, ok := fullyQualifiedNameToOpenAPIName(enum.FQEN(), reg)
 		if !ok {
 			panic(fmt.Sprintf("can't resolve OpenAPI name from FQEN %q", enum.FQEN()))
@@ -994,6 +1156,18 @@ func renderEnumerationsAsDefinition(enums enumMap, d openapiDefinitionsObject, r
 			panic(err)
 		}
 
+		// Enum comments should go to Description, not Title.
+		// updateOpenAPIDataFromComments may set Title as a fallback
+		// when Summary field is not available on schema objects.
+		// https://github.com/grpc-ecosystem/grpc-gateway/issues/2670
+		if enumComments != "" && enumSchemaObject.Description == "" && enumSchemaObject.Title != "" {
+			enumSchemaObject.Description = enumSchemaObject.Title
+			enumSchemaObject.Title = ""
+		}
+
+		if _, exists := d[swgName]; exists {
+			grpclog.Warningf("Collision: multiple enums map to OpenAPI definition name %q; the definition will be overwritten", swgName)
+		}
 		d[swgName] = enumSchemaObject
 	}
 }
@@ -1168,11 +1342,17 @@ func partsToOpenAPIPath(parts []string, overrides map[string]string) string {
 		}
 		parts[index] = part
 	}
-	if last := len(parts) - 1; strings.HasPrefix(parts[last], ":") {
-		// Last item is a verb (":" LITERAL).
-		return strings.Join(parts[:last], "/") + parts[last]
+
+	hasTrailingSlash := len(parts) > 0 && parts[len(parts)-1] == ""
+	if hasTrailingSlash {
+		parts = parts[:len(parts)-1]
 	}
-	return strings.Join(parts, "/")
+
+	if last := len(parts) - 1; last >= 0 && strings.HasPrefix(parts[last], ":") {
+		// The final non-empty part is a verb (":" LITERAL).
+		return strings.Join(parts[:last], "/") + parts[last] + map[bool]string{true: "/", false: ""}[hasTrailingSlash]
+	}
+	return strings.Join(parts, "/") + map[bool]string{true: "/", false: ""}[hasTrailingSlash]
 }
 
 // partsToRegexpMap returns a map of parameter name to ECMA 262 patterns
@@ -1250,9 +1430,31 @@ func renderServiceTags(services []*descriptor.Service, reg *descriptor.Registry)
 				tag.Name = opts.GetName()
 			}
 		}
+
+		// If no description is set from options, use proto comments
+		if tag.Description == "" {
+			svcIdx := findServiceIndex(svc)
+			if svcIdx >= 0 {
+				svcComments := protoComments(reg, svc.File, nil, "Service", int32(svcIdx))
+				if err := updateOpenAPIDataFromComments(reg, &tag, svc, svcComments, false); err != nil {
+					grpclog.Error(err)
+				}
+			}
+		}
+
 		tags = append(tags, tag)
 	}
 	return tags
+}
+
+// findServiceIndex finds the index of a service within its file's service list.
+func findServiceIndex(svc *descriptor.Service) int {
+	for i, s := range svc.File.Services {
+		if s == svc {
+			return i
+		}
+	}
+	return -1
 }
 
 // expandPathPatterns searches the URI parts for path parameters with pattern and when the pattern contains a sub-path,
@@ -1372,8 +1574,9 @@ func renderServices(services []*descriptor.Service, paths *openapiPathsObject, r
 				pathParamNames := make(map[string]string)
 				for _, parameter := range pathParams {
 
-					var paramType, paramFormat, desc, collectionFormat string
+					var paramType, paramFormat, desc, collectionFormat, schemaPattern string
 					var defaultValue interface{}
+					var example RawExample
 					var enumNames interface{}
 					var items *openapiItemsObject
 					var minItems *int
@@ -1389,6 +1592,8 @@ func renderServices(services []*descriptor.Service, paths *openapiPathsObject, r
 							paramFormat = schema.Format
 							desc = schema.Description
 							defaultValue = schema.Default
+							example = schema.Example
+							schemaPattern = schema.Pattern
 							extensions = schema.extensions
 						} else {
 							return errors.New("only primitive and well-known types are allowed in path parameters")
@@ -1410,6 +1615,8 @@ func renderServices(services []*descriptor.Service, paths *openapiPathsObject, r
 						schema := schemaOfField(parameter.Target, reg, customRefs)
 						desc = schema.Description
 						defaultValue = schema.Default
+						example = schema.Example
+						schemaPattern = schema.Pattern
 						extensions = schema.extensions
 					default:
 						var ok bool
@@ -1421,6 +1628,8 @@ func renderServices(services []*descriptor.Service, paths *openapiPathsObject, r
 						schema := schemaOfField(parameter.Target, reg, customRefs)
 						desc = schema.Description
 						defaultValue = schema.Default
+						example = schema.Example
+						schemaPattern = schema.Pattern
 						extensions = schema.extensions
 						// If there is no mandatory format based on the field,
 						// allow it to be overridden by the user
@@ -1450,23 +1659,32 @@ func renderServices(services []*descriptor.Service, paths *openapiPathsObject, r
 					if reg.GetUseJSONNamesForFields() {
 						parameterString = lowerCamelCase(parameterString, meth.RequestType.Fields, msgs)
 					}
-					var pattern string
+					pattern := schemaPattern
 					if regExp, ok := pathParamRegexpMap[parameterString]; ok {
 						pattern = regExp
 					}
-					if fc := getFieldConfiguration(reg, parameter.Target); fc != nil {
+					fc := getFieldConfiguration(reg, parameter.Target)
+					if fc != nil {
 						pathParamName := fc.GetPathParamName()
 						if pathParamName != "" && pathParamName != parameterString {
 							pathParamNames["{"+parameterString+"}"] = "{" + pathParamName + "}"
 							parameterString, _, _ = strings.Cut(pathParamName, "=")
 						}
 					}
+
+					// verify if the parameter is deprecated, either via proto or annotation
+					protoDeprecated := parameter.Target.GetOptions().GetDeprecated() && reg.GetEnableFieldDeprecation()
+					annotationDeprecated := fc.GetDeprecated()
+					deprecated := protoDeprecated || annotationDeprecated
+
 					parameters = append(parameters, openapiParameterObject{
 						Name:        parameterString,
 						Description: desc,
 						In:          "path",
 						Required:    true,
+						Deprecated:  deprecated,
 						Default:     defaultValue,
+						XExample:    example,
 						// Parameters in gRPC-Gateway can only be strings?
 						Type:             paramType,
 						Format:           paramFormat,
@@ -1526,20 +1744,25 @@ func renderServices(services []*descriptor.Service, paths *openapiPathsObject, r
 							}
 						}
 					} else {
-						// Body field path is limited to one path component. From google.api.HttpRule.body:
+						// google.api.HttpRule.body documents body fields as top-level request fields:
 						// "NOTE: the referred field must be present at the top-level of the request message type."
 						// Ref: https://github.com/googleapis/googleapis/blob/b3397f5febbf21dfc69b875ddabaf76bee765058/google/api/http.proto#L350-L352
-						if len(b.Body.FieldPath) > 1 {
-							return fmt.Errorf("body of request %q is not a top level field: '%v'", meth.Service.GetName(), b.Body.FieldPath)
-						}
-						bodyField := b.Body.FieldPath[0]
+						// grpc-gateway accepts nested body field paths when generating gateway handlers,
+						// so OpenAPI rendering also follows the full path and uses the terminal field type.
+						bodyFieldPath := b.Body.FieldPath
+						bodyField := bodyFieldPath[len(bodyFieldPath)-1]
+						bodyFieldRequiredName := bodyField.Name
 						if reg.GetUseJSONNamesForFields() {
-							bodyFieldName = lowerCamelCase(bodyField.Name, meth.RequestType.Fields, msgs)
+							bodyFieldName = lowerCamelCase(bodyFieldPath.String(), meth.RequestType.Fields, msgs)
+							bodyFieldRequiredName = lowerCamelCase(bodyField.Name, bodyField.Target.Message.Fields, msgs)
 						} else {
-							bodyFieldName = bodyField.Name
+							bodyFieldName = bodyFieldPath.String()
 						}
 						// Align pathParams with body field path.
-						pathParams := subPathParams(bodyField.Name, b.PathParams)
+						pathParams := b.PathParams
+						for _, component := range bodyFieldPath {
+							pathParams = subPathParams(component.Name, pathParams)
+						}
 
 						if len(pathParams) == 0 {
 							// When there are no path parameters, we only need the base schema of the field.
@@ -1550,6 +1773,39 @@ func renderServices(services []*descriptor.Service, paths *openapiPathsObject, r
 							schema, err = renderFieldAsDefinition(bodyField.Target, reg, customRefs, pathParams)
 							if err != nil {
 								return err
+							}
+							// renderFieldAsDefinition may add the body field name to the schema's required array
+							// via updateSwaggerObjectFromFieldBehavior. However, for body parameters, the schema
+							// represents the field's type, not the containing message. The body field name should
+							// only be in the schema's required array if it's actually a property of the schema.
+							// Remove the body field name from required if it's not a property to avoid invalid entries.
+							if schema.Required != nil && schema.Properties != nil {
+								// Build a set of property names
+								propertyNames := make(map[string]bool)
+								for _, prop := range *schema.Properties {
+									propertyNames[prop.Key] = true
+								}
+								// Filter required array: keep field names that are either:
+								// 1. Not the body field name, OR
+								// 2. The body field name AND it's actually a property
+								filteredRequired := make([]string, 0, len(schema.Required))
+								seenBodyFieldName := false
+								for _, req := range schema.Required {
+									if req == bodyFieldRequiredName {
+										if propertyNames[req] {
+											// It's a property, keep it (but only once)
+											if !seenBodyFieldName {
+												filteredRequired = append(filteredRequired, req)
+												seenBodyFieldName = true
+											}
+										}
+										// else: It's not a property, skip it
+									} else {
+										// Not the body field name, keep it
+										filteredRequired = append(filteredRequired, req)
+									}
+								}
+								schema.Required = filteredRequired
 							}
 						}
 						if schema.Title != "" {
@@ -2003,9 +2259,48 @@ func applyTemplate(p param) (*openapiSwaggerObject, error) {
 		},
 	}
 
+	// IMPORTANT: Initialize the naming cache BEFORE any code that uses fullyQualifiedNameToOpenAPIName.
+	// This ensures consistent naming between renderServices (which generates $refs) and
+	// renderMessagesAsDefinition (which generates definitions).
+	//
+	// Pre-scan to collect referenced names WITHOUT using the naming cache.
+	// This allows us to build the cache with the correct filtered names upfront.
+	referencedNames := collectReferencedNamesForCache(p.Services, p.Messages, p.reg)
+
+	// Get all names from the registry
+	allFQMNs := p.reg.GetAllFQMNs()
+	allFQENs := p.reg.GetAllFQENs()
+	allFQMethNs := p.reg.GetAllFQMethNs()
+	allNames := append(append(allFQMNs, allFQENs...), allFQMethNs...)
+
+	// Filter: EXCLUDE names that are from a DIFFERENT package AND are NOT referenced
+	// This way we keep all names from the current package, and all referenced names from other packages
+	currentPackage := p.File.GetPackage()
+	filteredNames := make([]string, 0, len(allNames))
+	for _, name := range allNames {
+		trimmedName := strings.TrimPrefix(name, ".")
+		if trimmedName == "" {
+			continue
+		}
+		// Include if: (1) from current package, OR (2) actually referenced, OR (3) from google.*/grpc.* packages
+		isCurrentPackage := strings.HasPrefix(trimmedName, currentPackage+".")
+		isGoogle := strings.HasPrefix(trimmedName, "google.")
+		isGRPC := strings.HasPrefix(trimmedName, "grpc.")
+		if isCurrentPackage || referencedNames[name] || isGoogle || isGRPC {
+			filteredNames = append(filteredNames, name)
+		}
+	}
+
+	// Initialize the naming cache BEFORE renderServices so all lookups use consistent naming
+	registriesSeenMutex.Lock()
+	resolvedNames := resolveFullyQualifiedNameToOpenAPINames(filteredNames, p.reg.GetOpenAPINamingStrategy())
+	registriesSeen[p.reg] = resolvedNames
+	registriesSeenMutex.Unlock()
+
 	// Loops through all the services and their exposed GET/POST/PUT/DELETE definitions
 	// and create entries for all of them.
 	// Also adds custom user specified references to second map.
+	// NOTE: This now uses the naming cache initialized above.
 	requestResponseRefs, customRefs := refMap{}, refMap{}
 	if err := renderServices(p.Services, &s.Paths, p.reg, requestResponseRefs, customRefs, p.Messages, s.Definitions); err != nil {
 		panic(err)
@@ -2028,7 +2323,9 @@ func applyTemplate(p param) (*openapiSwaggerObject, error) {
 
 	// Find all the service's messages and enumerations that are defined (recursively)
 	// and write request, response and other custom (but referenced) types out as definition objects.
+	// NOTE: This uses the same naming cache that was used by renderServices above.
 	findServicesMessagesAndEnumerations(p.Services, p.reg, messages, streamingMessages, enums, requestResponseRefs)
+
 	if err := renderMessagesAsDefinition(messages, s.Definitions, p.reg, customRefs, nil); err != nil {
 		return nil, err
 	}
@@ -3046,31 +3343,23 @@ func getEnumValueVisibilityOption(fd *descriptorpb.EnumValueDescriptorProto) *vi
 }
 
 func getMethodOpenAPIOption(reg *descriptor.Registry, meth *descriptor.Method) (*openapi_options.Operation, error) {
+	if opts, ok := reg.GetOpenAPIMethodOption(meth.FQMN()); ok {
+		return opts, nil
+	}
 	opts, err := extractOperationOptionFromMethodDescriptor(meth.MethodDescriptorProto)
 	if err != nil {
 		return nil, err
-	}
-	if opts != nil {
-		return opts, nil
-	}
-	opts, ok := reg.GetOpenAPIMethodOption(meth.FQMN())
-	if !ok {
-		return nil, nil
 	}
 	return opts, nil
 }
 
 func getMessageOpenAPIOption(reg *descriptor.Registry, msg *descriptor.Message) (*openapi_options.Schema, error) {
+	if opts, ok := reg.GetOpenAPIMessageOption(msg.FQMN()); ok {
+		return opts, nil
+	}
 	opts, err := extractSchemaOptionFromMessageDescriptor(msg.DescriptorProto)
 	if err != nil {
 		return nil, err
-	}
-	if opts != nil {
-		return opts, nil
-	}
-	opts, ok := reg.GetOpenAPIMessageOption(msg.FQMN())
-	if !ok {
-		return nil, nil
 	}
 	return opts, nil
 }
@@ -3095,31 +3384,23 @@ func getServiceOpenAPIOption(reg *descriptor.Registry, svc *descriptor.Service) 
 }
 
 func getFileOpenAPIOption(reg *descriptor.Registry, file *descriptor.File) (*openapi_options.Swagger, error) {
+	if opts, ok := reg.GetOpenAPIFileOption(*file.Name); ok {
+		return opts, nil
+	}
 	opts, err := extractOpenAPIOptionFromFileDescriptor(file.FileDescriptorProto)
 	if err != nil {
 		return nil, err
-	}
-	if opts != nil {
-		return opts, nil
-	}
-	opts, ok := reg.GetOpenAPIFileOption(*file.Name)
-	if !ok {
-		return nil, nil
 	}
 	return opts, nil
 }
 
 func getFieldOpenAPIOption(reg *descriptor.Registry, fd *descriptor.Field) (*openapi_options.JSONSchema, error) {
+	if opts, ok := reg.GetOpenAPIFieldOption(fd.FQFN()); ok {
+		return opts, nil
+	}
 	opts, err := extractJSONSchemaFromFieldDescriptor(fd.FieldDescriptorProto)
 	if err != nil {
 		return nil, err
-	}
-	if opts != nil {
-		return opts, nil
-	}
-	opts, ok := reg.GetOpenAPIFieldOption(fd.FQFN())
-	if !ok {
-		return nil, nil
 	}
 	return opts, nil
 }
@@ -3237,7 +3518,7 @@ func updateswaggerObjectFromJSONSchema(s *openapiSchemaObject, j *openapi_option
 func updateSwaggerObjectFromFieldBehavior(s *openapiSchemaObject, j []annotations.FieldBehavior, reg *descriptor.Registry, field *descriptor.Field) {
 	required := false
 	if reg.GetUseProto3FieldSemantics() {
-		required = !field.GetProto3Optional()
+		required = !field.GetProto3Optional() && field.OneofIndex == nil
 	}
 	for _, fb := range j {
 		switch fb {
