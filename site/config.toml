@@ -171,6 +171,8 @@ desc = "Chat with other project users in #users"
 [security]
   # Hugo >= 0.162 denies text/html content files by default. Agones has two:
   # content/en/_index.html and the generated content/en/docs/Reference/agones_crd_api_reference.html
+  # This also locks content types to markdown and html - which is good, we don't want to mix content formats on the site
+  # it will just make editing so much harder.
   allowContent = ['^text/markdown$', '^text/html$']
 [security.funcs]
   getenv = ['^HUGO_', '^CI$', 'RELEASE_BRANCH', 'HUGO_ENV', 'RELEASE_VERSION']
