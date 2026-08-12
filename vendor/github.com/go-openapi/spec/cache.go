@@ -1,60 +1,86 @@
-// Copyright 2015 go-swagger maintainers
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
+// SPDX-License-Identifier: Apache-2.0
 
 package spec
 
-import "sync"
+import (
+	"maps"
+	"sync"
+)
 
-// ResolutionCache a cache for resolving urls
+// ResolutionCache a cache for resolving urls.
 type ResolutionCache interface {
-	Get(string) (interface{}, bool)
-	Set(string, interface{})
+	Get(uri string) (any, bool)
+	Set(uri string, data any)
 }
 
 type simpleCache struct {
 	lock  sync.RWMutex
-	store map[string]interface{}
+	store map[string]any
 }
 
-// Get retrieves a cached URI
-func (s *simpleCache) Get(uri string) (interface{}, bool) {
-	debugLog("getting %q from resolution cache", uri)
+func (s *simpleCache) ShallowClone() ResolutionCache { //nolint:ireturn // returns the public interface type by design
+	store := make(map[string]any, len(s.store))
+	s.lock.RLock()
+	maps.Copy(store, s.store)
+	s.lock.RUnlock()
+
+	return &simpleCache{
+		store: store,
+	}
+}
+
+// Get retrieves a cached URI.
+func (s *simpleCache) Get(uri string) (any, bool) {
 	s.lock.RLock()
 	v, ok := s.store[uri]
-	debugLog("got %q from resolution cache: %t", uri, ok)
 
 	s.lock.RUnlock()
 	return v, ok
 }
 
-// Set caches a URI
-func (s *simpleCache) Set(uri string, data interface{}) {
+// Set caches a URI.
+func (s *simpleCache) Set(uri string, data any) {
 	s.lock.Lock()
 	s.store[uri] = data
 	s.lock.Unlock()
 }
 
-var resCache ResolutionCache
+var (
+	// resCache is a package level cache for $ref resolution and expansion.
+	// It is initialized lazily by methods that have the need for it: no
+	// memory is allocated unless some expander methods are called.
+	//
+	// It is initialized with JSON schema and swagger schema,
+	// which do not mutate during normal operations.
+	//
+	// All subsequent utilizations of this cache are produced from a shallow
+	// clone of this initial version.
+	resCache  *simpleCache //nolint:gochecknoglobals // package-level lazy cache for $ref resolution
+	onceCache sync.Once    //nolint:gochecknoglobals // guards lazy init of resCache
 
-func init() {
-	resCache = initResolutionCache()
+	_ ResolutionCache = &simpleCache{}
+)
+
+// initResolutionCache initializes the URI resolution cache. To be wrapped in a sync.Once.Do call.
+func initResolutionCache() {
+	resCache = defaultResolutionCache()
 }
 
-// initResolutionCache initializes the URI resolution cache
-func initResolutionCache() ResolutionCache {
-	return &simpleCache{store: map[string]interface{}{
+func defaultResolutionCache() *simpleCache {
+	return &simpleCache{store: map[string]any{
 		"http://swagger.io/v2/schema.json":       MustLoadSwagger20Schema(),
 		"http://json-schema.org/draft-04/schema": MustLoadJSONSchemaDraft04(),
 	}}
+}
+
+func cacheOrDefault(cache ResolutionCache) ResolutionCache { //nolint:ireturn // returns the public interface type by design
+	onceCache.Do(initResolutionCache)
+
+	if cache != nil {
+		return cache
+	}
+
+	// get a shallow clone of the base cache with swagger and json schema
+	return resCache.ShallowClone()
 }
