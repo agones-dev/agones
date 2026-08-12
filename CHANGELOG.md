@@ -1,5 +1,45 @@
 # Changelog
 
+# [v1.60.0](https://github.com/agones-dev/agones/tree/v1.60.0) (2026-08-11)
+
+[Full Changelog](https://github.com/agones-dev/agones/compare/v1.59.0...v1.60.0)
+
+**Breaking changes**
+- Upgrade supported Kubernetes versions to 1.34, 1.35, 1.36 by @Sivasankaran25 in https://github.com/agones-dev/agones/pull/4664
+- Created performance test cluster for 1.35 by @Sivasankaran25 in https://github.com/agones-dev/agones/pull/4672
+
+**Implemented enhancements**
+- build: add minikube image load support for simple-game-server by @markmandel in https://github.com/agones-dev/agones/pull/4647
+
+**Other**
+- Preparation for Release v1.60.0 by @indurireddy-TF in https://github.com/agones-dev/agones/pull/4642
+- docs: add Flowtriq to Third Party Libraries and Tools by @jacob-masse in https://github.com/agones-dev/agones/pull/4636
+- build: bump the go_modules group across 12 directories with 1 update by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4643
+- build: bump fossas/fossa-action from 1.9.0 to 2.0.0 by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4644
+- fix(util/https): redact sensitive headers before logging requests by @herdiyana256 in https://github.com/agones-dev/agones/pull/4645
+- docs: clarify that SDK state-changing calls are async and batched by @markmandel in https://github.com/agones-dev/agones/pull/4651
+- build: bump actions/stale from 10.3.0 to 10.4.0 by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4648
+- feat(k8s-export-openapi): add tests and update removal logic for OpenAPI fields by @manumathon in https://github.com/agones-dev/agones/pull/4649
+- build: bump the go_modules group across 0 directory with 1 update by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4646
+- build: bump the go_modules group across 11 directories with 1 update by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4657
+- build : upgrade Go version to 1.26.5 by @Ribhu-bhardwaj in https://github.com/agones-dev/agones/pull/4654
+- build: bump actions/checkout from 7.0.0 to 7.0.1 by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4656
+- build: bump brace-expansion from 5.0.6 to 5.0.7 in /sdks/nodejs in the npm_and_yarn group across 1 directory by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4653
+- chore: promote `PortPolicyNone` feature gate from beta to stable by @mckean023 in https://github.com/agones-dev/agones/pull/4627
+- build: bump github.com/google/cel-go from 0.27.0 to 0.29.0 in /build/agones-bot in the go_modules group across 1 directory by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4660
+- docs: add Colopl FESTIBATTLE CNCF architecture case study by @markmandel in https://github.com/agones-dev/agones/pull/4661
+- build: regen messages on test-gen-crd-code and test-gen-all-sdk-grpc by @markmandel in https://github.com/agones-dev/agones/pull/4662
+- build: update golang dependencies across all go.mod files by @Ribhu-bhardwaj in https://github.com/agones-dev/agones/pull/4659
+- chore: apply Zizmor security fixes by @Sivasankaran25 in https://github.com/agones-dev/agones/pull/4679
+- build: bump github.com/go-git/go-git/v5 from 5.19.1 to 5.19.2 in /build/scripts/example-version-checker in the go_modules group across 1 directory by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4678
+
+**New Contributors**
+- @jacob-masse made their first contribution in https://github.com/agones-dev/agones/pull/4636
+- @herdiyana256 made their first contribution in https://github.com/agones-dev/agones/pull/4645
+- @manumathon made their first contribution in https://github.com/agones-dev/agones/pull/4649
+- @Ribhu-bhardwaj made their first contribution in https://github.com/agones-dev/agones/pull/4654
+- @mckean023 made their first contribution in https://github.com/agones-dev/agones/pull/4627
+
 # [v1.59.0](https://github.com/agones-dev/agones/tree/v1.59.0) (2026-06-30)
 
 [Full Changelog](https://github.com/agones-dev/agones/compare/v1.58.0...v1.59.0)
