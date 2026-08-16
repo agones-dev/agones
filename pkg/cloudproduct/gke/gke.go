@@ -261,7 +261,7 @@ func (apa *autopilotPortAllocator) Allocate(gs *agonesv1.GameServer) *agonesv1.G
 
 	var ports []agonesv1.GameServerPort
 	for i, p := range gs.Spec.Ports {
-		if !(p.PortPolicy == agonesv1.Dynamic || p.PortPolicy == agonesv1.Passthrough) {
+		if p.PortPolicy != agonesv1.Dynamic && p.PortPolicy != agonesv1.Passthrough {
 			logger.WithField("gs", gs.Name).WithField("portPolicy", p.PortPolicy).Error(
 				"GameServer has invalid PortPolicy for Autopilot - this should have been rejected by webhooks. Refusing to assign ports.")
 			return gs

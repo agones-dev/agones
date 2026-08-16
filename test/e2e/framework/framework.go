@@ -61,6 +61,13 @@ import (
 const (
 	AutoCleanupLabelKey   = "agones.dev/e2e-test-auto-cleanup"
 	AutoCleanupLabelValue = "true"
+	// appLabelKey is the label key identifying which application a resource belongs to.
+	appLabelKey = "app"
+	// agonesAppLabelValue is the appLabelKey value put on Agones system resources.
+	agonesAppLabelValue = "agones"
+	// gameServerContainerName names the GameServer container. GameServerSpec.Container
+	// must match the pod container name, so both are derived from this constant.
+	gameServerContainerName = "game-server"
 )
 
 // NamespaceLabel is the label that is put on all namespaces that are created
@@ -708,7 +715,7 @@ func (f *Framework) CreateNamespace(namespace string) error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      saName,
 			Namespace: namespace,
-			Labels:    map[string]string{"app": "agones"},
+			Labels:    map[string]string{appLabelKey: agonesAppLabelValue},
 		},
 	}, options); err != nil {
 		err = errors.Errorf("creating ServiceAccount %s in namespace %s failed: %s", saName, namespace, err.Error())
@@ -721,7 +728,7 @@ func (f *Framework) CreateNamespace(namespace string) error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      roleName,
 			Namespace: namespace,
-			Labels:    map[string]string{"app": "agones"},
+			Labels:    map[string]string{appLabelKey: agonesAppLabelValue},
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
@@ -742,7 +749,7 @@ func (f *Framework) CreateNamespace(namespace string) error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "agones-sdk-access",
 			Namespace: namespace,
-			Labels:    map[string]string{"app": "agones"},
+			Labels:    map[string]string{appLabelKey: agonesAppLabelValue},
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
@@ -768,7 +775,7 @@ func (f *Framework) CreateNamespace(namespace string) error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "agones-sdk-cluster-access",
 			Namespace: namespace,
-			Labels:    map[string]string{"app": "agones"},
+			Labels:    map[string]string{appLabelKey: agonesAppLabelValue},
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
@@ -830,9 +837,9 @@ type patchRemoveNoValue struct {
 // DefaultGameServer provides a default GameServer fixture, based on parameters
 // passed to the Test Framework.
 func (f *Framework) DefaultGameServer(namespace string) *agonesv1.GameServer {
-	gs := &agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{GenerateName: "game-server", Namespace: namespace},
+	gs := &agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{GenerateName: gameServerContainerName, Namespace: namespace},
 		Spec: agonesv1.GameServerSpec{
-			Container: "game-server",
+			Container: gameServerContainerName,
 			Ports: []agonesv1.GameServerPort{{
 				ContainerPort: 7654,
 				Name:          "udp-port",
@@ -842,7 +849,7 @@ func (f *Framework) DefaultGameServer(namespace string) *agonesv1.GameServer {
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{{
-						Name:            "game-server",
+						Name:            gameServerContainerName,
 						Image:           f.GameServerImage,
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						Resources: corev1.ResourceRequirements{

@@ -24,23 +24,22 @@
 # Website targets
 #
 
+# Docsy 0.16+ sources Bootstrap and Font Awesome from npm rather than a Hugo module,
+# so the npm dependencies have to be resolved before any hugo invocation.
+site-deps: ensure-build-image
+	docker run --rm $(common_mounts) --workdir=$(mount_path)/site $(DOCKER_RUN_ARGS) $(build_tag) bash -c \
+	"$(git_safe) && hugo mod npm pack && npm install"
+
 # generate the latest website
 site-server: ARGS ?=-F
 site-server: ENV ?= RELEASE_VERSION="$(base_version)" RELEASE_BRANCH=main
-site-server: ensure-build-image
+site-server: site-deps
 	docker run --rm $(common_mounts) --workdir=$(mount_path)/site $(DOCKER_RUN_ARGS) -p 1313:1313 $(build_tag) bash -c \
 	"$(git_safe) && $(ENV) hugo server --watch --baseURL=http://localhost:1313/ --bind=0.0.0.0 $(ARGS)"
 
-site-static: ensure-build-image
+site-static: site-deps
 	-docker run --rm $(common_mounts) --workdir=$(mount_path)/site $(DOCKER_RUN_ARGS) $(build_tag) rm -r ./public
 	-mkdir $(agones_path)/site/public
-	# for some reason, this only work locally
-	# postcss-cli@8.3.1 broke things, so pinning the version
-	docker run --rm $(common_mounts) --workdir=$(mount_path)/site $(DOCKER_RUN_ARGS) $(build_tag) \
-		bash -c "npm list postcss-cli || npm install postcss-cli@11.0.0"
-	# autoprefixer 10.0.0 broke things, so pinning the version
-	docker run --rm $(common_mounts) --workdir=$(mount_path)/site $(DOCKER_RUN_ARGS) $(build_tag) \
-		bash -c "npm list autoprefixer || npm install autoprefixer@10.4.20"
 	docker run --rm $(common_mounts) --workdir=$(mount_path)/site $(DOCKER_RUN_ARGS) $(build_tag) bash -c \
         "$(git_safe) && $(ENV) hugo --config=config.toml $(ARGS)"
 

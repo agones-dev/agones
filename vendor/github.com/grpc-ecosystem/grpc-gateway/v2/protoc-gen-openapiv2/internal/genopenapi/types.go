@@ -149,6 +149,7 @@ type openapiParameterObject struct {
 	Description      string              `json:"description,omitempty" yaml:"description,omitempty"`
 	In               string              `json:"in,omitempty" yaml:"in,omitempty"`
 	Required         bool                `json:"required" yaml:"required"`
+	Deprecated       bool                `json:"deprecated,omitempty" yaml:"deprecated,omitempty"`
 	Type             string              `json:"type,omitempty" yaml:"type,omitempty"`
 	Format           string              `json:"format,omitempty" yaml:"format,omitempty"`
 	UniqueItems      bool                `json:"uniqueItems,omitempty" yaml:"uniqueItems,omitempty"`
@@ -158,6 +159,7 @@ type openapiParameterObject struct {
 	Default          interface{}         `json:"default,omitempty" yaml:"default,omitempty"`
 	MinItems         *int                `json:"minItems,omitempty" yaml:"minItems,omitempty"`
 	Pattern          string              `json:"pattern,omitempty" yaml:"pattern,omitempty"`
+	XExample         RawExample          `json:"x-example,omitempty" yaml:"x-example,omitempty"`
 
 	// Or you can explicitly refer to another type. If this is defined all
 	// other fields should be empty
