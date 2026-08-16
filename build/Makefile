@@ -24,7 +24,7 @@
 #
 
 # base version target. This is usually the next release.
-base_version = 1.60.0
+base_version = 1.61.0
 
 #
 # All of the following can be overwritten with environment variables
@@ -997,6 +997,8 @@ diff-directory:
 	else \
 		echo "Differences found."; \
 		echo "$$diff_output"; \
+		echo "\n\n>>> Error: Generated CRD code in pkg/$(DIRECTORY) is out of date. Please run 'make gen-crd-code' to regenerate it and commit the changes.\n\n"; \
+		exit 1; \
 	fi
 
 install-release: $(ensure-build-image)
