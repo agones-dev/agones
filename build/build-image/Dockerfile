@@ -78,7 +78,7 @@ RUN echo "source <(helm completion bash)" >> /root/.bashrc
 
 # install golang-ci linter
 # CGO disabled to avoid the linker depending on gold (deprecated in debian:trixie)
-RUN CGO_ENABLED=0 go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
+RUN CGO_ENABLED=0 go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
 
 # Install yamllint
 RUN apt-get update && \
@@ -97,7 +97,7 @@ RUN go install github.com/extism/cli/extism@v1.6.3
 #     \_/\_/ \___|_.__/|___/_|\__\___|
 #
 
-ENV HUGO_VER=0.157.0
+ENV HUGO_VER=0.164.0
 RUN ARCH=$(dpkg --print-architecture) && \
     mkdir /tmp/hugo && \
     wget -q -O /tmp/hugo/hugo.tar.gz https://github.com/gohugoio/hugo/releases/download/v${HUGO_VER}/hugo_extended_${HUGO_VER}_linux-${ARCH}.tar.gz && \

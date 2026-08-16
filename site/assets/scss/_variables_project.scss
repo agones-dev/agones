@@ -13,6 +13,11 @@ $grey:  #888 !default;
 $orange: $secondary;
 $td-sidebar-tree-root-color: #222 !default;
 
+// Bootstrap gives .navbar no horizontal padding; upstream Docsy supplies it via an
+// inner .container-fluid, which our navbar.html override doesn't use. Match the
+// container gutter (--bs-gutter-x: 1.5rem) so the brand lines up with page content.
+$navbar-padding-x: 0.75rem;
+
 .nav-shadow {
     box-shadow: 0 2px 2px -2px rgba(0,0,0,.2);
 }

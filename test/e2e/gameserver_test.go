@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/exec"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -353,7 +354,7 @@ func TestGameServerRestartBeforeReadyCrash(t *testing.T) {
 
 	logger.WithField("gs", newGs.ObjectMeta.Name).Info("GameServer created")
 
-	address := fmt.Sprintf("%s:%d", newGs.Status.Address, newGs.Status.Ports[0].Port)
+	address := net.JoinHostPort(newGs.Status.Address, strconv.Itoa(int(newGs.Status.Ports[0].Port)))
 	logger.WithField("address", address).Info("Dialing UDP message to address")
 
 	messageAndWait := func(gs *agonesv1.GameServer, msg string, check func(gs *agonesv1.GameServer, pod *corev1.Pod) bool) error {
@@ -456,7 +457,7 @@ func TestGameServerUnhealthyAfterReadyCrash(t *testing.T) {
 	gsClient := framework.AgonesClient.AgonesV1().GameServers(framework.Namespace)
 	defer gsClient.Delete(ctx, readyGs.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint: errcheck
 
-	address := fmt.Sprintf("%s:%d", readyGs.Status.Address, readyGs.Status.Ports[0].Port)
+	address := net.JoinHostPort(readyGs.Status.Address, strconv.Itoa(int(readyGs.Status.Ports[0].Port)))
 
 	// keep crashing, until we move to Unhealthy. Solves potential issues with controller Informer cache
 	// race conditions in which it has yet to see a GameServer is Ready before the crash.
@@ -505,7 +506,7 @@ func TestGameServerPodCompletedAfterCleanExit(t *testing.T) {
 		t.Fatalf("Could not get a GameServer ready: %v", err)
 	}
 
-	address := fmt.Sprintf("%s:%d", readyGs.Status.Address, readyGs.Status.Ports[0].Port)
+	address := net.JoinHostPort(readyGs.Status.Address, strconv.Itoa(int(readyGs.Status.Ports[0].Port)))
 	conn, err := net.Dial("udp", address)
 	mtx := &sync.Mutex{}
 	require.NoError(t, err)
