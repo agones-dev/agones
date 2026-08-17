@@ -29,7 +29,7 @@ This release has been tested against Kubernetes versions {{% k8s-version %}} on 
 
 The following container operating systems and architectures can be utilised with Agones:
 
-{{% feature publishVersion="1.60.0" %}}
+{{% feature publishVersion="1.61.0" %}}
 | OS        | Architecture | Support    |
 | --------- | ------------ | ---------- |
 | linux     | `amd64`      | **Stable** |
@@ -37,7 +37,7 @@ The following container operating systems and architectures can be utilised with
 | [windows] | `amd64`      | Beta       |
 {{% /feature %}}
 
-{{% feature expiryVersion="1.60.0" %}}
+{{% feature expiryVersion="1.61.0" %}}
 | OS        | Architecture | Support    |
 | --------- | ------------ | ---------- |
 | linux     | `amd64`      | **Stable** |
