@@ -113,7 +113,8 @@ test-gen-api-docs: ensure-build-image
 	@diff -bB /tmp/result.sorted /tmp/generated.html.sorted || \
 		(echo "\n\n>>> Error: API docs are out of date. Please run 'make gen-api-docs' to regenerate them since the CRD information in /pkg/apis has changed.\n\n" && exit 1)
 
-# Remove feature expiry/publish version shortcodes update in site/content/en/docs
+# Remove resolved feature expiryVersion/publishVersion shortcodes (version <= the release being cut)
+# from .md and .html files in site/content/en/docs.
 feature-shortcode-update: ensure-build-image
 	docker run --rm $(common_mounts) --workdir=$(mount_path) $(DOCKER_RUN_ARGS) $(build_tag) \
 		go run build/scripts/feature-shortcode-update/main.go -version=$(version)
