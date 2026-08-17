@@ -35,6 +35,11 @@ var (
 	featureCloseAngleRe   = regexp.MustCompile(`\{\{< /feature >\}\}`)
 )
 
+const (
+	mdExt   = ".md"
+	htmlExt = ".html"
+)
+
 func main() {
 	dirPath := "site/content/en/docs"
 
@@ -54,7 +59,7 @@ func main() {
 		}
 
 		ext := filepath.Ext(d.Name())
-		if d.IsDir() || (ext != ".md" && ext != ".html") {
+		if d.IsDir() || (ext != mdExt && ext != htmlExt) {
 			return nil
 		}
 
@@ -110,6 +115,8 @@ func main() {
 	}
 }
 
+// removeBlocks assumes feature shortcodes never nest — a {{%|{{< /feature %}}|>}} always
+// closes the single innermost open block, tracked via inExpiryBlock/inPublishBlock below.
 func removeBlocks(scanner *bufio.Scanner, targetVersion, ext string) string {
 	var sb strings.Builder
 	inExpiryBlock := false
@@ -145,8 +152,7 @@ func removeBlocks(scanner *bufio.Scanner, targetVersion, ext string) string {
 			modified = true
 			continue
 		}
-
-		if ext == ".md" {
+		if ext == mdExt {
 			if v, ok := matchOpen(line, publishOpenPercentRe, publishOpenAngleRe); ok && versionLTE(v, targetVersion) {
 				inPublishBlock = true
 				modified = true
@@ -184,18 +190,22 @@ func versionLTE(v, target string) bool {
 	vParts := strings.Split(v, ".")
 	tParts := strings.Split(target, ".")
 
-	toInt := func(s string) int {
-		n, _ := strconv.Atoi(strings.TrimSpace(s))
-		return n
+	toInt := func(s string) (int, error) {
+		return strconv.Atoi(strings.TrimSpace(s))
 	}
 
 	for i := 0; i < len(vParts) || i < len(tParts); i++ {
 		var vn, tn int
+		var err error
 		if i < len(vParts) {
-			vn = toInt(vParts[i])
+			if vn, err = toInt(vParts[i]); err != nil {
+				log.Printf("warning: could not parse version segment %q in %q, treating as 0", vParts[i], v)
+			}
 		}
 		if i < len(tParts) {
-			tn = toInt(tParts[i])
+			if tn, err = toInt(tParts[i]); err != nil {
+				log.Printf("warning: could not parse version segment %q in %q, treating as 0", tParts[i], target)
+			}
 		}
 		if vn != tn {
 			return vn < tn
