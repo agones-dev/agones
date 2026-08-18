@@ -30,7 +30,6 @@ namespace Agones
         Task<Status> SetLabelAsync(string key, string value);
         Task<Status> SetAnnotationAsync(string key, string value);
         Task<Status> HealthAsync();
-        IAgonesAlphaSDK Alpha();
         IAgonesBetaSDK Beta();
     }
 }

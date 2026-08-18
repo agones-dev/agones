@@ -349,24 +349,6 @@ struct FDuration
 };
 
 USTRUCT(BlueprintType)
-struct FAgonesPlayer
-{
-	GENERATED_BODY()
-
-	UPROPERTY(BlueprintReadOnly, Category="Agones")
-	FString PlayerID;
-};
-
-USTRUCT(BlueprintType)
-struct FPlayerCapacity
-{
-	GENERATED_BODY()
-
-	UPROPERTY(BlueprintReadOnly, Category="Agones")
-	int64 Count = 0;
-};
-
-USTRUCT(BlueprintType)
 struct FEmptyResponse
 {
 	GENERATED_BODY()
@@ -432,24 +414,6 @@ struct FCountResponse
 	explicit FCountResponse(const TSharedPtr<FJsonObject> JsonObject)
 	{
 		JsonObject->TryGetNumberField(TEXT("count"), Count);
-	}
-};
-
-USTRUCT(BlueprintType)
-struct FConnectedPlayersResponse
-{
-	GENERATED_BODY()
-
-	FConnectedPlayersResponse()
-	{
-	}
-
-	UPROPERTY(BlueprintReadOnly, Category="Agones")
-	TArray<FString> ConnectedPlayers;
-
-	explicit FConnectedPlayersResponse(const TSharedPtr<FJsonObject> JsonObject)
-	{
-		JsonObject->TryGetStringArrayField(TEXT("list"), ConnectedPlayers);
 	}
 };
 
