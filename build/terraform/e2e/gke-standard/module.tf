@@ -65,3 +65,27 @@ module "gke_cluster" {
 
   udpFirewall = false // firewall is created at the project module level
 }
+
+resource "google_container_node_pool" "windows_ltsc2022" {
+  name       = "win-ltsc2022"
+  cluster    = module.gke_cluster.name
+  location   = var.location
+  node_count = 2
+
+  node_config {
+    machine_type = "n2-standard-4"
+    image_type   = "WINDOWS_LTSC_CONTAINERD"
+    tags         = ["game-server"]
+
+    taint {
+      key    = "node.kubernetes.io/os"
+      value  = "windows"
+      effect = "NO_SCHEDULE"
+    }
+  }
+
+  management {
+    auto_repair  = true
+    auto_upgrade = false
+  }
+}
