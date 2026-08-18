@@ -48,7 +48,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	runtimeschema "k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
 	informercorev1 "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -204,7 +203,7 @@ func (c *Allocator) Allocate(ctx context.Context, gsa *allocationv1.GameServerAl
 
 	// server side validation
 	if errs := gsa.Validate(); len(errs) > 0 {
-		kind := runtimeschema.GroupKind{
+		kind := schema.GroupKind{
 			Group: allocationv1.SchemeGroupVersion.Group,
 			Kind:  "GameServerAllocation",
 		}
@@ -720,9 +719,7 @@ func Retry(backoff wait.Backoff, fn func() error) error {
 		switch {
 		case err == nil:
 			return true, nil
-		case err == ErrNoGameServer:
-			return true, err
-		case err == ErrTotalTimeoutExceeded:
+		case goErrors.Is(err, ErrNoGameServer), goErrors.Is(err, ErrTotalTimeoutExceeded):
 			return true, err
 		default:
 			lastConflictErr = err

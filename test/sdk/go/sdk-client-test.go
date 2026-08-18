@@ -106,9 +106,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not set label: %s", err)
 	}
-	if err != nil {
-		log.Fatalf("Error received on watch gameserver %s", err)
-	}
 	uid := <-c
 	err = sdk.SetAnnotation("UID", uid)
 	if err != nil {

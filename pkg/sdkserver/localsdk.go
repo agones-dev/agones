@@ -47,7 +47,7 @@ func defaultGs() *sdk.GameServer {
 	gs := &sdk.GameServer{
 		ObjectMeta: &sdk.GameServer_ObjectMeta{
 			Name:              "local",
-			Namespace:         "default",
+			Namespace:         defaultNamespace,
 			Uid:               "1234",
 			Generation:        1,
 			ResourceVersion:   "v1",

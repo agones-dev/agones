@@ -20,7 +20,6 @@ import (
 
 	e2eframework "agones.dev/agones/test/e2e/framework"
 	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 )
 
 const defaultNs = "default"
@@ -40,25 +39,25 @@ func TestMain(m *testing.M) {
 	)
 
 	if err = e2eframework.ParseTestFlags(); err != nil {
-		log.WithError(err).Error("failed to parse go test flags")
+		logrus.WithError(err).Error("failed to parse go test flags")
 		os.Exit(1)
 	}
 
 	if framework, err = e2eframework.NewFromFlags(); err != nil {
-		log.WithError(err).Error("failed to setup framework")
+		logrus.WithError(err).Error("failed to setup framework")
 		os.Exit(1)
 	}
 
 	// run cleanup before tests, to ensure no resources from previous runs exist.
 	err = framework.CleanUp(defaultNs)
 	if err != nil {
-		log.WithError(err).Error("failed to cleanup resources")
+		logrus.WithError(err).Error("failed to cleanup resources")
 	}
 
 	defer func() {
 		err = framework.CleanUp(defaultNs)
 		if err != nil {
-			log.WithError(err).Error("failed to cleanup resources")
+			logrus.WithError(err).Error("failed to cleanup resources")
 		}
 		os.Exit(exitCode)
 	}()

@@ -24,7 +24,7 @@
 #
 
 # base version target. This is usually the next release.
-base_version = 1.60.0
+base_version = 1.61.0
 
 #
 # All of the following can be overwritten with environment variables

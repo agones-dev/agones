@@ -258,11 +258,8 @@ func TestFleetScaleUpAllocateEditAndScaleDownToZero(t *testing.T) {
 		if err != nil {
 			return false, err
 		}
-		ready := false
 		// 2 GSSet should be created
-		if len(list.Items) == 2 {
-			ready = true
-		}
+		ready := len(list.Items) == 2
 		return ready, nil
 	})
 

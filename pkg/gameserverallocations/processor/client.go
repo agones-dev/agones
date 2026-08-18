@@ -35,6 +35,18 @@ import (
 // maxSendRetries is the maximum number of times a request can be re-queued after send failures
 const maxSendRetries = 3
 
+// Structured logging field keys used across the processor client and handler.
+const (
+	logFieldClientID     = "clientID"
+	logFieldBatchID      = "batchID"
+	logFieldRequestID    = "requestID"
+	logFieldRequestCount = "requestCount"
+	logFieldComponent    = "component"
+
+	// componentProcessorClient is the logFieldComponent value for this client.
+	componentProcessorClient = "processor-client"
+)
+
 // Config holds the processor client configuration
 type Config struct {
 	// ClientID is a unique identifier for this processor client instance
@@ -178,25 +190,25 @@ func (p *client) Allocate(ctx context.Context, req *allocationpb.AllocationReque
 
 	select {
 	case response := <-pendingReq.response:
-		p.logger.WithField("requestID", requestID).Debug("Received successful response")
+		p.logger.WithField(logFieldRequestID, requestID).Debug("Received successful response")
 		return response, nil
 
 	case err := <-pendingReq.error:
-		p.logger.WithField("requestID", requestID).WithError(err).Debug("Received error response")
+		p.logger.WithField(logFieldRequestID, requestID).WithError(err).Debug("Received error response")
 		return nil, err
 
 	case <-ctx.Done():
 		p.batchMutex.Lock()
 		delete(p.requestIDMapping, requestID)
 		p.batchMutex.Unlock()
-		p.logger.WithField("requestID", requestID).Debug("Request cancelled by context")
+		p.logger.WithField(logFieldRequestID, requestID).Debug("Request cancelled by context")
 		return nil, ctx.Err()
 
 	case <-time.After(timeout):
 		p.batchMutex.Lock()
 		delete(p.requestIDMapping, requestID)
 		p.batchMutex.Unlock()
-		p.logger.WithField("requestID", requestID).Error("Timeout waiting for processor response")
+		p.logger.WithField(logFieldRequestID, requestID).Error("Timeout waiting for processor response")
 		return nil, status.Errorf(codes.DeadlineExceeded, "allocation timeout after %v", timeout)
 	}
 }
@@ -283,7 +295,7 @@ func (p *client) handlePullRequest(stream allocationpb.Processor_StreamBatchesCl
 			filteredRequests = append(filteredRequests, req)
 			filteredWrappers = append(filteredWrappers, readyBatch.Requests[i])
 		} else {
-			p.logger.WithField("requestID", req.id).Debug("Dropping stale request from batch")
+			p.logger.WithField(logFieldRequestID, req.id).Debug("Dropping stale request from batch")
 		}
 	}
 	p.batchMutex.Unlock()
@@ -321,7 +333,7 @@ func (p *client) sendBatch(stream allocationpb.Processor_StreamBatchesClient, ba
 		for _, req := range requests {
 			req.sendRetries++
 			if req.sendRetries > maxSendRetries {
-				p.logger.WithField("requestID", req.id).Warn("Request exceeded max send retries, failing")
+				p.logger.WithField(logFieldRequestID, req.id).Warn("Request exceeded max send retries, failing")
 				delete(p.requestIDMapping, req.id)
 				select {
 				case req.error <- status.Errorf(codes.Unavailable, "failed to send after %d retries", maxSendRetries):
@@ -341,9 +353,9 @@ func (p *client) sendBatch(stream allocationpb.Processor_StreamBatchesClient, ba
 
 	sendDuration := time.Since(sendStart)
 	p.logger.WithFields(logrus.Fields{
-		"batchID":      batch.BatchId,
-		"requestCount": len(requests),
-		"sendDuration": sendDuration,
+		logFieldBatchID:      batch.BatchId,
+		logFieldRequestCount: len(requests),
+		"sendDuration":       sendDuration,
 	}).Debug("Batch sent successfully")
 }
 
@@ -351,9 +363,9 @@ func (p *client) sendBatch(stream allocationpb.Processor_StreamBatchesClient, ba
 // It matches responses to pending requests, sends results/errors, and cleans up processed requests
 func (p *client) handleBatchResponse(batchResp *allocationpb.BatchResponse) {
 	p.logger.WithFields(logrus.Fields{
-		"component":     "processor-client",
-		"batchID":       batchResp.BatchId,
-		"responseCount": len(batchResp.Responses),
+		logFieldComponent: componentProcessorClient,
+		logFieldBatchID:   batchResp.BatchId,
+		"responseCount":   len(batchResp.Responses),
 	}).Debug("Processing batch response")
 
 	successCount := 0
@@ -380,9 +392,9 @@ func (p *client) handleBatchResponse(batchResp *allocationpb.BatchResponse) {
 
 				select {
 				case req.response <- result.Response:
-					p.logger.WithField("requestID", requestID).Debug("Response sent successfully")
+					p.logger.WithField(logFieldRequestID, requestID).Debug("Response sent successfully")
 				default:
-					p.logger.WithField("requestID", requestID).Warn("Failed to send response - channel full")
+					p.logger.WithField(logFieldRequestID, requestID).Warn("Failed to send response - channel full")
 					responseProcessed = false
 				}
 
@@ -395,18 +407,18 @@ func (p *client) handleBatchResponse(batchResp *allocationpb.BatchResponse) {
 				msg := result.Error.Message
 
 				p.logger.WithFields(logrus.Fields{
-					"component": "processor-client",
-					"requestID": requestID,
-					"batchID":   batchResp.BatchId,
-					"errorCode": code,
-					"errorMsg":  msg,
+					logFieldComponent: componentProcessorClient,
+					logFieldRequestID: requestID,
+					logFieldBatchID:   batchResp.BatchId,
+					"errorCode":       code,
+					"errorMsg":        msg,
 				}).Error("Request failed with error from processor")
 
 				select {
 				case req.error <- status.Error(code, msg):
-					p.logger.WithField("requestID", requestID).Debug("Error sent successfully")
+					p.logger.WithField(logFieldRequestID, requestID).Debug("Error sent successfully")
 				default:
-					p.logger.WithField("requestID", requestID).Warn("Failed to send error - channel full")
+					p.logger.WithField(logFieldRequestID, requestID).Warn("Failed to send error - channel full")
 					responseProcessed = false
 				}
 
@@ -416,16 +428,16 @@ func (p *client) handleBatchResponse(batchResp *allocationpb.BatchResponse) {
 				responseProcessed = true
 
 				p.logger.WithFields(logrus.Fields{
-					"component": "processor-client",
-					"requestID": requestID,
-					"batchID":   batchResp.BatchId,
+					logFieldComponent: componentProcessorClient,
+					logFieldRequestID: requestID,
+					logFieldBatchID:   batchResp.BatchId,
 				}).Error("Response wrapper has no result")
 
 				select {
 				case req.error <- status.Errorf(codes.Internal, "empty response from processor"):
-					p.logger.WithField("requestID", requestID).Debug("Error sent successfully")
+					p.logger.WithField(logFieldRequestID, requestID).Debug("Error sent successfully")
 				default:
-					p.logger.WithField("requestID", requestID).Warn("Failed to send error - channel full")
+					p.logger.WithField(logFieldRequestID, requestID).Warn("Failed to send error - channel full")
 					responseProcessed = false
 				}
 			}
@@ -435,29 +447,29 @@ func (p *client) handleBatchResponse(batchResp *allocationpb.BatchResponse) {
 				p.batchMutex.Lock()
 				delete(p.requestIDMapping, requestID)
 				p.batchMutex.Unlock()
-				p.logger.WithField("requestID", requestID).Debug("Request cleaned up successfully")
+				p.logger.WithField(logFieldRequestID, requestID).Debug("Request cleaned up successfully")
 			} else {
-				p.logger.WithField("requestID", requestID).Warn("Keeping request in map due to failed processing")
+				p.logger.WithField(logFieldRequestID, requestID).Warn("Keeping request in map due to failed processing")
 			}
 		} else {
 			// No pending request found for this response
 			notFoundCount++
 			p.logger.WithFields(logrus.Fields{
-				"component": "processor-client",
-				"requestID": requestID,
-				"batchID":   batchResp.BatchId,
+				logFieldComponent: componentProcessorClient,
+				logFieldRequestID: requestID,
+				logFieldBatchID:   batchResp.BatchId,
 			}).Warn("No pending request found for response - may have timed out")
 		}
 	}
 
 	// Log summary of batch response processing
 	p.logger.WithFields(logrus.Fields{
-		"component":     "processor-client",
-		"batchID":       batchResp.BatchId,
-		"successCount":  successCount,
-		"errorCount":    errorCount,
-		"notFoundCount": notFoundCount,
-		"totalCount":    len(batchResp.Responses),
+		logFieldComponent: componentProcessorClient,
+		logFieldBatchID:   batchResp.BatchId,
+		"successCount":    successCount,
+		"errorCount":      errorCount,
+		"notFoundCount":   notFoundCount,
+		"totalCount":      len(batchResp.Responses),
 	}).Debug("Batch response processing completed")
 }
 
@@ -542,7 +554,7 @@ func (p *client) healthCheck(ctx context.Context, conn *grpc.ClientConn) error {
 // registerClient sends a registration message to the processor over the stream
 // This identifies the client instance to the processor service
 func (p *client) registerClient(stream allocationpb.Processor_StreamBatchesClient) error {
-	p.logger.WithField("clientID", p.config.ClientID).Info("Registering client with processor")
+	p.logger.WithField(logFieldClientID, p.config.ClientID).Info("Registering client with processor")
 
 	registerMsg := &allocationpb.ProcessorMessage{
 		ClientId: p.config.ClientID,
@@ -551,7 +563,7 @@ func (p *client) registerClient(stream allocationpb.Processor_StreamBatchesClien
 	// Send the registration message
 	err := stream.Send(registerMsg)
 	if err != nil {
-		p.logger.WithField("clientID", p.config.ClientID).WithError(err).Error("Failed to register client")
+		p.logger.WithField(logFieldClientID, p.config.ClientID).WithError(err).Error("Failed to register client")
 		return err
 	}
 
