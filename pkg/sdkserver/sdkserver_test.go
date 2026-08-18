@@ -985,9 +985,9 @@ func TestSDKServerReserveTimeoutOnRun(t *testing.T) {
 	}()
 
 	select {
-	case status := <-updated:
-		assert.Equal(t, agonesv1.GameServerStateRequestReady, status.State)
-		assert.Nil(t, status.ReservedUntil)
+	case gsStatus := <-updated:
+		assert.Equal(t, agonesv1.GameServerStateRequestReady, gsStatus.State)
+		assert.Nil(t, gsStatus.ReservedUntil)
 	case <-time.After(5 * time.Second):
 		assert.Fail(t, "should have been an update")
 	}
@@ -2442,7 +2442,7 @@ func waitForMessage(sc *SDKServer) error {
 	return wait.PollUntilContextTimeout(context.Background(), time.Second, 5*time.Second, true, func(_ context.Context) (done bool, err error) {
 		sc.healthMutex.RLock()
 		defer sc.healthMutex.RUnlock()
-		return sc.clock.Now().UTC() == sc.healthLastUpdated, nil
+		return sc.clock.Now().UTC().Equal(sc.healthLastUpdated), nil
 	})
 }
 

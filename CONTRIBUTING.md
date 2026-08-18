@@ -76,6 +76,7 @@ without prior warning.
 - For new features, documentation *must* be included. Review the [Documentation Editing and Contribution](https://agones.dev/site/docs/contribute/)
   guide for details.
 - It is strongly recommended that new API design follows the [Google AIPs](https://google.aip.dev/) design guidelines.
+- All submissions require appropriate automated unit and integration test coverage.
 - All submissions, including submissions by project members, will require review before being merged.
 - Once review has occurred, please rebase your PR down to a single commit. This will ensure a nice clean Git history.
 - If you are unable to access build errors from your PR, make sure that you have joined the [agones-discuss mailing list](https://groups.google.com/forum/#!forum/agones-discuss).

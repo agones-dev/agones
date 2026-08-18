@@ -93,29 +93,29 @@ func (h *Handler) StreamBatches(stream allocationpb.Processor_StreamBatchesServe
 
 	h.addClient(clientID, stream)
 	defer h.removeClient(clientID)
-	handlerLogger.WithField("clientID", clientID).Debug("Client registered")
+	handlerLogger.WithField(logFieldClientID, clientID).Debug("Client registered")
 
 	// Main loop: handle incoming messages
 	for {
 		msg, err := stream.Recv()
 		if err != nil {
 			if err == io.EOF {
-				handlerLogger.WithField("clientID", clientID).Debug("Stream closed by client")
+				handlerLogger.WithField(logFieldClientID, clientID).Debug("Stream closed by client")
 			} else {
-				handlerLogger.WithField("clientID", clientID).WithError(err).Warn("Stream receive error")
+				handlerLogger.WithField(logFieldClientID, clientID).WithError(err).Warn("Stream receive error")
 			}
 			return err
 		}
 
 		payload := msg.GetPayload()
 		if payload == nil {
-			handlerLogger.WithField("clientID", clientID).Warn("Received message with nil payload")
+			handlerLogger.WithField(logFieldClientID, clientID).Warn("Received message with nil payload")
 			continue
 		}
 
 		batchPayload, ok := payload.(*allocationpb.ProcessorMessage_BatchRequest)
 		if !ok {
-			handlerLogger.WithField("clientID", clientID).Warn("Received non-batch request payload")
+			handlerLogger.WithField(logFieldClientID, clientID).Warn("Received non-batch request payload")
 			continue
 		}
 
@@ -124,9 +124,9 @@ func (h *Handler) StreamBatches(stream allocationpb.Processor_StreamBatchesServe
 		requestWrappers := batchRequest.GetRequests()
 
 		handlerLogger.WithFields(logrus.Fields{
-			"clientID":     clientID,
-			"batchID":      batchID,
-			"requestCount": len(requestWrappers),
+			logFieldClientID:     clientID,
+			logFieldBatchID:      batchID,
+			logFieldRequestCount: len(requestWrappers),
 		}).Debug("Received batch request")
 
 		// Submit batch for processing
@@ -141,9 +141,9 @@ func (h *Handler) StreamBatches(stream allocationpb.Processor_StreamBatchesServe
 
 		if err := stream.Send(respMsg); err != nil {
 			handlerLogger.WithFields(logrus.Fields{
-				"clientID":     clientID,
-				"batchID":      batchID,
-				"requestCount": len(requestWrappers),
+				logFieldClientID:     clientID,
+				logFieldBatchID:      batchID,
+				logFieldRequestCount: len(requestWrappers),
 			}).WithError(err).Error("Failed to send response")
 			continue
 		}
@@ -186,8 +186,8 @@ func (h *Handler) sendPullRequestsToClients() {
 		}
 		if err := stream.Send(pullMsg); err != nil {
 			handlerLogger.WithFields(logrus.Fields{
-				"clientID": clientID,
-				"error":    err,
+				logFieldClientID: clientID,
+				"error":          err,
 			}).Warn("Failed to send pull request, removing client")
 			h.removeClient(clientID)
 		}
