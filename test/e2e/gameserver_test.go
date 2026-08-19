@@ -490,6 +490,47 @@ func TestGameServerUnhealthyAfterReadyCrash(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+// TestGameServerUnhealthyAfterReadyCrashWithGenericContainer checks that a GameServer
+// still becomes Unhealthy when the game container crashes while another generic
+// (non-sidecar) container in the Pod keeps running. With SidecarContainers enabled the
+// Pod stays in the Running phase in this scenario, since a Pod is only Failed once every
+// container has terminated, so the health controller must detect the terminated game
+// container directly rather than rely on the Pod's phase.
+func TestGameServerUnhealthyAfterReadyCrashWithGenericContainer(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	log := e2eframework.TestLogger(t)
+
+	gs := framework.DefaultGameServer(framework.Namespace)
+	// a generic long-running container, such as a log shipper, that keeps running after
+	// the game container terminates, keeping the Pod out of the Failed phase.
+	gs.Spec.Template.Spec.Containers = append(gs.Spec.Template.Spec.Containers, corev1.Container{
+		Name:            "generic",
+		Image:           "registry.k8s.io/pause:3.10",
+		ImagePullPolicy: corev1.PullIfNotPresent,
+	})
+
+	readyGs, err := framework.CreateGameServerAndWaitUntilReady(t, framework.Namespace, gs)
+	require.NoError(t, err)
+
+	log.WithField("gs", readyGs.ObjectMeta.Name).Info("GameServer created")
+
+	gsClient := framework.AgonesClient.AgonesV1().GameServers(framework.Namespace)
+	defer gsClient.Delete(ctx, readyGs.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint: errcheck
+
+	// keep crashing, until we move to Unhealthy. Solves potential issues with controller Informer cache
+	// race conditions in which it has yet to see a GameServer is Ready before the crash.
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		// the game server exits on CRASH without replying, so an error waiting for a reply is expected.
+		_, _ = framework.SendGameServerUDP(t, readyGs, "CRASH")
+
+		current, err := gsClient.Get(ctx, readyGs.ObjectMeta.Name, metav1.GetOptions{})
+		require.NoError(c, err)
+		log.WithField("gs", current.ObjectMeta.Name).WithField("state", current.Status.State).Info("checking GameServer state")
+		assert.Equal(c, agonesv1.GameServerStateUnhealthy, current.Status.State)
+	}, 3*time.Minute, 5*time.Second)
+}
+
 func TestGameServerPodCompletedAfterCleanExit(t *testing.T) {
 	if !runtime.FeatureEnabled(runtime.FeatureSidecarContainers) {
 		t.SkipNow()
