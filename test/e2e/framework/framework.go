@@ -648,17 +648,28 @@ func SendGameServerTCPToPort(gs *agonesv1.GameServer, portName string, msg strin
 }
 
 // SendTCP sends a message to an address, and returns its reply if
-// it returns one in 30 seconds
+// it returns one in 30 seconds. The initial dial is retried for up to
+// 15 seconds, since the network path (e.g. hostPort NAT/eBPF rules on
+// some cloud products, notably GKE Autopilot) can take a brief moment
+// to become reachable right after a GameServer transitions to Ready.
 func SendTCP(address, msg string) (string, error) {
-	conn, err := net.Dial("tcp", address)
+	var conn net.Conn
+	err := wait.PollUntilContextTimeout(context.Background(), time.Second, 15*time.Second, true, func(_ context.Context) (bool, error) {
+		var dialErr error
+		conn, dialErr = net.Dial("tcp", address)
+		if dialErr != nil {
+			logrus.WithError(dialErr).WithField("address", address).Info("could not dial TCP address, retrying")
+			return false, nil
+		}
+		return true, nil
+	})
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "timed out attempting to dial TCP address")
 	}
 
 	if err := conn.SetReadDeadline(time.Now().Add(30 * time.Second)); err != nil {
 		return "", err
 	}
-
 	defer func() {
 		if err := conn.Close(); err != nil {
 			logrus.Warn("Could not close TCP connection")
