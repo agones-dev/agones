@@ -21,8 +21,8 @@ import (
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
 	"agones.dev/agones/pkg/client/informers/externalversions"
 	listerv1 "agones.dev/agones/pkg/client/listers/agones/v1"
+	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/runtime"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -39,6 +39,7 @@ import (
 //nolint:govet // ignore fieldalignment, singleton
 type PerNodeCounter struct {
 	logger           *logrus.Entry
+	errs             *errors.Errors
 	gameServerSynced cache.InformerSynced
 	gameServerLister listerv1.GameServerLister
 	countMutex       sync.RWMutex
@@ -79,6 +80,7 @@ func NewPerNodeCounter(
 	}
 
 	pnc.logger = runtime.NewLoggerWithType(pnc)
+	pnc.errs = errors.FromStruct(pnc)
 
 	_, _ = gsInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -202,12 +204,12 @@ func (pnc *PerNodeCounter) Run(ctx context.Context, _ int) error {
 	pnc.logger.Debug("Running")
 
 	if !cache.WaitForCacheSync(ctx.Done(), pnc.gameServerSynced) {
-		return errors.New("failed to wait for caches to sync")
+		return pnc.errs.New("failed to wait for caches to sync")
 	}
 
 	gsList, err := pnc.gameServerLister.List(labels.Everything())
 	if err != nil {
-		return errors.Wrap(err, "error attempting to list all GameServers")
+		return pnc.errs.Wrap(err, "error attempting to list all GameServers")
 	}
 
 	counts := map[string]*NodeCount{}

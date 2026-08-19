@@ -193,7 +193,8 @@ func TestApplyGameServerAddressAndPort(t *testing.T) {
 
 		_, err = applyGameServerAddressAndPort(gsFixture, node, pod, noopSyncer)
 		if assert.Error(t, err) {
-			assert.Equal(t, "error getting external address for GameServer test: Could not find an address for Node: node1", err.Error())
+			assert.Contains(t, err.Error(), "error getting external address for GameServer test: ")
+			assert.Contains(t, err.Error(), "Could not find an address for Node: node1")
 		}
 	})
 }

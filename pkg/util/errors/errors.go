@@ -122,6 +122,14 @@ func (e *Errors) Wrap(err error, msg string) error {
 	return fmt.Errorf("%s: %w", e.prefix(msg), err)
 }
 
+// Wrapf returns an error annotating err with a formatted msg, prefixed as described on
+// Errors. The returned error wraps err, so errors.Is and errors.As traverse it.
+//
+// Wrapf returns nil if err is nil.
+func (e *Errors) Wrapf(err error, format string, a ...any) error {
+	return e.Wrap(err, fmt.Sprintf(format, a...))
+}
+
 // prefix returns msg prefixed with the package and struct name, omitting either
 // segment if it is empty.
 func (e *Errors) prefix(msg string) string {
