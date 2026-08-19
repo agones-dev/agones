@@ -2,7 +2,7 @@ module autoscaler-webhook
 
 go 1.26.5
 
-require agones.dev/agones v1.54.0
+require agones.dev/agones v1.60.0
 
 require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
