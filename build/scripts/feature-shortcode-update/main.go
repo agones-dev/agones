@@ -21,7 +21,23 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
+)
+
+var (
+	expiryOpenPercentRe   = regexp.MustCompile(`\{\{% feature expiryVersion="([^"]+)" %\}\}`)
+	expiryOpenAngleRe     = regexp.MustCompile(`\{\{< feature expiryVersion="([^"]+)" >\}\}`)
+	publishOpenPercentRe  = regexp.MustCompile(`\{\{% feature publishVersion="([^"]+)" %\}\}`)
+	publishOpenAngleRe    = regexp.MustCompile(`\{\{< feature publishVersion="([^"]+)" >\}\}`)
+	featureClosePercentRe = regexp.MustCompile(`\{\{% /feature %\}\}`)
+	featureCloseAngleRe   = regexp.MustCompile(`\{\{< /feature >\}\}`)
+)
+
+const (
+	mdExt   = ".md"
+	htmlExt = ".html"
 )
 
 func main() {
@@ -42,7 +58,8 @@ func main() {
 			log.Fatal(err)
 		}
 
-		if d.IsDir() || !strings.HasSuffix(d.Name(), ".md") {
+		ext := filepath.Ext(d.Name())
+		if d.IsDir() || (ext != mdExt && ext != htmlExt) {
 			return nil
 		}
 
@@ -57,7 +74,7 @@ func main() {
 		}()
 
 		scanner := bufio.NewScanner(file)
-		modifiedContent := removeBlocks(scanner, *version)
+		modifiedContent := removeBlocks(scanner, *version, ext)
 
 		// Only write the modified content back to the .md file if there are changes
 		if modifiedContent != "" {
@@ -98,61 +115,101 @@ func main() {
 	}
 }
 
-func removeBlocks(scanner *bufio.Scanner, version string) string {
+// removeBlocks assumes feature shortcodes never nest — a {{%|{{< /feature %}}|>}} always
+// closes the single innermost open block, tracked via inExpiryBlock/inPublishBlock below.
+func removeBlocks(scanner *bufio.Scanner, targetVersion, ext string) string {
 	var sb strings.Builder
-	expiryBlock := false
-	publishBlock := false
-	preserveLines := true
+	inExpiryBlock := false
+	inPublishBlock := false
 	modified := false
 
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		// Check if the line contains the starting of the expiryVersion shortcode with the specified version
-		if strings.Contains(line, "{{% feature expiryVersion=\""+version+"\" %}}") ||
-			strings.Contains(line, "{{< feature expiryVersion=\""+version+"\" >}}") {
-			expiryBlock = true
-			preserveLines = false
+		if inExpiryBlock {
+			// Drop every line inside a resolved expiryVersion block, including its own closing tag.
+			if matchFeatureClose(line) {
+				inExpiryBlock = false
+			}
 			modified = true
 			continue
 		}
 
-		// Check if the line contains the ending of the expiryVersion shortcode
-		if (strings.Contains(line, "{{% /feature %}}") && expiryBlock) ||
-			(strings.Contains(line, "{{< /feature >}}") && expiryBlock) {
-			expiryBlock = false
-			preserveLines = true
-			modified = true
-			continue
-		}
-
-		// Check if the line contains the starting of the publishVersion shortcode with the specified version
-		if strings.Contains(line, "{{% feature publishVersion=\""+version+"\" %}}") ||
-			strings.Contains(line, "{{< feature publishVersion=\""+version+"\" >}}") {
-			publishBlock = true
-			modified = true
-			continue
-		}
-
-		// Check if the line contains the ending of the publishVersion shortcode
-		if (strings.Contains(line, "{{% /feature %}}") && publishBlock) ||
-			(strings.Contains(line, "{{< /feature >}}") && publishBlock) {
-			publishBlock = false
-			modified = true
-			continue
-		}
-
-		// Preserve the line if it is not within an expiryVersion or publishVersion block
-		if preserveLines {
+		if inPublishBlock {
+			// Only reached for .md files (see below) - drop just the closing tag, content is kept.
+			if matchFeatureClose(line) {
+				inPublishBlock = false
+				modified = true
+				continue
+			}
 			sb.WriteString(line)
 			sb.WriteString("\n")
+			continue
 		}
+
+		if v, ok := matchOpen(line, expiryOpenPercentRe, expiryOpenAngleRe); ok && versionLTE(v, targetVersion) {
+			inExpiryBlock = true
+			modified = true
+			continue
+		}
+		if ext == mdExt {
+			if v, ok := matchOpen(line, publishOpenPercentRe, publishOpenAngleRe); ok && versionLTE(v, targetVersion) {
+				inPublishBlock = true
+				modified = true
+				continue
+			}
+		}
+
+		sb.WriteString(line)
+		sb.WriteString("\n")
 	}
 
-	// If no modifications were made, return an empty string
 	if !modified {
 		return ""
 	}
 
 	return sb.String()
+}
+
+func matchOpen(line string, percentRe, angleRe *regexp.Regexp) (string, bool) {
+	if m := percentRe.FindStringSubmatch(line); m != nil {
+		return m[1], true
+	}
+	if m := angleRe.FindStringSubmatch(line); m != nil {
+		return m[1], true
+	}
+	return "", false
+}
+
+func matchFeatureClose(line string) bool {
+	return featureClosePercentRe.MatchString(line) || featureCloseAngleRe.MatchString(line)
+}
+
+// versionLTE reports whether v is the same as, or an earlier release than, target.
+func versionLTE(v, target string) bool {
+	vParts := strings.Split(v, ".")
+	tParts := strings.Split(target, ".")
+
+	toInt := func(s string) (int, error) {
+		return strconv.Atoi(strings.TrimSpace(s))
+	}
+
+	for i := 0; i < len(vParts) || i < len(tParts); i++ {
+		var vn, tn int
+		var err error
+		if i < len(vParts) {
+			if vn, err = toInt(vParts[i]); err != nil {
+				log.Printf("warning: could not parse version segment %q in %q, treating as 0", vParts[i], v)
+			}
+		}
+		if i < len(tParts) {
+			if tn, err = toInt(tParts[i]); err != nil {
+				log.Printf("warning: could not parse version segment %q in %q, treating as 0", tParts[i], target)
+			}
+		}
+		if vn != tn {
+			return vn < tn
+		}
+	}
+	return true // equal
 }
