@@ -174,10 +174,6 @@ func NewPerNodeCounter(
 
 			// Remove from tracking since the object is deleted
 			delete(pnc.processed, uid)
-
-			pnc.logger.
-				WithField("processedAfter", len(pnc.processed)).
-				Info("PNCLEAK: DeleteFunc")
 		},
 	})
 
