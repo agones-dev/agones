@@ -64,6 +64,7 @@ spec:
           {{- $data := dict 
             "podPreserveUnknownFields" .Values.gameservers.podPreserveUnknownFields 
             "lists" .Values.gameservers.lists
+            "includeKubernetesPatchKeys" .Values.agones.crds.includeKubernetesPatchKeys
           }}
           {{- include "gameserver.schema" $data | indent 9 }}{{- /* include the schema then status, as it's easier to align */ -}}
           {{- include "gameserver.status" $data | indent 11 }}

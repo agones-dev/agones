@@ -389,6 +389,58 @@ func escapeDoubleBackslashes(filePath string) error {
 	return os.WriteFile(filePath, []byte(modifiedData), 0o644)
 }
 
+// patchKeys are OpenAPI extensions that are not valid CustomResourceDefinition schema fields, so
+// including them results in "unknown field" warnings on install, and errors on Kubernetes
+// distributions that decode strictly. They are wrapped in a Helm conditional so they can be opted
+// into by tools that make use of them, such as Kustomize.
+var patchKeys = []string{
+	"x-kubernetes-patch-merge-key:",
+	"x-kubernetes-patch-strategy:",
+}
+
+// wrapPatchKeys wraps each run of consecutive, equally indented patchKeys lines in a Helm
+// conditional. The conditional is emitted at column zero with whitespace trimming, so it renders
+// cleanly at any indentation depth.
+func wrapPatchKeys(yamlContent string) string {
+	lines := strings.Split(yamlContent, "\n")
+	out := make([]string, 0, len(lines))
+
+	for i := 0; i < len(lines); i++ {
+		if !isPatchKeyLine(lines[i]) {
+			out = append(out, lines[i])
+			continue
+		}
+
+		// Extend the run over following lines that are patch keys at the same indentation.
+		indent := leadingSpaces(lines[i])
+		j := i + 1
+		for j < len(lines) && isPatchKeyLine(lines[j]) && leadingSpaces(lines[j]) == indent {
+			j++
+		}
+
+		out = append(out, "{{- if .includeKubernetesPatchKeys }}")
+		out = append(out, lines[i:j]...)
+		out = append(out, "{{- end }}")
+		i = j - 1
+	}
+
+	return strings.Join(out, "\n")
+}
+
+func isPatchKeyLine(line string) bool {
+	trimmed := strings.TrimLeft(line, " ")
+	for _, key := range patchKeys {
+		if strings.HasPrefix(trimmed, key) {
+			return true
+		}
+	}
+	return false
+}
+
+func leadingSpaces(line string) int {
+	return len(line) - len(strings.TrimLeft(line, " "))
+}
+
 func jsonToHelmYaml(tmpDir, filename string) {
 	jsonFilePath := filepath.Join(tmpDir, filename+".json")
 	log.Println("JSONFILEPATH: ", jsonFilePath)
@@ -403,7 +455,7 @@ func jsonToHelmYaml(tmpDir, filename string) {
 	if err := json2yaml.Convert(&yamlBuffer, jsonReader); err != nil {
 		log.Fatalf("Failed to convert JSON to YAML: %s", err)
 	}
-	yamlContent := yamlBuffer.String()
+	yamlContent := wrapPatchKeys(yamlBuffer.String())
 
 	// Read boilerplate
 	boilerplateContent, err := os.ReadFile("../../boilerplate.yaml.txt")

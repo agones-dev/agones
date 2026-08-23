@@ -34,6 +34,7 @@ agones:
     install: true
     cleanupOnDelete: true
     cleanupJobTTL: 60
+    includeKubernetesPatchKeys: false
   serviceaccount:
     allocator:
       name: agones-allocator
