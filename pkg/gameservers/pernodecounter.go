@@ -153,7 +153,7 @@ func NewPerNodeCounter(
 			uid := gs.ObjectMeta.UID
 
 			// Check if we've tracked this GameServer
-			processed, exists := pnc.processed[gs.ObjectMeta.UID]
+			processed, exists := pnc.processed[uid]
 			if exists {
 				// Use the tracked state for accurate counting, as the current state may not be
 				// allocated or ready at this point (could very well be Shutdown).
