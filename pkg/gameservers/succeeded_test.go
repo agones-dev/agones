@@ -243,7 +243,7 @@ func TestSucceededControllerRun(t *testing.T) {
 
 	go func() {
 		err := c.Run(ctx, 1)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	}()
 
 	select {
@@ -292,7 +292,7 @@ func TestSucceededControllerRunGameServerResync(t *testing.T) {
 
 	go func() {
 		err := c.Run(ctx, 1)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 	}()
 
 	noChange := func(reason string) {

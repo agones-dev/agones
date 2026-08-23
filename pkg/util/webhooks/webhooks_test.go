@@ -113,13 +113,13 @@ func TestWebHookAddHandler(t *testing.T) {
 
 			buf := &bytes.Buffer{}
 			err := json.NewEncoder(buf).Encode(fixture)
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 
 			r, err := http.NewRequest("GET", url, buf)
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 
 			resp, err := client.Do(r)
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 			defer resp.Body.Close() // nolint: errcheck
 			assert.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -193,7 +193,7 @@ func TestWebHookFleetValidationHandler(t *testing.T) {
 					callCount++
 					obj := review.Request.Object
 					err := json.Unmarshal(obj.Raw, fleet)
-					assert.NotNil(t, err)
+					assert.Error(t, err)
 					if err != nil {
 						return review, errors.Wrapf(err, "error unmarshalling original Fleet json: %s", obj.Raw)
 					}
@@ -209,17 +209,17 @@ func TestWebHookFleetValidationHandler(t *testing.T) {
 
 			buf := &bytes.Buffer{}
 			err := json.NewEncoder(buf).Encode(fixture)
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 
 			r, err := http.NewRequest("GET", url, buf)
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 
 			resp, err := client.Do(r)
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 			defer resp.Body.Close() // nolint: errcheck
 			assert.Equal(t, http.StatusOK, resp.StatusCode)
 			body, err := io.ReadAll(resp.Body)
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 
 			expected := "cannot unmarshal bool into Go struct field Container.spec.template.spec.template.spec.containers.name of type string"
 			assert.Contains(t, string(body), expected)

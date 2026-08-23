@@ -381,8 +381,9 @@ func (p *client) handleBatchResponse(batchResp *allocationpb.BatchResponse) {
 		p.batchMutex.RUnlock()
 
 		if exists {
-			// Track if response was processed successfully
-			responseProcessed := false
+			// Track if response was processed successfully. Every switch branch
+			// below sets this before it can be read.
+			var responseProcessed bool
 
 			switch result := respWrapper.Result.(type) {
 			case *allocationpb.ResponseWrapper_Response:

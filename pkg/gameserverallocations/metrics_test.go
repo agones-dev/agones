@@ -192,7 +192,7 @@ func TestAllocationMetrics(t *testing.T) {
 		}}
 	gsa.ApplyDefaults()
 	errs := gsa.Validate()
-	require.Len(t, errs, 0)
+	require.Empty(t, errs)
 
 	result, err := a.Allocate(ctxAlloc, &gsa)
 	require.NoError(t, err)

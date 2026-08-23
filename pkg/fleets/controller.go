@@ -187,7 +187,7 @@ func (ext *Extensions) creationMutationHandler(review admissionv1.AdmissionRevie
 	if err != nil {
 		// If the JSON is invalid during mutation, fall through to validation. This allows OpenAPI schema validation
 		// to proceed, resulting in a more user friendly error message.
-		return review, nil
+		return review, nil //nolint:nilerr // deliberate: see comment above.
 	}
 
 	// This is the main logic of this function

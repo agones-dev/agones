@@ -93,7 +93,7 @@ func TestAllocatorAllocate(t *testing.T) {
 		}}
 	gsa.ApplyDefaults()
 	errs := gsa.Validate()
-	require.Len(t, errs, 0)
+	require.Empty(t, errs)
 
 	gs, err := a.allocate(ctx, &gsa)
 	require.NoError(t, err)
@@ -175,7 +175,7 @@ func TestAllocatorAllocatePriority(t *testing.T) {
 			}}
 		gsa.ApplyDefaults()
 		errs := gsa.Validate()
-		require.Len(t, errs, 0)
+		require.Empty(t, errs)
 
 		t.Run(name, func(t *testing.T) {
 			test(t, a, gsa.DeepCopy())
@@ -479,7 +479,7 @@ func TestAllocatorAllocateOnGameServerUpdateError(t *testing.T) {
 	// wait for all the gameservers to be in the cache
 	require.Eventuallyf(t, func() bool {
 		return a.allocationCache.cache.Len() == gsLen
-	}, 10*time.Second, time.Second, fmt.Sprintf("should be %d items in the cache", gsLen))
+	}, 10*time.Second, time.Second, "should be %d items in the cache", gsLen)
 
 	gsa := allocationv1.GameServerAllocation{ObjectMeta: metav1.ObjectMeta{Name: "gsa-1", Namespace: defaultNs},
 		Spec: allocationv1.GameServerAllocationSpec{},
@@ -489,7 +489,7 @@ func TestAllocatorAllocateOnGameServerUpdateError(t *testing.T) {
 	// without converter, we don't end up with at least one selector
 	gsa.Converter()
 	errs := gsa.Validate()
-	require.Len(t, errs, 0)
+	require.Empty(t, errs)
 	require.Len(t, gsa.Spec.Selectors, 1)
 
 	// try the private method
@@ -504,7 +504,7 @@ func TestAllocatorAllocateOnGameServerUpdateError(t *testing.T) {
 	// wait for all the gameservers to be in the cache
 	require.Eventuallyf(t, func() bool {
 		return a.allocationCache.cache.Len() == gsLen
-	}, 10*time.Second, time.Second, fmt.Sprintf("should be %d items in the cache", gsLen))
+	}, 10*time.Second, time.Second, "should be %d items in the cache", gsLen)
 
 	// try the public method
 	result, err := a.Allocate(ctx, gsa.DeepCopy())
@@ -544,10 +544,10 @@ func TestAllocatorRunLocalAllocations(t *testing.T) {
 
 		// This call initializes the cache
 		err := a.allocationCache.syncCache()
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		err = a.allocationCache.counter.Run(ctx, 0)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		gsa := &allocationv1.GameServerAllocation{
 			ObjectMeta: metav1.ObjectMeta{
@@ -558,7 +558,7 @@ func TestAllocatorRunLocalAllocations(t *testing.T) {
 			}}
 		gsa.ApplyDefaults()
 		errs := gsa.Validate()
-		require.Len(t, errs, 0)
+		require.Empty(t, errs)
 
 		// line up 3 in a batch
 		j1 := request{gsa: gsa.DeepCopy(), response: make(chan response, 1), ctx: context.Background()}
@@ -601,10 +601,10 @@ func TestAllocatorRunLocalAllocations(t *testing.T) {
 
 		// This call initializes the cache
 		err := a.allocationCache.syncCache()
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		err = a.allocationCache.counter.Run(ctx, 0)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		gsa := &allocationv1.GameServerAllocation{
 			ObjectMeta: metav1.ObjectMeta{
@@ -615,7 +615,7 @@ func TestAllocatorRunLocalAllocations(t *testing.T) {
 			}}
 		gsa.ApplyDefaults()
 		errs := gsa.Validate()
-		require.Len(t, errs, 0)
+		require.Empty(t, errs)
 
 		j1 := request{gsa: gsa.DeepCopy(), response: make(chan response, 1), ctx: context.Background()}
 		a.pendingRequests <- j1
@@ -635,10 +635,10 @@ func TestAllocatorRunLocalAllocations(t *testing.T) {
 
 		// This call initializes the cache
 		err := a.allocationCache.syncCache()
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		err = a.allocationCache.counter.Run(ctx, 0)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		gsa := &allocationv1.GameServerAllocation{
 			ObjectMeta: metav1.ObjectMeta{
@@ -649,7 +649,7 @@ func TestAllocatorRunLocalAllocations(t *testing.T) {
 			}}
 		gsa.ApplyDefaults()
 		errs := gsa.Validate()
-		require.Len(t, errs, 0)
+		require.Empty(t, errs)
 
 		reqCtx, reqCancel := context.WithTimeout(context.Background(), time.Millisecond)
 		reqCancel()
@@ -734,10 +734,10 @@ func TestAllocatorRunLocalAllocationsCountsAndLists(t *testing.T) {
 
 	// This call initializes the cache
 	err := a.allocationCache.syncCache()
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	err = a.allocationCache.counter.Run(ctx, 0)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	READY := agonesv1.GameServerStateReady
 
@@ -1117,7 +1117,7 @@ func TestAllocatorCreateRestClientError(t *testing.T) {
 			SecretName: "secret-name",
 		}
 		_, err := a.createRemoteClusterDialOption(defaultNs, connectionInfo)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 	})
 }
 

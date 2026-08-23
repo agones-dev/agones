@@ -141,10 +141,10 @@ func TestControllerSyncGameServer(t *testing.T) {
 		defer cancel()
 
 		err := c.portAllocator.Run(ctx)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		err = c.syncGameServer(ctx, "default/test")
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.Equal(t, 3, updateCount, "update reactor should fire thrice")
 		assert.True(t, podCreated, "pod should be created")
 	})
@@ -240,10 +240,10 @@ func TestControllerSyncGameServerWithInitSidecar(t *testing.T) {
 		defer cancel()
 
 		err := c.portAllocator.Run(ctx)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		err = c.syncGameServer(ctx, "default/test")
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.Equal(t, 3, updateCount, "update reactor should fire thrice")
 		assert.True(t, podCreated, "pod should be created")
 	})
@@ -274,7 +274,7 @@ func runReconcileDeleteGameServer(t *testing.T, fixture *agonesv1.GameServer) {
 	agonesWatch.Delete(fixture)
 
 	err := c.syncGameServer(ctx, "default/test")
-	assert.Nil(t, err, fmt.Sprintf("Shouldn't be an error from syncGameServer: %+v", err))
+	assert.NoError(t, err, "Shouldn't be an error from syncGameServer: %+v", err)
 	assert.False(t, podAction, "Nothing should happen to a Pod")
 }
 
@@ -328,10 +328,10 @@ func TestControllerSyncGameServerWithDevIP(t *testing.T) {
 		defer cancel()
 
 		err := c.portAllocator.Run(ctx)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		err = c.syncGameServer(ctx, "default/test")
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.Equal(t, 1, updateCount, "update reactor should fire once")
 	})
 
@@ -419,7 +419,7 @@ func TestControllerWatchGameServers(t *testing.T) {
 	fixture := agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "default"}, Spec: newSingleContainerSpec()}
 	fixture.ApplyDefaults()
 	pod, err := fixture.Pod(agtesting.FakeAPIHooks{})
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	pod.ObjectMeta.Name = pod.ObjectMeta.GenerateName + "-pod"
 
 	gsWatch := watch.NewFake()
@@ -460,7 +460,7 @@ func TestControllerWatchGameServers(t *testing.T) {
 
 	go func() {
 		err := c.Run(ctx, 1)
-		assert.Nil(t, err, "Run should not error")
+		assert.NoError(t, err, "Run should not error")
 	}()
 
 	logrus.Info("Adding first fixture")
@@ -504,7 +504,7 @@ func TestControllerWatchGameServers(t *testing.T) {
 
 	// add an unscheduled game pod
 	pod, err = fixture.Pod(agtesting.FakeAPIHooks{})
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	pod.ObjectMeta.Name = pod.ObjectMeta.GenerateName + "-pod2"
 	podWatch.Add(pod)
 	noStateChange(podSynced)
@@ -745,7 +745,7 @@ func TestControllerSyncGameServerDeletionTimestamp(t *testing.T) {
 			Spec: newSingleContainerSpec()}
 		fixture.ApplyDefaults()
 		pod, err := fixture.Pod(agtesting.FakeAPIHooks{})
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		deleted := false
 		mocks.KubeClient.AddReactor("list", "pods", func(_ k8stesting.Action) (bool, runtime.Object, error) {
@@ -776,7 +776,7 @@ func TestControllerSyncGameServerDeletionTimestamp(t *testing.T) {
 			Spec: newSingleContainerSpec()}
 		fixture.ApplyDefaults()
 		pod, err := fixture.Pod(agtesting.FakeAPIHooks{})
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		mocks.KubeClient.AddReactor("list", "pods", func(_ k8stesting.Action) (bool, runtime.Object, error) {
 			return true, &corev1.PodList{Items: []corev1.Pod{*pod}}, nil
@@ -816,7 +816,7 @@ func TestControllerSyncGameServerDeletionTimestamp(t *testing.T) {
 		defer cancel()
 
 		result, err := c.syncGameServerDeletionTimestamp(ctx, fixture)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.True(t, updated, "gameserver should be updated, to remove the finaliser")
 		assert.Equal(t, fixture.ObjectMeta.Name, result.ObjectMeta.Name)
 		assert.Empty(t, result.ObjectMeta.Finalizers)
@@ -847,7 +847,7 @@ func TestControllerSyncGameServerDeletionTimestamp(t *testing.T) {
 		defer cancel()
 
 		result, err := c.syncGameServerDeletionTimestamp(ctx, fixture)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.True(t, updated, "gameserver should be updated, to remove the finaliser")
 		assert.Equal(t, fixture.ObjectMeta.Name, result.ObjectMeta.Name)
 		assert.Empty(t, result.ObjectMeta.Finalizers)
@@ -1166,7 +1166,7 @@ func TestControllerSyncGameServerCreatingState(t *testing.T) {
 		podCreated := false
 		gsUpdated := false
 		pod, err := fixture.Pod(agtesting.FakeAPIHooks{})
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		m.KubeClient.AddReactor("list", "pods", func(_ k8stesting.Action) (bool, runtime.Object, error) {
 			return true, &corev1.PodList{Items: []corev1.Pod{*pod}}, nil
@@ -1187,7 +1187,7 @@ func TestControllerSyncGameServerCreatingState(t *testing.T) {
 		defer cancel()
 
 		gs, err := c.syncGameServerCreatingState(ctx, fixture)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.Equal(t, agonesv1.GameServerStateStarting, gs.Status.State)
 		assert.False(t, podCreated, "Pod should not have been created")
 		assert.True(t, gsUpdated, "GameServer should have been updated")
@@ -1215,7 +1215,7 @@ func TestControllerSyncGameServerCreatingState(t *testing.T) {
 		defer cancel()
 
 		gs, err := c.syncGameServerCreatingState(ctx, fixture)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		assert.True(t, podCreated, "attempt should have been made to create a pod")
 		assert.True(t, gsUpdated, "GameServer should be updated")
@@ -1252,7 +1252,7 @@ func TestControllerSyncGameServerStartingState(t *testing.T) {
 		gsFixture := newFixture()
 		gsFixture.ApplyDefaults()
 		pod, err := gsFixture.Pod(agtesting.FakeAPIHooks{})
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		pod.Spec.NodeName = nodeFixtureName
 		pod.Status.PodIPs = []corev1.PodIP{{IP: ipv6Fixture}}
 		gsUpdated := false
@@ -1279,7 +1279,7 @@ func TestControllerSyncGameServerStartingState(t *testing.T) {
 
 		assert.True(t, gsUpdated)
 		assert.Equal(t, gs.Status.NodeName, node.ObjectMeta.Name)
-		assert.Equal(t, gs.Status.Address, ipFixture)
+		assert.Equal(t, ipFixture, gs.Status.Address)
 		assert.Equal(t, []corev1.NodeAddress{
 			{Address: ipFixture, Type: "ExternalIP"},
 			{Address: ipv6Fixture, Type: "PodIP"},
@@ -1630,8 +1630,8 @@ func TestControllerCreateGameServerPod(t *testing.T) {
 			assert.Equal(t, "REQUESTS_RATE_LIMIT", sidecarContainer.Env[4].Name)
 			assert.Equal(t, "500ms", sidecarContainer.Env[4].Value)
 			assert.Equal(t, string(fixture.Spec.SdkServer.LogLevel), sidecarContainer.Env[3].Value)
-			assert.Equal(t, *sidecarContainer.SecurityContext.AllowPrivilegeEscalation, false)
-			assert.Equal(t, *sidecarContainer.SecurityContext.RunAsNonRoot, true)
+			assert.False(t, *sidecarContainer.SecurityContext.AllowPrivilegeEscalation)
+			assert.True(t, *sidecarContainer.SecurityContext.RunAsNonRoot)
 			assert.Equal(t, *sidecarContainer.SecurityContext.RunAsUser, int64(sidecarRunAsUser))
 
 			assert.Equal(t, fixture.Spec.Ports[0].HostPort, gsContainer.Ports[0].HostPort)
@@ -1678,7 +1678,7 @@ func TestControllerCreateGameServerPod(t *testing.T) {
 		})
 
 		_, err := c.createGameServerPod(context.Background(), fixture)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.True(t, created)
 	})
 
@@ -2140,7 +2140,7 @@ func TestControllerSyncGameServerShutdownState(t *testing.T) {
 		defer cancel()
 
 		err := c.syncGameServerShutdownState(ctx, gsFixture)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.True(t, checkDeleted, "GameServer should be deleted")
 		assert.Contains(t, <-mocks.FakeRecorder.Events, "Deletion started")
 	})

@@ -79,7 +79,7 @@ func TestPerNodeCounterGameServerEvents(t *testing.T) {
 	require.Eventuallyf(t, func() bool {
 		counts = pnc.Counts()
 		return len(counts) == 1 && int64(0) == counts[name1].Ready
-	}, 5*time.Second, time.Second, "Ready should be 0, but is instead", counts[name1].Ready)
+	}, 5*time.Second, time.Second, "Ready should be 0, but is instead %d", counts[name1].Ready)
 	assert.Equal(t, int64(1), counts[name1].Allocated)
 
 	gs.Status.State = agonesv1.GameServerStateShutdown
@@ -88,7 +88,7 @@ func TestPerNodeCounterGameServerEvents(t *testing.T) {
 	require.Eventuallyf(t, func() bool {
 		counts = pnc.Counts()
 		return len(counts) == 1 && int64(0) == counts[name1].Allocated
-	}, 5*time.Second, time.Second, "Allocated should be 0, but is instead", counts[name1].Allocated)
+	}, 5*time.Second, time.Second, "Allocated should be 0, but is instead %d", counts[name1].Allocated)
 	assert.Equal(t, int64(0), counts[name1].Ready)
 
 	gs.ObjectMeta.Name = "gs2"
@@ -118,7 +118,7 @@ func TestPerNodeCounterGameServerEvents(t *testing.T) {
 	require.Eventuallyf(t, func() bool {
 		counts = pnc.Counts()
 		return len(counts) == 2 && int64(1) == counts[name2].Allocated
-	}, 5*time.Second, time.Second, "Allocated should be 1, but is instead", counts[name2].Allocated)
+	}, 5*time.Second, time.Second, "Allocated should be 1, but is instead %d", counts[name2].Allocated)
 	assert.Equal(t, int64(0), counts[name1].Ready)
 	assert.Equal(t, int64(0), counts[name1].Allocated)
 	assert.Equal(t, int64(1), counts[name2].Ready)

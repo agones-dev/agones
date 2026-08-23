@@ -72,7 +72,6 @@ func (c *Controller) rollingUpdateRestFixedOnReadyRollingUpdateFix(ctx context.C
 
 	totalAlreadyScaledDown := int32(0)
 
-	totalScaleDownCount := int32(0)
 	// Check if we can scale down.
 	allGSS := rest
 	allGSS = append(allGSS, active)
@@ -99,10 +98,10 @@ func (c *Controller) rollingUpdateRestFixedOnReadyRollingUpdateFix(ctx context.C
 		// There could be the case when GameServerSet would be updated from another place, say Status or Spec would be updated
 		// We don't want to propagate such errors further
 		// And this set in sync with reconcileOldReplicaSets() Kubernetes code
-		return nil
+		return nil //nolint:nilerr // deliberate: see comment above.
 	}
 	// Resulting value is readyReplicasCount + unavailable - fleet.Spec.Replicas
-	totalScaleDownCount = readyReplicasCount - minAvailable
+	totalScaleDownCount := readyReplicasCount - minAvailable
 	if readyReplicasCount <= minAvailable {
 		// Cannot scale down.
 		return nil
