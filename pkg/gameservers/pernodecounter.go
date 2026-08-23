@@ -150,6 +150,8 @@ func NewPerNodeCounter(
 			pnc.countMutex.Lock()
 			defer pnc.countMutex.Unlock()
 
+			uid := gs.ObjectMeta.UID
+
 			// Check if we've tracked this GameServer
 			processed, exists := pnc.processed[gs.ObjectMeta.UID]
 			if exists {
@@ -171,7 +173,11 @@ func NewPerNodeCounter(
 			}
 
 			// Remove from tracking since the object is deleted
-			delete(pnc.processed, gs.ObjectMeta.UID)
+			delete(pnc.processed, uid)
+
+			pnc.logger.
+				WithField("processedAfter", len(pnc.processed)).
+				Info("PNCLEAK: DeleteFunc")
 		},
 	})
 
