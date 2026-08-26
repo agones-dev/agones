@@ -18,6 +18,8 @@ package main
 import (
 	"bufio"
 	"flag"
+	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
@@ -36,26 +38,25 @@ var (
 )
 
 const (
-	mdExt   = ".md"
-	htmlExt = ".html"
+	mdExt            = ".md"
+	htmlExt          = ".html"
+	maxScanTokenSize = 10 * 1024 * 1024 // 10MB
 )
 
 func main() {
-	dirPath := "site/content/en/docs"
-
-	version := flag.String("version", "", "Expiry version to remove")
+	version := flag.String("version", "", "the version being released, e.g. 1.61.0")
 	flag.Parse()
 
-	// Check if the version is provided
 	if *version == "" {
-		log.Fatal("Version not specified. Please provide a value for the -version flag in CLI.")
+		log.Fatal("must specify -version")
 	}
 
-	modifiedFiles := 0
+	dirPath := "site/content/en/docs"
+	filesProcessed := 0
 
-	err := filepath.WalkDir(dirPath, func(filePath string, d os.DirEntry, err error) error {
+	err := filepath.WalkDir(dirPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		ext := filepath.Ext(d.Name())
@@ -63,61 +64,53 @@ func main() {
 			return nil
 		}
 
-		file, err := os.Open(filePath)
+		file, err := os.Open(path)
 		if err != nil {
-			log.Fatal(err)
+			return fmt.Errorf("opening %s: %w", path, err)
 		}
 		defer func() {
-			if err := file.Close(); err != nil {
-				log.Fatal(err)
+			if cerr := file.Close(); cerr != nil {
+				log.Printf("warning: closing %s: %v", path, cerr)
 			}
 		}()
 
 		scanner := bufio.NewScanner(file)
-		modifiedContent := removeBlocks(scanner, *version, ext)
+		scanner.Buffer(make([]byte, 0, 64*1024), maxScanTokenSize)
 
-		// Only write the modified content back to the .md file if there are changes
-		if modifiedContent != "" {
-			outputFile, err := os.Create(filePath)
-			if err != nil {
-				log.Fatal(err)
+		modifiedContent, changed, err := removeBlocks(scanner, *version, ext)
+		if err != nil {
+			// Fix for review comment #1: propagate the scan failure and
+			// bail out *before* os.Create below, instead of silently
+			// writing back a truncated result.
+			return fmt.Errorf("scanning %s: %w", path, err)
+		}
+
+		if changed {
+			if werr := os.WriteFile(path, []byte(modifiedContent), 0o644); werr != nil {
+				return fmt.Errorf("writing %s: %w", path, werr)
 			}
-			defer func() {
-				if err := outputFile.Close(); err != nil {
-					log.Fatal(err)
-				}
-			}()
-
-			writer := bufio.NewWriter(outputFile)
-			_, err = writer.WriteString(modifiedContent)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			// Flush the writer to ensure all content is written
-			if err := writer.Flush(); err != nil {
-				log.Fatal(err)
-			}
-
-			log.Printf("Processed file: %s\n", filePath)
-			modifiedFiles++
+			log.Printf("Processed file: %s", path)
+			filesProcessed++
 		}
 
 		return nil
 	})
-
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if modifiedFiles == 0 {
+	if filesProcessed == 0 {
 		log.Println("There are no files with feature expiryVersion or publishVersion shortcodes")
 	}
 }
 
-// removeBlocks assumes feature shortcodes never nest — a {{%|{{< /feature %}}|>}} always
-// closes the single innermost open block, tracked via inExpiryBlock/inPublishBlock below.
-func removeBlocks(scanner *bufio.Scanner, targetVersion, ext string) string {
+// removeBlocks assumes feature shortcodes never nest — a {{%|{{< /feature %}}|>}}
+// always closes the single innermost open block, tracked via
+// inExpiryBlock/inPublishBlock below.
+//
+// It returns the (possibly unchanged) file content, whether anything was
+// actually changed, and any scanning error encountered.
+func removeBlocks(scanner *bufio.Scanner, targetVersion, ext string) (string, bool, error) {
 	var sb strings.Builder
 	inExpiryBlock := false
 	inPublishBlock := false
@@ -127,7 +120,8 @@ func removeBlocks(scanner *bufio.Scanner, targetVersion, ext string) string {
 		line := scanner.Text()
 
 		if inExpiryBlock {
-			// Drop every line inside a resolved expiryVersion block, including its own closing tag.
+			// Drop every line inside a resolved expiryVersion block,
+			// including its own closing tag.
 			if matchFeatureClose(line) {
 				inExpiryBlock = false
 			}
@@ -136,7 +130,8 @@ func removeBlocks(scanner *bufio.Scanner, targetVersion, ext string) string {
 		}
 
 		if inPublishBlock {
-			// Only reached for .md files (see below) - drop just the closing tag, content is kept.
+			// Only reached for .md files (see below) - drop just the
+			// closing tag, content is kept.
 			if matchFeatureClose(line) {
 				inPublishBlock = false
 				modified = true
@@ -148,14 +143,32 @@ func removeBlocks(scanner *bufio.Scanner, targetVersion, ext string) string {
 		}
 
 		if v, ok := matchOpen(line, expiryOpenPercentRe, expiryOpenAngleRe); ok && versionLTE(v, targetVersion) {
-			inExpiryBlock = true
 			modified = true
+			if matchFeatureClose(line) {
+				// Whole block resolves on one line: drop it entirely,
+				// stay out of any block state.
+				continue
+			}
+			inExpiryBlock = true
 			continue
 		}
+
 		if ext == mdExt {
 			if v, ok := matchOpen(line, publishOpenPercentRe, publishOpenAngleRe); ok && versionLTE(v, targetVersion) {
-				inPublishBlock = true
 				modified = true
+				unwrapped, closedOnSameLine := stripPublishTagsOnLine(line)
+				if closedOnSameLine {
+					if strings.TrimSpace(unwrapped) != "" {
+						sb.WriteString(unwrapped)
+						sb.WriteString("\n")
+					}
+					continue
+				}
+				inPublishBlock = true
+				if strings.TrimSpace(unwrapped) != "" {
+					sb.WriteString(unwrapped)
+					sb.WriteString("\n")
+				}
 				continue
 			}
 		}
@@ -164,11 +177,27 @@ func removeBlocks(scanner *bufio.Scanner, targetVersion, ext string) string {
 		sb.WriteString("\n")
 	}
 
-	if !modified {
-		return ""
+	if err := scanner.Err(); err != nil {
+		return "", false, err
 	}
 
-	return sb.String()
+	return sb.String(), modified, nil
+}
+
+// stripPublishTagsOnLine removes a publishVersion open tag (already
+// confirmed matched by the caller) and, if present on the same line, its
+// matching close tag, returning the remaining text and whether the close
+// tag was found on this line.
+func stripPublishTagsOnLine(line string) (string, bool) {
+	out := publishOpenPercentRe.ReplaceAllString(line, "")
+	out = publishOpenAngleRe.ReplaceAllString(out, "")
+
+	closedOnSameLine := matchFeatureClose(out)
+	if closedOnSameLine {
+		out = featureClosePercentRe.ReplaceAllString(out, "")
+		out = featureCloseAngleRe.ReplaceAllString(out, "")
+	}
+	return out, closedOnSameLine
 }
 
 func matchOpen(line string, percentRe, angleRe *regexp.Regexp) (string, bool) {
