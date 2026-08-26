@@ -181,9 +181,6 @@ fn run_sync() -> Result<(), String> {
     })?;
 
     let feature_gates = env::var("FEATURE_GATES").unwrap_or_default();
-    if feature_gates.contains("PlayerTracking=true") {
-        run_player_tracking_features(sdk.alpha().clone())?;
-    }
     if feature_gates.contains("CountsAndLists=true") {
         run_counts_and_lists_features(sdk.beta().clone())?;
     }
@@ -202,93 +199,6 @@ fn run_sync() -> Result<(), String> {
             .map_err(|e| format!("Could not run Shutdown: {}. Exiting!", e))
     })?;
     println!("rust: ...marked for Shutdown");
-
-    Ok(())
-}
-
-fn run_player_tracking_features(mut alpha: agones::alpha::Alpha) -> Result<(), String> {
-    use tokio::runtime::Handle;
-
-    println!("rust: Setting player capacity...");
-    Handle::current().block_on(async {
-        alpha
-            .set_player_capacity(10)
-            .await
-            .map_err(|e| format!("Could not run SetPlayerCapacity(): {:#?}. Exiting!", e))
-    })?;
-
-    println!("rust: Getting player capacity...");
-    let capacity = Handle::current().block_on(async {
-        alpha
-            .get_player_capacity()
-            .await
-            .map_err(|e| format!("Could not run GetPlayerCapacity(): {}. Exiting!", e))
-    })?;
-    println!("rust: Player capacity: {}", capacity);
-
-    println!("rust: Increasing the player count...");
-    let player_id = "1234".to_string();
-
-    let added = Handle::current().block_on(async {
-        alpha
-            .player_connect(&player_id)
-            .await
-            .map_err(|e| format!("Could not run PlayerConnect(): {}. Exiting!", e))
-    })?;
-    if added {
-        println!("rust: Added player");
-    } else {
-        panic!("rust: Failed to add player. Exiting!");
-    }
-
-    let connected = Handle::current().block_on(async {
-        alpha
-            .is_player_connected(&player_id)
-            .await
-            .map_err(|e| format!("Could not run IsPlayerConnected(): {}. Exiting!", e))
-    })?;
-    if connected {
-        println!("rust: {} is connected", player_id);
-    } else {
-        panic!("rust: {} is not connected. Exiting!", player_id);
-    }
-
-    let player_ids = Handle::current().block_on(async {
-        alpha
-            .get_connected_players()
-            .await
-            .map_err(|e| format!("Could not run GetConnectedPlayers(): {}. Exiting!", e))
-    })?;
-    println!("rust: Connected players: {:?}", player_ids);
-
-    let player_count = Handle::current().block_on(async {
-        alpha
-            .get_player_count()
-            .await
-            .map_err(|e| format!("Could not run GetConnectedPlayers(): {}. Exiting!", e))
-    })?;
-    println!("rust: Current player count: {}", player_count);
-
-    println!("rust: Decreasing the player count...");
-    let removed = Handle::current().block_on(async {
-        alpha
-            .player_disconnect(&player_id)
-            .await
-            .map_err(|e| format!("Could not run PlayerDisconnect(): {}. Exiting!", e))
-    })?;
-    if removed {
-        println!("rust: Removed player");
-    } else {
-        panic!("rust: Failed to remove player. Exiting!");
-    }
-
-    let player_count = Handle::current().block_on(async {
-        alpha
-            .get_player_count()
-            .await
-            .map_err(|e| format!("Could not GetPlayerCount(): {}. Exiting!", e))
-    })?;
-    println!("rust: Current player count: {}", player_count);
 
     Ok(())
 }
@@ -529,9 +439,6 @@ async fn run_async() -> Result<(), String> {
         .map_err(|e| format!("Could not run SetLabel(): {}. Exiting!", e))?;
 
     let feature_gates = env::var("FEATURE_GATES").unwrap_or_default();
-    if feature_gates.contains("PlayerTracking=true") {
-        run_player_tracking_features_async(sdk.alpha().clone()).await?;
-    }
     if feature_gates.contains("CountsAndLists=true") {
         run_counts_and_lists_features_async(sdk.beta().clone()).await?;
     }
@@ -548,74 +455,6 @@ async fn run_async() -> Result<(), String> {
         .await
         .map_err(|e| format!("Could not run Shutdown: {}. Exiting!", e))?;
     println!("rust_async: ...marked for Shutdown");
-
-    Ok(())
-}
-
-async fn run_player_tracking_features_async(mut alpha: agones::alpha::Alpha) -> Result<(), String> {
-    println!("rust_async: Setting player capacity...");
-    alpha
-        .set_player_capacity(10)
-        .await
-        .map_err(|e| format!("Could not run SetPlayerCapacity(): {}. Exiting!", e))?;
-
-    println!("rust_async: Getting player capacity...");
-    let capacity = alpha
-        .get_player_capacity()
-        .await
-        .map_err(|e| format!("Could not run GetPlayerCapacity(): {}. Exiting!", e))?;
-    println!("rust_async: Player capacity: {}", capacity);
-
-    println!("rust_async: Increasing the player count...");
-    let player_id = "1234".to_string();
-    let added = alpha
-        .player_connect(&player_id)
-        .await
-        .map_err(|e| format!("Could not run PlayerConnect(): {}. Exiting!", e))?;
-    if added {
-        println!("Added player");
-    } else {
-        panic!("rust_async: Failed to add player. Exiting!");
-    }
-
-    let connected = alpha
-        .is_player_connected(&player_id)
-        .await
-        .map_err(|e| format!("Could not run IsPlayerConnected(): {}. Exiting!", e))?;
-    if connected {
-        println!("rust_async: {} is connected", player_id);
-    } else {
-        panic!("rust_async: {} is not connected. Exiting!", player_id);
-    }
-
-    let player_ids = alpha
-        .get_connected_players()
-        .await
-        .map_err(|e| format!("Could not run GetConnectedPlayers(): {}. Exiting!", e))?;
-    println!("rust_async: Connected players: {:?}", player_ids);
-
-    let player_count = alpha
-        .get_player_count()
-        .await
-        .map_err(|e| format!("Could not run GetConnectedPlayers(): {}. Exiting!", e))?;
-    println!("rust_async: Current player count: {}", player_count);
-
-    println!("rust_async: Decreasing the player count...");
-    let removed = alpha
-        .player_disconnect(&player_id)
-        .await
-        .map_err(|e| format!("Could not run PlayerDisconnect(): {}. Exiting!", e))?;
-    if removed {
-        println!("rust_async: Removed player");
-    } else {
-        panic!("rust_async: Failed to remove player. Exiting!");
-    }
-
-    let player_count = alpha
-        .get_player_count()
-        .await
-        .map_err(|e| format!("Could not GetPlayerCount(): {}. Exiting!", e))?;
-    println!("rust_async: Current player count: {}", player_count);
 
     Ok(())
 }

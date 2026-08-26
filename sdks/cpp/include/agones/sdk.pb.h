@@ -190,14 +190,6 @@ AGONES_EXPORT extern const ::google::protobuf::internal::ClassDataFull GameServe
 #else
 AGONES_EXPORT extern const GameServer_Status_ListsEntry_DoNotUseGlobalsTypeInternal GameServer_Status_ListsEntry_DoNotUse_globals_;
 #endif  // PROTOBUF_MESSAGE_GLOBALS
-class GameServer_Status_PlayerStatus;
-struct GameServer_Status_PlayerStatusGlobalsTypeInternal;
-#ifndef PROTOBUF_MESSAGE_GLOBALS
-AGONES_EXPORT extern GameServer_Status_PlayerStatusGlobalsTypeInternal GameServer_Status_PlayerStatus_globals_;
-AGONES_EXPORT extern const ::google::protobuf::internal::ClassDataFull GameServer_Status_PlayerStatus_class_data_;
-#else
-AGONES_EXPORT extern const GameServer_Status_PlayerStatusGlobalsTypeInternal GameServer_Status_PlayerStatus_globals_;
-#endif  // PROTOBUF_MESSAGE_GLOBALS
 class GameServer_Status_Port;
 struct GameServer_Status_PortGlobalsTypeInternal;
 #ifndef PROTOBUF_MESSAGE_GLOBALS
@@ -672,248 +664,6 @@ class AGONES_EXPORT  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED GameServer_Status_Por
 };
 // -------------------------------------------------------------------
 
-class AGONES_EXPORT  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED GameServer_Status_PlayerStatus final : public ::google::protobuf::Message
-/* @@protoc_insertion_point(class_definition:agones.dev.sdk.GameServer.Status.PlayerStatus) */ {
- public:
-  inline GameServer_Status_PlayerStatus() : GameServer_Status_PlayerStatus(nullptr) {}
-  ~GameServer_Status_PlayerStatus() PROTOBUF_FINAL;
-
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-  void operator delete(GameServer_Status_PlayerStatus* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
-    SharedDtor(*msg);
-    ::google::protobuf::internal::SizedDelete(msg, sizeof(GameServer_Status_PlayerStatus));
-  }
-#endif
-
-  template <typename = void>
-  explicit constexpr GameServer_Status_PlayerStatus(::google::protobuf::internal::ConstantInitialized,
-                           const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL
-                               class_data);
-
-  inline GameServer_Status_PlayerStatus(const GameServer_Status_PlayerStatus& from) : GameServer_Status_PlayerStatus(nullptr, from) {}
-  inline GameServer_Status_PlayerStatus(GameServer_Status_PlayerStatus&& from) noexcept : GameServer_Status_PlayerStatus(nullptr, ::std::move(from)) {}
-  inline GameServer_Status_PlayerStatus& operator=(const GameServer_Status_PlayerStatus& from) {
-    CopyFrom(from);
-    return *this;
-  }
-  inline GameServer_Status_PlayerStatus& operator=(GameServer_Status_PlayerStatus&& from) noexcept {
-    if (this == &from) return *this;
-    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
-      InternalSwap(&from);
-    } else {
-      CopyFrom(from);
-    }
-    return *this;
-  }
-
-  [[nodiscard]] inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const
-      ABSL_ATTRIBUTE_LIFETIME_BOUND {
-    return _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance);
-  }
-  [[nodiscard]] inline ::google::protobuf::UnknownFieldSet* PROTOBUF_NONNULL
-  mutable_unknown_fields() ABSL_ATTRIBUTE_LIFETIME_BOUND {
-    return _internal_metadata_.mutable_unknown_fields<::google::protobuf::UnknownFieldSet>();
-  }
-
-  [[nodiscard]] static const ::google::protobuf::Descriptor* PROTOBUF_NONNULL descriptor() {
-    return GetDescriptor();
-  }
-  [[nodiscard]] static const ::google::protobuf::Descriptor* PROTOBUF_NONNULL
-  GetDescriptor() {
-    return default_instance().GetMetadata().descriptor;
-  }
-  [[nodiscard]] static const ::google::protobuf::Reflection* PROTOBUF_NONNULL GetReflection() {
-    return default_instance().GetMetadata().reflection;
-  }
-  [[nodiscard]] static const GameServer_Status_PlayerStatus& default_instance() {
-    return *::google::protobuf::internal::MessageGlobalsBase::ToDefaultInstance<GameServer_Status_PlayerStatus>(&GameServer_Status_PlayerStatus_globals_);
-  }
-  static constexpr int kIndexInFileMessages = 10;
-  friend void swap(GameServer_Status_PlayerStatus& a, GameServer_Status_PlayerStatus& b) { a.Swap(&b); }
-  inline void Swap(GameServer_Status_PlayerStatus* PROTOBUF_NONNULL other) {
-    if (other == this) return;
-    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
-      InternalSwap(other);
-    } else {
-      ::google::protobuf::internal::GenericSwap(this, other);
-    }
-  }
-  void UnsafeArenaSwap(GameServer_Status_PlayerStatus* PROTOBUF_NONNULL other) {
-    if (other == this) return;
-    ABSL_DCHECK(GetArena() == other->GetArena());
-    InternalSwap(other);
-  }
-
-  // implements Message ----------------------------------------------
-
-  [[nodiscard]] GameServer_Status_PlayerStatus* PROTOBUF_NONNULL
-  New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
-    return ::google::protobuf::Message::DefaultConstruct<GameServer_Status_PlayerStatus>(arena);
-  }
-  using ::google::protobuf::Message::CopyFrom;
-  void CopyFrom(const GameServer_Status_PlayerStatus& from);
-  using ::google::protobuf::Message::MergeFrom;
-  void MergeFrom(const GameServer_Status_PlayerStatus& from) { GameServer_Status_PlayerStatus::MergeImpl(*this, from); }
-
-  private:
-  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
-                        const ::google::protobuf::MessageLite& from_msg);
-
-  public:
-  [[nodiscard]] bool IsInitialized() const {
-    return true;
-  }
-  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
-  #if defined(PROTOBUF_CUSTOM_VTABLE)
-  private:
-  [[nodiscard]] static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
-  [[nodiscard]] static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
-      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
-      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
-
-  public:
-  [[nodiscard]] ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
-  [[nodiscard]] ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
-      ::uint8_t* PROTOBUF_NONNULL target,
-      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
-    return _InternalSerialize(*this, target, stream);
-  }
-  #else   // PROTOBUF_CUSTOM_VTABLE
-  [[nodiscard]] ::size_t ByteSizeLong() const final;
-  [[nodiscard]] ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
-      ::uint8_t* PROTOBUF_NONNULL target,
-      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
-  #endif  // PROTOBUF_CUSTOM_VTABLE
-  [[nodiscard]] int GetCachedSize() const {
-    return _impl_._cached_size_.Get();
-  }
-
-  private:
-  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
-  static void SharedDtor(MessageLite& self);
-  void InternalSwap(GameServer_Status_PlayerStatus* PROTOBUF_NONNULL other);
- private:
-  template <typename T>
-  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
-  static ::absl::string_view FullMessageName() { return "agones.dev.sdk.GameServer.Status.PlayerStatus"; }
-
-  explicit GameServer_Status_PlayerStatus(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
-  GameServer_Status_PlayerStatus(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const GameServer_Status_PlayerStatus& from);
-  GameServer_Status_PlayerStatus(
-      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, GameServer_Status_PlayerStatus&& from) noexcept
-      : GameServer_Status_PlayerStatus(arena) {
-    *this = ::std::move(from);
-  }
-  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
-  static void* PROTOBUF_NONNULL PlacementNew_(
-      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
-      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
-  static constexpr auto InternalNewImpl_();
-
- public:
-  static constexpr auto InternalGenerateClassData_(
-      const MessageLite& prototype,
-      const ::google::protobuf::internal::TcParseTableBase* PROTOBUF_NULLABLE tc_table = nullptr);
-
-  [[nodiscard]] ::google::protobuf::Metadata GetMetadata() const;
-  // nested types ----------------------------------------------------
-
-  // accessors -------------------------------------------------------
-  enum : int {
-    kIdsFieldNumber = 3,
-    kCountFieldNumber = 1,
-    kCapacityFieldNumber = 2,
-  };
-  // repeated string ids = 3;
-  [[nodiscard]] int ids_size()
-      const;
-  private:
-  int _internal_ids_size() const;
-
-  public:
-  void clear_ids() ;
-  [[nodiscard]] const ::std::string& ids(int index) const;
-  ::std::string* PROTOBUF_NONNULL mutable_ids(int index);
-  template <typename Arg_ = const ::std::string&, typename... Args_>
-  void set_ids(int index, Arg_&& value, Args_... args);
-  ::std::string* PROTOBUF_NONNULL add_ids();
-  template <typename Arg_ = const ::std::string&, typename... Args_>
-  void add_ids(Arg_&& value, Args_... args);
-  [[nodiscard]] const
-      ::google::protobuf::RepeatedPtrField<::std::string>&
-      ids() const;
-  [[nodiscard]] ::google::protobuf::RepeatedPtrField<::std::string>*
-      PROTOBUF_NONNULL
-      mutable_ids();
-
-  private:
-  const ::google::protobuf::RepeatedPtrField<::std::string>& _internal_ids() const;
-  ::google::protobuf::RepeatedPtrField<::std::string>* PROTOBUF_NONNULL _internal_mutable_ids();
-
-  public:
-  // int64 count = 1;
-  void clear_count() ;
-  [[nodiscard]] ::int64_t count() const;
-  void set_count(::int64_t value);
-
-  private:
-  ::int64_t _internal_count() const;
-  void _internal_set_count(::int64_t value);
-
-  public:
-  // int64 capacity = 2;
-  void clear_capacity() ;
-  [[nodiscard]] ::int64_t capacity() const;
-  void set_capacity(::int64_t value);
-
-  private:
-  ::int64_t _internal_capacity() const;
-  void _internal_set_capacity(::int64_t value);
-
-  public:
-  // @@protoc_insertion_point(class_scope:agones.dev.sdk.GameServer.Status.PlayerStatus)
- private:
-  class _Internal;
-  using ParseTableT_ =
-      ::google::protobuf::internal::TcParseTable<2, 3,
-                          0, 57,
-                          2>;
-  static constexpr ParseTableT_ InternalGenerateParseTable_(
-      const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL class_data);
-  friend class ::google::protobuf::internal::TcParser;
-  #ifndef PROTOBUF_MESSAGE_GLOBALS
-  static const ParseTableT_ _table_;
-  #endif
-
-  friend class ::google::protobuf::MessageLite;
-  friend class ::google::protobuf::Arena;
-  friend ::google::protobuf::internal::PrivateAccess;
-  template <typename T>
-  friend class ::google::protobuf::Arena::InternalHelper;
-  using InternalArenaConstructable_ = void;
-  using DestructorSkippable_ = void;
-  struct Impl_ {
-    inline explicit constexpr Impl_(::google::protobuf::internal::InternalVisibility visibility,
-                                    ::google::protobuf::internal::ConstantInitialized) noexcept;
-    inline explicit Impl_(
-        ::google::protobuf::internal::InternalVisibility visibility,
-        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
-    inline explicit Impl_(
-        ::google::protobuf::internal::InternalVisibility visibility,
-        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
-        const GameServer_Status_PlayerStatus& from_msg);
-    ::google::protobuf::internal::HasBits<1> _has_bits_;
-    ::google::protobuf::internal::CachedSize _cached_size_;
-    ::google::protobuf::RepeatedPtrField<::std::string> ids_;
-    ::int64_t count_;
-    ::int64_t capacity_;
-    PROTOBUF_TSAN_DECLARE_MEMBER
-  };
-  union { Impl_ _impl_; };
-  friend struct ::TableStruct_sdk_2eproto;
-};
-// -------------------------------------------------------------------
-
 class AGONES_EXPORT  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED GameServer_Status_ListStatus final : public ::google::protobuf::Message
 /* @@protoc_insertion_point(class_definition:agones.dev.sdk.GameServer.Status.ListStatus) */ {
  public:
@@ -970,7 +720,7 @@ class AGONES_EXPORT  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED GameServer_Status_Lis
   [[nodiscard]] static const GameServer_Status_ListStatus& default_instance() {
     return *::google::protobuf::internal::MessageGlobalsBase::ToDefaultInstance<GameServer_Status_ListStatus>(&GameServer_Status_ListStatus_globals_);
   }
-  static constexpr int kIndexInFileMessages = 12;
+  static constexpr int kIndexInFileMessages = 11;
   friend void swap(GameServer_Status_ListStatus& a, GameServer_Status_ListStatus& b) { a.Swap(&b); }
   inline void Swap(GameServer_Status_ListStatus* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -1200,7 +950,7 @@ class AGONES_EXPORT  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED GameServer_Status_Cou
   [[nodiscard]] static const GameServer_Status_CounterStatus& default_instance() {
     return *::google::protobuf::internal::MessageGlobalsBase::ToDefaultInstance<GameServer_Status_CounterStatus>(&GameServer_Status_CounterStatus_globals_);
   }
-  static constexpr int kIndexInFileMessages = 11;
+  static constexpr int kIndexInFileMessages = 10;
   friend void swap(GameServer_Status_CounterStatus& a, GameServer_Status_CounterStatus& b) { a.Swap(&b); }
   inline void Swap(GameServer_Status_CounterStatus* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -2945,7 +2695,7 @@ class AGONES_EXPORT  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED GameServer_Status fin
   [[nodiscard]] static const GameServer_Status& default_instance() {
     return *::google::protobuf::internal::MessageGlobalsBase::ToDefaultInstance<GameServer_Status>(&GameServer_Status_globals_);
   }
-  static constexpr int kIndexInFileMessages = 15;
+  static constexpr int kIndexInFileMessages = 14;
   friend void swap(GameServer_Status& a, GameServer_Status& b) { a.Swap(&b); }
   inline void Swap(GameServer_Status* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -3036,7 +2786,6 @@ class AGONES_EXPORT  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED GameServer_Status fin
   // nested types ----------------------------------------------------
   using Address = GameServer_Status_Address;
   using Port = GameServer_Status_Port;
-  using PlayerStatus = GameServer_Status_PlayerStatus;
   using CounterStatus = GameServer_Status_CounterStatus;
   using ListStatus = GameServer_Status_ListStatus;
 
@@ -3046,7 +2795,6 @@ class AGONES_EXPORT  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED GameServer_Status fin
     kAddressesFieldNumber = 7,
     kStateFieldNumber = 1,
     kAddressFieldNumber = 2,
-    kPlayersFieldNumber = 4,
     kCountersFieldNumber = 5,
     kListsFieldNumber = 6,
   };
@@ -3122,22 +2870,6 @@ class AGONES_EXPORT  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED GameServer_Status fin
   ::std::string* PROTOBUF_NONNULL _internal_mutable_address();
 
   public:
-  // .agones.dev.sdk.GameServer.Status.PlayerStatus players = 4;
-  [[nodiscard]] bool has_players()
-      const;
-  void clear_players() ;
-  [[nodiscard]] const ::agones::dev::sdk::GameServer_Status_PlayerStatus& players() const;
-  [[nodiscard]] ::agones::dev::sdk::GameServer_Status_PlayerStatus* PROTOBUF_NULLABLE release_players();
-  ::agones::dev::sdk::GameServer_Status_PlayerStatus* PROTOBUF_NONNULL mutable_players();
-  void set_allocated_players(::agones::dev::sdk::GameServer_Status_PlayerStatus* PROTOBUF_NULLABLE value);
-  void unsafe_arena_set_allocated_players(::agones::dev::sdk::GameServer_Status_PlayerStatus* PROTOBUF_NULLABLE value);
-  ::agones::dev::sdk::GameServer_Status_PlayerStatus* PROTOBUF_NULLABLE unsafe_arena_release_players();
-
-  private:
-  const ::agones::dev::sdk::GameServer_Status_PlayerStatus& _internal_players() const;
-  ::agones::dev::sdk::GameServer_Status_PlayerStatus* PROTOBUF_NONNULL _internal_mutable_players();
-
-  public:
   // map<string, .agones.dev.sdk.GameServer.Status.CounterStatus> counters = 5;
   [[nodiscard]] int counters_size()
       const;
@@ -3174,8 +2906,8 @@ class AGONES_EXPORT  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED GameServer_Status fin
  private:
   class _Internal;
   using ParseTableT_ =
-      ::google::protobuf::internal::TcParseTable<3, 7,
-                          7, 66,
+      ::google::protobuf::internal::TcParseTable<3, 6,
+                          6, 66,
                           2>;
   static constexpr ParseTableT_ InternalGenerateParseTable_(
       const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL class_data);
@@ -3207,7 +2939,6 @@ class AGONES_EXPORT  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED GameServer_Status fin
     ::google::protobuf::RepeatedPtrField< ::agones::dev::sdk::GameServer_Status_Address > addresses_;
     ::google::protobuf::internal::ArenaStringPtr state_;
     ::google::protobuf::internal::ArenaStringPtr address_;
-    ::agones::dev::sdk::GameServer_Status_PlayerStatus* PROTOBUF_NULLABLE players_;
     ::google::protobuf::internal::MapField<GameServer_Status_CountersEntry_DoNotUse, ::std::string, ::agones::dev::sdk::GameServer_Status_CounterStatus> counters_;
     ::google::protobuf::internal::MapField<GameServer_Status_ListsEntry_DoNotUse, ::std::string, ::agones::dev::sdk::GameServer_Status_ListStatus> lists_;
     PROTOBUF_TSAN_DECLARE_MEMBER
@@ -3273,7 +3004,7 @@ class AGONES_EXPORT  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED GameServer final : pu
   [[nodiscard]] static const GameServer& default_instance() {
     return *::google::protobuf::internal::MessageGlobalsBase::ToDefaultInstance<GameServer>(&GameServer_globals_);
   }
-  static constexpr int kIndexInFileMessages = 16;
+  static constexpr int kIndexInFileMessages = 15;
   friend void swap(GameServer& a, GameServer& b) { a.Swap(&b); }
   inline void Swap(GameServer* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -4464,130 +4195,6 @@ inline void GameServer_Status_Port::_internal_set_port(::int32_t value) {
 
 // -------------------------------------------------------------------
 
-// GameServer_Status_PlayerStatus
-
-// int64 count = 1;
-inline void GameServer_Status_PlayerStatus::clear_count() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.count_ = ::int64_t{0};
-  ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
-}
-inline ::int64_t GameServer_Status_PlayerStatus::count() const {
-  // @@protoc_insertion_point(field_get:agones.dev.sdk.GameServer.Status.PlayerStatus.count)
-  return _internal_count();
-}
-inline void GameServer_Status_PlayerStatus::set_count(::int64_t value) {
-  _internal_set_count(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
-  // @@protoc_insertion_point(field_set:agones.dev.sdk.GameServer.Status.PlayerStatus.count)
-}
-inline ::int64_t GameServer_Status_PlayerStatus::_internal_count() const {
-  ::google::protobuf::internal::TSanRead(&_impl_);
-  return _impl_.count_;
-}
-inline void GameServer_Status_PlayerStatus::_internal_set_count(::int64_t value) {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.count_ = value;
-}
-
-// int64 capacity = 2;
-inline void GameServer_Status_PlayerStatus::clear_capacity() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.capacity_ = ::int64_t{0};
-  ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
-}
-inline ::int64_t GameServer_Status_PlayerStatus::capacity() const {
-  // @@protoc_insertion_point(field_get:agones.dev.sdk.GameServer.Status.PlayerStatus.capacity)
-  return _internal_capacity();
-}
-inline void GameServer_Status_PlayerStatus::set_capacity(::int64_t value) {
-  _internal_set_capacity(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
-  // @@protoc_insertion_point(field_set:agones.dev.sdk.GameServer.Status.PlayerStatus.capacity)
-}
-inline ::int64_t GameServer_Status_PlayerStatus::_internal_capacity() const {
-  ::google::protobuf::internal::TSanRead(&_impl_);
-  return _impl_.capacity_;
-}
-inline void GameServer_Status_PlayerStatus::_internal_set_capacity(::int64_t value) {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.capacity_ = value;
-}
-
-// repeated string ids = 3;
-inline int GameServer_Status_PlayerStatus::_internal_ids_size() const {
-  return _internal_ids().size();
-}
-inline int GameServer_Status_PlayerStatus::ids_size() const {
-  return _internal_ids_size();
-}
-inline void GameServer_Status_PlayerStatus::clear_ids() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.ids_.Clear();
-  ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
-}
-inline ::std::string* PROTOBUF_NONNULL GameServer_Status_PlayerStatus::add_ids()
-    ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  ::std::string* _s =
-      _internal_mutable_ids()->InternalAddWithArena(
-          ::google::protobuf::MessageLite::internal_visibility(), GetArena());
-  SetHasBit(_impl_._has_bits_[0], 0x00000001U);
-  // @@protoc_insertion_point(field_add_mutable:agones.dev.sdk.GameServer.Status.PlayerStatus.ids)
-  return _s;
-}
-inline const ::std::string& GameServer_Status_PlayerStatus::ids(int index) const
-    ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  // @@protoc_insertion_point(field_get:agones.dev.sdk.GameServer.Status.PlayerStatus.ids)
-  return _internal_ids().Get(index);
-}
-inline ::std::string* PROTOBUF_NONNULL GameServer_Status_PlayerStatus::mutable_ids(int index)
-    ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  // @@protoc_insertion_point(field_mutable:agones.dev.sdk.GameServer.Status.PlayerStatus.ids)
-  return _internal_mutable_ids()->Mutable(index);
-}
-template <typename Arg_, typename... Args_>
-inline void GameServer_Status_PlayerStatus::set_ids(int index, Arg_&& value, Args_... args) {
-  ::google::protobuf::internal::AssignToString(
-      *_internal_mutable_ids()->Mutable(index),
-      ::std::forward<Arg_>(value), args... );
-  // @@protoc_insertion_point(field_set:agones.dev.sdk.GameServer.Status.PlayerStatus.ids)
-}
-template <typename Arg_, typename... Args_>
-inline void GameServer_Status_PlayerStatus::add_ids(Arg_&& value, Args_... args) {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  ::google::protobuf::internal::AddToRepeatedPtrField(
-      ::google::protobuf::MessageLite::internal_visibility(), GetArena(),
-      *_internal_mutable_ids(), ::std::forward<Arg_>(value),
-      args... );
-  SetHasBit(_impl_._has_bits_[0], 0x00000001U);
-  // @@protoc_insertion_point(field_add:agones.dev.sdk.GameServer.Status.PlayerStatus.ids)
-}
-inline const ::google::protobuf::RepeatedPtrField<::std::string>& GameServer_Status_PlayerStatus::ids()
-    const ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  // @@protoc_insertion_point(field_list:agones.dev.sdk.GameServer.Status.PlayerStatus.ids)
-  return _internal_ids();
-}
-inline ::google::protobuf::RepeatedPtrField<::std::string>* PROTOBUF_NONNULL
-GameServer_Status_PlayerStatus::mutable_ids() ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  SetHasBit(_impl_._has_bits_[0], 0x00000001U);
-  // @@protoc_insertion_point(field_mutable_list:agones.dev.sdk.GameServer.Status.PlayerStatus.ids)
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  return _internal_mutable_ids();
-}
-inline const ::google::protobuf::RepeatedPtrField<::std::string>&
-GameServer_Status_PlayerStatus::_internal_ids() const {
-  ::google::protobuf::internal::TSanRead(&_impl_);
-  return _impl_.ids_;
-}
-inline ::google::protobuf::RepeatedPtrField<::std::string>* PROTOBUF_NONNULL
-GameServer_Status_PlayerStatus::_internal_mutable_ids() {
-  ::google::protobuf::internal::TSanRead(&_impl_);
-  return &_impl_.ids_;
-}
-
-// -------------------------------------------------------------------
-
 // GameServer_Status_CounterStatus
 
 // int64 count = 1;
@@ -4984,104 +4591,6 @@ GameServer_Status::_internal_mutable_ports() {
   return &_impl_.ports_;
 }
 
-// .agones.dev.sdk.GameServer.Status.PlayerStatus players = 4;
-inline bool GameServer_Status::has_players() const {
-  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000010U);
-  PROTOBUF_ASSUME(!value || _impl_.players_ != nullptr);
-  return value;
-}
-inline void GameServer_Status::clear_players() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  if (_impl_.players_ != nullptr) _impl_.players_->Clear();
-  ClearHasBit(_impl_._has_bits_[0], 0x00000010U);
-}
-inline const ::agones::dev::sdk::GameServer_Status_PlayerStatus& GameServer_Status::_internal_players() const {
-  ::google::protobuf::internal::TSanRead(&_impl_);
-  const ::agones::dev::sdk::GameServer_Status_PlayerStatus* p = _impl_.players_;
-  return p != nullptr ? *p : *::google::protobuf::internal::MessageGlobalsBase::ToDefaultInstance<::agones::dev::sdk::GameServer_Status_PlayerStatus>(&::agones::dev::sdk::GameServer_Status_PlayerStatus_globals_);
-}
-inline const ::agones::dev::sdk::GameServer_Status_PlayerStatus& GameServer_Status::players() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  // @@protoc_insertion_point(field_get:agones.dev.sdk.GameServer.Status.players)
-  return _internal_players();
-}
-inline void GameServer_Status::unsafe_arena_set_allocated_players(
-    ::agones::dev::sdk::GameServer_Status_PlayerStatus* PROTOBUF_NULLABLE value) {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  if (GetArena() == nullptr) {
-    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.players_);
-  }
-  _impl_.players_ = reinterpret_cast<::agones::dev::sdk::GameServer_Status_PlayerStatus*>(value);
-  if (value != nullptr) {
-    SetHasBit(_impl_._has_bits_[0], 0x00000010U);
-  } else {
-    ClearHasBit(_impl_._has_bits_[0], 0x00000010U);
-  }
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:agones.dev.sdk.GameServer.Status.players)
-}
-inline ::agones::dev::sdk::GameServer_Status_PlayerStatus* PROTOBUF_NULLABLE GameServer_Status::release_players() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-
-  ClearHasBit(_impl_._has_bits_[0], 0x00000010U);
-  ::agones::dev::sdk::GameServer_Status_PlayerStatus* released = _impl_.players_;
-  _impl_.players_ = nullptr;
-  if (::google::protobuf::internal::DebugHardenForceCopyInRelease()) {
-    auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
-    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
-    if (GetArena() == nullptr) {
-      delete old;
-    }
-  } else {
-    if (GetArena() != nullptr) {
-      released = ::google::protobuf::internal::DuplicateIfNonNull(released);
-    }
-  }
-  return released;
-}
-inline ::agones::dev::sdk::GameServer_Status_PlayerStatus* PROTOBUF_NULLABLE GameServer_Status::unsafe_arena_release_players() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  // @@protoc_insertion_point(field_release:agones.dev.sdk.GameServer.Status.players)
-
-  ClearHasBit(_impl_._has_bits_[0], 0x00000010U);
-  ::agones::dev::sdk::GameServer_Status_PlayerStatus* temp = _impl_.players_;
-  _impl_.players_ = nullptr;
-  return temp;
-}
-inline ::agones::dev::sdk::GameServer_Status_PlayerStatus* PROTOBUF_NONNULL GameServer_Status::_internal_mutable_players() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  if (_impl_.players_ == nullptr) {
-    auto* p = ::google::protobuf::Message::DefaultConstruct<::agones::dev::sdk::GameServer_Status_PlayerStatus>(GetArena());
-    _impl_.players_ = reinterpret_cast<::agones::dev::sdk::GameServer_Status_PlayerStatus*>(p);
-  }
-  return _impl_.players_;
-}
-inline ::agones::dev::sdk::GameServer_Status_PlayerStatus* PROTOBUF_NONNULL GameServer_Status::mutable_players()
-    ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  SetHasBit(_impl_._has_bits_[0], 0x00000010U);
-  ::agones::dev::sdk::GameServer_Status_PlayerStatus* _msg = _internal_mutable_players();
-  // @@protoc_insertion_point(field_mutable:agones.dev.sdk.GameServer.Status.players)
-  return _msg;
-}
-inline void GameServer_Status::set_allocated_players(::agones::dev::sdk::GameServer_Status_PlayerStatus* PROTOBUF_NULLABLE value) {
-  ::google::protobuf::Arena* message_arena = GetArena();
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  if (message_arena == nullptr) {
-    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.players_);
-  }
-
-  if (value != nullptr) {
-    ::google::protobuf::Arena* submessage_arena = value->GetArena();
-    if (message_arena != submessage_arena) {
-      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
-    }
-    SetHasBit(_impl_._has_bits_[0], 0x00000010U);
-  } else {
-    ClearHasBit(_impl_._has_bits_[0], 0x00000010U);
-  }
-
-  _impl_.players_ = reinterpret_cast<::agones::dev::sdk::GameServer_Status_PlayerStatus*>(value);
-  // @@protoc_insertion_point(field_set_allocated:agones.dev.sdk.GameServer.Status.players)
-}
-
 // map<string, .agones.dev.sdk.GameServer.Status.CounterStatus> counters = 5;
 inline int GameServer_Status::_internal_counters_size() const {
   return _internal_counters().size();
@@ -5092,7 +4601,7 @@ inline int GameServer_Status::counters_size() const {
 inline void GameServer_Status::clear_counters() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.counters_.Clear();
-  ClearHasBit(_impl_._has_bits_[0], 0x00000020U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000010U);
 }
 inline const ::google::protobuf::Map<::std::string, ::agones::dev::sdk::GameServer_Status_CounterStatus>& GameServer_Status::_internal_counters() const {
   ::google::protobuf::internal::TSanRead(&_impl_);
@@ -5108,7 +4617,7 @@ inline ::google::protobuf::Map<::std::string, ::agones::dev::sdk::GameServer_Sta
 }
 inline ::google::protobuf::Map<::std::string, ::agones::dev::sdk::GameServer_Status_CounterStatus>* PROTOBUF_NONNULL GameServer_Status::mutable_counters()
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  SetHasBit(_impl_._has_bits_[0], 0x00000020U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000010U);
   // @@protoc_insertion_point(field_mutable_map:agones.dev.sdk.GameServer.Status.counters)
   return _internal_mutable_counters();
 }
@@ -5123,7 +4632,7 @@ inline int GameServer_Status::lists_size() const {
 inline void GameServer_Status::clear_lists() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.lists_.Clear();
-  ClearHasBit(_impl_._has_bits_[0], 0x00000040U);
+  ClearHasBit(_impl_._has_bits_[0], 0x00000020U);
 }
 inline const ::google::protobuf::Map<::std::string, ::agones::dev::sdk::GameServer_Status_ListStatus>& GameServer_Status::_internal_lists() const {
   ::google::protobuf::internal::TSanRead(&_impl_);
@@ -5139,7 +4648,7 @@ inline ::google::protobuf::Map<::std::string, ::agones::dev::sdk::GameServer_Sta
 }
 inline ::google::protobuf::Map<::std::string, ::agones::dev::sdk::GameServer_Status_ListStatus>* PROTOBUF_NONNULL GameServer_Status::mutable_lists()
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  SetHasBit(_impl_._has_bits_[0], 0x00000040U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000020U);
   // @@protoc_insertion_point(field_mutable_map:agones.dev.sdk.GameServer.Status.lists)
   return _internal_mutable_lists();
 }

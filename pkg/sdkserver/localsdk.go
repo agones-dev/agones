@@ -34,15 +34,13 @@ import (
 
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
 	"agones.dev/agones/pkg/sdk"
-	"agones.dev/agones/pkg/sdk/alpha"
 	"agones.dev/agones/pkg/sdk/beta"
 	"agones.dev/agones/pkg/util/runtime"
 )
 
 var (
-	_ sdk.SDKServer   = &LocalSDKServer{}
-	_ alpha.SDKServer = &LocalSDKServer{}
-	_ beta.SDKServer  = &LocalSDKServer{}
+	_ sdk.SDKServer  = &LocalSDKServer{}
+	_ beta.SDKServer = &LocalSDKServer{}
 )
 
 func defaultGs() *sdk.GameServer {
@@ -152,9 +150,6 @@ func NewLocalSDKServer(filePath string, testSdkName string) (*LocalSDKServer, er
 			l.logger.WithError(err).WithField("filePath", filePath).Error("error adding watcher")
 		}
 	}
-	if runtime.FeatureEnabled(runtime.FeaturePlayerTracking) && l.gs.Status.Players == nil {
-		l.gs.Status.Players = &sdk.GameServer_Status_PlayerStatus{}
-	}
 
 	if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
 		if l.gs.Status.Counters == nil {
@@ -226,16 +221,6 @@ func (l *LocalSDKServer) recordRequestWithValue(request string, value string, ob
 			fieldVal = strconv.FormatInt(l.gs.ObjectMeta.CreationTimestamp, 10)
 		case "UID":
 			fieldVal = l.gs.ObjectMeta.Uid
-		case "PlayerCapacity":
-			if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-				return
-			}
-			fieldVal = strconv.FormatInt(l.gs.Status.Players.Capacity, 10)
-		case "PlayerIDs":
-			if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-				return
-			}
-			fieldVal = strings.Join(l.gs.Status.Players.Ids, ",")
 		default:
 			l.logger.Error("unexpected Field to compare")
 		}
@@ -421,191 +406,6 @@ func (l *LocalSDKServer) stopReserveTimer() {
 		l.reserveTimer.Stop()
 	}
 	l.gsReserveDuration = nil
-}
-
-// PlayerConnect should be called when a player connects.
-// [Stage:Alpha]
-// [FeatureFlag:PlayerTracking]
-func (l *LocalSDKServer) PlayerConnect(_ context.Context, id *alpha.PlayerID) (*alpha.Bool, error) {
-	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return &alpha.Bool{Bool: false}, errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
-	}
-	l.logger.WithField("playerID", id.PlayerID).Info("Player Connected")
-	l.gsMutex.Lock()
-	defer l.gsMutex.Unlock()
-
-	if l.gs.Status.Players == nil {
-		l.gs.Status.Players = &sdk.GameServer_Status_PlayerStatus{}
-	}
-
-	// the player is already connected, return false.
-	for _, playerID := range l.gs.Status.Players.Ids {
-		if playerID == id.PlayerID {
-			return &alpha.Bool{Bool: false}, nil
-		}
-	}
-
-	if l.gs.Status.Players.Count >= l.gs.Status.Players.Capacity {
-		return &alpha.Bool{Bool: false}, errors.New("Players are already at capacity")
-	}
-
-	l.gs.Status.Players.Ids = append(l.gs.Status.Players.Ids, id.PlayerID)
-	l.gs.Status.Players.Count = int64(len(l.gs.Status.Players.Ids))
-
-	l.update <- struct{}{}
-	l.recordRequestWithValue("playerconnect", "1234", "PlayerIDs")
-	return &alpha.Bool{Bool: true}, nil
-}
-
-// PlayerDisconnect should be called when a player disconnects.
-// [Stage:Alpha]
-// [FeatureFlag:PlayerTracking]
-func (l *LocalSDKServer) PlayerDisconnect(_ context.Context, id *alpha.PlayerID) (*alpha.Bool, error) {
-	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return &alpha.Bool{Bool: false}, errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
-	}
-	l.logger.WithField("playerID", id.PlayerID).Info("Player Disconnected")
-	l.gsMutex.Lock()
-	defer l.gsMutex.Unlock()
-
-	if l.gs.Status.Players == nil {
-		l.gs.Status.Players = &sdk.GameServer_Status_PlayerStatus{}
-	}
-
-	found := -1
-	for i, playerID := range l.gs.Status.Players.Ids {
-		if playerID == id.PlayerID {
-			found = i
-			break
-		}
-	}
-	if found == -1 {
-		return &alpha.Bool{Bool: false}, nil
-	}
-
-	l.gs.Status.Players.Ids = append(l.gs.Status.Players.Ids[:found], l.gs.Status.Players.Ids[found+1:]...)
-	l.gs.Status.Players.Count = int64(len(l.gs.Status.Players.Ids))
-
-	l.update <- struct{}{}
-	l.recordRequestWithValue("playerdisconnect", "", "PlayerIDs")
-	return &alpha.Bool{Bool: true}, nil
-}
-
-// IsPlayerConnected returns if the playerID is currently connected to the GameServer.
-// [Stage:Alpha]
-// [FeatureFlag:PlayerTracking]
-func (l *LocalSDKServer) IsPlayerConnected(_ context.Context, id *alpha.PlayerID) (*alpha.Bool, error) {
-	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return &alpha.Bool{Bool: false}, errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
-	}
-
-	result := &alpha.Bool{Bool: false}
-	l.logger.WithField("playerID", id.PlayerID).Info("Is a Player Connected?")
-	l.gsMutex.Lock()
-	defer l.gsMutex.Unlock()
-
-	l.recordRequestWithValue("isplayerconnected", id.PlayerID, "PlayerIDs")
-
-	if l.gs.Status.Players == nil {
-		return result, nil
-	}
-
-	for _, playerID := range l.gs.Status.Players.Ids {
-		if id.PlayerID == playerID {
-			result.Bool = true
-			break
-		}
-	}
-
-	return result, nil
-}
-
-// GetConnectedPlayers returns the list of the currently connected player ids.
-// [Stage:Alpha]
-// [FeatureFlag:PlayerTracking]
-func (l *LocalSDKServer) GetConnectedPlayers(_ context.Context, _ *alpha.Empty) (*alpha.PlayerIDList, error) {
-	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
-	}
-	l.logger.Info("Getting Connected Players")
-
-	result := &alpha.PlayerIDList{List: []string{}}
-
-	l.gsMutex.Lock()
-	defer l.gsMutex.Unlock()
-	l.recordRequest("getconnectedplayers")
-
-	if l.gs.Status.Players == nil {
-		return result, nil
-	}
-	result.List = l.gs.Status.Players.Ids
-	return result, nil
-}
-
-// GetPlayerCount returns the current player count.
-// [Stage:Alpha]
-// [FeatureFlag:PlayerTracking]
-func (l *LocalSDKServer) GetPlayerCount(_ context.Context, _ *alpha.Empty) (*alpha.Count, error) {
-	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
-	}
-	l.logger.Info("Getting Player Count")
-	l.recordRequest("getplayercount")
-	l.gsMutex.RLock()
-	defer l.gsMutex.RUnlock()
-
-	result := &alpha.Count{}
-	if l.gs.Status.Players != nil {
-		result.Count = l.gs.Status.Players.Count
-	}
-
-	return result, nil
-}
-
-// SetPlayerCapacity to change the game server's player capacity.
-// [Stage:Alpha]
-// [FeatureFlag:PlayerTracking]
-func (l *LocalSDKServer) SetPlayerCapacity(_ context.Context, count *alpha.Count) (*alpha.Empty, error) {
-	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
-	}
-
-	l.logger.WithField("capacity", count.Count).Info("Setting Player Capacity")
-	l.gsMutex.Lock()
-	defer l.gsMutex.Unlock()
-
-	if l.gs.Status.Players == nil {
-		l.gs.Status.Players = &sdk.GameServer_Status_PlayerStatus{}
-	}
-
-	l.gs.Status.Players.Capacity = count.Count
-
-	l.update <- struct{}{}
-	l.recordRequestWithValue("setplayercapacity", strconv.FormatInt(count.Count, 10), "PlayerCapacity")
-	return &alpha.Empty{}, nil
-}
-
-// GetPlayerCapacity returns the current player capacity.
-// [Stage:Alpha]
-// [FeatureFlag:PlayerTracking]
-func (l *LocalSDKServer) GetPlayerCapacity(_ context.Context, _ *alpha.Empty) (*alpha.Count, error) {
-	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
-	}
-	l.logger.Info("Getting Player Capacity")
-	l.recordRequest("getplayercapacity")
-	l.gsMutex.RLock()
-	defer l.gsMutex.RUnlock()
-
-	// SDK.GetPlayerCapacity() has a contract of always return a number,
-	// so if we're nil, then let's always return a value, and
-	// remove lots of special cases upstream.
-	result := &alpha.Count{}
-	if l.gs.Status.Players != nil {
-		result.Count = l.gs.Status.Players.Capacity
-	}
-
-	return result, nil
 }
 
 // GetCounter returns a Counter. Returns not found if the counter does not exist.
