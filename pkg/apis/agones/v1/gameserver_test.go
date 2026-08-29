@@ -1571,7 +1571,7 @@ func TestGameServerPodNoErrors(t *testing.T) {
 	fixture.ApplyDefaults()
 
 	pod, err := fixture.Pod(fakeAPIHooks{})
-	assert.Nil(t, err, "Pod should not return an error")
+	assert.NoError(t, err, "Pod should not return an error")
 	assert.Equal(t, fixture.ObjectMeta.Name, pod.ObjectMeta.Name)
 	assert.Equal(t, fixture.ObjectMeta.Name, pod.Spec.Hostname)
 	assert.Equal(t, fixture.ObjectMeta.Namespace, pod.ObjectMeta.Namespace)
@@ -1629,7 +1629,7 @@ func TestGameServerPodContainerNotFoundErrReturned(t *testing.T) {
 	}
 
 	_, err := fixture.Pod(fakeAPIHooks{})
-	if assert.NotNil(t, err, "Pod should return an error") {
+	if assert.Error(t, err, "Pod should return an error") {
 		assert.Equal(t, "failed to find container named Container1 in pod spec", err.Error())
 	}
 }
@@ -1646,7 +1646,7 @@ func TestGameServerPodWithSidecarNoErrors(t *testing.T) {
 	sidecar := corev1.Container{Name: "sidecar", Image: "container/sidecar"}
 	fixture.Spec.Template.Spec.ServiceAccountName = "other-agones-sdk"
 	pod, err := fixture.Pod(fakeAPIHooks{}, sidecar)
-	assert.Nil(t, err, "Pod should not return an error")
+	assert.NoError(t, err, "Pod should not return an error")
 	assert.Equal(t, fixture.ObjectMeta.Name, pod.ObjectMeta.Name)
 	assert.Len(t, pod.Spec.Containers, 2, "Should have two containers")
 	assert.Equal(t, "other-agones-sdk", pod.Spec.ServiceAccountName)
@@ -1667,7 +1667,7 @@ func TestGameServerPodWithInitSidecarNoErrors(t *testing.T) {
 	sidecar := corev1.Container{Name: "sidecar", Image: "container/sidecar"}
 	fixture.Spec.Template.Spec.ServiceAccountName = "other-agones-sdk"
 	pod, err := fixture.Pod(fakeAPIHooks{}, sidecar)
-	assert.Nil(t, err, "Pod should not return an error")
+	assert.NoError(t, err, "Pod should not return an error")
 	assert.Equal(t, fixture.ObjectMeta.Name, pod.ObjectMeta.Name)
 	assert.Len(t, pod.Spec.Containers, 1, "Should have one containers")
 	assert.Equal(t, "other-agones-sdk", pod.Spec.ServiceAccountName)
@@ -1675,7 +1675,7 @@ func TestGameServerPodWithInitSidecarNoErrors(t *testing.T) {
 	assert.Equal(t, corev1.ContainerRestartPolicyAlways, *pod.Spec.InitContainers[0].RestartPolicy)
 	assert.Equal(t, "container", pod.Spec.Containers[0].Name)
 	assert.True(t, metav1.IsControlledBy(pod, fixture))
-	assert.Equal(t, pod.Spec.RestartPolicy, corev1.RestartPolicyNever)
+	assert.Equal(t, corev1.RestartPolicyNever, pod.Spec.RestartPolicy)
 }
 
 func TestGameServerPodWithInitSidecarPrependsToExistingInitContainers(t *testing.T) {
@@ -1915,7 +1915,7 @@ func TestGameServerPatch(t *testing.T) {
 	delta.Spec.Container = "bear"
 
 	patch, err := fixture.Patch(delta)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	assert.Contains(t, string(patch), `{"op":"replace","path":"/spec/container","value":"bear"}`)
 	assert.Contains(t, string(patch), `{"op":"test","path":"/metadata/resourceVersion","value":"1234"}`)
@@ -1946,7 +1946,7 @@ func TestGameServerGetDevAddress(t *testing.T) {
 	regularGs.ObjectMeta.Annotations = map[string]string{}
 	devAddress, isDev = regularGs.GetDevAddress()
 	assert.False(t, isDev, "dev-game should NOT have a dev-address")
-	assert.Equal(t, "", devAddress, "dev-address IP address should be 127.1.1.1")
+	assert.Empty(t, devAddress, "dev-address IP address should be 127.1.1.1")
 }
 
 func TestGameServerIsDeletable(t *testing.T) {
@@ -2059,7 +2059,7 @@ func TestGameServerApplyToPodContainer(t *testing.T) {
 				return c
 			})
 
-			if tc.expected.err != "" && assert.NotNil(t, result) {
+			if tc.expected.err != "" && assert.Error(t, result) {
 				assert.Equal(t, tc.expected.err, result.Error())
 			}
 			assert.Equal(t, tc.expected.tty, pod.Spec.Containers[0].TTY)

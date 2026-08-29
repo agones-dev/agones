@@ -55,7 +55,7 @@ func TestAllocationOverflowControllerWatchGameServers(t *testing.T) {
 
 	go func() {
 		err := c.Run(ctx)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	}()
 
 	change := func() string {
@@ -148,7 +148,7 @@ func TestAllocationOverflowSyncGameServerSet(t *testing.T) {
 		cancel := run(c, m, gsSet, func(action k8stesting.Action) (bool, runtime.Object, error) {
 			ua := action.(k8stesting.UpdateAction)
 			gs := ua.GetObject().(*agonesv1.GameServer)
-			require.Equal(t, gs.Status.State, agonesv1.GameServerStateAllocated)
+			require.Equal(t, agonesv1.GameServerStateAllocated, gs.Status.State)
 			require.Equal(t, "green", gs.ObjectMeta.Labels["colour"])
 
 			count++
@@ -183,7 +183,7 @@ func TestAllocationOverflowSyncGameServerSet(t *testing.T) {
 		cancel := run(c, m, gsSet, func(action k8stesting.Action) (bool, runtime.Object, error) {
 			ua := action.(k8stesting.UpdateAction)
 			gs := ua.GetObject().(*agonesv1.GameServer)
-			require.Equal(t, gs.Status.State, agonesv1.GameServerStateAllocated)
+			require.Equal(t, agonesv1.GameServerStateAllocated, gs.Status.State)
 			require.Equal(t, "green", gs.ObjectMeta.Labels["colour"])
 
 			count++

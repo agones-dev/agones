@@ -606,21 +606,21 @@ func TestGameServerSetDropCountsAndListsStatus(t *testing.T) {
 	flag = string(utilruntime.FeatureCountsAndLists) + "=true"
 	require.NoError(t, utilruntime.ParseFeatures(flag))
 	err := c.syncGameServerSetStatus(context.Background(), gss, gsList)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.True(t, updated)
 
 	updated = false
 	flag = string(utilruntime.FeatureCountsAndLists) + "=false"
 	require.NoError(t, utilruntime.ParseFeatures(flag))
 	err = c.syncGameServerSetStatus(context.Background(), gss, gsList)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.True(t, updated)
 
 	updated = false
 	flag = string(utilruntime.FeatureCountsAndLists) + "=true"
 	require.NoError(t, utilruntime.ParseFeatures(flag))
 	err = c.syncGameServerSetStatus(context.Background(), gss, gsList)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.True(t, updated)
 }
 
@@ -654,7 +654,7 @@ func TestControllerWatchGameServers(t *testing.T) {
 
 	go func() {
 		err := c.Run(ctx, 1)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 	}()
 
 	f := func() string {
@@ -772,7 +772,7 @@ func TestSyncGameServerSet(t *testing.T) {
 		m.AgonesClient.AddReactor("update", "gameservers", func(action k8stesting.Action) (bool, runtime.Object, error) {
 			ua := action.(k8stesting.UpdateAction)
 			gs := ua.GetObject().(*agonesv1.GameServer)
-			assert.Equal(t, gs.Status.State, agonesv1.GameServerStateShutdown)
+			assert.Equal(t, agonesv1.GameServerStateShutdown, gs.Status.State)
 
 			updated = true
 			assert.Equal(t, "test-0", gs.GetName())
@@ -818,7 +818,7 @@ func TestSyncGameServerSet(t *testing.T) {
 		m.AgonesClient.AddReactor("update", "gameservers", func(action k8stesting.Action) (bool, runtime.Object, error) {
 			ua := action.(k8stesting.UpdateAction)
 			gs := ua.GetObject().(*agonesv1.GameServer)
-			assert.Equal(t, gs.Status.State, agonesv1.GameServerStateShutdown)
+			assert.Equal(t, agonesv1.GameServerStateShutdown, gs.Status.State)
 
 			updated = true
 			assert.Equal(t, "test-0", gs.GetName())
@@ -864,7 +864,7 @@ func TestSyncGameServerSet(t *testing.T) {
 		m.AgonesClient.AddReactor("update", "gameservers", func(action k8stesting.Action) (bool, runtime.Object, error) {
 			ua := action.(k8stesting.UpdateAction)
 			gs := ua.GetObject().(*agonesv1.GameServer)
-			assert.Equal(t, gs.Status.State, agonesv1.GameServerStateShutdown)
+			assert.Equal(t, agonesv1.GameServerStateShutdown, gs.Status.State)
 
 			updated = true
 			assert.Equal(t, "test-0", gs.GetName())
@@ -936,7 +936,7 @@ func TestSyncGameServerSet(t *testing.T) {
 		m.AgonesClient.AddReactor("update", "gameservers", func(action k8stesting.Action) (bool, runtime.Object, error) {
 			ua := action.(k8stesting.UpdateAction)
 			gs := ua.GetObject().(*agonesv1.GameServer)
-			require.Equal(t, gs.Status.State, agonesv1.GameServerStateShutdown)
+			require.Equal(t, agonesv1.GameServerStateShutdown, gs.Status.State)
 
 			deleted = append(deleted, gs.ObjectMeta.Name)
 			return true, nil, nil
@@ -977,7 +977,7 @@ func TestControllerSyncUnhealthyGameServers(t *testing.T) {
 			ua := action.(k8stesting.UpdateAction)
 			gs := ua.GetObject().(*agonesv1.GameServer)
 
-			assert.Equal(t, gs.Status.State, agonesv1.GameServerStateShutdown)
+			assert.Equal(t, agonesv1.GameServerStateShutdown, gs.Status.State)
 
 			updatedCount++
 			return true, nil, nil
@@ -987,7 +987,7 @@ func TestControllerSyncUnhealthyGameServers(t *testing.T) {
 		defer cancel()
 
 		err := c.deleteGameServers(ctx, gsSet, []*agonesv1.GameServer{gs1, gs2, gs3})
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		assert.Equal(t, 3, updatedCount, "Updates should have occurred")
 	})
@@ -998,7 +998,7 @@ func TestControllerSyncUnhealthyGameServers(t *testing.T) {
 			ua := action.(k8stesting.UpdateAction)
 			gs := ua.GetObject().(*agonesv1.GameServer)
 
-			assert.Equal(t, gs.Status.State, agonesv1.GameServerStateShutdown)
+			assert.Equal(t, agonesv1.GameServerStateShutdown, gs.Status.State)
 
 			return true, nil, errors.New("update-err")
 		})
@@ -1036,7 +1036,7 @@ func TestSyncMoreGameServers(t *testing.T) {
 		defer cancel()
 
 		err := c.addMoreGameServers(ctx, gsSet, expected)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.Equal(t, expected, count)
 		agtesting.AssertEventContains(t, m.FakeRecorder.Events, "SuccessfulCreate")
 	})
@@ -1085,7 +1085,7 @@ func TestControllerSyncGameServerSetStatus(t *testing.T) {
 
 		list := []*agonesv1.GameServer{{Status: agonesv1.GameServerStatus{State: agonesv1.GameServerStateReady}}}
 		err := c.syncGameServerSetStatus(context.Background(), gsSet, list)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.True(t, updated)
 	})
 
@@ -1117,7 +1117,7 @@ func TestControllerSyncGameServerSetStatus(t *testing.T) {
 			{Status: agonesv1.GameServerStatus{State: agonesv1.GameServerStateAllocated}},
 		}
 		err := c.syncGameServerSetStatus(context.Background(), gsSet, list)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.True(t, updated)
 	})
 }

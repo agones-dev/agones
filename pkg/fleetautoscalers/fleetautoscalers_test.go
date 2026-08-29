@@ -223,10 +223,10 @@ func TestComputeDesiredFleetSize(t *testing.T) {
 
 			replicas, limited, err := computeDesiredFleetSize(ctx, &fasState{}, fas.Spec.Policy, f, gameServers.Lister().GameServers(f.ObjectMeta.Namespace), nc, &fasLog)
 
-			if tc.expected.err != "" && assert.NotNil(t, err) {
+			if tc.expected.err != "" && assert.Error(t, err) {
 				assert.Equal(t, tc.expected.err, err.Error())
 			} else {
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 				assert.Equal(t, tc.expected.replicas, replicas)
 				assert.Equal(t, tc.expected.limited, limited)
 			}
@@ -373,10 +373,10 @@ func TestApplyBufferPolicy(t *testing.T) {
 			}
 			replicas, limited, err := applyBufferPolicy(&fasState{}, tc.buffer, f, &fasLog)
 
-			if tc.expected.err != "" && assert.NotNil(t, err) {
+			if tc.expected.err != "" && assert.Error(t, err) {
 				assert.Equal(t, tc.expected.err, err.Error())
 			} else {
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 				assert.Equal(t, tc.expected.replicas, replicas)
 				assert.Equal(t, tc.expected.limited, limited)
 			}
@@ -630,14 +630,14 @@ func TestApplyWebhookPolicy(t *testing.T) {
 				recorder:       m.FakeRecorder,
 				currChainEntry: &fas.Status.LastAppliedPolicy,
 			}
-			replicas, limited, err := applyWebhookPolicy(&fasState{}, tc.webhookPolicy, f, &fasLog)
+			replicas, limited, err := applyWebhookPolicy(context.Background(), &fasState{}, tc.webhookPolicy, f, &fasLog)
 
-			if tc.expected.err != "" && assert.NotNil(t, err) {
+			if tc.expected.err != "" && assert.Error(t, err) {
 				assert.Equal(t, tc.expected.err, err.Error())
 			} else {
 				assert.Equal(t, tc.expected.replicas, replicas)
 				assert.Equal(t, tc.expected.limited, limited)
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 			}
 		})
 	}
@@ -673,9 +673,9 @@ func TestApplyWebhookPolicyWithMetadata(t *testing.T) {
 		recorder:       m.FakeRecorder,
 		currChainEntry: &fas.Status.LastAppliedPolicy,
 	}
-	replicas, limited, err := applyWebhookPolicy(&fasState{}, webhookPolicy, fleet, &fasLog)
+	replicas, limited, err := applyWebhookPolicy(context.Background(), &fasState{}, webhookPolicy, fleet, &fasLog)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.False(t, limited)
 	assert.Equal(t, fixedReplicas, replicas)
 }
@@ -700,9 +700,9 @@ func TestApplyWebhookPolicyNilFleet(t *testing.T) {
 		recorder:       m.FakeRecorder,
 		currChainEntry: &fas.Status.LastAppliedPolicy,
 	}
-	replicas, limited, err := applyWebhookPolicy(&fasState{}, w, nil, &fasLog)
+	replicas, limited, err := applyWebhookPolicy(context.Background(), &fasState{}, w, nil, &fasLog)
 
-	if assert.NotNil(t, err) {
+	if assert.Error(t, err) {
 		assert.Equal(t, "fleet parameter must not be nil", err.Error())
 	}
 
@@ -943,10 +943,10 @@ func TestBuildURLFromConfiguration(t *testing.T) {
 			url, err := buildURLFromConfiguration(tc.state, tc.config)
 
 			if tc.expected.err != "" {
-				assert.NotNil(t, err)
+				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tc.expected.err)
 			} else {
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 				assert.NotNil(t, url)
 				assert.Equal(t, tc.expected.url, url.String())
 
@@ -1730,9 +1730,9 @@ func TestApplyCounterPolicy(t *testing.T) {
 			replicas, limited, err := applyCounterOrListPolicy(tc.cp, nil, tc.fleet, informer.GameServers().Lister().GameServers(tc.fleet.ObjectMeta.Namespace), nc)
 
 			if tc.want.wantErr {
-				assert.NotNil(t, err)
+				assert.Error(t, err)
 			} else {
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 				assert.Equal(t, tc.want.replicas, replicas)
 				assert.Equal(t, tc.want.limited, limited)
 			}
@@ -2454,9 +2454,9 @@ func TestApplyListPolicy(t *testing.T) {
 			replicas, limited, err := applyCounterOrListPolicy(nil, tc.lp, tc.fleet, informer.GameServers().Lister().GameServers(tc.fleet.ObjectMeta.Namespace), nc)
 
 			if tc.want.wantErr {
-				assert.NotNil(t, err)
+				assert.Error(t, err)
 			} else {
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 				assert.Equal(t, tc.want.replicas, replicas)
 				assert.Equal(t, tc.want.limited, limited)
 			}
@@ -2826,9 +2826,9 @@ func TestApplySchedulePolicy(t *testing.T) {
 			replicas, limited, err := applySchedulePolicy(ctx, &fasState{}, tc.sp, f, nil, nil, tc.now, &fasLog)
 
 			if tc.want.wantErr {
-				assert.NotNil(t, err)
+				assert.Error(t, err)
 			} else {
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 				assert.Equal(t, tc.want.replicas, replicas)
 				assert.Equal(t, tc.want.limited, limited)
 			}
@@ -3017,9 +3017,9 @@ func TestApplyChainPolicy(t *testing.T) {
 			replicas, limited, err := applyChainPolicy(ctx, &fasState{}, *tc.cp, f, nil, nil, tc.now, &fasLog)
 
 			if tc.want.wantErr {
-				assert.NotNil(t, err)
+				assert.Error(t, err)
 			} else {
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 				assert.Equal(t, tc.want.replicas, replicas)
 				assert.Equal(t, tc.want.limited, limited)
 			}

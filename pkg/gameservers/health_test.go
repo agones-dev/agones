@@ -384,7 +384,7 @@ func TestHealthControllerSyncGameServer(t *testing.T) {
 			defer cancel()
 
 			err := hc.syncGameServer(ctx, "default/test")
-			assert.Nil(t, err, err)
+			assert.NoError(t, err)
 			assert.True(t, got, "GameServers Should be got!")
 
 			assert.Equal(t, test.expected.updated, updated, "updated test")
