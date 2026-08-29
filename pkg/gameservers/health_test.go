@@ -65,6 +65,62 @@ func TestHealthControllerFailedContainer(t *testing.T) {
 	assert.False(t, hc.failedContainer(pod2))
 }
 
+func TestHealthControllerFailedContainerSidecarContainers(t *testing.T) {
+	t.Parallel()
+
+	agruntime.FeatureTestMutex.Lock()
+	defer agruntime.FeatureTestMutex.Unlock()
+	require.NoError(t, agruntime.ParseFeatures(string(agruntime.FeatureSidecarContainers)+"=true"))
+
+	m := agtesting.NewMocks()
+	hc := NewHealthController(healthcheck.NewHandler(), m.KubeClient, m.AgonesClient, m.KubeInformerFactory, m.AgonesInformerFactory, false)
+
+	gs := agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "test"}, Spec: newSingleContainerSpec()}
+	gs.ApplyDefaults()
+
+	pod, err := gs.Pod(agtesting.FakeAPIHooks{})
+	require.NoError(t, err)
+	// The fix relies on GameServer Pods never restarting the game container.
+	require.Equal(t, corev1.RestartPolicyNever, pod.Spec.RestartPolicy)
+
+	pod.Status = corev1.PodStatus{
+		Phase: corev1.PodRunning,
+		ContainerStatuses: []corev1.ContainerStatus{
+			{Name: gs.Spec.Container, State: corev1.ContainerState{
+				Terminated: &corev1.ContainerStateTerminated{ExitCode: 137, Reason: "OOMKilled"}}},
+			{Name: "log-shipper", State: corev1.ContainerState{
+				Running: &corev1.ContainerStateRunning{}}},
+		},
+	}
+
+	assert.False(t, hc.failedPod(pod), "Pod is Running, so failedPod cannot detect this")
+	assert.True(t, hc.failedContainer(pod), "a terminated game container that cannot restart is failed")
+	assert.True(t, hc.isUnhealthy(pod))
+
+	// A running game container is not failed.
+	running := pod.DeepCopy()
+	running.Status.ContainerStatuses[0].State = corev1.ContainerState{Running: &corev1.ContainerStateRunning{}}
+	assert.False(t, hc.failedContainer(running))
+
+	// If Kubernetes may still restart the container, leave the lifecycle to it.
+	restartable := pod.DeepCopy()
+	restartable.Spec.RestartPolicy = corev1.RestartPolicyAlways
+	assert.False(t, hc.failedContainer(restartable))
+
+	// A non-matching container name must not be treated as the game container.
+	noMatch := pod.DeepCopy()
+	noMatch.Status.ContainerStatuses[0].Name = "not-the-game-container"
+	assert.False(t, hc.failedContainer(noMatch))
+
+	// A clean exit is a normal shutdown, not a failure - the SucceededController moves it
+	// to Shutdown, and marking it Unhealthy here would block that permanently.
+	cleanExit := pod.DeepCopy()
+	cleanExit.Status.ContainerStatuses[0].State = corev1.ContainerState{
+		Terminated: &corev1.ContainerStateTerminated{ExitCode: 0, Reason: "Completed"}}
+	assert.False(t, hc.failedContainer(cleanExit), "a cleanly exited game container is not failed")
+	assert.False(t, hc.isUnhealthy(cleanExit))
+}
+
 func TestHealthControllerFailedPod(t *testing.T) {
 	t.Parallel()
 
