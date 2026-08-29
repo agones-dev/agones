@@ -250,7 +250,7 @@ func TestHealthControllerSkipUnhealthyGameContainer(t *testing.T) {
 			result, err := hc.skipUnhealthyGameContainer(gs, pod)
 
 			if len(v.expected.err) > 0 {
-				require.EqualError(t, err, v.expected.err)
+				require.ErrorContains(t, err, v.expected.err)
 			} else {
 				assert.NoError(t, err)
 			}
@@ -422,9 +422,7 @@ func TestHealthControllerSyncGameServerUpdateFailed(t *testing.T) {
 
 	err := hc.syncGameServer(ctx, "default/test")
 
-	if assert.Error(t, err) {
-		assert.Equal(t, "error updating GameServer test/default to unhealthy: update-err", err.Error())
-	}
+	assert.ErrorContains(t, err, "error updating GameServer test/default to unhealthy: update-err")
 }
 
 func TestHealthControllerRunNoSideCar(t *testing.T) {

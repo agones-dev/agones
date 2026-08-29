@@ -140,3 +140,19 @@ func TestWrap(t *testing.T) {
 	// matches github.com/pkg/errors.Wrap: nil in, nil out
 	assert.NoError(t, pkg.Wrap(nil, "no capacity"))
 }
+
+func TestWrapf(t *testing.T) {
+	sentinel := errors.New("boom")
+
+	pkg := FromPackage()
+	err := pkg.Wrapf(sentinel, "no capacity on %s", "node-1")
+	assert.EqualError(t, err, thisPkg+": no capacity on node-1: boom")
+	assert.ErrorIs(t, err, sentinel)
+
+	str := FromStruct(&testStruct{})
+	err = str.Wrapf(sentinel, "no capacity on %s", "node-1")
+	assert.EqualError(t, err, thisPkg+".testStruct: no capacity on node-1: boom")
+	assert.ErrorIs(t, err, sentinel)
+
+	assert.NoError(t, pkg.Wrapf(nil, "no capacity on %s", "node-1"))
+}

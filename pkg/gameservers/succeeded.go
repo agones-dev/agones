@@ -24,11 +24,11 @@ import (
 	getterv1 "agones.dev/agones/pkg/client/clientset/versioned/typed/agones/v1"
 	"agones.dev/agones/pkg/client/informers/externalversions"
 	listerv1 "agones.dev/agones/pkg/client/listers/agones/v1"
+	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/logfields"
 	"agones.dev/agones/pkg/util/runtime"
 	"agones.dev/agones/pkg/util/workerqueue"
 	"github.com/heptiolabs/healthcheck"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -52,6 +52,7 @@ type SucceededController struct {
 	gameServerLister listerv1.GameServerLister
 	workerqueue      *workerqueue.WorkerQueue
 	recorder         record.EventRecorder
+	errs             *errors.Errors
 }
 
 // NewSucceededController creates a new SucceededController and sets up event handlers.
@@ -72,6 +73,7 @@ func NewSucceededController(health healthcheck.Handler,
 	}
 
 	c.baseLogger = runtime.NewLoggerWithType(c)
+	c.errs = errors.FromStruct(c)
 	c.workerqueue = workerqueue.NewWorkerQueue(c.syncGameServer, c.baseLogger, logfields.GameServerKey, agones.GroupName+".SucceededController")
 	health.AddLivenessCheck("gameserver-succeeded-workerqueue", healthcheck.Check(c.workerqueue.Healthy))
 
@@ -120,7 +122,7 @@ func NewSucceededController(health healthcheck.Handler,
 func (c *SucceededController) Run(ctx context.Context, workers int) error {
 	c.baseLogger.Debug("Wait for cache sync")
 	if !cache.WaitForCacheSync(ctx.Done(), c.gameServerSynced, c.podSynced) {
-		return errors.New("failed to wait for caches to sync")
+		return c.errs.New("failed to wait for caches to sync")
 	}
 
 	c.workerqueue.Run(ctx, workers)
@@ -136,7 +138,7 @@ func (c *SucceededController) syncGameServer(ctx context.Context, key string) er
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		// don't return an error, as we don't want this retried
-		runtime.HandleError(c.loggerForGameServerKey(key), errors.Wrapf(err, "invalid resource key"))
+		runtime.HandleError(c.loggerForGameServerKey(key), c.errs.Wrap(err, "invalid resource key"))
 		return nil
 	}
 
@@ -144,7 +146,7 @@ func (c *SucceededController) syncGameServer(ctx context.Context, key string) er
 	pod, err := c.podLister.Pods(namespace).Get(name)
 	if err != nil {
 		if !k8serrors.IsNotFound(err) {
-			return errors.Wrapf(err, "error retrieving Pod %s from namespace %s", name, namespace)
+			return c.errs.Wrapf(err, "error retrieving Pod %s from namespace %s", name, namespace)
 		}
 		// If the pod doesn't exist, we don't need to do anything
 		return nil
@@ -163,7 +165,7 @@ func (c *SucceededController) syncGameServer(ctx context.Context, key string) er
 			c.loggerForGameServerKey(key).Debug("GameServer is no longer available for syncing")
 			return nil
 		}
-		return errors.Wrapf(err, "error retrieving GameServer %s from namespace %s", name, namespace)
+		return c.errs.Wrapf(err, "error retrieving GameServer %s from namespace %s", name, namespace)
 	}
 
 	// already on the way out, so no need to do anything.
@@ -176,7 +178,7 @@ func (c *SucceededController) syncGameServer(ctx context.Context, key string) er
 	gsCopy.Status.State = agonesv1.GameServerStateShutdown
 	gs, err = c.gameServerGetter.GameServers(gsCopy.ObjectMeta.Namespace).Update(ctx, gsCopy, metav1.UpdateOptions{})
 	if err != nil {
-		return errors.Wrap(err, "error updating GameServer to Shutdown")
+		return c.errs.Wrap(err, "error updating GameServer to Shutdown")
 	}
 
 	c.recorder.Event(gs, corev1.EventTypeNormal, string(gs.Status.State), "Pod is in Succeeded state")
