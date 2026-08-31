@@ -86,7 +86,7 @@ func TestWorkerQueueHealthy(t *testing.T) {
 
 		return false, nil
 	})
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	close(done) // Ensure the handler no longer blocks.
 	cancel()    // Stop the worker queue.
@@ -100,7 +100,7 @@ func TestWorkerQueueHealthy(t *testing.T) {
 
 		return false, nil
 	})
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 }
 
 func TestWorkQueueHealthCheck(t *testing.T) {
@@ -126,13 +126,13 @@ func TestWorkQueueHealthCheck(t *testing.T) {
 		logrus.WithField("runcount", rc).Info("Checking run count before liveness check")
 		return rc == workersCount, nil
 	})
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	f := func(t *testing.T, url string, status int) {
 		// sometimes the http server takes a bit to start up
 		err := wait.PollUntilContextTimeout(context.Background(), time.Second, 5*time.Second, true, func(_ context.Context) (done bool, err error) {
 			resp, err := http.Get(url)
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 			defer resp.Body.Close() // nolint: errcheck
 
 			if status != resp.StatusCode {
@@ -140,14 +140,14 @@ func TestWorkQueueHealthCheck(t *testing.T) {
 			}
 
 			body, err := io.ReadAll(resp.Body)
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 			assert.Equal(t, status, resp.StatusCode)
 			assert.Equal(t, []byte("{}\n"), body)
 
 			return true, nil
 		})
 
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 	}
 
 	url := server.URL + "/live"
@@ -160,7 +160,7 @@ func TestWorkQueueHealthCheck(t *testing.T) {
 		logrus.WithField("runcount", rc).Info("Checking run count")
 		return rc == 0, nil
 	})
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	// gate
 	assert.Error(t, wq.Healthy())

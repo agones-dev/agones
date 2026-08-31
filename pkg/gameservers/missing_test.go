@@ -215,7 +215,7 @@ func TestMissingPodControllerRun(t *testing.T) {
 
 	go func() {
 		err := c.Run(ctx, 1)
-		assert.Nil(t, err, "Run should not error")
+		assert.NoError(t, err, "Run should not error")
 	}()
 
 	noChange := func() {

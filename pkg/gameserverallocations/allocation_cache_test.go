@@ -177,10 +177,10 @@ func TestAllocationCacheListSortedGameServers(t *testing.T) {
 
 			// This call initializes the cache
 			err := cache.syncCache()
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 
 			err = cache.counter.Run(ctx, 0)
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 
 			list := cache.ListSortedGameServers(v.gsa)
 
@@ -471,10 +471,10 @@ func TestListSortedGameServersPriorities(t *testing.T) {
 
 			// This call initializes the cache
 			err := cache.syncCache()
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 
 			err = cache.counter.Run(ctx, 0)
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 
 			got := cache.ListSortedGameServersPriorities(testScenario.gsa)
 
@@ -505,12 +505,12 @@ func TestAllocatorRunCacheSync(t *testing.T) {
 			return count == expected, nil
 		})
 
-		assert.NoError(t, err, fmt.Sprintf("Should be %d values", expected))
+		assert.NoError(t, err, "Should be %d values", expected)
 	}
 
 	go func() {
 		err := cache.Run(ctx)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 	}()
 
 	gs := agonesv1.GameServer{

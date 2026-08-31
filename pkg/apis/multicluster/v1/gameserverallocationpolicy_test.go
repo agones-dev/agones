@@ -336,7 +336,7 @@ func TestConnectionInfoIterator_SameClustersAndPriorities(t *testing.T) {
 	res := iterator.priorityToCluster[444]["cluster-name"]
 
 	// check an internal slice of policies
-	if assert.Equal(t, 2, len(res)) {
+	if assert.Len(t, res, 2) {
 		assert.Equal(t, "cluster-name", res[0].Spec.ConnectionInfo.ClusterName)
 		assert.Equal(t, int32(444), res[0].Spec.Priority)
 		assert.Equal(t, "cluster-name", res[1].Spec.ConnectionInfo.ClusterName)

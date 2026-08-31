@@ -200,8 +200,8 @@ func TestAllocatorWithMatchExpressions(t *testing.T) {
 		response, err := grpcClient.Allocate(ctx, request)
 		require.NoError(c, err, "failing Allocate request")
 		helper.ValidateAllocatorResponse(t, response)
-		require.Equal(t, response.Metadata.Labels["tier"], "staging")
-		require.Equal(t, response.Metadata.Labels["gslabel"], "allocatedbytest")
+		require.Equal(t, "staging", response.Metadata.Labels["tier"])
+		require.Equal(t, "allocatedbytest", response.Metadata.Labels["gslabel"])
 
 		// Attempt allocation with NotIn on the same label value — should find no match.
 		noMatchRequest := &pb.AllocationRequest{
@@ -229,7 +229,7 @@ func TestRestAllocatorWithDeprecatedRequired(t *testing.T) {
 	tlsCA := helper.RefreshAllocatorTLSCerts(ctx, t, ip, framework)
 
 	flt, err := helper.CreateFleet(ctx, framework.Namespace, framework)
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return
 	}
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
@@ -243,7 +243,7 @@ func TestRestAllocatorWithDeprecatedRequired(t *testing.T) {
 		Metadata:                     &pb.MetaPatch{Labels: map[string]string{"gslabel": "allocatedbytest"}},
 	}
 	tlsCfg, err := helper.GetTLSConfig(ctx, allocatorClientSecretNamespace, allocatorClientSecretName, tlsCA, framework)
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return
 	}
 	client := &http.Client{
@@ -252,11 +252,11 @@ func TestRestAllocatorWithDeprecatedRequired(t *testing.T) {
 		},
 	}
 	jsonRes, err := json.Marshal(request)
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return
 	}
 	req, err := http.NewRequest("POST", "https://"+requestURL+"/gameserverallocation", bytes.NewBuffer(jsonRes))
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		logrus.WithError(err).Info("failed to create rest request")
 		return
 	}
@@ -361,8 +361,8 @@ func TestAllocatorWithCountersAndLists(t *testing.T) {
 		assert.Equal(c, int64(1), response.GetCounters()["players"].Count.GetValue())
 		assert.Contains(c, response.GetLists(), "rooms")
 		assert.Equal(c, int64(10), response.GetLists()["rooms"].Capacity.GetValue())
-		assert.EqualValues(c, request.Lists["rooms"].AddValues, response.GetLists()["rooms"].Values)
-		assert.NotEqualValues(c, request.Lists["rooms"].DeleteValues, response.GetLists()["rooms"].Values)
+		assert.Equal(c, request.Lists["rooms"].AddValues, response.GetLists()["rooms"].Values)
+		assert.NotEqual(c, request.Lists["rooms"].DeleteValues, response.GetLists()["rooms"].Values)
 	}, 5*time.Minute, 2*time.Second)
 }
 
@@ -426,7 +426,7 @@ func TestRestAllocatorWithCountersAndLists(t *testing.T) {
 	}
 	err = wait.PollUntilContextTimeout(context.Background(), 2*time.Second, 5*time.Minute, true, func(ctx context.Context) (bool, error) {
 		tlsCfg, err := helper.GetTLSConfig(ctx, allocatorClientSecretNamespace, allocatorClientSecretName, tlsCA, framework)
-		if !assert.Nil(t, err) {
+		if !assert.NoError(t, err) {
 			return false, err
 		}
 		client := &http.Client{
@@ -435,11 +435,11 @@ func TestRestAllocatorWithCountersAndLists(t *testing.T) {
 			},
 		}
 		jsonRes, err := protojson.Marshal(request)
-		if !assert.Nil(t, err) {
+		if !assert.NoError(t, err) {
 			return false, nil
 		}
 		req, err := http.NewRequest("POST", "https://"+requestURL+"/gameserverallocation", bytes.NewBuffer(jsonRes))
-		if !assert.Nil(t, err) {
+		if !assert.NoError(t, err) {
 			return false, nil
 		}
 		resp, err := client.Do(req)
@@ -491,7 +491,7 @@ func TestRestAllocatorWithSelectors(t *testing.T) {
 		Metadata:            &pb.MetaPatch{Labels: map[string]string{"gslabel": "allocatedbytest", "blue-frog.fred_thing": "test.dog_fred-blue"}},
 	}
 	tlsCfg, err := helper.GetTLSConfig(ctx, allocatorClientSecretNamespace, allocatorClientSecretName, tlsCA, framework)
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return
 	}
 	client := &http.Client{
@@ -500,11 +500,11 @@ func TestRestAllocatorWithSelectors(t *testing.T) {
 		},
 	}
 	jsonRes, err := json.Marshal(request)
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return
 	}
 	req, err := http.NewRequest("POST", "https://"+requestURL+"/gameserverallocation", bytes.NewBuffer(jsonRes))
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		logrus.WithError(err).Info("failed to create rest request")
 		return
 	}
@@ -556,7 +556,7 @@ func TestAllocatorCrossNamespace(t *testing.T) {
 
 	namespaceB := fmt.Sprintf("allocator-b-%s", uuid.NewUUID())
 	err := framework.CreateNamespace(namespaceB)
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return
 	}
 	defer func() {
@@ -586,7 +586,7 @@ func TestAllocatorCrossNamespace(t *testing.T) {
 
 	// Create a fleet in namespace B. Allocation should not happen in A according to policy
 	flt, err := helper.CreateFleet(ctx, namespaceB, framework)
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return
 	}
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))

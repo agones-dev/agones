@@ -42,7 +42,7 @@ func TestSDK(t *testing.T) {
 	assert.False(t, sm.hm.healthy)
 
 	err := s.Ready()
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.True(t, sm.ready)
 	assert.False(t, sm.shutdown)
 
@@ -51,7 +51,7 @@ func TestSDK(t *testing.T) {
 	assert.EqualValues(t, 12, sm.reserved.Seconds)
 
 	err = s.Health()
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.True(t, sm.hm.healthy)
 
 	err = s.Allocate()
@@ -59,12 +59,12 @@ func TestSDK(t *testing.T) {
 	assert.True(t, sm.allocated)
 
 	err = s.Shutdown()
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.True(t, sm.ready)
 	assert.True(t, sm.shutdown)
 
 	gs, err := s.GameServer()
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.NotNil(t, gs)
 }
 
@@ -85,7 +85,7 @@ func TestSDKWatchGameServer(t *testing.T) {
 		assert.Equal(t, fixture.ObjectMeta.Name, gs.ObjectMeta.Name)
 		updated <- struct{}{}
 	})
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	sm.wm.msgs <- fixture
 
@@ -108,7 +108,7 @@ func TestSDKSetLabel(t *testing.T) {
 
 	expected := "bar"
 	err := s.SetLabel("foo", expected)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, expected, sm.labels["agones.dev/sdk-foo"])
 }
 
@@ -124,7 +124,7 @@ func TestSDKSetAnnotation(t *testing.T) {
 
 	expected := "bar"
 	err := s.SetAnnotation("foo", expected)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, expected, sm.annotations["agones.dev/sdk-foo"])
 }
 

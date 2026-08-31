@@ -65,7 +65,7 @@ func TestSyncPodPortsToGameServer(t *testing.T) {
 			oldPod := tc.pod.DeepCopy()
 			err := (&gkeAutopilot{}).SyncPodPortsToGameServer(tc.gs, tc.pod)
 			if tc.wantErr {
-				assert.NotNil(t, err)
+				assert.Error(t, err)
 				return
 			}
 			if assert.NoError(t, err) {

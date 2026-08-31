@@ -43,7 +43,7 @@ func TestUDPServerVisit(t *testing.T) {
 
 	fc := testclocks.NewFakeClock(time.Now())
 	u, err := defaultFixture(fc)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	defer u.close()
 
 	// gate
@@ -75,7 +75,7 @@ func TestUDPServerCleanup(t *testing.T) {
 
 	fc := testclocks.NewFakeClock(time.Now())
 	u, err := defaultFixture(fc)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	defer u.close()
 
 	// gate
@@ -102,7 +102,7 @@ func TestUDPServerHealth(t *testing.T) {
 
 	fc := testclocks.NewFakeClock(time.Now())
 	u, err := defaultFixture(fc)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	defer u.close()
 
 	assert.Error(t, u.Health())
@@ -118,7 +118,7 @@ func TestUDPServerHealth(t *testing.T) {
 		return u.Health() != nil, nil
 	})
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 }
 
 func defaultFixture(cl clock.WithTickerAndDelayedExecution) (*udpServer, error) {

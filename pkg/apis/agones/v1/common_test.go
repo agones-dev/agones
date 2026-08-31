@@ -163,7 +163,7 @@ func TestAllocationOverflowCountMatches(t *testing.T) {
 
 			count, rest := ao.CountMatches(list)
 			assert.Equal(t, v.expected.count, count, "count")
-			assert.Equal(t, v.expected.rest, len(rest), "rest")
+			assert.Len(t, rest, v.expected.rest, "rest")
 			for _, gs := range rest {
 				assert.Equal(t, GameServerStateAllocated, gs.Status.State)
 			}

@@ -181,6 +181,7 @@ func NewLocalSDKServer(filePath string, testSdkName string) (*LocalSDKServer, er
 // GenerateUID - generate gameserver UID at random for testing
 func (l *LocalSDKServer) GenerateUID() {
 	// Generating Random UID
+	//nolint:gosec // G404: a stand-in UID for local testing, never a security boundary.
 	seededRand := rand.New(
 		rand.NewSource(time.Now().UnixNano()))
 	UID := fmt.Sprintf("%d", seededRand.Int())
@@ -298,7 +299,7 @@ func (l *LocalSDKServer) Shutdown(context.Context, *sdk.Empty) (*sdk.Empty, erro
 func (l *LocalSDKServer) Health(stream sdk.SDK_HealthServer) error {
 	for {
 		_, err := stream.Recv()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			l.logger.Info("Health stream closed.")
 			return stream.SendAndClose(&sdk.Empty{})
 		}
@@ -743,7 +744,7 @@ func (l *LocalSDKServer) UpdateList(_ context.Context, in *beta.UpdateListReques
 	if GameServerListMaxCapacity == 0 {
 		err := l.GsLocalListsMaxItems()
 		if err != nil {
-			return nil, fmt.Errorf("%v", err)
+			return nil, fmt.Errorf("%w", err)
 		}
 	}
 

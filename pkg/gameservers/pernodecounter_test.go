@@ -15,6 +15,7 @@
 package gameservers
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	k8stesting "k8s.io/client-go/testing"
 )
@@ -34,6 +36,58 @@ const (
 	name1     = "node1"
 	name2     = "node2"
 )
+
+func TestPerNodeCounterMapLeak(t *testing.T) {
+	t.Parallel()
+
+	pnc, m := newFakePerNodeCounter()
+
+	processedLen := func() int {
+		pnc.countMutex.RLock()
+		defer pnc.countMutex.RUnlock()
+		return len(pnc.processed)
+	}
+
+	fakeWatch := watch.NewFake()
+	m.AgonesClient.AddWatchReactor("gameservers", k8stesting.DefaultWatchReactor(fakeWatch, nil))
+
+	_, cancel := agtesting.StartInformers(m)
+	defer cancel()
+
+	assert.Empty(t, pnc.Counts())
+
+	gss := make([]*agonesv1.GameServer, 0)
+
+	gs := &agonesv1.GameServer{
+		ObjectMeta: metav1.ObjectMeta{Name: "gs", Namespace: defaultNs, UID: "uid-gs", ResourceVersion: "1"},
+		Status: agonesv1.GameServerStatus{
+			State: agonesv1.GameServerStateReady, NodeName: name1,
+		},
+	}
+
+	for i := range 10 {
+		name := fmt.Sprintf("gs%d", i)
+		uid := fmt.Sprintf("uid-gs%d", i)
+		gs.ObjectMeta.Name = name
+		gs.ObjectMeta.UID = types.UID(uid)
+
+		cgs := gs.DeepCopy()
+		fakeWatch.Add(cgs)
+		gss = append(gss, cgs)
+	}
+
+	require.Eventuallyf(t, func() bool {
+		return processedLen() == 10
+	}, 5*time.Second, time.Second, "len should be 10, instead: %v", processedLen())
+
+	for _, gs := range gss {
+		fakeWatch.Delete(gs)
+	}
+
+	require.Eventuallyf(t, func() bool {
+		return processedLen() == 0
+	}, 5*time.Second, time.Second, "len should be 0, instead: %v", processedLen())
+}
 
 func TestPerNodeCounterGameServerEvents(t *testing.T) {
 	t.Parallel()
@@ -79,7 +133,7 @@ func TestPerNodeCounterGameServerEvents(t *testing.T) {
 	require.Eventuallyf(t, func() bool {
 		counts = pnc.Counts()
 		return len(counts) == 1 && int64(0) == counts[name1].Ready
-	}, 5*time.Second, time.Second, "Ready should be 0, but is instead", counts[name1].Ready)
+	}, 5*time.Second, time.Second, "Ready should be 0, but is instead %d", counts[name1].Ready)
 	assert.Equal(t, int64(1), counts[name1].Allocated)
 
 	gs.Status.State = agonesv1.GameServerStateShutdown
@@ -88,7 +142,7 @@ func TestPerNodeCounterGameServerEvents(t *testing.T) {
 	require.Eventuallyf(t, func() bool {
 		counts = pnc.Counts()
 		return len(counts) == 1 && int64(0) == counts[name1].Allocated
-	}, 5*time.Second, time.Second, "Allocated should be 0, but is instead", counts[name1].Allocated)
+	}, 5*time.Second, time.Second, "Allocated should be 0, but is instead %d", counts[name1].Allocated)
 	assert.Equal(t, int64(0), counts[name1].Ready)
 
 	gs.ObjectMeta.Name = "gs2"
@@ -118,7 +172,7 @@ func TestPerNodeCounterGameServerEvents(t *testing.T) {
 	require.Eventuallyf(t, func() bool {
 		counts = pnc.Counts()
 		return len(counts) == 2 && int64(1) == counts[name2].Allocated
-	}, 5*time.Second, time.Second, "Allocated should be 1, but is instead", counts[name2].Allocated)
+	}, 5*time.Second, time.Second, "Allocated should be 1, but is instead %d", counts[name2].Allocated)
 	assert.Equal(t, int64(0), counts[name1].Ready)
 	assert.Equal(t, int64(0), counts[name1].Allocated)
 	assert.Equal(t, int64(1), counts[name2].Ready)
