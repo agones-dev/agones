@@ -102,12 +102,12 @@ func TestFleetStrategyValidation(t *testing.T) {
 	assert.NoError(t, err)
 	// func to check that we receive an expected error
 	verifyErr := func(err error) {
-		assert.Error(t, err)
+		require.Error(t, err)
 		var statusErr *k8serrors.StatusError
 		ok := errors.As(err, &statusErr)
 		assert.True(t, ok)
 		fmt.Println(statusErr)
-		assert.Len(t, statusErr.Status().Details.Causes, 1)
+		require.Len(t, statusErr.Status().Details.Causes, 1)
 		assert.Equal(t, metav1.CauseTypeFieldValueNotSupported, statusErr.Status().Details.Causes[0].Type)
 		assert.Contains(t, statusErr.Status().Details.Causes[0].Message, `supported values: "RollingUpdate", "Recreate"`)
 	}
