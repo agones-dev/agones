@@ -421,6 +421,8 @@ func wrapPatchKeys(yamlContent string) string {
 		out = append(out, "{{- if .includeKubernetesPatchKeys }}")
 		out = append(out, lines[i:j]...)
 		out = append(out, "{{- end }}")
+		// We'll continue from j, since this is where we ended up after at the end of the j loop
+		// which looked for the closing line for the template condition.
 		i = j - 1
 	}
 
