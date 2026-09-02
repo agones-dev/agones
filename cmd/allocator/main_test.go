@@ -64,7 +64,7 @@ func TestAllocateHandler(t *testing.T) {
 	if !assert.True(t, ok) {
 		return
 	}
-	assert.Equal(t, st.Code(), codes.Aborted)
+	assert.Equal(t, codes.Aborted, st.Code())
 }
 
 func TestAllocateHandlerReturnsError(t *testing.T) {
@@ -86,22 +86,22 @@ func TestAllocateHandlerReturnsError(t *testing.T) {
 func TestGetTlsCert(t *testing.T) {
 	t.Parallel()
 	cert1, err := tls.X509KeyPair(serverCert1, serverKey1)
-	assert.Nil(t, err, "expected (serverCert1, serverKey1) to create a cert")
+	assert.NoError(t, err, "expected (serverCert1, serverKey1) to create a cert")
 
 	cert2, err := tls.X509KeyPair(serverCert2, serverKey2)
-	assert.Nil(t, err, "expected (serverCert2, serverKey2) to create a cert")
+	assert.NoError(t, err, "expected (serverCert2, serverKey2) to create a cert")
 
 	h := serviceHandler{
 		tlsCert: &cert1,
 	}
 
 	retrievedCert1, err := h.getTLSCert(nil)
-	assert.Nil(t, err, "expected getTlsCert() to not fail")
+	assert.NoError(t, err, "expected getTlsCert() to not fail")
 	assert.Equal(t, cert1.Certificate, retrievedCert1.Certificate, "expected the retrieved cert to be equal to the original one")
 
 	h.tlsCert = &cert2
 	retrievedCert2, err := h.getTLSCert(nil)
-	assert.Nil(t, err, "expected getTlsCert() to not fail")
+	assert.NoError(t, err, "expected getTlsCert() to not fail")
 	assert.Equal(t, cert2.Certificate, retrievedCert2.Certificate, "expected the retrieved cert to be equal to the original one")
 }
 
@@ -174,7 +174,7 @@ func TestVerifyClientCertificateSucceeds(t *testing.T) {
 
 	block, _ := pem.Decode(crt)
 	input := [][]byte{block.Bytes}
-	assert.Nil(t, h.verifyClientCertificate(input, nil),
+	assert.NoError(t, h.verifyClientCertificate(input, nil),
 		"verifyClientCertificate failed.")
 }
 
@@ -197,12 +197,12 @@ func TestGettingCaCert(t *testing.T) {
 	t.Parallel()
 
 	file, err := os.CreateTemp(".", "*.crt")
-	if assert.Nil(t, err) {
+	if assert.NoError(t, err) {
 		defer os.Remove(file.Name()) // nolint: errcheck
 		_, err = file.WriteString(clientCert)
-		if assert.Nil(t, err) {
+		if assert.NoError(t, err) {
 			certPool, err := getCACertPool("./")
-			if assert.Nil(t, err) {
+			if assert.NoError(t, err) {
 				// linting complaints certPool.Subjects() has been deprecated since Go 1.18.
 				// But since this cert doesn't come from SystemCertPool, it doesn't seem behavior
 				// should be impacted. So marking the lint as ignored.

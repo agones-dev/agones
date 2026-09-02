@@ -71,7 +71,7 @@ func TestFleetAutoscalerValidateUpdate(t *testing.T) {
 		fas.Spec.Policy.Buffer.BufferSize = intstr.FromString("20%")
 		causes := fas.Validate()
 
-		assert.Len(t, causes, 0)
+		assert.Empty(t, causes)
 	})
 
 	t.Run("bufferSize bad percent", func(t *testing.T) {
@@ -132,7 +132,7 @@ func TestFleetAutoscalerWebhookValidateUpdate(t *testing.T) {
 		fas := webhookFixture()
 		causes := fas.Validate()
 
-		assert.Len(t, causes, 0)
+		assert.Empty(t, causes)
 	})
 
 	t.Run("good url value", func(t *testing.T) {
@@ -142,7 +142,7 @@ func TestFleetAutoscalerWebhookValidateUpdate(t *testing.T) {
 		fas.Spec.Policy.Webhook.Service = nil
 		causes := fas.Validate()
 
-		assert.Len(t, causes, 0)
+		assert.Empty(t, causes)
 	})
 
 	t.Run("bad URL and service value", func(t *testing.T) {
@@ -176,7 +176,7 @@ func TestFleetAutoscalerWebhookValidateUpdate(t *testing.T) {
 		fas.Spec.Policy.Webhook.CABundle = []byte(goodCaBundle)
 
 		causes := fas.Validate()
-		assert.Len(t, causes, 0)
+		assert.Empty(t, causes)
 	})
 
 	t.Run("https url and invalid CABundle value", func(t *testing.T) {
@@ -199,7 +199,7 @@ func TestFleetAutoscalerWebhookValidateUpdate(t *testing.T) {
 		fas.Spec.Policy.Webhook.CABundle = nil
 
 		causes := fas.Validate()
-		assert.Len(t, causes, 0)
+		assert.Empty(t, causes)
 	})
 
 	t.Run("bad url value", func(t *testing.T) {

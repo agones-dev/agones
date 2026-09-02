@@ -72,7 +72,7 @@ func TestFindGameServerForAllocationPacked(t *testing.T) {
 				emptyGSA.ApplyDefaults()
 				emptyGSA.Converter()
 				allErrs := emptyGSA.Validate()
-				require.Len(t, allErrs, 0)
+				require.Empty(t, allErrs)
 				require.Len(t, emptyGSA.Spec.Selectors, 1)
 
 				gs, index, err := findGameServerForAllocation(emptyGSA, list)
@@ -190,7 +190,7 @@ func TestFindGameServerForAllocationPacked(t *testing.T) {
 				assert.Len(t, list, 8)
 
 				gs, index, err := findGameServerForAllocation(gsa, list)
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 				assert.Equal(t, "node2", gs.Status.NodeName)
 				assert.Equal(t, gs, list[index])
 				assert.Equal(t, agonesv1.GameServerStateReady, gs.Status.State)
@@ -207,11 +207,11 @@ func TestFindGameServerForAllocationPacked(t *testing.T) {
 
 			gsa.ApplyDefaults()
 			allErrs := gsa.Validate()
-			require.Len(t, allErrs, 0)
+			require.Empty(t, allErrs)
 
 			twoLabelsGsa.ApplyDefaults()
 			allErrs = twoLabelsGsa.Validate()
-			require.Len(t, allErrs, 0)
+			require.Empty(t, allErrs)
 
 			controller, m := newFakeController()
 			c := controller.allocator.allocationCache
@@ -225,10 +225,10 @@ func TestFindGameServerForAllocationPacked(t *testing.T) {
 
 			// This call initializes the cache
 			err := c.syncCache()
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 
 			err = c.counter.Run(ctx, 0)
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 
 			list := c.ListSortedGameServers(v.gsa)
 			v.test(t, list)
@@ -260,7 +260,7 @@ func TestFindGameServerForAllocationDistributed(t *testing.T) {
 	}
 	gsa.ApplyDefaults()
 	allErrs := gsa.Validate()
-	require.Len(t, allErrs, 0)
+	require.Empty(t, allErrs)
 
 	gsList := []agonesv1.GameServer{
 		{ObjectMeta: metav1.ObjectMeta{Name: "gs1", Namespace: defaultNs, Labels: labels},
@@ -288,10 +288,10 @@ func TestFindGameServerForAllocationDistributed(t *testing.T) {
 
 	// This call initializes the cache
 	err := c.syncCache()
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	err = c.counter.Run(ctx, 0)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	list := c.ListSortedGameServers(gsa)
 	assert.Len(t, list, 6)

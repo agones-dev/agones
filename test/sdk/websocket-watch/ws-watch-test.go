@@ -54,7 +54,7 @@ func main() {
 	}
 	response, respErr := httpClient.Do(req)
 	if respErr != nil {
-		log.Fatalf("Could not post reserve request: %v", reqErr) // nolint: gocritic
+		log.Fatalf("Could not post reserve request: %v", respErr) // nolint: gocritic
 	}
 	defer response.Body.Close() // nolint: errcheck
 

@@ -24,11 +24,11 @@ import (
 	getterv1 "agones.dev/agones/pkg/client/clientset/versioned/typed/agones/v1"
 	"agones.dev/agones/pkg/client/informers/externalversions"
 	listerv1 "agones.dev/agones/pkg/client/listers/agones/v1"
+	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/logfields"
 	"agones.dev/agones/pkg/util/runtime"
 	"agones.dev/agones/pkg/util/workerqueue"
 	"github.com/heptiolabs/healthcheck"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -47,6 +47,7 @@ import (
 // similar type conditions.
 type HealthController struct {
 	baseLogger       *logrus.Entry
+	errs             *errors.Errors
 	podSynced        cache.InformerSynced
 	podLister        corelisterv1.PodLister
 	gameServerSynced cache.InformerSynced
@@ -78,6 +79,7 @@ func NewHealthController(
 	}
 
 	hc.baseLogger = runtime.NewLoggerWithType(hc)
+	hc.errs = errors.FromStruct(hc)
 	hc.workerqueue = workerqueue.NewWorkerQueue(hc.syncGameServer, hc.baseLogger, logfields.GameServerKey, agones.GroupName+".HealthController")
 	health.AddLivenessCheck("gameserver-health-workerqueue", healthcheck.Check(hc.workerqueue.Healthy))
 
@@ -156,13 +158,35 @@ func (hc *HealthController) evictedPod(pod *corev1.Pod) bool {
 // failedContainer checks each container, and determines if the main gameserver
 // container has failed
 func (hc *HealthController) failedContainer(pod *corev1.Pod) bool {
-	// return false, since there is no gameserver restart before ready. When this graduates, you can delete this
-	// whole function.
+	container := pod.Annotations[agonesv1.GameServerContainerAnnotation]
+
+	// With SidecarContainers enabled, failedPod() normally catches a dead game container via
+	// the Failed Pod phase - but a Pod is only Failed once *every* container has terminated,
+	// so a long-lived non-sidecar container in the Pod can hold it in the Running phase after
+	// the game container has died. Since the Pod is RestartPolicy: Never, a game container
+	// that terminated with a non-zero exit code can never come back, so report it as failed
+	// directly. A zero exit code is a normal shutdown, handled by the SucceededController.
 	if runtime.FeatureEnabled(runtime.FeatureSidecarContainers) {
+		if pod.Spec.RestartPolicy != corev1.RestartPolicyNever {
+			// Kubernetes may still restart the container; leave the lifecycle to it.
+			return false
+		}
+
+		for _, cs := range pod.Status.ContainerStatuses {
+			if cs.Name == container {
+				if cs.State.Terminated != nil && cs.State.Terminated.ExitCode != 0 {
+					hc.baseLogger.WithField("gs", pod.ObjectMeta.Name).
+						WithField("containerStatuses", pod.Status.ContainerStatuses).
+						WithField("container", container).
+						Debug("Game server container terminated with a non-zero exit code and cannot restart")
+					return true
+				}
+				return false
+			}
+		}
 		return false
 	}
 
-	container := pod.Annotations[agonesv1.GameServerContainerAnnotation]
 	for _, cs := range pod.Status.ContainerStatuses {
 		if cs.Name == container {
 			// sometimes on a restart, the cs.State can be running and the last state will be merged
@@ -181,7 +205,7 @@ func (hc *HealthController) failedContainer(pod *corev1.Pod) bool {
 func (hc *HealthController) Run(ctx context.Context, workers int) error {
 	hc.baseLogger.Debug("Wait for cache sync")
 	if !cache.WaitForCacheSync(ctx.Done(), hc.gameServerSynced, hc.podSynced) {
-		return errors.New("failed to wait for caches to sync")
+		return hc.errs.New("failed to wait for caches to sync")
 	}
 
 	hc.workerqueue.Run(ctx, workers)
@@ -209,7 +233,7 @@ func (hc *HealthController) syncGameServer(ctx context.Context, key string) erro
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		// don't return an error, as we don't want this retried
-		runtime.HandleError(hc.loggerForGameServerKey(key), errors.Wrapf(err, "invalid resource key"))
+		runtime.HandleError(hc.loggerForGameServerKey(key), hc.errs.Wrap(err, "invalid resource key"))
 		return nil
 	}
 
@@ -219,7 +243,7 @@ func (hc *HealthController) syncGameServer(ctx context.Context, key string) erro
 			hc.loggerForGameServerKey(key).Debug("GameServer is no longer available for syncing")
 			return nil
 		}
-		return errors.Wrapf(err, "error retrieving GameServer %s from namespace %s", name, namespace)
+		return hc.errs.Wrapf(err, "error retrieving GameServer %s from namespace %s", name, namespace)
 	}
 
 	// at this point we don't care, we're already Unhealthy / deleting
@@ -232,7 +256,7 @@ func (hc *HealthController) syncGameServer(ctx context.Context, key string) erro
 	if err != nil {
 		if !k8serrors.IsNotFound(err) {
 			// If the pod exists but there is an error, go back into the queue.
-			return errors.Wrapf(err, "error retrieving Pod %s for GameServer to check status", gs.ObjectMeta.Name)
+			return hc.errs.Wrapf(err, "error retrieving Pod %s for GameServer to check status", gs.ObjectMeta.Name)
 		}
 		hc.baseLogger.WithField("gs", gs.ObjectMeta.Name).Debug("Could not find Pod")
 	}
@@ -255,7 +279,7 @@ func (hc *HealthController) syncGameServer(ctx context.Context, key string) erro
 	gsCopy.Status.State = agonesv1.GameServerStateUnhealthy
 
 	if _, err := hc.gameServerGetter.GameServers(gs.ObjectMeta.Namespace).Update(ctx, gsCopy, metav1.UpdateOptions{}); err != nil {
-		return errors.Wrapf(err, "error updating GameServer %s/%s to unhealthy", gs.ObjectMeta.Name, gs.ObjectMeta.Namespace)
+		return hc.errs.Wrapf(err, "error updating GameServer %s/%s to unhealthy", gs.ObjectMeta.Name, gs.ObjectMeta.Namespace)
 	}
 
 	hc.recorder.Event(gs, corev1.EventTypeWarning, string(gsCopy.Status.State), "Issue with Gameserver pod")
@@ -276,9 +300,15 @@ func (hc *HealthController) skipUnhealthyGameContainer(gs *agonesv1.GameServer, 
 		return false, nil
 	}
 
-	// if Sidecar is enabled, always return false, since there is no skip - it's just whatever K8s/Agones wants tso do.
+	// if Sidecar is enabled, there is no skip once the GameServer is past Ready - it's just
+	// whatever K8s/Agones wants to do. Before Ready we still skip on a game container
+	// failure, matching the non-sidecar path below: a container that dies during startup is
+	// left to normal Kubernetes handling rather than immediately failing the GameServer.
 	// on move to stable, this function can be deleted.
 	if runtime.FeatureEnabled(runtime.FeatureSidecarContainers) {
+		if gs.IsBeforeReady() {
+			return hc.failedContainer(pod), nil
+		}
 		return false, nil
 	}
 
@@ -288,7 +318,7 @@ func (hc *HealthController) skipUnhealthyGameContainer(gs *agonesv1.GameServer, 
 	// in which case, send it back to the queue to try again.
 	gsReadyContainerID := gs.ObjectMeta.Annotations[agonesv1.GameServerReadyContainerIDAnnotation]
 	if pod.ObjectMeta.Annotations[agonesv1.GameServerReadyContainerIDAnnotation] != gsReadyContainerID {
-		return false, workerqueue.NewTraceError(errors.Errorf("pod and gameserver %s data are out of sync, retrying", gs.ObjectMeta.Name))
+		return false, workerqueue.NewTraceError(hc.errs.Errorf("pod and gameserver %s data are out of sync, retrying", gs.ObjectMeta.Name))
 	}
 
 	if gs.IsBeforeReady() {

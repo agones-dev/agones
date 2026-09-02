@@ -187,7 +187,7 @@ func (ext *Extensions) creationMutationHandler(review admissionv1.AdmissionRevie
 	if err != nil {
 		// If the JSON is invalid during mutation, fall through to validation. This allows OpenAPI schema validation
 		// to proceed, resulting in a more user friendly error message.
-		return review, nil
+		return review, nil //nolint:nilerr // deliberate: see comment above.
 	}
 
 	// This is the main logic of this function
@@ -519,9 +519,11 @@ func (c *Controller) rollingUpdateActive(fleet *agonesv1.Fleet, active *agonesv1
 	}
 
 	// if the active spec replicas are greater than or equal the fleet spec replicas, then we don't
-	// need to do another rolling update upwards.
+	// need to do another rolling update upwards. Clamp at zero: when the Allocated GameServers in
+	// the inactive GameServerSets outnumber the fleet's target, this subtraction goes negative and
+	// the resulting GameServerSet update is rejected by the API server, aborting every fleet sync.
 	if active.Spec.Replicas >= (fleet.Spec.Replicas - sumAllocated) {
-		return fleet.Spec.Replicas - sumAllocated, nil
+		return fleet.LowerBoundReplicas(fleet.Spec.Replicas - sumAllocated), nil
 	}
 
 	r, err := intstr.GetValueFromIntOrPercent(fleet.Spec.Strategy.RollingUpdate.MaxSurge, int(fleet.Spec.Replicas), true)

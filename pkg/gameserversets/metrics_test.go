@@ -80,7 +80,7 @@ func TestGSSMetrics(t *testing.T) {
 	defer cancel()
 
 	err := c.addMoreGameServers(ctx, gsSet, expected)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, expected, count)
 	agtesting.AssertEventContains(t, m.FakeRecorder.Events, "SuccessfulCreate")
 

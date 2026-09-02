@@ -41,14 +41,14 @@ func testHTTPHealth(t *testing.T, url string, expectedResponse string, expectedS
 		if resp != nil {
 			defer resp.Body.Close() // nolint: errcheck
 			body, err := io.ReadAll(resp.Body)
-			assert.Nil(t, err, "(%s) read response error should be nil: %v", url, err)
+			assert.NoError(t, err, "(%s) read response error should be nil: %v", url, err)
 			assert.Equal(t, expectedStatus, resp.StatusCode, "url: %s", url)
 			assert.Equal(t, []byte(expectedResponse), body, "(%s) response body should be '%s'", url, expectedResponse)
 		}
 
 		return true, nil
 	})
-	assert.Nil(t, err, "Timeout on %s health check, %v", url, err)
+	assert.NoError(t, err, "Timeout on %s health check, %v", url, err)
 }
 
 // emptyMockStream is the mock of the SDK_HealthServer for streaming

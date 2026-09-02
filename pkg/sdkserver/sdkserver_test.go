@@ -121,9 +121,9 @@ func TestSidecarRun(t *testing.T) {
 		"label": {
 			f: func(sc *SDKServer, ctx context.Context) {
 				_, err := sc.SetLabel(ctx, &sdk.KeyValue{Key: "foo", Value: "value-foo"})
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 				_, err = sc.SetLabel(ctx, &sdk.KeyValue{Key: "bar", Value: "value-bar"})
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 			},
 			expected: expected{
 				labels: map[string]string{
@@ -134,9 +134,9 @@ func TestSidecarRun(t *testing.T) {
 		"annotation": {
 			f: func(sc *SDKServer, ctx context.Context) {
 				_, err := sc.SetAnnotation(ctx, &sdk.KeyValue{Key: "test-1", Value: "annotation-1"})
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 				_, err = sc.SetAnnotation(ctx, &sdk.KeyValue{Key: "test-2", Value: "annotation-2"})
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 			},
 			expected: expected{
 				annotations: map[string]string{
@@ -219,7 +219,7 @@ func TestSidecarRun(t *testing.T) {
 			sc.informerFactory.Start(stop)
 			assert.True(t, cache.WaitForCacheSync(stop, sc.gameServerSynced))
 
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 			sc.recorder = m.FakeRecorder
 			if v.clock != nil {
 				sc.clock = v.clock
@@ -230,7 +230,7 @@ func TestSidecarRun(t *testing.T) {
 
 			go func() {
 				err := sc.Run(ctx)
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 				wg.Done()
 			}()
 			v.f(sc, ctx)
@@ -305,7 +305,7 @@ func TestSDKServerSyncGameServer(t *testing.T) {
 		t.Run(k, func(t *testing.T) {
 			m := agtesting.NewMocks()
 			sc, err := defaultSidecar(m)
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 
 			sc.gsState = v.scData.gsState
 			sc.gsLabels = v.scData.gsLabels
@@ -345,7 +345,7 @@ func TestSDKServerSyncGameServer(t *testing.T) {
 			sc.gsWaitForSync.Done()
 
 			err = sc.syncGameServer(ctx, v.key)
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 			assert.True(t, updated, "should have updated")
 		})
 	}
@@ -407,7 +407,7 @@ func TestSidecarUpdateState(t *testing.T) {
 			sc.gsWaitForSync.Done()
 
 			err = sc.updateState(ctx)
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 			assert.False(t, updated)
 		})
 	}
@@ -431,7 +431,7 @@ func TestSidecarHealthLastUpdated(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		err := sc.Health(stream)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		wg.Done()
 	}()
 
@@ -440,7 +440,7 @@ func TestSidecarHealthLastUpdated(t *testing.T) {
 	stream.msgs <- &sdk.Empty{}
 
 	err = waitForMessage(sc)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	sc.healthMutex.RLock()
 	assert.Equal(t, sc.clock.Now().UTC().String(), sc.healthLastUpdated.String())
 	sc.healthMutex.RUnlock()
@@ -449,7 +449,7 @@ func TestSidecarHealthLastUpdated(t *testing.T) {
 	fc.Step(3 * time.Second)
 	stream.msgs <- &sdk.Empty{}
 	err = waitForMessage(sc)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	sc.healthMutex.RLock()
 	assert.Equal(t, sc.clock.Now().UTC().String(), sc.healthLastUpdated.String())
 	sc.healthMutex.RUnlock()
@@ -503,7 +503,7 @@ func TestSidecarUnhealthyMessage(t *testing.T) {
 
 	go func() {
 		err := sc.Run(ctx)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 	}()
 
 	// manually push through an unhealthy state change
@@ -539,7 +539,7 @@ func TestSidecarHealthy(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		err := sc.Health(stream)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		wg.Done()
 	}()
 
@@ -561,7 +561,7 @@ func TestSidecarHealthy(t *testing.T) {
 			fc.SetTime(time.Now().UTC())
 			stream.msgs <- &sdk.Empty{}
 			err = waitForMessage(sc)
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 
 			fc.Step(v.timeAdd)
 			sc.checkHealth()
@@ -606,7 +606,7 @@ func TestSidecarHealthy(t *testing.T) {
 
 		stream.msgs <- &sdk.Empty{}
 		err = waitForMessage(sc)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		fc.Step(10 * time.Second)
 		assert.True(t, sc.healthy())
 	})
@@ -645,7 +645,7 @@ func TestSidecarHTTPHealthCheck(t *testing.T) {
 
 	go func() {
 		err := sc.Run(ctx)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		// gate
 		assert.Equal(t, 1*time.Second, sc.healthTimeout)
 		wg.Done()
@@ -738,7 +738,7 @@ func TestSDKServerWatchGameServer(t *testing.T) {
 	stream := newGameServerMockStream()
 	asyncWatchGameServer(t, sc, stream)
 
-	require.Nil(t, waitConnectedStreamCount(sc, 1))
+	require.NoError(t, waitConnectedStreamCount(sc, 1))
 	require.Equal(t, stream, sc.connectedStreams[0])
 
 	// modify for 2nd event in watch stream
@@ -810,7 +810,7 @@ func TestSDKServerSendGameServerUpdate(t *testing.T) {
 
 	stream := newGameServerMockStream()
 	asyncWatchGameServer(t, sc, stream)
-	assert.Nil(t, waitConnectedStreamCount(sc, 1))
+	assert.NoError(t, waitConnectedStreamCount(sc, 1))
 
 	sc.sendGameServerUpdate(fixture)
 
@@ -873,14 +873,14 @@ func TestSDKServer_SendGameServerUpdateRemovesDisconnectedStream(t *testing.T) {
 	asyncWatchGameServer(t, sc, streamTwo)
 
 	// Verify that two streams are connected.
-	assert.Nil(t, waitConnectedStreamCount(sc, 2))
+	assert.NoError(t, waitConnectedStreamCount(sc, 2))
 	streamOneCancel()
 	streamTwoCancel()
 
 	// Trigger stream removal by sending a game server update.
 	sc.sendGameServerUpdate(fixture)
 	// Verify that zero streams are connected.
-	assert.Nil(t, waitConnectedStreamCount(sc, 0))
+	assert.NoError(t, waitConnectedStreamCount(sc, 0))
 }
 
 func TestSDKServerUpdateEventHandler(t *testing.T) {
@@ -918,7 +918,7 @@ func TestSDKServerUpdateEventHandler(t *testing.T) {
 	}, time.Minute, time.Second, "Could not find the GameServer")
 	stream := newGameServerMockStream()
 	asyncWatchGameServer(t, sc, stream)
-	assert.Nil(t, waitConnectedStreamCount(sc, 1))
+	assert.NoError(t, waitConnectedStreamCount(sc, 1))
 
 	// need to add it before it can be modified
 	fakeWatch.Add(fixture.DeepCopy())
@@ -980,7 +980,7 @@ func TestSDKServerReserveTimeoutOnRun(t *testing.T) {
 
 	go func() {
 		err = sc.Run(ctx)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		wg.Done()
 	}()
 
@@ -1035,7 +1035,7 @@ func TestSDKServerReserveTimeout(t *testing.T) {
 
 	go func() {
 		err = sc.Run(ctx)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		wg.Done()
 	}()
 
@@ -1920,7 +1920,7 @@ func TestDeleteValues(t *testing.T) {
 		"PGFMEopXax": true, "qOOorODUsn": true, "rcVUwlHOME": true}
 
 	newList := deleteValues(list, toDeleteMap)
-	assert.Equal(t, len(list)-len(toDeleteMap), len(newList))
+	assert.Len(t, newList, len(list)-len(toDeleteMap))
 }
 
 func TestSDKServerPlayerCapacity(t *testing.T) {
@@ -2278,7 +2278,7 @@ func TestSDKServerGracefulTerminationInterrupt(t *testing.T) {
 		return true, &agonesv1.GameServerList{Items: []agonesv1.GameServer{*gs.DeepCopy()}}, nil
 	})
 	sc, err := defaultSidecar(m)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	sdkCtx := sc.NewSDKServerContext(ctx)
@@ -2291,7 +2291,7 @@ func TestSDKServerGracefulTerminationInterrupt(t *testing.T) {
 
 	go func() {
 		err := sc.Run(sdkCtx)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		wg.Done()
 	}()
 
@@ -2311,7 +2311,7 @@ func TestSDKServerGracefulTerminationInterrupt(t *testing.T) {
 	cancel()
 	// Assert ctx is cancelled and sdkCtx is not cancelled
 	assertContextCancelled(context.Canceled, 1*time.Second, ctx)
-	assert.Nil(t, sdkCtx.Err())
+	assert.NoError(t, sdkCtx.Err())
 	//	Assert gs is still requestReady
 	assert.Equal(t, agonesv1.GameServerStateRequestReady, sc.gsState)
 	// gs Shutdown
@@ -2344,7 +2344,7 @@ func TestSDKServerGracefulTerminationShutdown(t *testing.T) {
 	})
 
 	sc, err := defaultSidecar(m)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	sdkCtx := sc.NewSDKServerContext(ctx)
@@ -2357,7 +2357,7 @@ func TestSDKServerGracefulTerminationShutdown(t *testing.T) {
 
 	go func() {
 		err = sc.Run(sdkCtx)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		wg.Done()
 	}()
 
@@ -2378,8 +2378,8 @@ func TestSDKServerGracefulTerminationShutdown(t *testing.T) {
 	fakeWatch.Modify(gs.DeepCopy())
 
 	// assert none of the context have been cancelled
-	assert.Nil(t, sdkCtx.Err())
-	assert.Nil(t, ctx.Err())
+	assert.NoError(t, sdkCtx.Err())
+	assert.NoError(t, ctx.Err())
 	//	Mock interruption signal
 	cancel()
 	// Assert ctx is cancelled and sdkCtx is not cancelled
@@ -2409,7 +2409,7 @@ func TestSDKServerGracefulTerminationGameServerStateChannel(t *testing.T) {
 	})
 
 	sc, err := defaultSidecar(m)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -2459,7 +2459,7 @@ func asyncWatchGameServer(t *testing.T, sc *SDKServer, stream sdk.SDK_WatchGameS
 	// if gsWaitForSync is not Done().
 	go func() {
 		err := sc.WatchGameServer(&sdk.Empty{}, stream)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	}()
 }
 

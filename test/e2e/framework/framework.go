@@ -35,6 +35,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -228,7 +229,7 @@ func (f *Framework) CreateGameServerAndWaitUntilReady(t *testing.T, ns string, g
 	log := TestLogger(t)
 	newGs, err := f.AgonesClient.AgonesV1().GameServers(ns).Create(context.Background(), gs, metav1.CreateOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("creating %v GameServer instances failed (%v): %v", gs.Spec, gs.Name, err)
+		return nil, fmt.Errorf("creating %v GameServer instances failed (%v): %w", gs.Spec, gs.Name, err)
 	}
 
 	log.WithField("gs", newGs.ObjectMeta.Name).Info("GameServer created, waiting for Ready")
@@ -236,7 +237,7 @@ func (f *Framework) CreateGameServerAndWaitUntilReady(t *testing.T, ns string, g
 	readyGs, err := f.WaitForGameServerState(t, newGs, agonesv1.GameServerStateReady, f.WaitForState)
 
 	if err != nil {
-		return readyGs, fmt.Errorf("waiting for %v GameServer instance readiness timed out (%v): %v",
+		return readyGs, fmt.Errorf("waiting for %v GameServer instance readiness timed out (%v): %w",
 			gs.Spec, gs.Name, err)
 	}
 
@@ -315,7 +316,7 @@ func (f *Framework) CycleAllocations(ctx context.Context, t *testing.T, flt *ago
 		go func(gsa *allocationv1.GameServerAllocation) {
 			time.Sleep(allocDuration)
 			err := f.AgonesClient.AgonesV1().GameServers(gsa.Namespace).Delete(context.Background(), gsa.Status.GameServerName, metav1.DeleteOptions{})
-			require.NoError(t, err)
+			assert.NoError(t, err)
 		}(gsa)
 
 		return false, nil

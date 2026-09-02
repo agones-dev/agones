@@ -46,7 +46,7 @@ func TestWaitForEstablishedCRD(t *testing.T) {
 		})
 
 		err := WaitForEstablishedCRD(context.Background(), extClient.ApiextensionsV1().CustomResourceDefinitions(), "test", logrus.WithField("test", "already-established"))
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 	})
 
 	t.Run("CRD takes a second to become established", func(t *testing.T) {
@@ -71,6 +71,6 @@ func TestWaitForEstablishedCRD(t *testing.T) {
 		}()
 
 		err := WaitForEstablishedCRD(context.Background(), extClient.ApiextensionsV1().CustomResourceDefinitions(), "test", logrus.WithField("test", "already-established"))
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 	})
 }

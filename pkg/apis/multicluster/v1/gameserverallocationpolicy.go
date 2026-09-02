@@ -174,6 +174,7 @@ func selectRandomWeighted(connections []*ClusterConnectionInfo, weights []int) *
 		return nil
 	}
 
+	//nolint:gosec // G404: weighted pick between allocation policies; nothing here is a secret.
 	randValue := rand.Intn(sum)
 	sum = 0
 	for i, weight := range weights {

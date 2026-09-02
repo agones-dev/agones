@@ -103,7 +103,7 @@ func externalIP(t *testing.T, kubeCore typedv1.NodesGetter, svc *corev1.Service)
 	// likely this is minikube, so go get the node ip
 	if svc.Spec.Type == corev1.ServiceTypeNodePort {
 		nodes, err := kubeCore.Nodes().List(ctx, metav1.ListOptions{})
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.Len(t, nodes.Items, 1, "Should only be 1 node on minikube")
 
 		addresses := nodes.Items[0].Status.Addresses

@@ -79,7 +79,7 @@ func TestControllerSyncFleet(t *testing.T) {
 		defer cancel()
 
 		err := c.syncFleet(ctx, "default/fleet-1")
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.True(t, created, "gameserverset should have been created")
 		agtesting.AssertEventContains(t, m.FakeRecorder.Events, "CreatingGameServerSet")
 	})
@@ -117,7 +117,7 @@ func TestControllerSyncFleet(t *testing.T) {
 		defer cancel()
 
 		err := c.syncFleet(ctx, "default/fleet-1")
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		agtesting.AssertNoEvent(t, m.FakeRecorder.Events)
 	})
 
@@ -154,7 +154,7 @@ func TestControllerSyncFleet(t *testing.T) {
 		defer cancel()
 
 		err := c.syncFleet(ctx, "default/fleet-1")
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.True(t, updated, "gameserverset should have been updated")
 		agtesting.AssertEventContains(t, m.FakeRecorder.Events, "ScalingGameServerSet")
 	})
@@ -199,7 +199,7 @@ func TestControllerSyncFleet(t *testing.T) {
 		defer cancel()
 
 		err := c.syncFleet(ctx, "default/fleet-1")
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		agtesting.AssertNoEvent(t, m.FakeRecorder.Events)
 	})
 
@@ -230,7 +230,7 @@ func TestControllerSyncFleet(t *testing.T) {
 		c.allocs.inc("default", "fleet-1", 1)
 
 		err := c.syncFleet(ctx, "default/fleet-1")
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.Equal(t, int64(1), f.Status.Allocations)
 	})
 
@@ -262,7 +262,7 @@ func TestControllerSyncFleet(t *testing.T) {
 		c, _ := newFakeController()
 
 		err := c.syncFleet(context.Background(), "default/fleet-1")
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 	})
 
 	t.Run("fleet invalid strategy type", func(t *testing.T) {
@@ -460,7 +460,7 @@ func TestControllerRun(t *testing.T) {
 
 	go func() {
 		err := c.Run(ctx, 1)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 	}()
 
 	f := func() string {
@@ -543,7 +543,7 @@ func TestControllerUpdateFleetStatus(t *testing.T) {
 		defer cancel()
 
 		err := c.updateFleetStatus(ctx, fleet)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.True(t, updated)
 	})
 
@@ -616,7 +616,7 @@ func TestControllerUpdateFleetPlayerStatus(t *testing.T) {
 	defer cancel()
 
 	err := c.updateFleetStatus(ctx, fleet)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.True(t, updated)
 }
 
@@ -706,7 +706,7 @@ func TestControllerUpdateFleetCounterStatus(t *testing.T) {
 	defer cancel()
 
 	err := c.updateFleetStatus(ctx, fleet)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.True(t, updated)
 }
 
@@ -796,7 +796,7 @@ func TestControllerUpdateFleetListStatus(t *testing.T) {
 	defer cancel()
 
 	err := c.updateFleetStatus(ctx, fleet)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.True(t, updated)
 }
 
@@ -1070,7 +1070,7 @@ func TestControllerUpsertGameServerSet(t *testing.T) {
 		})
 
 		err := c.upsertGameServerSet(context.Background(), f, gsSet, replicas)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		assert.True(t, created, "Should be created")
 		agtesting.AssertEventContains(t, m.FakeRecorder.Events, "CreatingGameServerSet")
@@ -1093,7 +1093,7 @@ func TestControllerUpsertGameServerSet(t *testing.T) {
 		})
 
 		err := c.upsertGameServerSet(context.Background(), f, gsSet, replicas)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		assert.True(t, update, "Should be updated")
 		agtesting.AssertEventContains(t, m.FakeRecorder.Events, "ScalingGameServerSet")
@@ -1145,7 +1145,7 @@ func TestControllerUpsertGameServerSet(t *testing.T) {
 		})
 
 		err := c.upsertGameServerSet(context.Background(), f, gsSet, replicas)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		agtesting.AssertNoEvent(t, m.FakeRecorder.Events)
 	})
 
@@ -1177,7 +1177,7 @@ func TestControllerUpsertGameServerSet(t *testing.T) {
 
 		// Update Priorities on the GameServerSet to match the Fleet
 		err := c.upsertGameServerSet(context.Background(), f, gsSet, gsSet.Spec.Replicas)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		assert.True(t, update, "Should be updated")
 		agtesting.AssertEventContains(t, m.FakeRecorder.Events, "UpdatingGameServerSet")
@@ -1238,7 +1238,7 @@ func TestControllerDeleteEmptyGameServerSets(t *testing.T) {
 	})
 
 	err := c.deleteEmptyGameServerSets(context.Background(), f, []*agonesv1.GameServerSet{gsSet1, gsSet2})
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.True(t, deleted, "delete should happen")
 }
 
@@ -1255,7 +1255,7 @@ func TestControllerRollingUpdateDeploymentNoInactiveGSSNoErrors(t *testing.T) {
 	c, _ := newFakeController()
 
 	replicas, err := c.rollingUpdateDeployment(context.Background(), f, active, []*agonesv1.GameServerSet{})
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, int32(25), replicas)
 }
 
@@ -1321,6 +1321,57 @@ func TestControllerRollingUpdateDeploymentNegativeReplica(t *testing.T) {
 	// assert no error, when fleet replicas is negative value(0 replicas - 1 allocated = -1)
 	assert.NoError(t, err)
 	// assert replicas 0, after user scales replicas to 0
+	assert.Equal(t, int32(0), replicas)
+}
+
+func TestControllerRollingUpdateDeploymentAllocatedExceedsFleetReplicas(t *testing.T) {
+	t.Parallel()
+
+	// A fleet whose target is below the number of Allocated GameServers still held by an
+	// inactive GameServerSet: the fleet was scaled down (autoscaler or manual) part way
+	// through a rolling update while allocations kept climbing.
+	f := defaultFixture()
+	f.Spec.Replicas = 5
+	f.Status.Replicas = 8
+	f.Status.AllocatedReplicas = 8
+	f.Status.ReadyReplicas = 0
+
+	f.Spec.Template.Spec.Ports = []agonesv1.GameServerPort{{
+		ContainerPort: 6000,
+		Name:          "gameport",
+		PortPolicy:    agonesv1.Dynamic,
+		Protocol:      corev1.ProtocolUDP,
+	}}
+
+	// The inactive set holds 8 Allocated GameServers, 3 more than the whole fleet now wants.
+	inactive := f.GameServerSet()
+	inactive.ObjectMeta.Name = "inactive"
+	inactive.Spec.Replicas = 0
+	inactive.Status.Replicas = 8
+	inactive.Status.ReadyReplicas = 0
+	inactive.Status.AllocatedReplicas = 8
+
+	active := f.GameServerSet()
+	active.ObjectMeta.Name = "active"
+	active.Spec.Replicas = 0
+	active.Status.Replicas = 0
+	active.Status.ReadyReplicas = 0
+	active.Status.AllocatedReplicas = 0
+
+	c, m := newFakeController()
+
+	m.AgonesClient.AddReactor("update", "gameserversets", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		ca := action.(k8stesting.UpdateAction)
+		gsSet := ca.GetObject().(*agonesv1.GameServerSet)
+		assert.GreaterOrEqual(t, gsSet.Spec.Replicas, int32(0), "GameServerSet %s was given negative replicas", gsSet.ObjectMeta.Name)
+		return true, gsSet, nil
+	})
+
+	// Without the clamp this returns 5 - 8 = -3, the API server rejects the update
+	// ("spec.replicas ... should be a non-negative integer") and every subsequent fleet
+	// sync aborts until the allocations drain.
+	replicas, err := c.rollingUpdateDeployment(context.Background(), f, active, []*agonesv1.GameServerSet{inactive})
+	assert.NoError(t, err)
 	assert.Equal(t, int32(0), replicas)
 }
 
