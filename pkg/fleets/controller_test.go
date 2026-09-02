@@ -1324,6 +1324,57 @@ func TestControllerRollingUpdateDeploymentNegativeReplica(t *testing.T) {
 	assert.Equal(t, int32(0), replicas)
 }
 
+func TestControllerRollingUpdateDeploymentAllocatedExceedsFleetReplicas(t *testing.T) {
+	t.Parallel()
+
+	// A fleet whose target is below the number of Allocated GameServers still held by an
+	// inactive GameServerSet: the fleet was scaled down (autoscaler or manual) part way
+	// through a rolling update while allocations kept climbing.
+	f := defaultFixture()
+	f.Spec.Replicas = 5
+	f.Status.Replicas = 8
+	f.Status.AllocatedReplicas = 8
+	f.Status.ReadyReplicas = 0
+
+	f.Spec.Template.Spec.Ports = []agonesv1.GameServerPort{{
+		ContainerPort: 6000,
+		Name:          "gameport",
+		PortPolicy:    agonesv1.Dynamic,
+		Protocol:      corev1.ProtocolUDP,
+	}}
+
+	// The inactive set holds 8 Allocated GameServers, 3 more than the whole fleet now wants.
+	inactive := f.GameServerSet()
+	inactive.ObjectMeta.Name = "inactive"
+	inactive.Spec.Replicas = 0
+	inactive.Status.Replicas = 8
+	inactive.Status.ReadyReplicas = 0
+	inactive.Status.AllocatedReplicas = 8
+
+	active := f.GameServerSet()
+	active.ObjectMeta.Name = "active"
+	active.Spec.Replicas = 0
+	active.Status.Replicas = 0
+	active.Status.ReadyReplicas = 0
+	active.Status.AllocatedReplicas = 0
+
+	c, m := newFakeController()
+
+	m.AgonesClient.AddReactor("update", "gameserversets", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		ca := action.(k8stesting.UpdateAction)
+		gsSet := ca.GetObject().(*agonesv1.GameServerSet)
+		assert.GreaterOrEqual(t, gsSet.Spec.Replicas, int32(0), "GameServerSet %s was given negative replicas", gsSet.ObjectMeta.Name)
+		return true, gsSet, nil
+	})
+
+	// Without the clamp this returns 5 - 8 = -3, the API server rejects the update
+	// ("spec.replicas ... should be a non-negative integer") and every subsequent fleet
+	// sync aborts until the allocations drain.
+	replicas, err := c.rollingUpdateDeployment(context.Background(), f, active, []*agonesv1.GameServerSet{inactive})
+	assert.NoError(t, err)
+	assert.Equal(t, int32(0), replicas)
+}
+
 func TestControllerRollingUpdateDeploymentGSSUpdateFailedErrExpected(t *testing.T) {
 	t.Parallel()
 
