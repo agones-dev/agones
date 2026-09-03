@@ -31,6 +31,7 @@ import (
 	"testing"
 	"time"
 
+	"agones.dev/agones/pkg/cloudproduct"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
@@ -204,7 +205,7 @@ func NewFromFlags() (*Framework, error) {
 	framework.Namespace = viper.GetString(namespaceFlag)
 	framework.CloudProduct = viper.GetString(cloudProductFlag)
 	framework.WaitForState = 5 * time.Minute
-	if framework.CloudProduct == "gke-autopilot" {
+	if framework.CloudProduct == cloudproduct.GkeAutopilotProduct {
 		// Autopilot can take a little while due to autoscaling, be a little liberal.
 		// Keeping it under 10m so we don't get stack track dumps at 10m as unit tests can't be extended past 10m.
 		framework.WaitForState = 8 * time.Minute
@@ -663,10 +664,10 @@ func (f *Framework) SendGameServerTCPToPort(gs *agonesv1.GameServer, portName st
 // error.
 func (f *Framework) SendTCP(address, msg string) (string, error) {
 	var conn net.Conn
-	if f.CloudProduct == "gke-autopilot" {
+	if f.CloudProduct == cloudproduct.GkeAutopilotProduct {
 		err := wait.PollUntilContextTimeout(context.Background(), time.Second, 5*time.Minute, true, func(_ context.Context) (bool, error) {
 			var dialErr error
-			conn, dialErr = net.Dial("tcp", address)
+			conn, dialErr = net.DialTimeout("tcp", address, 10*time.Second)
 			if dialErr != nil {
 				logrus.WithError(dialErr).WithField("address", address).Info("could not dial TCP address, retrying")
 				return false, nil
@@ -678,13 +679,13 @@ func (f *Framework) SendTCP(address, msg string) (string, error) {
 		}
 	} else {
 		var err error
-		conn, err = net.Dial("tcp", address)
+		conn, err = net.DialTimeout("tcp", address, 10*time.Second)
 		if err != nil {
 			return "", err
 		}
 	}
 
-	if err := conn.SetReadDeadline(time.Now().Add(30 * time.Second)); err != nil {
+	if err := conn.SetDeadline(time.Now().Add(30 * time.Second)); err != nil {
 		return "", err
 	}
 
