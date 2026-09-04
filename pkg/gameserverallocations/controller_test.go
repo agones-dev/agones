@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -34,7 +35,6 @@ import (
 	"agones.dev/agones/pkg/util/apiserver"
 	"agones.dev/agones/pkg/util/runtime"
 	"github.com/heptiolabs/healthcheck"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
@@ -552,7 +552,7 @@ func TestMultiClusterAllocationFromRemote(t *testing.T) {
 
 		_, err = executeAllocation(gsa, c)
 		if assert.Error(t, err) {
-			assert.Contains(t, err.Error(), "test error message")
+			assert.ErrorContains(t, err, "test error message")
 		}
 		assert.Greaterf(t, retry, 1, "Retry count %v. Expecting to retry on error.", retry)
 	})
@@ -788,7 +788,10 @@ func executeAllocation(gsa *allocationv1.GameServerAllocation, c *Extensions) (*
 	ret := &allocationv1.GameServerAllocation{}
 	jsn := rec.Body.Bytes()
 	err = json.Unmarshal(jsn, ret)
-	return ret, errors.Wrapf(err, "failed to unmarshal allocation response: %s", jsn)
+	if err != nil {
+		return ret, fmt.Errorf("failed to unmarshal allocation response: %s: %w", jsn, err)
+	}
+	return ret, nil
 }
 
 func addReactorForGameServer(m *agtesting.Mocks) string {

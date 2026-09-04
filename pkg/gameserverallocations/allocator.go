@@ -33,9 +33,9 @@ import (
 	multiclusterinformerv1 "agones.dev/agones/pkg/client/informers/externalversions/multicluster/v1"
 	multiclusterlisterv1 "agones.dev/agones/pkg/client/listers/multicluster/v1"
 	"agones.dev/agones/pkg/util/apiserver"
+	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/logfields"
 	"agones.dev/agones/pkg/util/runtime"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/tag"
 	"google.golang.org/grpc"
@@ -61,13 +61,13 @@ import (
 var (
 	// ErrNoGameServer is returned when there are no Allocatable GameServers
 	// available
-	ErrNoGameServer = errors.New("Could not find an Allocatable GameServer")
+	ErrNoGameServer = errs.New("Could not find an Allocatable GameServer")
 	// ErrConflictInGameServerSelection is returned when the candidate gameserver already allocated
-	ErrConflictInGameServerSelection = errors.New("The Gameserver was already allocated")
+	ErrConflictInGameServerSelection = errs.New("The Gameserver was already allocated")
 	// ErrTotalTimeoutExceeded is used to signal that total retry timeout has been exceeded and no additional retries should be made
 	ErrTotalTimeoutExceeded = status.Errorf(codes.DeadlineExceeded, "remote allocation total timeout exceeded")
 	// ErrGameServerUpdateConflict is returned when the game server selected for applying the allocation cannot be updated
-	ErrGameServerUpdateConflict = errors.New("could not update the selected GameServer")
+	ErrGameServerUpdateConflict = errs.New("could not update the selected GameServer")
 )
 
 const (
@@ -98,6 +98,8 @@ var remoteAllocationRetry = wait.Backoff{
 }
 
 // Allocator handles game server allocation
+//
+//nolint:govet // fieldalignment: struct alignment is not critical for our use case
 type Allocator struct {
 	baseLogger                   *logrus.Entry
 	allocationPolicyLister       multiclusterlisterv1.GameServerAllocationPolicyLister
@@ -112,6 +114,7 @@ type Allocator struct {
 	remoteAllocationTimeout      time.Duration
 	totalRemoteAllocationTimeout time.Duration
 	batchWaitTime                time.Duration
+	errs                         *errors.Errors
 }
 
 // request is an async request for allocation
@@ -157,6 +160,7 @@ func NewAllocator(policyInformer multiclusterinformerv1.GameServerAllocationPoli
 	}
 
 	ah.baseLogger = runtime.NewLoggerWithType(ah)
+	ah.errs = errors.FromStruct(ah)
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(ah.baseLogger.Debugf)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeClient.CoreV1().Events("")})
@@ -185,7 +189,7 @@ func (c *Allocator) Run(ctx context.Context) error {
 func (c *Allocator) Sync(ctx context.Context) error {
 	c.baseLogger.Debug("Wait for Allocator cache sync")
 	if !cache.WaitForCacheSync(ctx.Done(), c.secretSynced, c.allocationPolicySynced) {
-		return errors.New("failed to wait for caches to sync")
+		return c.errs.New("failed to wait for caches to sync")
 	}
 	return nil
 }
@@ -212,7 +216,7 @@ func (c *Allocator) Allocate(ctx context.Context, gsa *allocationv1.GameServerAl
 		var gvks []schema.GroupVersionKind
 		gvks, _, err := apiserver.Scheme.ObjectKinds(s)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not find objectkinds for status")
+			return nil, c.errs.Wrap(err, "could not find objectkinds for status")
 		}
 
 		c.loggerForGameServerAllocation(gsa).Debug("GameServerAllocation is invalid")
@@ -318,7 +322,7 @@ func (c *Allocator) applyMultiClusterAllocation(ctx context.Context, gsa *alloca
 	if err != nil {
 		return nil, err
 	} else if len(policies) == 0 {
-		return nil, errors.New("no multi-cluster allocation policy is specified")
+		return nil, c.errs.New("no multi-cluster allocation policy is specified")
 	}
 
 	it := multiclusterv1.NewConnectionInfoIterator(policies)
@@ -426,7 +430,7 @@ func (c *Allocator) createRemoteClusterDialOption(namespace string, connectionIn
 		// This is required for self-signed certs.
 		tlsConfig.RootCAs = x509.NewCertPool()
 		if len(connectionInfo.ServerCA) != 0 && !tlsConfig.RootCAs.AppendCertsFromPEM(connectionInfo.ServerCA) {
-			return nil, errors.New("only PEM format is accepted for server CA")
+			return nil, c.errs.New("only PEM format is accepted for server CA")
 		}
 		// Add client CA cert, which can be used instead of / as well as the specified ServerCA cert
 		if len(caCert) != 0 {
@@ -608,7 +612,7 @@ func (c *Allocator) allocationUpdateWorkers(ctx context.Context, workerCount int
 				case res := <-updateQueue:
 					gs, err := c.applyAllocationToGameServer(ctx, res.request.gsa.Spec.MetaPatch, res.gs, res.request.gsa)
 					if err != nil {
-						if !k8serrors.IsConflict(errors.Cause(err)) {
+						if !k8serrors.IsConflict(err) {
 							// since we could not allocate, we should put it back
 							// but not if it's a conflict, as the cache is no longer up to date, and
 							// we should wait for it to get updated with fresh info.

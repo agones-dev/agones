@@ -24,11 +24,11 @@ import (
 	informerv1 "agones.dev/agones/pkg/client/informers/externalversions/agones/v1"
 	listerv1 "agones.dev/agones/pkg/client/listers/agones/v1"
 	"agones.dev/agones/pkg/gameservers"
+	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/logfields"
 	"agones.dev/agones/pkg/util/runtime"
 	"agones.dev/agones/pkg/util/workerqueue"
 	"github.com/heptiolabs/healthcheck"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
@@ -50,6 +50,7 @@ type AllocationCache struct {
 	workerqueue      *workerqueue.WorkerQueue
 	counter          *gameservers.PerNodeCounter
 	matcher          matcher
+	errs             *errors.Errors
 }
 
 // NewAllocationCache creates a new instance of AllocationCache
@@ -95,6 +96,7 @@ func NewAllocationCache(informer informerv1.GameServerInformer, counter *gameser
 	})
 
 	c.baseLogger = runtime.NewLoggerWithType(c)
+	c.errs = errors.FromStruct(c)
 	c.workerqueue = workerqueue.NewWorkerQueue(c.SyncGameServers, c.baseLogger, logfields.GameServerKey, agones.GroupName+".AllocationCache")
 	health.AddLivenessCheck("allocationcache-workerqueue", healthcheck.Check(c.workerqueue.Healthy))
 
@@ -118,7 +120,7 @@ func (c *AllocationCache) RemoveGameServer(gs *agonesv1.GameServer) error {
 func (c *AllocationCache) Sync(ctx context.Context) error {
 	c.baseLogger.Debug("Wait for AllocationCache cache sync")
 	if !cache.WaitForCacheSync(ctx.Done(), c.gameServerSynced) {
-		return errors.New("failed to wait for caches to sync")
+		return c.errs.New("failed to wait for caches to sync")
 	}
 
 	// build the cache
@@ -260,7 +262,7 @@ func (c *AllocationCache) syncCache() error {
 	// build the cache
 	gsList, err := c.gameServerLister.List(labels.Everything())
 	if err != nil {
-		return errors.Wrap(err, "could not list GameServers")
+		return c.errs.Wrap(err, "could not list GameServers")
 	}
 
 	// convert list of current gameservers to map for faster access
@@ -307,7 +309,7 @@ func (c *AllocationCache) getKey(gs *agonesv1.GameServer) (string, bool) {
 	var err error
 	if key, err = cache.MetaNamespaceKeyFunc(gs); err != nil {
 		ok = false
-		err = errors.Wrap(err, "Error creating key for object")
+		err = c.errs.Wrap(err, "Error creating key for object")
 		runtime.HandleError(c.baseLogger.WithField("obj", gs), err)
 	}
 	return key, ok

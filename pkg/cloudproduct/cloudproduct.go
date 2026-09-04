@@ -60,8 +60,10 @@ const (
 	// If --cloud-product=auto, auto-detect
 	autoDetectString = "auto"
 
-	genericProduct      = "generic"
-	gkeAutopilotProduct = "gke-autopilot"
+	// GenericProduct is a standard Kubernetes cluster.
+	GenericProduct = "generic"
+	// GkeAutopilotProduct is a GKE Autopilot cluster.
+	GkeAutopilotProduct = "gke-autopilot"
 )
 
 var (
@@ -85,9 +87,9 @@ func NewFromFlag(ctx context.Context, kc *kubernetes.Clientset) (ControllerHooks
 	product := autoDetect(ctx, viper.GetString(cloudProductFlag), kc)
 
 	switch product {
-	case gkeAutopilotProduct:
+	case GkeAutopilotProduct:
 		return gke.Autopilot(), nil
-	case genericProduct:
+	case GenericProduct:
 		return generic.New(), nil
 	}
 	return nil, errors.Errorf("unknown cloud product: %q", product)
@@ -105,6 +107,6 @@ func autoDetect(ctx context.Context, product string, kc *kubernetes.Clientset) s
 			return product
 		}
 	}
-	logger.Infof("Cloud product defaulted to %q", genericProduct)
-	return genericProduct
+	logger.Infof("Cloud product defaulted to %q", GenericProduct)
+	return GenericProduct
 }

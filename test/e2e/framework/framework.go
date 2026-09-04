@@ -31,6 +31,7 @@ import (
 	"testing"
 	"time"
 
+	"agones.dev/agones/pkg/cloudproduct"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
@@ -204,7 +205,7 @@ func NewFromFlags() (*Framework, error) {
 	framework.Namespace = viper.GetString(namespaceFlag)
 	framework.CloudProduct = viper.GetString(cloudProductFlag)
 	framework.WaitForState = 5 * time.Minute
-	if framework.CloudProduct == "gke-autopilot" {
+	if framework.CloudProduct == cloudproduct.GkeAutopilotProduct {
 		// Autopilot can take a little while due to autoscaling, be a little liberal.
 		// Keeping it under 10m so we don't get stack track dumps at 10m as unit tests can't be extended past 10m.
 		framework.WaitForState = 8 * time.Minute
@@ -618,7 +619,7 @@ func (f *Framework) SendUDP(t *testing.T, address, msg string) (string, error) {
 // SendGameServerTCP sends a message to a gameserver and returns its reply
 // finds the first tcp port from the spec to send the message to,
 // returns error if no Ports were allocated
-func SendGameServerTCP(gs *agonesv1.GameServer, msg string) (string, error) {
+func (f *Framework) SendGameServerTCP(gs *agonesv1.GameServer, msg string) (string, error) {
 	if len(gs.Status.Ports) == 0 {
 		return "", errors.New("Empty Ports array")
 	}
@@ -626,7 +627,7 @@ func SendGameServerTCP(gs *agonesv1.GameServer, msg string) (string, error) {
 	// use first tcp port
 	for _, p := range gs.Spec.Ports {
 		if p.Protocol == corev1.ProtocolTCP {
-			return SendGameServerTCPToPort(gs, p.Name, msg)
+			return f.SendGameServerTCPToPort(gs, p.Name, msg)
 		}
 	}
 	return "", errors.New("No TCP ports")
@@ -634,29 +635,57 @@ func SendGameServerTCP(gs *agonesv1.GameServer, msg string) (string, error) {
 
 // SendGameServerTCPToPort sends a message to a gameserver at the named port and returns its reply
 // returns error if no Ports were allocated or a port of the specified name doesn't exist
-func SendGameServerTCPToPort(gs *agonesv1.GameServer, portName string, msg string) (string, error) {
+func (f *Framework) SendGameServerTCPToPort(gs *agonesv1.GameServer, portName string, msg string) (string, error) {
 	if len(gs.Status.Ports) == 0 {
 		return "", errors.New("Empty Ports array")
 	}
 	var port agonesv1.GameServerStatusPort
+	var found bool
 	for _, p := range gs.Status.Ports {
 		if p.Name == portName {
 			port = p
+			found = true
+			break
 		}
 	}
+	if !found {
+		return "", errors.Errorf("port %q not found in GameServer status", portName)
+	}
 	address := fmt.Sprintf("%s:%d", gs.Status.Address, port.Port)
-	return SendTCP(address, msg)
+	return f.SendTCP(address, msg)
 }
 
-// SendTCP sends a message to an address, and returns its reply if
-// it returns one in 30 seconds
-func SendTCP(address, msg string) (string, error) {
-	conn, err := net.Dial("tcp", address)
-	if err != nil {
-		return "", err
+// SendTCP connects to an address and sends it a message, returning the
+// reply. On GKE Autopilot, the initial dial is retried for up to 5 minutes,
+// since the network path (e.g. hostPort NAT/eBPF rules) can take a while to
+// become reachable right after a GameServer transitions to Ready; other
+// cloud products dial once, as they are not known to have this delay. Once
+// connected, the reply must arrive within 30 seconds or this returns an
+// error.
+func (f *Framework) SendTCP(address, msg string) (string, error) {
+	var conn net.Conn
+	if f.CloudProduct == cloudproduct.GkeAutopilotProduct {
+		err := wait.PollUntilContextTimeout(context.Background(), time.Second, 5*time.Minute, true, func(_ context.Context) (bool, error) {
+			var dialErr error
+			conn, dialErr = net.DialTimeout("tcp", address, 10*time.Second)
+			if dialErr != nil {
+				logrus.WithError(dialErr).WithField("address", address).Info("could not dial TCP address, retrying")
+				return false, nil
+			}
+			return true, nil
+		})
+		if err != nil {
+			return "", errors.Wrap(err, "timed out attempting to dial TCP address")
+		}
+	} else {
+		var err error
+		conn, err = net.DialTimeout("tcp", address, 10*time.Second)
+		if err != nil {
+			return "", err
+		}
 	}
 
-	if err := conn.SetReadDeadline(time.Now().Add(30 * time.Second)); err != nil {
+	if err := conn.SetDeadline(time.Now().Add(30 * time.Second)); err != nil {
 		return "", err
 	}
 
@@ -667,7 +696,7 @@ func SendTCP(address, msg string) (string, error) {
 	}()
 
 	// writes to the tcp connection
-	_, err = fmt.Fprintln(conn, msg)
+	_, err := fmt.Fprintln(conn, msg)
 	if err != nil {
 		return "", err
 	}
