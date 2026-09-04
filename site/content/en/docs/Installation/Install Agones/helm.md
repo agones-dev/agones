@@ -105,11 +105,21 @@ The following tables lists the configurable parameters of the Agones chart and t
 
 ### Custom Resource Definitions
 
+{{% feature expiryVersion="1.61.0" %}}
 | Parameter                     | Description                                                                                                                                                                                                                         | Default |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
 | `agones.crds.install`         | Install the CRDs with this chart. Useful to disable if you want to subchart (since crd-install hook is broken), so you can copy the CRDs into your own chart.                                                                       | `true`  |
 | `agones.crds.cleanupOnDelete` | Run the pre-delete hook to delete all GameServers and their backing Pods when deleting the helm chart, so that all CRDs can be removed on chart deletion                                                                            | `true`  |
 | `agones.crds.cleanupJobTTL`   | The number of seconds for Kubernetes to delete the associated Job and Pods of the pre-delete hook after it completes, regardless if the Job is successful or not. Set to `0` to disable cleaning up the Job or the associated Pods. | `60`    |
+{{% /feature %}}
+{{% feature publishVersion="1.61.0" %}}
+| Parameter                                | Description                                                                                                                                                                                                                         | Default |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `agones.crds.install`                    | Install the CRDs with this chart. Useful to disable if you want to subchart (since crd-install hook is broken), so you can copy the CRDs into your own chart.                                                                       | `true`  |
+| `agones.crds.cleanupOnDelete`            | Run the pre-delete hook to delete all GameServers and their backing Pods when deleting the helm chart, so that all CRDs can be removed on chart deletion                                                                            | `true`  |
+| `agones.crds.cleanupJobTTL`              | The number of seconds for Kubernetes to delete the associated Job and Pods of the pre-delete hook after it completes, regardless if the Job is successful or not. Set to `0` to disable cleaning up the Job or the associated Pods. | `60`    |
+| `agones.crds.includeKubernetesPatchKeys` | Include the `x-kubernetes-patch-strategy` and `x-kubernetes-patch-merge-key` fields in the embedded `PodTemplateSpec` and `ObjectMeta` CRD schemas. These are not valid CustomResourceDefinition fields, so enabling this produces `unknown field` warnings on install, and fails on Kubernetes distributions that decode strictly, such as K3s. Tools such as [Kustomize][kustomize-openapi] can make use of them. | `false` |
+{{% /feature %}}
 
 ### Metrics
 
@@ -417,6 +427,7 @@ The following tables lists the configurable parameters of the Agones chart and t
 [rest-requests]: {{< ref "/docs/Advanced/allocator-service.md#using-rest" >}}
 [grpc-requests]: {{< ref "/docs/Advanced/allocator-service.md#using-grpc" >}}
 [split-controller]: {{< ref "/docs/Advanced/high-availability-agones" >}}
+[kustomize-openapi]: https://github.com/kubernetes-sigs/kustomize/blob/master/examples/customOpenAPIschema.md
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`. For example,
 
