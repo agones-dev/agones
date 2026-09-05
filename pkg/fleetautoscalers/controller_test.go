@@ -17,6 +17,7 @@ package fleetautoscalers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -30,7 +31,6 @@ import (
 	agtesting "agones.dev/agones/pkg/testing"
 	"agones.dev/agones/pkg/util/webhooks"
 	"github.com/heptiolabs/healthcheck"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gomodules.xyz/jsonpatch/v2"
@@ -232,7 +232,7 @@ func TestControllerCreationValidationHandler(t *testing.T) {
 		_, err = ext.validationHandler(review)
 
 		if assert.Error(t, err) {
-			assert.Equal(t, "error unmarshalling FleetAutoscaler json after schema validation: \"MQ==\": json: cannot unmarshal string into Go value of type v1.FleetAutoscaler", err.Error())
+			assert.ErrorContains(t, err, "error unmarshalling FleetAutoscaler json after schema validation: \"MQ==\": json: cannot unmarshal string into Go value of type v1.FleetAutoscaler")
 		}
 	})
 }
@@ -670,7 +670,7 @@ func TestControllerSyncFleetAutoscaler(t *testing.T) {
 
 		err := c.syncFleetAutoscaler(ctx, "default/fas-1")
 		if assert.Error(t, err) {
-			assert.Equal(t, "error updating status for fleetautoscaler fas-1: random-err", err.Error())
+			assert.ErrorContains(t, err, "error updating status for fleetautoscaler fas-1: random-err")
 		}
 
 		agtesting.AssertEventContains(t, m.FakeRecorder.Events, "FailedGetFleet")
@@ -700,7 +700,7 @@ func TestControllerSyncFleetAutoscaler(t *testing.T) {
 
 		err := c.syncFleetAutoscaler(ctx, "default/fas-1")
 		if assert.Error(t, err) {
-			assert.Equal(t, "error calculating autoscaling fleet: fleet-1: wrong policy type, should be one of: Buffer, Webhook, Counter, List, Schedule, Chain", err.Error())
+			assert.ErrorContains(t, err, "error calculating autoscaling fleet: fleet-1")
 		}
 	})
 
@@ -734,7 +734,7 @@ func TestControllerSyncFleetAutoscaler(t *testing.T) {
 
 		err := c.syncFleetAutoscaler(ctx, "default/fas-1")
 		if assert.Error(t, err) {
-			assert.Equal(t, "error updating status for fleetautoscaler fas-1: random-err", err.Error())
+			assert.ErrorContains(t, err, "error updating status for fleetautoscaler fas-1: random-err")
 		}
 	})
 
@@ -762,7 +762,7 @@ func TestControllerSyncFleetAutoscaler(t *testing.T) {
 
 		err := c.syncFleetAutoscaler(ctx, "default/fas-1")
 		if assert.Error(t, err) {
-			assert.Equal(t, "error autoscaling fleet fleet-1 to 7 replicas: error updating replicas for fleet fleet-1: random-err", err.Error())
+			assert.ErrorContains(t, err, "error autoscaling fleet fleet-1 to 7 replicas")
 		}
 
 		agtesting.AssertEventContains(t, m.FakeRecorder.Events, "AutoScalingFleetError")
@@ -833,7 +833,7 @@ func TestControllerScaleFleet(t *testing.T) {
 
 		err := c.scaleFleet(context.Background(), fas, f, replicas)
 		if assert.Error(t, err) {
-			assert.Equal(t, "error updating replicas for fleet fleet-1: random-err", err.Error())
+			assert.ErrorContains(t, err, "error updating replicas for fleet fleet-1: random-err")
 		}
 		agtesting.AssertEventContains(t, m.FakeRecorder.Events, "AutoScalingFleetError")
 	})
@@ -922,7 +922,7 @@ func TestControllerUpdateStatus(t *testing.T) {
 
 		err := c.updateStatus(ctx, fas, fas.Status.CurrentReplicas, fas.Status.DesiredReplicas, false, fas.Status.ScalingLimited, fas.Spec.Policy.Type)
 		if assert.Error(t, err) {
-			assert.Equal(t, "error updating status for fleetautoscaler fas-1: random-err", err.Error())
+			assert.ErrorContains(t, err, "error updating status for fleetautoscaler fas-1: random-err")
 		}
 		agtesting.AssertNoEvent(t, m.FakeRecorder.Events)
 	})
@@ -1003,7 +1003,7 @@ func TestControllerUpdateStatusUnableToScale(t *testing.T) {
 
 		err := c.updateStatusUnableToScale(ctx, fas)
 		if assert.Error(t, err) {
-			assert.Equal(t, "error updating status for fleetautoscaler fas-1: random-err", err.Error())
+			assert.ErrorContains(t, err, "error updating status for fleetautoscaler fas-1: random-err")
 		}
 		agtesting.AssertNoEvent(t, m.FakeRecorder.Events)
 	})

@@ -17,6 +17,7 @@ package fleetautoscalers
 import (
 	"context"
 	"encoding/json"
+	stderrors "errors"
 	"fmt"
 	"net/http"
 	"sync"
@@ -33,13 +34,14 @@ import (
 	listerautoscalingv1 "agones.dev/agones/pkg/client/listers/autoscaling/v1"
 	"agones.dev/agones/pkg/gameservers"
 	"agones.dev/agones/pkg/util/crd"
+	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/logfields"
 	"agones.dev/agones/pkg/util/runtime"
 	"agones.dev/agones/pkg/util/webhooks"
 	"agones.dev/agones/pkg/util/workerqueue"
+
 	extism "github.com/extism/go-sdk"
 	"github.com/heptiolabs/healthcheck"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gomodules.xyz/jsonpatch/v2"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -90,6 +92,7 @@ func (ft *fasThread) close(ctx context.Context) {
 // Extensions struct contains what is needed to bind webhook handlers
 type Extensions struct {
 	baseLogger *logrus.Entry
+	errs       *errors.Errors
 }
 
 // FasLogger helps log and record events related to FleetAutoscaler.
@@ -105,6 +108,7 @@ type FasLogger struct {
 //nolint:govet // ignore fieldalignment, singleton
 type Controller struct {
 	baseLogger            *logrus.Entry
+	errs                  *errors.Errors
 	clock                 clock.WithTickerAndDelayedExecution
 	counter               *gameservers.PerNodeCounter
 	crdGetter             apiextclientv1.CustomResourceDefinitionInterface
@@ -149,6 +153,7 @@ func NewController(
 		gameServerLister:      gameServers.Lister(),
 	}
 	c.baseLogger = runtime.NewLoggerWithType(c)
+	c.errs = errors.FromStruct(c)
 	c.workerqueue = workerqueue.NewWorkerQueueWithRateLimiter(c.syncFleetAutoscaler, c.baseLogger, logfields.FleetAutoscalerKey, autoscaling.GroupName+".FleetAutoscalerController", workerqueue.FastRateLimiter(3*time.Second))
 	health.AddLivenessCheck("fleetautoscaler-workerqueue", c.workerqueue.Healthy)
 
@@ -184,6 +189,7 @@ func NewExtensions(wh *webhooks.WebHook) *Extensions {
 	ext := &Extensions{}
 
 	ext.baseLogger = runtime.NewLoggerWithType(ext)
+	ext.errs = errors.FromStruct(ext)
 
 	kind := autoscalingv1.Kind("FleetAutoscaler")
 	wh.AddHandler("/mutate", kind, admissionv1.Create, ext.mutationHandler)
@@ -204,7 +210,7 @@ func (c *Controller) Run(ctx context.Context, workers int) error {
 
 	c.baseLogger.Debug("Wait for cache sync")
 	if !cache.WaitForCacheSync(ctx.Done(), c.fleetSynced, c.fleetAutoscalerSynced) {
-		return errors.New("failed to wait for caches to sync")
+		return c.errs.New("failed to wait for caches to sync")
 	}
 
 	go func() {
@@ -257,17 +263,17 @@ func (ext *Extensions) mutationHandler(review admissionv1.AdmissionReview) (admi
 
 	newFas, err := json.Marshal(fas)
 	if err != nil {
-		return review, errors.Wrapf(err, "error marshalling default applied FleetAutoscaler %s to json", fas.ObjectMeta.Name)
+		return review, ext.errs.Wrapf(err, "error marshalling default applied FleetAutoscaler %s to json", fas.ObjectMeta.Name)
 	}
 
 	patch, err := jsonpatch.CreatePatch(obj.Raw, newFas)
 	if err != nil {
-		return review, errors.Wrapf(err, "error creating patch for FleetAutoscaler %s", fas.ObjectMeta.Name)
+		return review, ext.errs.Wrapf(err, "error creating patch for FleetAutoscaler %s", fas.ObjectMeta.Name)
 	}
 
 	jsonPatch, err := json.Marshal(patch)
 	if err != nil {
-		return review, errors.Wrapf(err, "error creating json for patch for FleetAutoScaler %s", fas.ObjectMeta.Name)
+		return review, ext.errs.Wrapf(err, "error creating json for patch for FleetAutoScaler %s", fas.ObjectMeta.Name)
 	}
 
 	pt := admissionv1.PatchTypeJSONPatch
@@ -285,7 +291,7 @@ func (ext *Extensions) validationHandler(review admissionv1.AdmissionReview) (ad
 	err := json.Unmarshal(obj.Raw, fas)
 	if err != nil {
 		ext.baseLogger.WithField("review", review).WithError(err).Error("validationHandler")
-		return review, errors.Wrapf(err, "error unmarshalling FleetAutoscaler json after schema validation: %s", obj.Raw)
+		return review, ext.errs.Wrapf(err, "error unmarshalling FleetAutoscaler json after schema validation: %s", obj.Raw)
 	}
 	fas.ApplyDefaults()
 
@@ -323,7 +329,7 @@ func (c *Controller) syncFleetAutoscaler(ctx context.Context, key string) error 
 	thread, ok := c.fasThreads[fas.ObjectMeta.UID]
 	c.fasThreadMutex.Unlock()
 	if !ok {
-		return errors.New("There should be a fasThread for the FleetAutoscaler, but it was not found")
+		return c.errs.New("There should be a fasThread for the FleetAutoscaler, but it was not found")
 	}
 
 	// Retrieve the fleet by spec name
@@ -364,7 +370,7 @@ func (c *Controller) syncFleetAutoscaler(ctx context.Context, key string) error 
 
 	// If the err is not nil and not an inactive schedule error (ignorable in this case), then record the event
 	if err != nil {
-		if !errors.Is(err, InactiveScheduleError{}) {
+		if !stderrors.Is(err, InactiveScheduleError{}) {
 			c.recorder.Eventf(fas, corev1.EventTypeWarning, "FleetAutoscaler",
 				"Error calculating desired fleet size on FleetAutoscaler %s. Error: %s", fas.ObjectMeta.Name, err.Error())
 
@@ -372,7 +378,7 @@ func (c *Controller) syncFleetAutoscaler(ctx context.Context, key string) error 
 				return err
 			}
 		}
-		return errors.Wrapf(err, "error calculating autoscaling fleet: %s", fleet.ObjectMeta.Name)
+		return c.errs.Wrapf(err, "error calculating autoscaling fleet: %s", fleet.ObjectMeta.Name)
 	}
 
 	// Log the desired replicas and scaling status
@@ -380,7 +386,7 @@ func (c *Controller) syncFleetAutoscaler(ctx context.Context, key string) error 
 
 	// Scale the fleet to the new size
 	if err = c.scaleFleet(ctx, fas, fleet, desiredReplicas); err != nil {
-		return errors.Wrapf(err, "error autoscaling fleet %s to %d replicas", fas.Spec.FleetName, desiredReplicas)
+		return c.errs.Wrapf(err, "error autoscaling fleet %s to %d replicas", fas.Spec.FleetName, desiredReplicas)
 	}
 
 	return c.updateStatus(ctx, fas, currentReplicas, desiredReplicas, desiredReplicas != fleet.Spec.Replicas, scalingLimited, *fasLog.currChainEntry)
@@ -393,7 +399,7 @@ func (c *Controller) getFleetAutoscalerByKey(key string) (*autoscalingv1.FleetAu
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		// don't return an error, as we don't want this retried
-		runtime.HandleError(c.loggerForFleetAutoscalerKey(key), errors.Wrapf(err, "invalid resource key"))
+		runtime.HandleError(c.loggerForFleetAutoscalerKey(key), c.errs.Wrapf(err, "invalid resource key"))
 		return nil, nil
 	}
 	fas, err := c.fleetAutoscalerLister.FleetAutoscalers(namespace).Get(name)
@@ -402,7 +408,7 @@ func (c *Controller) getFleetAutoscalerByKey(key string) (*autoscalingv1.FleetAu
 			c.loggerForFleetAutoscalerKey(key).Debug(fmt.Sprintf("FleetAutoscaler %s from namespace %s is no longer available for syncing", name, namespace))
 			return nil, nil
 		}
-		return nil, errors.Wrapf(err, "error retrieving FleetAutoscaler %s from namespace %s", name, namespace)
+		return nil, c.errs.Wrapf(err, "error retrieving FleetAutoscaler %s from namespace %s", name, namespace)
 	}
 	return fas, nil
 }
@@ -416,7 +422,7 @@ func (c *Controller) scaleFleet(ctx context.Context, fas *autoscalingv1.FleetAut
 		if err != nil {
 			c.recorder.Eventf(fas, corev1.EventTypeWarning, "AutoScalingFleetError",
 				"Error on scaling fleet %s from %d to %d. Error: %s", fCopy.ObjectMeta.Name, f.Spec.Replicas, fCopy.Spec.Replicas, err.Error())
-			return errors.Wrapf(err, "error updating replicas for fleet %s", f.ObjectMeta.Name)
+			return c.errs.Wrapf(err, "error updating replicas for fleet %s", f.ObjectMeta.Name)
 		}
 
 		c.recorder.Eventf(fas, corev1.EventTypeNormal, "AutoScalingFleet",
@@ -458,7 +464,7 @@ func (c *Controller) updateStatus(ctx context.Context, fas *autoscalingv1.FleetA
 
 		_, err := c.fleetAutoscalerGetter.FleetAutoscalers(fas.ObjectMeta.Namespace).UpdateStatus(ctx, fasCopy, metav1.UpdateOptions{})
 		if err != nil {
-			return errors.Wrapf(err, "error updating status for fleetautoscaler %s", fas.ObjectMeta.Name)
+			return c.errs.Wrapf(err, "error updating status for fleetautoscaler %s", fas.ObjectMeta.Name)
 		}
 	}
 
@@ -477,7 +483,7 @@ func (c *Controller) updateStatusUnableToScale(ctx context.Context, fas *autosca
 	if !apiequality.Semantic.DeepEqual(fas.Status, fasCopy.Status) {
 		_, err := c.fleetAutoscalerGetter.FleetAutoscalers(fas.ObjectMeta.Namespace).UpdateStatus(ctx, fasCopy, metav1.UpdateOptions{})
 		if err != nil {
-			return errors.Wrapf(err, "error updating status for fleetautoscaler %s", fas.ObjectMeta.Name)
+			return c.errs.Wrapf(err, "error updating status for fleetautoscaler %s", fas.ObjectMeta.Name)
 		}
 	}
 
@@ -569,12 +575,12 @@ func (c *Controller) cleanFasThreads(ctx context.Context, key string) error {
 	c.baseLogger.WithField("key", key).Debug("Doing full autoscaler thread cleanup")
 	namespace, _, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
-		return errors.Wrap(err, "attempting to clean all fleet autoscaler threads")
+		return c.errs.Wrap(err, "attempting to clean all fleet autoscaler threads")
 	}
 
 	fasList, err := c.fleetAutoscalerLister.FleetAutoscalers(namespace).List(labels.Everything())
 	if err != nil {
-		return errors.Wrap(err, "attempting to clean all fleet autoscaler threads")
+		return c.errs.Wrap(err, "attempting to clean all fleet autoscaler threads")
 	}
 
 	c.fasThreadMutex.Lock()
