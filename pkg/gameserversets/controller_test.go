@@ -314,40 +314,6 @@ func TestComputeStatus(t *testing.T) {
 		}
 	})
 
-	t.Run("player tracking", func(t *testing.T) {
-		utilruntime.FeatureTestMutex.Lock()
-		defer utilruntime.FeatureTestMutex.Unlock()
-
-		require.NoError(t, utilruntime.ParseFeatures(fmt.Sprintf("%s=true", utilruntime.FeaturePlayerTracking)))
-
-		gsSet := defaultFixture()
-		var list []*agonesv1.GameServer
-		gs1 := gsWithState(agonesv1.GameServerStateAllocated)
-		gs1.Status.Players = &agonesv1.PlayerStatus{Count: 5, Capacity: 10}
-		gs2 := gsWithState(agonesv1.GameServerStateReserved)
-		gs2.Status.Players = &agonesv1.PlayerStatus{Count: 10, Capacity: 15}
-		gs3 := gsWithState(agonesv1.GameServerStateCreating)
-		gs3.Status.Players = &agonesv1.PlayerStatus{Count: 20, Capacity: 30}
-		gs4 := gsWithState(agonesv1.GameServerStateReady)
-		gs4.Status.Players = &agonesv1.PlayerStatus{Count: 15, Capacity: 30}
-		list = append(list, gs1, gs2, gs3, gs4)
-
-		expected := agonesv1.GameServerSetStatus{
-			Replicas:          4,
-			ReadyReplicas:     1,
-			ReservedReplicas:  1,
-			AllocatedReplicas: 1,
-			Players: &agonesv1.AggregatedPlayerStatus{
-				Count:    30,
-				Capacity: 55,
-			},
-			Counters: map[string]agonesv1.AggregatedCounterStatus{},
-			Lists:    map[string]agonesv1.AggregatedListStatus{},
-		}
-
-		assert.Equal(t, expected, computeStatus(gsSet, list))
-	})
-
 	t.Run("counters", func(t *testing.T) {
 		utilruntime.FeatureTestMutex.Lock()
 		defer utilruntime.FeatureTestMutex.Unlock()

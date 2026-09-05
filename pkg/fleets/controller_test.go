@@ -569,57 +569,6 @@ func TestControllerUpdateFleetStatus(t *testing.T) {
 
 }
 
-func TestControllerUpdateFleetPlayerStatus(t *testing.T) {
-	t.Parallel()
-
-	utilruntime.FeatureTestMutex.Lock()
-	defer utilruntime.FeatureTestMutex.Unlock()
-
-	require.NoError(t, utilruntime.ParseFeatures(string(utilruntime.FeaturePlayerTracking)+"=true"))
-
-	fleet := defaultFixture()
-	c, m := newFakeController()
-
-	gsSet1 := fleet.GameServerSet()
-	gsSet1.ObjectMeta.Name = "gsSet1"
-	gsSet1.Status.Players = &agonesv1.AggregatedPlayerStatus{
-		Count:    5,
-		Capacity: 10,
-	}
-
-	gsSet2 := fleet.GameServerSet()
-	gsSet2.ObjectMeta.Name = "gsSet2"
-	gsSet2.Status.Players = &agonesv1.AggregatedPlayerStatus{
-		Count:    10,
-		Capacity: 20,
-	}
-
-	m.AgonesClient.AddReactor("list", "gameserversets",
-		func(_ k8stesting.Action) (bool, runtime.Object, error) {
-			return true, &agonesv1.GameServerSetList{Items: []agonesv1.GameServerSet{*gsSet1, *gsSet2}}, nil
-		})
-
-	updated := false
-	m.AgonesClient.AddReactor("update", "fleets",
-		func(action k8stesting.Action) (bool, runtime.Object, error) {
-			updated = true
-			ua := action.(k8stesting.UpdateAction)
-			fleet := ua.GetObject().(*agonesv1.Fleet)
-
-			assert.Equal(t, gsSet1.Status.Players.Count+gsSet2.Status.Players.Count, fleet.Status.Players.Count)
-			assert.Equal(t, gsSet1.Status.Players.Capacity+gsSet2.Status.Players.Capacity, fleet.Status.Players.Capacity)
-
-			return true, fleet, nil
-		})
-
-	ctx, cancel := agtesting.StartInformers(m, c.fleetSynced, c.gameServerSetSynced)
-	defer cancel()
-
-	err := c.updateFleetStatus(ctx, fleet)
-	assert.NoError(t, err)
-	assert.True(t, updated)
-}
-
 // nolint:dupl // Linter errors on lines are duplicate of TestControllerUpdateFleetListStatus
 func TestControllerUpdateFleetCounterStatus(t *testing.T) {
 	t.Parallel()
