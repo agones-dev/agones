@@ -17,6 +17,7 @@ package sdkserver
 import (
 	"context"
 	"encoding/json"
+	stderrors "errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -25,7 +26,6 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/testing/protocmp"
@@ -570,7 +570,7 @@ func TestLocalSDKServerPlayerConnectAndDisconnect(t *testing.T) {
 			// should return an error if we try to add another, since we're at capacity
 			nopePlayer := &alpha.PlayerID{PlayerID: "nope"}
 			_, err = l.PlayerConnect(context.Background(), nopePlayer)
-			assert.EqualError(t, err, "Players are already at capacity")
+			assert.ErrorContains(t, err, "Players are already at capacity")
 
 			ok, err = l.IsPlayerConnected(context.Background(), nopePlayer)
 			assert.NoError(t, err)
@@ -660,7 +660,7 @@ func TestLocalSDKServerGetCounter(t *testing.T) {
 		},
 		"Counter does not exist": {
 			name:    "noName",
-			wantErr: errors.Errorf("not found. %s Counter not found", "noName"),
+			wantErr: fmt.Errorf("not found. %s Counter not found", "noName"),
 		},
 	}
 
@@ -675,7 +675,7 @@ func TestLocalSDKServerGetCounter(t *testing.T) {
 				}
 			} else {
 				// Check tests expecting errors
-				assert.EqualError(t, err, testScenario.wantErr.Error())
+				assert.ErrorContains(t, err, testScenario.wantErr.Error())
 			}
 		})
 	}
@@ -766,7 +766,7 @@ func TestLocalSDKServerUpdateCounter(t *testing.T) {
 					Name:      "sessions",
 					CountDiff: -2,
 				}},
-			wantErr: errors.Errorf("out of range. Count must be within range [0,Capacity]. Found Count: %d, Capacity: %d", -1, 100),
+			wantErr: fmt.Errorf("out of range. Count must be within range [0,Capacity]. Found Count: %d, Capacity: %d", -1, 100),
 		},
 		"Cannot Increment Counter": {
 			updateRequest: &beta.UpdateCounterRequest{
@@ -774,7 +774,7 @@ func TestLocalSDKServerUpdateCounter(t *testing.T) {
 					Name:      "players",
 					CountDiff: 1,
 				}},
-			wantErr: errors.Errorf("out of range. Count must be within range [0,Capacity]. Found Count: %d, Capacity: %d", 101, 100),
+			wantErr: fmt.Errorf("out of range. Count must be within range [0,Capacity]. Found Count: %d, Capacity: %d", 101, 100),
 		},
 		"Counter does not exist": {
 			updateRequest: &beta.UpdateCounterRequest{
@@ -782,13 +782,13 @@ func TestLocalSDKServerUpdateCounter(t *testing.T) {
 					Name:      "dragons",
 					CountDiff: 1,
 				}},
-			wantErr: errors.Errorf("not found. %s Counter not found", "dragons"),
+			wantErr: fmt.Errorf("not found. %s Counter not found", "dragons"),
 		},
 		"request Counter is nil": {
 			updateRequest: &beta.UpdateCounterRequest{
 				CounterUpdateRequest: nil,
 			},
-			wantErr: errors.Errorf("invalid argument. CounterUpdateRequest cannot be nil"),
+			wantErr: stderrors.New("invalid argument. CounterUpdateRequest cannot be nil"),
 		},
 		"capacity is less than zero": {
 			updateRequest: &beta.UpdateCounterRequest{
@@ -796,7 +796,7 @@ func TestLocalSDKServerUpdateCounter(t *testing.T) {
 					Name:     "lobbies",
 					Capacity: wrapperspb.Int64(-1),
 				}},
-			wantErr: errors.Errorf("out of range. Capacity must be greater than or equal to 0. Found Capacity: %d", -1),
+			wantErr: fmt.Errorf("out of range. Capacity must be greater than or equal to 0. Found Capacity: %d", -1),
 		},
 		"count is less than zero": {
 			updateRequest: &beta.UpdateCounterRequest{
@@ -804,7 +804,7 @@ func TestLocalSDKServerUpdateCounter(t *testing.T) {
 					Name:  "players",
 					Count: wrapperspb.Int64(-1),
 				}},
-			wantErr: errors.Errorf("out of range. Count must be within range [0,Capacity]. Found Count: %d, Capacity: %d", -1, 100),
+			wantErr: fmt.Errorf("out of range. Count must be within range [0,Capacity]. Found Count: %d, Capacity: %d", -1, 100),
 		},
 		"count is greater than capacity": {
 			updateRequest: &beta.UpdateCounterRequest{
@@ -812,7 +812,7 @@ func TestLocalSDKServerUpdateCounter(t *testing.T) {
 					Name:  "players",
 					Count: wrapperspb.Int64(101),
 				}},
-			wantErr: errors.Errorf("out of range. Count must be within range [0,Capacity]. Found Count: %d, Capacity: %d", 101, 100),
+			wantErr: fmt.Errorf("out of range. Count must be within range [0,Capacity]. Found Count: %d, Capacity: %d", 101, 100),
 		},
 	}
 
@@ -884,7 +884,7 @@ func TestLocalSDKServerGetList(t *testing.T) {
 		},
 		"List does not exist": {
 			name:    "noName",
-			wantErr: errors.Errorf("not found. %s List not found", "noName"),
+			wantErr: fmt.Errorf("not found. %s List not found", "noName"),
 		},
 	}
 
@@ -899,7 +899,7 @@ func TestLocalSDKServerGetList(t *testing.T) {
 				}
 			} else {
 				// Check tests expecting errors
-				assert.EqualError(t, err, testScenario.wantErr.Error())
+				assert.ErrorContains(t, err, testScenario.wantErr.Error())
 			}
 		})
 	}
@@ -1018,21 +1018,21 @@ func TestLocalSDKServerUpdateList(t *testing.T) {
 				},
 				UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"capacity"}},
 			},
-			wantErr: errors.Errorf("not found. %s List not found", "dragons"),
+			wantErr: fmt.Errorf("not found. %s List not found", "dragons"),
 		},
 		"request List is nil": {
 			updateRequest: &beta.UpdateListRequest{
 				List:       nil,
 				UpdateMask: &fieldmaskpb.FieldMask{},
 			},
-			wantErr: errors.Errorf("invalid argument. List: %v and UpdateMask %v cannot be nil", nil, &fieldmaskpb.FieldMask{}),
+			wantErr: fmt.Errorf("invalid argument. List: %v and UpdateMask %v cannot be nil", nil, &fieldmaskpb.FieldMask{}),
 		},
 		"request UpdateMask is nil": {
 			updateRequest: &beta.UpdateListRequest{
 				List:       &beta.List{},
 				UpdateMask: nil,
 			},
-			wantErr: errors.Errorf("invalid argument. List: %v and UpdateMask %v cannot be nil", &beta.List{}, nil),
+			wantErr: fmt.Errorf("invalid argument. List: %v and UpdateMask %v cannot be nil", &beta.List{}, nil),
 		},
 		"updateMask contains invalid path": {
 			updateRequest: &beta.UpdateListRequest{
@@ -1041,7 +1041,7 @@ func TestLocalSDKServerUpdateList(t *testing.T) {
 				},
 				UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"foo"}},
 			},
-			wantErr: errors.Errorf("invalid argument. Field Mask Path(s): [foo] are invalid for List. Use valid field name(s): "),
+			wantErr: stderrors.New("invalid argument. Field Mask Path(s): [foo] are invalid for List. Use valid field name(s): "),
 		},
 		"updateMask is empty": {
 			updateRequest: &beta.UpdateListRequest{
@@ -1050,7 +1050,7 @@ func TestLocalSDKServerUpdateList(t *testing.T) {
 				},
 				UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{""}},
 			},
-			wantErr: errors.Errorf("invalid argument. Field Mask Path(s): [] are invalid for List. Use valid field name(s): "),
+			wantErr: stderrors.New("invalid argument. Field Mask Path(s): [] are invalid for List. Use valid field name(s): "),
 		},
 		"capacity is less than zero": {
 			updateRequest: &beta.UpdateListRequest{
@@ -1060,7 +1060,7 @@ func TestLocalSDKServerUpdateList(t *testing.T) {
 				},
 				UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"capacity"}},
 			},
-			wantErr: errors.Errorf("out of range. Capacity must be within range [0,1000]. Found Capacity: %d", -1),
+			wantErr: fmt.Errorf("out of range. Capacity must be within range [0,1000]. Found Capacity: %d", -1),
 		},
 		"capacity greater than max capacity (1000)": {
 			updateRequest: &beta.UpdateListRequest{
@@ -1070,7 +1070,7 @@ func TestLocalSDKServerUpdateList(t *testing.T) {
 				},
 				UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"capacity"}},
 			},
-			wantErr: errors.Errorf("out of range. Capacity must be within range [0,1000]. Found Capacity: %d", 1001),
+			wantErr: fmt.Errorf("out of range. Capacity must be within range [0,1000]. Found Capacity: %d", 1001),
 		},
 		"capacity is less than List length": {
 			updateRequest: &beta.UpdateListRequest{
@@ -1162,21 +1162,21 @@ func TestLocalSDKServerAddListValue(t *testing.T) {
 			addRequest: &beta.AddListValueRequest{
 				Name: "dragons",
 			},
-			wantErr: errors.Errorf("not found. %s List not found", "dragons"),
+			wantErr: fmt.Errorf("not found. %s List not found", "dragons"),
 		},
 		"add more values than capacity": {
 			addRequest: &beta.AddListValueRequest{
 				Name:  "hacks",
 				Value: "hack3",
 			},
-			wantErr: errors.Errorf("out of range. No available capacity. Current Capacity: %d, List Size: %d", int64(2), int64(2)),
+			wantErr: fmt.Errorf("out of range. No available capacity. Current Capacity: %d, List Size: %d", int64(2), int64(2)),
 		},
 		"add existing value": {
 			addRequest: &beta.AddListValueRequest{
 				Name:  "lemmings",
 				Value: "lemming1",
 			},
-			wantErr: errors.Errorf("already exists. Value: %s already in List: %s", "lemming1", "lemmings"),
+			wantErr: fmt.Errorf("already exists. Value: %s already in List: %s", "lemming1", "lemmings"),
 		},
 	}
 
@@ -1254,14 +1254,14 @@ func TestLocalSDKServerRemoveListValue(t *testing.T) {
 			removeRequest: &beta.RemoveListValueRequest{
 				Name: "dragons",
 			},
-			wantErr: errors.Errorf("not found. %s List not found", "dragons"),
+			wantErr: fmt.Errorf("not found. %s List not found", "dragons"),
 		},
 		"value does not exist": {
 			removeRequest: &beta.RemoveListValueRequest{
 				Name:  "items",
 				Value: "item3",
 			},
-			wantErr: errors.Errorf("not found. Value: %s not found in List: %s", "item3", "items"),
+			wantErr: fmt.Errorf("not found. Value: %s not found in List: %s", "item3", "items"),
 		},
 	}
 

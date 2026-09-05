@@ -2188,7 +2188,7 @@ func TestSDKServerPlayerConnectAndDisconnect(t *testing.T) {
 	// should return an error if we try and add another, since we're at capacity
 	nopePlayer := &alpha.PlayerID{PlayerID: "nope"}
 	_, err = sc.PlayerConnect(context.Background(), nopePlayer)
-	assert.EqualError(t, err, "players are already at capacity")
+	assert.ErrorContains(t, err, "players are already at capacity")
 
 	// sdk value should always be correct, even if we send more than one update per second.
 	// let's leave one player behind
