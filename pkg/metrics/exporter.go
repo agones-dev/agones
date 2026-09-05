@@ -25,7 +25,6 @@ import (
 	"contrib.go.opencensus.io/exporter/prometheus"
 	"contrib.go.opencensus.io/exporter/stackdriver"
 	"github.com/heptiolabs/healthcheck"
-	"github.com/pkg/errors"
 	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"go.opencensus.io/stats/view"
@@ -109,11 +108,11 @@ func SetReportingPeriod(forPrometheus, forStackdriver bool) {
 func getMonitoredResource(projectID string) (*monitoredres.MonitoredResource, error) {
 	zone, err := metadata.ZoneWithContext(context.TODO())
 	if err != nil {
-		return nil, errors.Wrap(err, "error getting zone")
+		return nil, errs.Wrap(err, "error getting zone")
 	}
 	clusterName, err := metadata.InstanceAttributeValueWithContext(context.TODO(), "cluster-name")
 	if err != nil {
-		return nil, errors.Wrap(err, "error getting cluster-name")
+		return nil, errs.Wrap(err, "error getting cluster-name")
 	}
 
 	return &monitoredres.MonitoredResource{
