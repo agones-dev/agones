@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"time"
 
+	"agones.dev/agones/pkg/util/errors"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/encoding/protojson"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -30,12 +30,9 @@ import (
 	clientcmd "k8s.io/client-go/tools/clientcmd"
 )
 
-const sourceKey = "source"
+var errs = errors.FromPackage()
 
-// stackTracer is the pkg/errors stacktrace interface
-type stackTracer interface {
-	StackTrace() errors.StackTrace
-}
+const sourceKey = "source"
 
 // replace the standard glog error logger, with a logrus one
 func init() {
@@ -49,15 +46,7 @@ func init() {
 	})
 
 	runtime.ErrorHandlers[0] = func(_ context.Context, err error, _ string, _ ...interface{}) {
-		if stackTrace, ok := err.(stackTracer); ok {
-			var stack []string
-			for _, f := range stackTrace.StackTrace() {
-				stack = append(stack, fmt.Sprintf("%+v", f))
-			}
-			logrus.WithField("stack", stack).Error(err)
-		} else {
-			logrus.Error(err)
-		}
+		logrus.Error(err)
 	}
 }
 

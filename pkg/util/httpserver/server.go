@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"agones.dev/agones/pkg/util/runtime"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -65,7 +64,7 @@ func (s *Server) Run(ctx context.Context, _ int) error {
 		if err == http.ErrServerClosed {
 			s.Logger.WithError(err).Info("http server closed")
 		} else {
-			wrappedErr := errors.Wrap(err, "Could not listen on :"+s.Port)
+			wrappedErr := errs.Wrap(err, "Could not listen on :"+s.Port)
 			runtime.HandleError(s.Logger.WithError(wrappedErr), wrappedErr)
 		}
 	}

@@ -19,8 +19,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/runtime"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,6 +30,7 @@ import (
 // WebHook manage Kubernetes webhooks
 type WebHook struct {
 	logger   *logrus.Entry
+	errs     *errors.Errors
 	mux      *http.ServeMux
 	handlers map[string][]operationHandler
 }
@@ -53,6 +54,7 @@ func NewWebHook(mux *http.ServeMux) *WebHook {
 	}
 
 	wh.logger = runtime.NewLoggerWithType(wh)
+	wh.errs = errors.FromStruct(wh)
 	return wh
 }
 
@@ -78,7 +80,7 @@ func (wh *WebHook) handle(path string, w http.ResponseWriter, r *http.Request) e
 	var review admissionv1.AdmissionReview
 	err := json.NewDecoder(r.Body).Decode(&review)
 	if err != nil {
-		return errors.Wrapf(err, "error decoding decoding json for path %v", path)
+		return wh.errs.Wrapf(err, "error decoding decoding json for path %v", path)
 	}
 
 	// set it to true, in case there are no handlers
@@ -116,7 +118,7 @@ func (wh *WebHook) handle(path string, w http.ResponseWriter, r *http.Request) e
 	}
 	err = json.NewEncoder(w).Encode(review)
 	if err != nil {
-		return errors.Wrapf(err, "error decoding encoding json for path %v", path)
+		return wh.errs.Wrapf(err, "error decoding encoding json for path %v", path)
 	}
 
 	return nil

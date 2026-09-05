@@ -19,13 +19,14 @@ package workerqueue
 
 import (
 	"context"
+	stderrors "errors"
 	"fmt"
 	"sync"
 	"time"
 
+	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/logfields"
 	"agones.dev/agones/pkg/util/runtime"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	k8serror "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -59,7 +60,7 @@ func (l *traceError) Error() string {
 // isTraceError returns if the error is a trace error or not
 func isTraceError(err error) bool {
 	var traceErr *traceError
-	return errors.As(err, &traceErr)
+	return stderrors.As(err, &traceErr)
 }
 
 // Handler is the handler for processing the work queue
@@ -73,6 +74,7 @@ type Handler func(context.Context, string) error
 //nolint:govet // ignore fieldalignment, singleton
 type WorkerQueue struct {
 	logger  *logrus.Entry
+	errs    *errors.Errors
 	keyName string
 	queue   workqueue.TypedRateLimitingInterface[any]
 	// SyncHandler is exported to make testing easier (hack)
@@ -106,12 +108,14 @@ func NewWorkerQueue(handler Handler, logger *logrus.Entry, keyName logfields.Res
 
 // NewWorkerQueueWithRateLimiter returns a new worker queue for a given name and a custom rate limiter.
 func NewWorkerQueueWithRateLimiter(handler Handler, logger *logrus.Entry, keyName logfields.ResourceType, queueName string, rateLimiter workqueue.TypedRateLimiter[any]) *WorkerQueue {
-	return &WorkerQueue{
+	wq := &WorkerQueue{
 		keyName:     string(keyName),
 		logger:      logger.WithField("queue", queueName),
 		queue:       workqueue.NewNamedRateLimitingQueue(rateLimiter, queueName),
 		SyncHandler: handler,
 	}
+	wq.errs = errors.FromStruct(wq)
+	return wq
 }
 
 // Enqueue puts the name of the runtime.Object in the
@@ -121,7 +125,7 @@ func (wq *WorkerQueue) Enqueue(obj interface{}) {
 	var key string
 	var err error
 	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
-		err = errors.Wrap(err, "Error creating key for object")
+		err = wq.errs.Wrap(err, "Error creating key for object")
 		runtime.HandleError(wq.logger.WithField("obj", obj), err)
 		return
 	}
@@ -136,7 +140,7 @@ func (wq *WorkerQueue) EnqueueImmediately(obj interface{}) {
 	var key string
 	var err error
 	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
-		err = errors.Wrap(err, "Error creating key for object")
+		err = wq.errs.Wrap(err, "Error creating key for object")
 		runtime.HandleError(wq.logger.WithField("obj", obj), err)
 		return
 	}
@@ -149,7 +153,7 @@ func (wq *WorkerQueue) EnqueueAfter(obj interface{}, duration time.Duration) {
 	var key string
 	var err error
 	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
-		err = errors.Wrap(err, "Error creating key for object")
+		err = wq.errs.Wrap(err, "Error creating key for object")
 		runtime.HandleError(wq.logger.WithField("obj", obj), err)
 		return
 	}
@@ -180,7 +184,7 @@ func (wq *WorkerQueue) processNextWorkItem(ctx context.Context) bool {
 	var key string
 	var ok bool
 	if key, ok = obj.(string); !ok {
-		runtime.HandleError(wq.logger.WithField(wq.keyName, obj), errors.Errorf("expected string in queue, but got %T", obj))
+		runtime.HandleError(wq.logger.WithField(wq.keyName, obj), wq.errs.Errorf("expected string in queue, but got %T", obj))
 		// this is a bad entry, we don't want to reprocess
 		wq.queue.Forget(obj)
 		return true
@@ -189,7 +193,7 @@ func (wq *WorkerQueue) processNextWorkItem(ctx context.Context) bool {
 	if err := wq.SyncHandler(ctx, key); err != nil {
 		// Conflicts are expected, so only show them in debug operations.
 		// Also check is traceError for other expected errors.
-		if k8serror.IsConflict(errors.Cause(err)) || isTraceError(err) {
+		if k8serror.IsConflict(err) || isTraceError(err) {
 			wq.logger.WithField(wq.keyName, obj).Trace(err)
 		} else {
 			runtime.HandleError(wq.logger.WithField(wq.keyName, obj), err)
