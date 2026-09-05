@@ -137,8 +137,8 @@ spec:
           value: {{ .Values.agones.image.sdk.memoryRequest | quote }}
         - name: SIDECAR_MEMORY_LIMIT
           value: {{ .Values.agones.image.sdk.memoryLimit | quote }}
-        - name: SIDECAR_RUN_AS_USER
-          value: "1000"
+        - name: SIDECAR_SECURITY_CONTEXT
+          value: {{ .Values.agones.image.sdk.securityContext | toJson | quote }}
         - name: SIDECAR_REQUESTS_RATE_LIMIT
           value: {{ .Values.agones.sdkServer.requestsRateLimit | quote }}
         - name: SDK_SERVICE_ACCOUNT

@@ -1622,6 +1622,8 @@ func TestControllerCreateGameServerPod(t *testing.T) {
 			assert.False(t, *sidecarContainer.SecurityContext.AllowPrivilegeEscalation)
 			assert.True(t, *sidecarContainer.SecurityContext.RunAsNonRoot)
 			assert.Equal(t, *sidecarContainer.SecurityContext.RunAsUser, int64(sidecarRunAsUser))
+			assert.Equal(t, []corev1.Capability{"ALL"}, sidecarContainer.SecurityContext.Capabilities.Drop)
+			assert.Equal(t, corev1.SeccompProfileTypeRuntimeDefault, sidecarContainer.SecurityContext.SeccompProfile.Type)
 
 			assert.Equal(t, fixture.Spec.Ports[0].HostPort, gsContainer.Ports[0].HostPort)
 			assert.Equal(t, fixture.Spec.Ports[0].ContainerPort, gsContainer.Ports[0].ContainerPort)
@@ -2551,6 +2553,47 @@ func testWithNonZeroDeletionTimestamp(t *testing.T, f func(*Controller, *agonesv
 	assert.Equal(t, fixture, result)
 }
 
+func TestControllerSidecarSecurityContext(t *testing.T) {
+	t.Parallel()
+
+	newGameServer := func() *agonesv1.GameServer {
+		gs := &agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "default"}, Spec: newSingleContainerSpec()}
+		gs.ApplyDefaults()
+		return gs
+	}
+
+	t.Run("default security context", func(t *testing.T) {
+		c, _ := newFakeController()
+		sidecar := c.sidecar(newGameServer())
+
+		assert.Equal(t, DefaultSidecarSecurityContext(sidecarRunAsUser), sidecar.SecurityContext)
+	})
+
+	t.Run("custom security context", func(t *testing.T) {
+		c, _ := newFakeController()
+		c.sidecarSecurityContext = &corev1.SecurityContext{
+			RunAsNonRoot: ptr.To(true),
+			RunAsUser:    ptr.To(int64(2000)),
+			RunAsGroup:   ptr.To(int64(3000)),
+		}
+		sidecar := c.sidecar(newGameServer())
+
+		assert.Equal(t, c.sidecarSecurityContext, sidecar.SecurityContext)
+		assert.Nil(t, sidecar.SecurityContext.Capabilities)
+		assert.Nil(t, sidecar.SecurityContext.SeccompProfile)
+	})
+
+	t.Run("each sidecar gets its own copy", func(t *testing.T) {
+		c, _ := newFakeController()
+		first := c.sidecar(newGameServer())
+		second := c.sidecar(newGameServer())
+
+		*first.SecurityContext.RunAsUser = 2000
+		assert.Equal(t, int64(sidecarRunAsUser), *second.SecurityContext.RunAsUser)
+		assert.Equal(t, int64(sidecarRunAsUser), *c.sidecarSecurityContext.RunAsUser)
+	})
+}
+
 // newFakeController returns a controller, backed by the fake Clientset
 func newFakeController() (*Controller, agtesting.Mocks) {
 	m := agtesting.NewMocks()
@@ -2560,7 +2603,7 @@ func newFakeController() (*Controller, agtesting.Mocks) {
 		map[string]portallocator.PortRange{agonesv1.DefaultPortRange: {MinPort: 10, MaxPort: 20}},
 		"sidecar:dev", false,
 		resource.MustParse("0.05"), resource.MustParse("0.1"),
-		resource.MustParse("50Mi"), resource.MustParse("100Mi"), sidecarRunAsUser, 500*time.Millisecond, "sdk-service-account",
+		resource.MustParse("50Mi"), resource.MustParse("100Mi"), DefaultSidecarSecurityContext(sidecarRunAsUser), 500*time.Millisecond, "sdk-service-account",
 		m.KubeClient, m.KubeInformerFactory, m.ExtClient, m.AgonesClient, m.AgonesInformerFactory)
 	c.recorder = m.FakeRecorder
 	return c, m

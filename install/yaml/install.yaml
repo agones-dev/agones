@@ -20787,8 +20787,8 @@ spec:
           value: "0"
         - name: SIDECAR_MEMORY_LIMIT
           value: "0"
-        - name: SIDECAR_RUN_AS_USER
-          value: "1000"
+        - name: SIDECAR_SECURITY_CONTEXT
+          value: "{\"allowPrivilegeEscalation\":false,\"capabilities\":{\"drop\":[\"ALL\"]},\"runAsNonRoot\":true,\"runAsUser\":1000,\"seccompProfile\":{\"type\":\"RuntimeDefault\"}}"
         - name: SIDECAR_REQUESTS_RATE_LIMIT
           value: "500ms"
         - name: SDK_SERVICE_ACCOUNT

@@ -29,6 +29,23 @@ If you are collecting [Metrics]({{< relref "metrics" >}}) using our standard Pro
 
 See [Creating a Cluster]({{< relref "Creating Cluster" >}}) for initial set up on your cloud provider.
 
+{{% feature publishVersion="1.61.0" %}}
+## Pod Security Standards
+
+The Agones sdk sidecar container declares a security context that is compatible with the `restricted`
+[Pod Security Standard](https://kubernetes.io/docs/concepts/security/pod-security-standards/) by default, so
+`GameServers` can be run in namespaces that enforce it. Your game server container, and any other containers in the
+`GameServer` Pod template, need to declare their own compliant security contexts.
+
+The `baseline` and `restricted` standards also forbid `hostPort`, which the `Dynamic`, `Static` and `Passthrough`
+port policies rely on, so `GameServers` in these namespaces need to use the `None`
+[port policy]({{< ref "/docs/Reference/gameserver.md" >}}).
+
+The sidecar security context can be changed through the `agones.image.sdk.securityContext`
+[Helm value]({{< ref "/docs/Installation/Install Agones/helm.md#configuration" >}}), for example to use a different seccomp
+profile or group.
+{{% /feature %}}
+
 ## Redundant Clusters
 
 ### Allocate Across Clusters

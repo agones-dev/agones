@@ -67,6 +67,7 @@ const (
 	sidecarMemoryRequestFlag           = "sidecar-memory-request"
 	sidecarMemoryLimitFlag             = "sidecar-memory-limit"
 	sidecarRunAsUserFlag               = "sidecar-run-as-user"
+	sidecarSecurityContextFlag         = "sidecar-security-context"
 	sidecarRequestsRateLimitFlag       = "sidecar-requests-rate-limit"
 	sdkServerAccountFlag               = "sdk-service-account"
 	pullSidecarFlag                    = "always-pull-sidecar"
@@ -206,7 +207,7 @@ func main() {
 	gsController := gameservers.NewController(controllerHooks, health,
 		ctlConf.PortRanges, ctlConf.SidecarImage, ctlConf.AlwaysPullSidecar,
 		ctlConf.SidecarCPURequest, ctlConf.SidecarCPULimit,
-		ctlConf.SidecarMemoryRequest, ctlConf.SidecarMemoryLimit, ctlConf.SidecarRunAsUser, ctlConf.SidecarRequestsRateLimit, ctlConf.SdkServiceAccount,
+		ctlConf.SidecarMemoryRequest, ctlConf.SidecarMemoryLimit, ctlConf.SidecarSecurityContext, ctlConf.SidecarRequestsRateLimit, ctlConf.SdkServiceAccount,
 		kubeClient, kubeInformerFactory, extClient, agonesClient, agonesInformerFactory)
 	gsSetController := gameserversets.NewController(health, gsCounter,
 		kubeClient, extClient, agonesClient, agonesInformerFactory, ctlConf.MaxCreationParallelism, ctlConf.MaxDeletionParallelism, ctlConf.MaxGameServerCreationsPerBatch, ctlConf.MaxGameServerDeletionsPerBatch, ctlConf.MaxPodPendingCount)
@@ -253,6 +254,7 @@ func parseEnvFlags() config {
 	viper.SetDefault(sidecarMemoryRequestFlag, "0")
 	viper.SetDefault(sidecarMemoryLimitFlag, "0")
 	viper.SetDefault(sidecarRunAsUserFlag, "1000")
+	viper.SetDefault(sidecarSecurityContextFlag, "")
 	viper.SetDefault(sidecarRequestsRateLimitFlag, "500ms")
 	viper.SetDefault(pullSidecarFlag, false)
 	viper.SetDefault(sdkServerAccountFlag, "agones-sdk")
@@ -284,7 +286,8 @@ func parseEnvFlags() config {
 	pflag.String(sidecarCPURequestFlag, viper.GetString(sidecarCPURequestFlag), "Flag to overwrite the GameServer sidecar container's cpu request. Can also use SIDECAR_CPU_REQUEST env variable")
 	pflag.String(sidecarMemoryLimitFlag, viper.GetString(sidecarMemoryLimitFlag), "Flag to overwrite the GameServer sidecar container's memory limit. Can also use SIDECAR_MEMORY_LIMIT env variable")
 	pflag.String(sidecarMemoryRequestFlag, viper.GetString(sidecarMemoryRequestFlag), "Flag to overwrite the GameServer sidecar container's memory request. Can also use SIDECAR_MEMORY_REQUEST env variable")
-	pflag.Int32(sidecarRunAsUserFlag, viper.GetInt32(sidecarRunAsUserFlag), "Flag to indicate the GameServer sidecar container's UID. Can also use SIDECAR_RUN_AS_USER env variable")
+	pflag.Int32(sidecarRunAsUserFlag, viper.GetInt32(sidecarRunAsUserFlag), "Flag to indicate the GameServer sidecar container's UID. Only used when --sidecar-security-context is empty. Can also use SIDECAR_RUN_AS_USER env variable")
+	pflag.String(sidecarSecurityContextFlag, viper.GetString(sidecarSecurityContextFlag), `Optional. JSON encoded Kubernetes SecurityContext for the GameServer sidecar container. Defaults to a context compatible with the "restricted" Pod Security Standard. Can also use SIDECAR_SECURITY_CONTEXT env variable`)
 	pflag.String(sidecarRequestsRateLimitFlag, viper.GetString(sidecarRequestsRateLimitFlag), "Flag to indicate the GameServer sidecar requests rate limit. Can also use SIDECAR_REQUESTS_RATE_LIMIT env variable")
 	pflag.Bool(pullSidecarFlag, viper.GetBool(pullSidecarFlag), "For development purposes, set the sidecar image to have a ImagePullPolicy of Always. Can also use ALWAYS_PULL_SIDECAR env variable")
 	pflag.String(sdkServerAccountFlag, viper.GetString(sdkServerAccountFlag), "Overwrite what service account default for GameServer Pods. Defaults to Can also use SDK_SERVICE_ACCOUNT")
@@ -323,6 +326,7 @@ func parseEnvFlags() config {
 	runtime.Must(viper.BindEnv(sidecarMemoryLimitFlag))
 	runtime.Must(viper.BindEnv(sidecarMemoryRequestFlag))
 	runtime.Must(viper.BindEnv(sidecarRunAsUserFlag))
+	runtime.Must(viper.BindEnv(sidecarSecurityContextFlag))
 	runtime.Must(viper.BindEnv(sidecarRequestsRateLimitFlag))
 	runtime.Must(viper.BindEnv(pullSidecarFlag))
 	runtime.Must(viper.BindEnv(sdkServerAccountFlag))
@@ -381,6 +385,11 @@ func parseEnvFlags() config {
 		logger.WithError(err).Fatalf("could not parse %s", sidecarRequestsRateLimitFlag)
 	}
 
+	sidecarSecurityContext, err := parseSidecarSecurityContext(viper.GetString(sidecarSecurityContextFlag), int64(viper.GetInt32(sidecarRunAsUserFlag)))
+	if err != nil {
+		logger.WithError(err).Fatalf("could not parse %s", sidecarSecurityContextFlag)
+	}
+
 	portRanges, err := parsePortRanges(viper.GetString(additionalPortRangesFlag))
 	if err != nil {
 		logger.WithError(err).Fatalf("could not parse %s", additionalPortRangesFlag)
@@ -397,7 +406,7 @@ func parseEnvFlags() config {
 		SidecarCPULimit:                limitCPU,
 		SidecarMemoryRequest:           requestMemory,
 		SidecarMemoryLimit:             limitMemory,
-		SidecarRunAsUser:               int(viper.GetInt32(sidecarRunAsUserFlag)),
+		SidecarSecurityContext:         sidecarSecurityContext,
 		SidecarRequestsRateLimit:       requestsRateLimit,
 		SdkServiceAccount:              viper.GetString(sdkServerAccountFlag),
 		AlwaysPullSidecar:              viper.GetBool(pullSidecarFlag),
@@ -448,6 +457,20 @@ func parsePortRanges(s string) (map[string]portallocator.PortRange, error) {
 	return portRanges, nil
 }
 
+// parseSidecarSecurityContext parses the JSON encoded sidecar security context, falling back to
+// the default restricted-compatible context with the given UID when none is provided.
+func parseSidecarSecurityContext(s string, runAsUser int64) (*corev1.SecurityContext, error) {
+	if strings.TrimSpace(s) == "" {
+		return gameservers.DefaultSidecarSecurityContext(runAsUser), nil
+	}
+
+	sc := &corev1.SecurityContext{}
+	if err := json.Unmarshal([]byte(s), sc); err != nil {
+		return nil, fmt.Errorf("invalid sidecar security context format: %w", err)
+	}
+	return sc, nil
+}
+
 // config stores all required configuration to create a game server controller.
 type config struct {
 	PortRanges                     map[string]portallocator.PortRange
@@ -456,7 +479,7 @@ type config struct {
 	SidecarCPULimit                resource.Quantity
 	SidecarMemoryRequest           resource.Quantity
 	SidecarMemoryLimit             resource.Quantity
-	SidecarRunAsUser               int
+	SidecarSecurityContext         *corev1.SecurityContext
 	SidecarRequestsRateLimit       time.Duration
 	SdkServiceAccount              string
 	AlwaysPullSidecar              bool

@@ -345,6 +345,15 @@ agones:
       memoryRequest: 0
       memoryLimit: 0
       alwaysPull: false
+      securityContext:
+        allowPrivilegeEscalation: false
+        runAsNonRoot: true
+        runAsUser: 1000
+        capabilities:
+          drop:
+            - ALL
+        seccompProfile:
+          type: RuntimeDefault
     ping:
       name: agones-ping
       pullPolicy: IfNotPresent

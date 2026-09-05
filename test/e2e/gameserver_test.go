@@ -22,6 +22,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -530,6 +531,56 @@ func TestGameServerUnhealthyAfterReadyCrashWithGenericContainer(t *testing.T) {
 		log.WithField("gs", current.ObjectMeta.Name).WithField("state", current.Status.State).Info("checking GameServer state")
 		assert.Equal(c, agonesv1.GameServerStateUnhealthy, current.Status.State)
 	}, 3*time.Minute, 5*time.Second)
+}
+
+// TestGameServerRestrictedPodSecurity checks that a GameServer becomes Ready in a namespace that
+// enforces the restricted Pod Security Standard, which requires the sdk sidecar container to
+// declare a compliant security context.
+func TestGameServerRestrictedPodSecurity(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	namespace := fmt.Sprintf("restricted-%s", rand.String(5))
+	require.NoError(t, framework.CreateNamespace(namespace))
+	defer func() {
+		if derr := framework.DeleteNamespace(namespace); derr != nil {
+			t.Error(derr)
+		}
+	}()
+
+	ns, err := framework.KubeClient.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
+	require.NoError(t, err)
+	ns.ObjectMeta.Labels["pod-security.kubernetes.io/enforce"] = "restricted"
+	_, err = framework.KubeClient.CoreV1().Namespaces().Update(ctx, ns, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	gs := framework.DefaultGameServer(namespace)
+	// the restricted standard forbids hostPort, so the port must be PortPolicy None
+	gs.Spec.Ports[0] = agonesv1.GameServerPort{Name: "udp-port", PortPolicy: agonesv1.None, ContainerPort: 7654, Protocol: corev1.ProtocolUDP}
+	gs.Spec.Template.Spec.Containers[0].SecurityContext = &corev1.SecurityContext{
+		AllowPrivilegeEscalation: ptr.To(false),
+		RunAsNonRoot:             ptr.To(true),
+		RunAsUser:                ptr.To(int64(1000)),
+		Capabilities:             &corev1.Capabilities{Drop: []corev1.Capability{"ALL"}},
+		SeccompProfile:           &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
+	}
+
+	readyGs, err := framework.CreateGameServerAndWaitUntilReady(t, namespace, gs)
+	require.NoError(t, err)
+
+	pod, err := framework.KubeClient.CoreV1().Pods(namespace).Get(ctx, readyGs.ObjectMeta.Name, metav1.GetOptions{})
+	require.NoError(t, err)
+
+	containers := slices.Concat(pod.Spec.InitContainers, pod.Spec.Containers)
+	i := slices.IndexFunc(containers, func(c corev1.Container) bool { return c.Name == "agones-gameserver-sidecar" })
+	require.NotEqual(t, -1, i, "sdk sidecar container not found")
+
+	sc := containers[i].SecurityContext
+	require.NotNil(t, sc)
+	assert.False(t, *sc.AllowPrivilegeEscalation)
+	assert.True(t, *sc.RunAsNonRoot)
+	assert.Equal(t, []corev1.Capability{"ALL"}, sc.Capabilities.Drop)
+	assert.Equal(t, corev1.SeccompProfileTypeRuntimeDefault, sc.SeccompProfile.Type)
 }
 
 func TestGameServerPodCompletedAfterCleanExit(t *testing.T) {
