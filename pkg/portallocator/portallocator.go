@@ -22,8 +22,8 @@ import (
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
 	"agones.dev/agones/pkg/client/informers/externalversions"
 	listerv1 "agones.dev/agones/pkg/client/listers/agones/v1"
+	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/runtime"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -114,6 +114,7 @@ type portAllocation map[int32]bool
 //nolint:govet // ignore fieldalignment, singleton
 type portRangeAllocator struct {
 	logger             *logrus.Entry
+	errs               *errors.Errors
 	name               string
 	mutex              sync.RWMutex
 	portAllocations    []portAllocation
@@ -149,6 +150,7 @@ func newRangeAllocator(name string, minPort, maxPort int32,
 		nodeSynced:         nodes.Informer().HasSynced,
 	}
 	pa.logger = runtime.NewLoggerWithType(pa).WithField("range", name)
+	pa.errs = errors.FromStruct(pa)
 
 	_, _ = pa.gameServerInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		DeleteFunc: pa.syncDeleteGameServer,
@@ -164,12 +166,12 @@ func (pa *portRangeAllocator) Run(ctx context.Context) error {
 	pa.logger.Debug("Running")
 
 	if !cache.WaitForCacheSync(ctx.Done(), pa.gameServerSynced, pa.nodeSynced) {
-		return errors.New("failed to wait for caches to sync")
+		return pa.errs.New("failed to wait for caches to sync")
 	}
 
 	// on run, let's make sure we start with a perfect slate straight away
 	if err := pa.syncAll(); err != nil {
-		return errors.Wrap(err, "error performing initial sync")
+		return pa.errs.Wrap(err, "error performing initial sync")
 	}
 
 	return nil
@@ -329,12 +331,12 @@ func (pa *portRangeAllocator) syncAll() error {
 
 	nodes, err := pa.nodeLister.List(labels.Everything())
 	if err != nil {
-		return errors.Wrap(err, "error listing all nodes")
+		return pa.errs.Wrap(err, "error listing all nodes")
 	}
 
 	gameservers, err := pa.gameServerLister.List(labels.Everything())
 	if err != nil {
-		return errors.Wrapf(err, "error listing all GameServers")
+		return pa.errs.Wrapf(err, "error listing all GameServers")
 	}
 
 	gsRegistry := map[types.UID]bool{}
