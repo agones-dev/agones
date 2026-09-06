@@ -41,6 +41,10 @@ The `baseline` and `restricted` standards also forbid `hostPort`, which the `Dyn
 port policies rely on, so `GameServers` in these namespaces need to use the `None`
 [port policy]({{< ref "/docs/Reference/gameserver.md" >}}).
 
+On [GKE Autopilot]({{< ref "/docs/Installation/Creating Cluster/gke.md" >}}), Agones sets the Pod seccomp profile to
+`Unconfined` unless the `GameServer` Pod template sets one, which the `restricted` standard rejects. Set
+`securityContext.seccompProfile.type: RuntimeDefault` on the Pod template to run in these namespaces.
+
 The sidecar security context can be changed through the `agones.image.sdk.securityContext`
 [Helm value]({{< ref "/docs/Installation/Install Agones/helm.md#configuration" >}}), for example to use a different seccomp
 profile or group.

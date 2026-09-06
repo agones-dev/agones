@@ -557,6 +557,10 @@ func TestGameServerRestrictedPodSecurity(t *testing.T) {
 	gs := framework.DefaultGameServer(namespace)
 	// the restricted standard forbids hostPort, so the port must be PortPolicy None
 	gs.Spec.Ports[0] = agonesv1.GameServerPort{Name: "udp-port", PortPolicy: agonesv1.None, ContainerPort: 7654, Protocol: corev1.ProtocolUDP}
+	// a pod level seccomp profile, as GKE Autopilot otherwise defaults it to Unconfined
+	gs.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{
+		SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
+	}
 	gs.Spec.Template.Spec.Containers[0].SecurityContext = &corev1.SecurityContext{
 		AllowPrivilegeEscalation: ptr.To(false),
 		RunAsNonRoot:             ptr.To(true),

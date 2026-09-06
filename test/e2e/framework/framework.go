@@ -238,6 +238,9 @@ func (f *Framework) CreateGameServerAndWaitUntilReady(t *testing.T, ns string, g
 	readyGs, err := f.WaitForGameServerState(t, newGs, agonesv1.GameServerStateReady, f.WaitForState)
 
 	if err != nil {
+		if readyGs != nil {
+			f.LogEvents(t, log, ns, readyGs)
+		}
 		return readyGs, fmt.Errorf("waiting for %v GameServer instance readiness timed out (%v): %w",
 			gs.Spec, gs.Name, err)
 	}
