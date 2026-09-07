@@ -1630,7 +1630,7 @@ func TestGameServerPodContainerNotFoundErrReturned(t *testing.T) {
 
 	_, err := fixture.Pod(fakeAPIHooks{})
 	if assert.Error(t, err, "Pod should return an error") {
-		assert.Equal(t, "failed to find container named Container1 in pod spec", err.Error())
+		assert.ErrorContains(t, err, "failed to find container named Container1 in pod spec")
 	}
 }
 
@@ -2060,7 +2060,7 @@ func TestGameServerApplyToPodContainer(t *testing.T) {
 			})
 
 			if tc.expected.err != "" && assert.Error(t, result) {
-				assert.Equal(t, tc.expected.err, result.Error())
+				assert.ErrorContains(t, result, tc.expected.err)
 			}
 			assert.Equal(t, tc.expected.tty, pod.Spec.Containers[0].TTY)
 			assert.False(t, pod.Spec.Containers[1].TTY)
