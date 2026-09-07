@@ -19,9 +19,11 @@ set -ex
 cd ./sdks/rust/proto/sdk
 
 # Authenticate with crates.io
+set +x
 read -rsp 'Crates.io API Token: ' CARGO_REGISTRY_TOKEN
 printf '\n'
 export CARGO_REGISTRY_TOKEN
+set -x
 
 # Perform a dry run of cargo publish
 dry_run_output=$(cargo publish --dry-run 2>&1)
