@@ -30,7 +30,7 @@ import (
 func TestParseSidecarSecurityContext(t *testing.T) {
 	t.Parallel()
 
-	t.Run("empty falls back to the default", func(t *testing.T) {
+	t.Run("empty or null falls back to the default", func(t *testing.T) {
 		sc, err := parseSidecarSecurityContext("", 1000)
 		require.NoError(t, err)
 		assert.Equal(t, gameservers.DefaultSidecarSecurityContext(1000), sc)
@@ -38,6 +38,10 @@ func TestParseSidecarSecurityContext(t *testing.T) {
 		sc, err = parseSidecarSecurityContext("  ", 2000)
 		require.NoError(t, err)
 		assert.Equal(t, int64(2000), *sc.RunAsUser)
+
+		sc, err = parseSidecarSecurityContext("null", 3000)
+		require.NoError(t, err)
+		assert.Equal(t, gameservers.DefaultSidecarSecurityContext(3000), sc)
 	})
 
 	t.Run("json is used as is", func(t *testing.T) {

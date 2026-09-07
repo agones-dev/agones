@@ -464,9 +464,13 @@ func parseSidecarSecurityContext(s string, runAsUser int64) (*corev1.SecurityCon
 		return gameservers.DefaultSidecarSecurityContext(runAsUser), nil
 	}
 
-	sc := &corev1.SecurityContext{}
-	if err := json.Unmarshal([]byte(s), sc); err != nil {
+	var sc *corev1.SecurityContext
+	if err := json.Unmarshal([]byte(s), &sc); err != nil {
 		return nil, fmt.Errorf("invalid sidecar security context format: %w", err)
+	}
+	// Helm renders an unset value as "null", which unmarshals to nil.
+	if sc == nil {
+		return gameservers.DefaultSidecarSecurityContext(runAsUser), nil
 	}
 	return sc, nil
 }
