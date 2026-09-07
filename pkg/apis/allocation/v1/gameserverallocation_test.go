@@ -154,7 +154,7 @@ func TestGameServerSelectorApplyDefaults(t *testing.T) {
 	assert.Equal(t, int64(10), s.Counters["foo"].MaxAvailable)
 	assert.Equal(t, int64(2), s.Lists["bar"].MinAvailable)
 	assert.Equal(t, int64(0), s.Lists["bar"].MaxAvailable)
-	assert.Equal(t, "", s.Lists["bar"].ContainsValue)
+	assert.Empty(t, s.Lists["bar"].ContainsValue)
 
 	// Test apply defaults is idempotent -- calling ApplyDefaults more than one time does not change the original result.
 	s.ApplyDefaults()
@@ -165,7 +165,7 @@ func TestGameServerSelectorApplyDefaults(t *testing.T) {
 	assert.Equal(t, int64(10), s.Counters["foo"].MaxAvailable)
 	assert.Equal(t, int64(2), s.Lists["bar"].MinAvailable)
 	assert.Equal(t, int64(0), s.Lists["bar"].MaxAvailable)
-	assert.Equal(t, "", s.Lists["bar"].ContainsValue)
+	assert.Empty(t, s.Lists["bar"].ContainsValue)
 }
 
 func TestGameServerSelectorValidate(t *testing.T) {
@@ -313,17 +313,17 @@ func TestMetaPatchValidate(t *testing.T) {
 	}
 	path := field.NewPath("spec", "metadata")
 	allErrs := mp.Validate(path)
-	assert.Len(t, allErrs, 0)
+	assert.Empty(t, allErrs)
 
 	mp.Labels = map[string]string{}
 	mp.Annotations = map[string]string{}
 	allErrs = mp.Validate(path)
-	assert.Len(t, allErrs, 0)
+	assert.Empty(t, allErrs)
 
 	mp.Labels["foo"] = "bar"
 	mp.Annotations["bar"] = "foo"
 	allErrs = mp.Validate(path)
-	assert.Len(t, allErrs, 0)
+	assert.Empty(t, allErrs)
 
 	// invalid label
 	invalid := mp.DeepCopy()
@@ -1174,7 +1174,7 @@ func TestGameServerAllocationValidate(t *testing.T) {
 	gsa.ApplyDefaults()
 
 	allErrs := gsa.Validate()
-	assert.Len(t, allErrs, 0)
+	assert.Empty(t, allErrs)
 
 	gsa.Spec.Scheduling = "FLERG"
 

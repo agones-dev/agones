@@ -104,13 +104,13 @@ func CreateAllocationPolicy(ctx context.Context, t *testing.T, framework *e2e.Fr
 func GetAllocatorEndpoint(ctx context.Context, t *testing.T, framework *e2e.Framework) (string, int32) {
 	kubeCore := framework.KubeClient.CoreV1()
 	svc, err := kubeCore.Services(agonesSystemNamespace).Get(ctx, allocatorServiceName, metav1.GetOptions{})
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
 	if !assert.NotNil(t, svc.Status.LoadBalancer) {
 		t.FailNow()
 	}
-	if !assert.Equal(t, 1, len(svc.Status.LoadBalancer.Ingress)) {
+	if !assert.Len(t, svc.Status.LoadBalancer.Ingress, 1) {
 		t.FailNow()
 	}
 	if !assert.NotNil(t, 0, svc.Status.LoadBalancer.Ingress[0].IP) {
@@ -276,7 +276,7 @@ func ValidateAllocatorResponse(t *testing.T, resp *pb.AllocationResponse) {
 	if !assert.NotNil(t, resp) {
 		return
 	}
-	assert.Greater(t, len(resp.Ports), 0)
+	assert.NotEmpty(t, resp.Ports)
 	assert.NotEmpty(t, resp.GameServerName)
 	assert.NotEmpty(t, resp.Address)
 	assert.NotEmpty(t, resp.Addresses)
@@ -303,7 +303,7 @@ func GetAllocatorClient(ctx context.Context, t *testing.T, framework *e2e.Framew
 	tlsCA := RefreshAllocatorTLSCerts(ctx, t, ip, framework)
 
 	flt, err := CreateFleet(ctx, framework.Namespace, framework)
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return nil, err
 	}
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))

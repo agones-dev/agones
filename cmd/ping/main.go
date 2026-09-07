@@ -34,6 +34,10 @@ import (
 const (
 	httpResponseFlag = "http-response"
 	udpRateLimitFlag = "udp-rate-limit"
+
+	// readHeaderTimeout bounds how long a client may take to send its request
+	// headers, so a Slowloris client cannot hold the listener open indefinitely.
+	readHeaderTimeout = 60 * time.Second
 )
 
 var (
@@ -75,8 +79,9 @@ func serveHTTP(ctlConf config, h healthcheck.Handler) func() {
 	// we don't need a health checker, we already have a http endpoint that returns 200
 	mux := http.NewServeMux()
 	srv := &http.Server{
-		Addr:    ":8080",
-		Handler: mux,
+		Addr:              ":8080",
+		Handler:           mux,
+		ReadHeaderTimeout: readHeaderTimeout,
 	}
 
 	// add health check as well

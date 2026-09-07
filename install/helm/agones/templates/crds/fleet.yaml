@@ -138,6 +138,7 @@ spec:
                     "metadata" true 
                     "podPreserveUnknownFields" .Values.gameservers.podPreserveUnknownFields
                     "lists" .Values.gameservers.lists
+                    "includeKubernetesPatchKeys" .Values.agones.crds.includeKubernetesPatchKeys
                   }}
                   {{- include "gameserver.schema" $data | indent 17 }}
             status:

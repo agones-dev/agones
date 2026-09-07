@@ -50,7 +50,7 @@ func TestGameServerSetGameServer(t *testing.T) {
 	}
 
 	gs := gsSet.GameServer()
-	assert.Equal(t, "", gs.ObjectMeta.Name)
+	assert.Empty(t, gs.ObjectMeta.Name)
 	assert.Equal(t, gsSet.ObjectMeta.Namespace, gs.ObjectMeta.Namespace)
 	assert.Equal(t, gsSet.ObjectMeta.Name+"-", gs.ObjectMeta.GenerateName)
 	assert.Equal(t, gsSet.ObjectMeta.Name, gs.ObjectMeta.Labels[GameServerSetGameServerLabel])
@@ -96,7 +96,7 @@ func TestGameServerSetValidateUpdate(t *testing.T) {
 	newGSS.Name = ""
 	newGSS.GenerateName = longName
 	errs = newGSS.Validate(fakeAPIHooks{})
-	assert.Len(t, errs, 0)
+	assert.Empty(t, errs)
 
 	newGSS = gsSet.DeepCopy()
 	newGSS.Name = longName

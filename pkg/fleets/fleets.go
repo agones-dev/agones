@@ -19,17 +19,19 @@ package fleets
 import (
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
 	listerv1 "agones.dev/agones/pkg/client/listers/agones/v1"
-	"github.com/pkg/errors"
+	"agones.dev/agones/pkg/util/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
+
+var errs = errors.FromPackage()
 
 // ListGameServerSetsByFleetOwner lists all the GameServerSets for a given
 // Fleet
 func ListGameServerSetsByFleetOwner(gameServerSetNamespacedLister listerv1.GameServerSetNamespaceLister, f *agonesv1.Fleet) ([]*agonesv1.GameServerSet, error) {
 	list, err := gameServerSetNamespacedLister.List(labels.SelectorFromSet(labels.Set{agonesv1.FleetNameLabel: f.ObjectMeta.Name}))
 	if err != nil {
-		return list, errors.Wrapf(err, "error listing gameserversets for fleet %s", f.ObjectMeta.Name)
+		return list, errs.Wrapf(err, "error listing gameserversets for fleet %s", f.ObjectMeta.Name)
 	}
 
 	var result []*agonesv1.GameServerSet
@@ -49,7 +51,7 @@ func ListGameServersByFleetOwner(gameServerNamespacedLister listerv1.GameServerN
 
 	list, err := gameServerNamespacedLister.List(labels.SelectorFromSet(labels.Set{agonesv1.FleetNameLabel: fleet.ObjectMeta.Name}))
 	if err != nil {
-		return list, errors.Wrapf(err, "error listing gameservers for fleets %s", fleet.ObjectMeta.Name)
+		return list, errs.Wrapf(err, "error listing gameservers for fleets %s", fleet.ObjectMeta.Name)
 	}
 	return list, nil
 }

@@ -37,7 +37,7 @@ func TestBatchWatch(t *testing.T) {
 		case eventOut <- struct{}{}:
 			// capacity
 		default:
-			assert.FailNow(t, "second event written - did not want")
+			assert.Fail(t, "second event written - did not want")
 		}
 	}, func(error) {
 		errorCount++

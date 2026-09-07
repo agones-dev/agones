@@ -250,7 +250,7 @@ func (ext *Extensions) mutationHandler(review admissionv1.AdmissionReview) (admi
 	if err != nil {
 		// If the JSON is invalid during mutation, fall through to validation. This allows OpenAPI schema validation
 		// to proceed, resulting in a more user friendly error message.
-		return review, nil
+		return review, nil //nolint:nilerr // deliberate: see comment above.
 	}
 
 	fas.ApplyDefaults()

@@ -285,7 +285,7 @@ func setupGameServerAllocation(t *testing.T, ctrl *fakeController) {
 	require.EventuallyWithT(t, func(collect *assert.CollectT) {
 		gs, err := ctrl.gameServerLister.GameServers(gs.ObjectMeta.Namespace).Get(gs.ObjectMeta.Name)
 		require.NoError(collect, err)
-		assert.Equal(collect, gs.Status.State, agonesv1.GameServerStateAllocated)
+		assert.Equal(collect, agonesv1.GameServerStateAllocated, gs.Status.State)
 	}, 5*time.Second, time.Second)
 	ctrl.collect()
 }

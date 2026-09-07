@@ -71,7 +71,7 @@ func TestGameServerPodAutoscalerAnnotations(t *testing.T) {
 				}}
 			}
 			pod, err := gs.Pod(&generic{})
-			assert.Nil(t, err, "Pod should not return an error")
+			assert.NoError(t, err, "Pod should not return an error")
 			assert.Equal(t, gs.ObjectMeta.Name, pod.ObjectMeta.Name)
 			assert.Equal(t, gs.ObjectMeta.Namespace, pod.ObjectMeta.Namespace)
 			assert.Equal(t, agonesv1.GameServerLabelRole, pod.ObjectMeta.Labels[agonesv1.RoleLabel])

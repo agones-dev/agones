@@ -164,7 +164,7 @@ func (s *SDK) WatchGameServer(f GameServerCallback) error {
 			var gs *sdk.GameServer
 			gs, err = stream.Recv()
 			if err != nil {
-				if err == io.EOF {
+				if errors.Is(err, io.EOF) {
 					log(gs, "gameserver event stream EOF received", nil)
 					return
 				}

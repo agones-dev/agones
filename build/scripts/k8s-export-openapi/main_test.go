@@ -92,3 +92,63 @@ func TestRemoveFieldsKeepsPatchKeys(t *testing.T) {
 		t.Errorf("x-kubernetes-unions should be removed")
 	}
 }
+
+func TestWrapPatchKeys(t *testing.T) {
+	t.Parallel()
+
+	for name, tc := range map[string]struct {
+		in   string
+		want string
+	}{
+		"adjacent keys share a conditional": {
+			in: "    type: array\n" +
+				"    x-kubernetes-patch-merge-key: uid\n" +
+				"    x-kubernetes-patch-strategy: merge\n" +
+				"  resourceVersion:\n",
+			want: "    type: array\n" +
+				"{{- if .includeKubernetesPatchKeys }}\n" +
+				"    x-kubernetes-patch-merge-key: uid\n" +
+				"    x-kubernetes-patch-strategy: merge\n" +
+				"{{- end }}\n" +
+				"  resourceVersion:\n",
+		},
+		"standalone key": {
+			in: "    type: array\n" +
+				"    x-kubernetes-patch-strategy: merge\n",
+			want: "    type: array\n" +
+				"{{- if .includeKubernetesPatchKeys }}\n" +
+				"    x-kubernetes-patch-strategy: merge\n" +
+				"{{- end }}\n",
+		},
+		"runs at differing indentation are not merged": {
+			in: "        x-kubernetes-patch-strategy: merge\n" +
+				"    x-kubernetes-patch-strategy: merge,retainKeys\n",
+			want: "{{- if .includeKubernetesPatchKeys }}\n" +
+				"        x-kubernetes-patch-strategy: merge\n" +
+				"{{- end }}\n" +
+				"{{- if .includeKubernetesPatchKeys }}\n" +
+				"    x-kubernetes-patch-strategy: merge,retainKeys\n" +
+				"{{- end }}\n",
+		},
+		"other extensions are left alone": {
+			in: "      type: object\n" +
+				"      x-kubernetes-map-type: atomic\n" +
+				"      x-kubernetes-int-or-string: true\n",
+			want: "      type: object\n" +
+				"      x-kubernetes-map-type: atomic\n" +
+				"      x-kubernetes-int-or-string: true\n",
+		},
+		"no patch keys": {
+			in:   "description: a description\ntype: object\n",
+			want: "description: a description\ntype: object\n",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := wrapPatchKeys(tc.in); got != tc.want {
+				t.Errorf("wrapPatchKeys() =\n%s\nwant\n%s", got, tc.want)
+			}
+		})
+	}
+}

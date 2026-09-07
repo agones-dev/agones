@@ -28,17 +28,32 @@ linters:
   # `default: standard` (the default) additionally enables errcheck, govet,
   # ineffassign, staticcheck and unused, so they are deliberately not listed here.
   enable:
+    - asasalint
+    - bidichk
     - bodyclose
     - copyloopvar
     - dupl
+    - durationcheck
+    - errname
+    - errorlint
+    - fatcontext
+    - gocheckcompilerdirectives
     - goconst
     - gocritic
     - gocyclo
+    - gosec
+    - makezero
     - misspell
     - nakedret
+    - nilerr
+    - nilnesserr
+    - noctx
+    - reassign
     - revive
+    - testifylint
     - unconvert
     - unparam
+    - wastedassign
   settings:
     goconst:
       # Table-driven tests repeat literals by nature; hoisting them into
@@ -53,6 +68,24 @@ linters:
         rangeValCopy:
           sizeThreshold: 512
           skipTestFuncs: true
+    gosec:
+      excludes:
+        # G104 is unhandled errors, which errcheck already reports, and errcheck
+        # understands the `//nolint:errcheck` directives already in the tree.
+        - G104
+        # G115 is integer overflow on conversion. The Kubernetes API types round
+        # int32 through int constantly, so this fires on ~370 conversions that
+        # are structurally safe. Triaging it is worthwhile but it needs its own
+        # pass -- bundling it here would bury every other gosec finding.
+        - G115
+    testifylint:
+      disable:
+        # require-error wants every assert.NoError that guards later statements
+        # rewritten as require.NoError. It is right about most of them, but it
+        # is ~330 call sites and changing whether a test aborts or continues is
+        # a behavioural change per site, not a mechanical one. Worth doing
+        # deliberately rather than as a side effect of turning the linter on.
+        - require-error
     govet:
       disable-all: false
       enable-all: true
@@ -96,6 +129,41 @@ linters:
       - path: (.+)_test\.go|^test/|^cmd/.*|^pkg/apis/.*
         # fieldalignment is in the `govet` linter, so exclude based on text instead of all of govet
         text: '^fieldalignment: .*'
+
+      # `wait.PollUntilContextTimeout` and friends take `(false, nil)` to mean
+      # "not ready, try again" -- returning the error instead aborts the poll.
+      # The e2e suite is built on that idiom, so nilerr fires on correct code
+      # there and would tax every new poll loop with a fresh suppression.
+      - path: (.+)_test\.go|^test/
+        linters: [nilerr]
+
+      # noctx wants every request, listener and dial to carry a context. That
+      # matters for the controllers, where cancellation has to propagate; in a
+      # test the enclosing `go test` timeout already bounds everything, so it
+      # would only buy a context.Background() argument on every call.
+      - path: (.+)_test\.go|^test/
+        linters: [noctx]
+
+      # Tests legitimately do the things gosec is looking for: weak RNG for
+      # fixtures (G404), reading files named by a variable (G304), permissive
+      # temp-dir permissions (G301/G306). None of it ships.
+      - path: (.+)_test\.go|^test/
+        linters: [gosec]
+
+      # build/ is developer tooling, run by a maintainer on their own machine
+      # against repo-local paths. It is not built into any container and never
+      # sees untrusted input, so the file-permission and file-inclusion rules
+      # have nothing to protect here.
+      - path: ^build/
+        linters: [gosec]
+
+      # The GenAI sample exists to relay player-authored text to an
+      # operator-supplied endpoint and log both sides of the conversation, so
+      # the SSRF (G704) and log-injection (G706) taint analysis flags its whole
+      # reason for existing. Kept enabled everywhere else.
+      - path: ^examples/
+        linters: [gosec]
+        text: '^G70[46]:'
 
     # which file paths to exclude: issues from them won't be reported
     paths:

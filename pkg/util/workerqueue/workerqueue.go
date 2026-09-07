@@ -58,9 +58,8 @@ func (l *traceError) Error() string {
 
 // isTraceError returns if the error is a trace error or not
 func isTraceError(err error) bool {
-	cause := errors.Cause(err)
-	_, ok := cause.(*traceError)
-	return ok
+	var traceErr *traceError
+	return errors.As(err, &traceErr)
 }
 
 // Handler is the handler for processing the work queue

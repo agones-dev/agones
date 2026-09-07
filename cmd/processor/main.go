@@ -325,7 +325,7 @@ func whenLeader(ctx context.Context, cancel context.CancelFunc, logger *logrus.E
 
 func runGRPC(ctx context.Context, h *processor.Handler, grpcHealth *grpchealth.Server, grpcPort int) {
 	logger.WithField("port", grpcPort).Info("Running the grpc handler on port")
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", grpcPort))
+	listener, err := (&net.ListenConfig{}).Listen(ctx, "tcp", fmt.Sprintf(":%d", grpcPort))
 	if err != nil {
 		logger.WithError(err).Fatalf("Failed to listen on TCP port %d", grpcPort)
 		os.Exit(1)

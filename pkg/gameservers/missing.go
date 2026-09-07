@@ -24,11 +24,11 @@ import (
 	getterv1 "agones.dev/agones/pkg/client/clientset/versioned/typed/agones/v1"
 	"agones.dev/agones/pkg/client/informers/externalversions"
 	listerv1 "agones.dev/agones/pkg/client/listers/agones/v1"
+	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/logfields"
 	"agones.dev/agones/pkg/util/runtime"
 	"agones.dev/agones/pkg/util/workerqueue"
 	"github.com/heptiolabs/healthcheck"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -61,6 +61,7 @@ type MissingPodController struct {
 	gameServerLister listerv1.GameServerLister
 	workerqueue      *workerqueue.WorkerQueue
 	recorder         record.EventRecorder
+	errs             *errors.Errors
 }
 
 // NewMissingPodController returns a MissingPodController
@@ -81,6 +82,7 @@ func NewMissingPodController(health healthcheck.Handler,
 	}
 
 	c.baseLogger = runtime.NewLoggerWithType(c)
+	c.errs = errors.FromStruct(c)
 	c.workerqueue = workerqueue.NewWorkerQueue(c.syncGameServer, c.baseLogger, logfields.GameServerKey, agones.GroupName+".MissingPodController")
 	health.AddLivenessCheck("gameserver-missing-pod-workerqueue", healthcheck.Check(c.workerqueue.Healthy))
 
@@ -113,7 +115,7 @@ func NewMissingPodController(health healthcheck.Handler,
 func (c *MissingPodController) Run(ctx context.Context, workers int) error {
 	c.baseLogger.Debug("Wait for cache sync")
 	if !cache.WaitForCacheSync(ctx.Done(), c.gameServerSynced, c.podSynced) {
-		return errors.New("failed to wait for caches to sync")
+		return c.errs.New("failed to wait for caches to sync")
 	}
 
 	c.workerqueue.Run(ctx, workers)
@@ -130,7 +132,7 @@ func (c *MissingPodController) syncGameServer(ctx context.Context, key string) e
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		// don't return an error, as we don't want this retried
-		runtime.HandleError(c.loggerForGameServerKey(key), errors.Wrapf(err, "invalid resource key"))
+		runtime.HandleError(c.loggerForGameServerKey(key), c.errs.Wrap(err, "invalid resource key"))
 		return nil
 	}
 
@@ -138,7 +140,7 @@ func (c *MissingPodController) syncGameServer(ctx context.Context, key string) e
 	podFailed := false
 	if pod, err := c.podLister.Pods(namespace).Get(name); err != nil {
 		if !k8serrors.IsNotFound(err) {
-			return errors.Wrapf(err, "error retrieving Pod %s from namespace %s", name, namespace)
+			return c.errs.Wrapf(err, "error retrieving Pod %s from namespace %s", name, namespace)
 		}
 	} else if isGameServerPod(pod) {
 		if pod.Status.Phase != corev1.PodFailed {
@@ -159,7 +161,7 @@ func (c *MissingPodController) syncGameServer(ctx context.Context, key string) e
 			c.loggerForGameServerKey(key).Debug("GameServer is no longer available for syncing")
 			return nil
 		}
-		return errors.Wrapf(err, "error retrieving GameServer %s from namespace %s", name, namespace)
+		return c.errs.Wrapf(err, "error retrieving GameServer %s from namespace %s", name, namespace)
 	}
 
 	// already on the way out, so no need to do anything.
@@ -172,7 +174,7 @@ func (c *MissingPodController) syncGameServer(ctx context.Context, key string) e
 	gsCopy.Status.State = agonesv1.GameServerStateUnhealthy
 	gs, err = c.gameServerGetter.GameServers(gsCopy.ObjectMeta.Namespace).Update(ctx, gsCopy, metav1.UpdateOptions{})
 	if err != nil {
-		return errors.Wrap(err, "error updating GameServer to Unhealthy")
+		return c.errs.Wrap(err, "error updating GameServer to Unhealthy")
 	}
 
 	eventMessage := "Pod is missing"

@@ -51,6 +51,10 @@ const (
 	defaultHTTPPort   = 9358
 	defaultHealthPort = 8080
 
+	// readHeaderTimeout bounds how long a client may take to send its request
+	// headers, so a Slowloris client cannot hold the listener open indefinitely.
+	readHeaderTimeout = 60 * time.Second
+
 	// Flags (that can also be env vars)
 	gameServerNameFlag      = "gameserver-name"
 	podNamespaceFlag        = "pod-namespace"
@@ -100,8 +104,9 @@ func main() {
 
 	mux := runtime.NewServerMux()
 	httpServer := &http.Server{
-		Addr:    fmt.Sprintf("%s:%d", ctlConf.Address, ctlConf.HTTPPort),
-		Handler: wsproxy.WebsocketProxy(healthCheckWrapper(mux)),
+		Addr:              fmt.Sprintf("%s:%d", ctlConf.Address, ctlConf.HTTPPort),
+		Handler:           wsproxy.WebsocketProxy(healthCheckWrapper(mux)),
+		ReadHeaderTimeout: readHeaderTimeout,
 	}
 	defer httpServer.Close() // nolint: errcheck
 
@@ -177,7 +182,7 @@ func main() {
 	}
 
 	grpcEndpoint := fmt.Sprintf("%s:%d", ctlConf.Address, ctlConf.GRPCPort)
-	go runGrpc(grpcServer, grpcEndpoint)
+	go runGrpc(ctx, grpcServer, grpcEndpoint)
 	go runGateway(ctx, grpcEndpoint, mux, httpServer)
 
 	<-ctx.Done()
@@ -237,8 +242,8 @@ func registerTestSdkServer(grpcServer *grpc.Server, ctlConf config) (func(), err
 }
 
 // runGrpc runs the grpc service
-func runGrpc(grpcServer *grpc.Server, grpcEndpoint string) {
-	lis, err := net.Listen("tcp", grpcEndpoint)
+func runGrpc(ctx context.Context, grpcServer *grpc.Server, grpcEndpoint string) {
+	lis, err := (&net.ListenConfig{}).Listen(ctx, "tcp", grpcEndpoint)
 	if err != nil {
 		logger.WithField("grpcEndpoint", grpcEndpoint).Fatal("Could not listen on grpc endpoint")
 	}

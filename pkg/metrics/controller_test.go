@@ -16,6 +16,7 @@ package metrics
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 	"testing"
@@ -25,7 +26,6 @@ import (
 	agtesting "agones.dev/agones/pkg/testing"
 	"agones.dev/agones/pkg/util/runtime"
 	"github.com/google/go-cmp/cmp"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opencensus.io/metric/metricdata"
@@ -123,8 +123,8 @@ func assertMetricData(t *testing.T, c *fakeController, f func(), reader *metrice
 		}
 		require.NotNil(ct, wantedMetric, "No metric found with name: %s", metricName)
 
-		assert.Equal(ct, len(expectedValuesAsMap), len(expected), "Multiple entries in 'expected' slice have the exact same labels")
-		assert.Equalf(ct, len(expectedValuesAsMap), len(wantedMetric.TimeSeries), "number of timeseries does not match under metric: %v", metricName)
+		assert.Len(ct, expected, len(expectedValuesAsMap), "Multiple entries in 'expected' slice have the exact same labels")
+		assert.Lenf(ct, wantedMetric.TimeSeries, len(expectedValuesAsMap), "number of timeseries does not match under metric: %v", metricName)
 		for _, tsd := range wantedMetric.TimeSeries {
 			actualLabelValues := make([]string, len(tsd.LabelValues))
 			for i, k := range tsd.LabelValues {
@@ -133,7 +133,7 @@ func assertMetricData(t *testing.T, c *fakeController, f func(), reader *metrice
 			e, ok := expectedValuesAsMap[serialize(actualLabelValues)]
 			assert.True(ct, ok, "no TimeSeries found with labels: %v", actualLabelValues)
 			assert.Equal(ct, e.labels, actualLabelValues, "label values don't match")
-			assert.Equal(ct, 1, len(tsd.Points), "assertMetricDataValues can only handle a single Point in a TimeSeries")
+			assert.Len(ct, tsd.Points, 1, "assertMetricDataValues can only handle a single Point in a TimeSeries")
 			assert.Equal(ct, e.val, tsd.Points[0].Value, "metric: %s, tags: %v, values don't match; got: %v, want: %v", metricName, tsd.LabelValues, tsd.Points[0].Value, e.val)
 		}
 	}, 10*time.Second, 100*time.Millisecond)
@@ -699,7 +699,7 @@ func TestCalcDuration(t *testing.T) {
 			gs1:         gameServerWithFleetStateCreationTimestamp(fleet1, gsName1, "", creationTimestamp),
 			gs2:         gameServerWithFleetStateCreationTimestamp(fleet1, gsName1, agonesv1.GameServerStateRequestReady, creationTimestamp),
 			expected: result{
-				err:      errors.Errorf("unable to calculate '' state duration of '%s' GameServer", gsName1),
+				err:      fmt.Errorf("unable to calculate '' state duration of '%s' GameServer", gsName1),
 				duration: 0,
 			},
 		},
@@ -717,7 +717,7 @@ func TestCalcDuration(t *testing.T) {
 			gs1:         gameServerWithFleetStateCreationTimestamp(fleet1, gsName1, agonesv1.GameServerStateRequestReady, creationTimestamp),
 			gs2:         gameServerWithFleetStateCreationTimestamp(fleet1, gsName1, agonesv1.GameServerStateShutdown, creationTimestamp),
 			expected: result{
-				err:      errors.Errorf("unable to calculate 'RequestReady' state duration of '%s' GameServer", gsName1),
+				err:      fmt.Errorf("unable to calculate 'RequestReady' state duration of '%s' GameServer", gsName1),
 				duration: 0,
 			},
 		},
@@ -726,7 +726,7 @@ func TestCalcDuration(t *testing.T) {
 			gs1:         gameServerWithFleetStateCreationTimestamp(fleet2, gsName2, "", futureTimestamp),
 			gs2:         gameServerWithFleetStateCreationTimestamp(fleet2, gsName2, agonesv1.GameServerStateCreating, futureTimestamp),
 			expected: result{
-				err:      errors.Errorf("negative duration for '' state of '%s' GameServer", gsName2),
+				err:      fmt.Errorf("negative duration for '' state of '%s' GameServer", gsName2),
 				duration: 0,
 			},
 		},
@@ -751,10 +751,10 @@ func TestCalcDuration(t *testing.T) {
 			} else {
 				assert.NoError(t, err, "Unable to caculate duration of a particular state")
 			}
-			assert.Equal(t, tc.expected.duration, duration, "Time diff should be calculated properly")
+			assert.InDelta(t, tc.expected.duration, duration, 0.0001, "Time diff should be calculated properly")
 		})
 	}
-	assert.Len(t, c.gameServerStateLastChange.Keys(), 0, "We should not have any keys after the test")
+	assert.Empty(t, c.gameServerStateLastChange.Keys(), "We should not have any keys after the test")
 }
 
 func TestIsSystemNode(t *testing.T) {

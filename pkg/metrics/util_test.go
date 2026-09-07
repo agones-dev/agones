@@ -84,7 +84,7 @@ func (c *fakeController) close() {
 func (c *fakeController) run(t *testing.T) {
 	go func() {
 		err := c.Controller.Run(c.ctx, 1)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 	}()
 	c.sync()
 }

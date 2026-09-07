@@ -144,7 +144,7 @@ func main() {
 	if *simEndpoint == "" {
 		log.Printf("Creating GenAI Client at endpoint %s (from_id=%d, to_id=%d)", *genAiEndpoint, *fromID, *toID)
 		genAiConn := initClient(*genAiEndpoint, *genAiContext, "GenAI", *genAiNpc, *fromID, *toID)
-		go tcpListener(*port, genAiConn)
+		go tcpListener(sigCtx, *port, genAiConn)
 		<-sigCtx.Done()
 	} else {
 		var wg sync.WaitGroup
@@ -155,6 +155,7 @@ func main() {
 				defer wg.Done()
 				for {
 					// Create a random from_id and name
+					//nolint:gosec // G404: simulated player ids, not a security boundary.
 					fid := int(rand.Int31())
 					name := fmt.Sprintf("Sim%08x", fid)
 					log.Printf("=== New player %s (id %d) ===", name, fid)
@@ -263,26 +264,26 @@ func handleGenAIRequest(prompt string, clientConn *connection, chatHistory []Mes
 		jsonStr, err = json.Marshal(genAIRequest)
 	}
 	if err != nil {
-		return "", fmt.Errorf("unable to marshal json request: %v", err)
+		return "", fmt.Errorf("unable to marshal json request: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", clientConn.endpoint, bytes.NewBuffer(jsonStr))
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, clientConn.endpoint, bytes.NewBuffer(jsonStr))
 	if err != nil {
-		return "", fmt.Errorf("unable create http POST request: %v", err)
+		return "", fmt.Errorf("unable create http POST request: %w", err)
 	}
 	req.Header.Set("accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := clientConn.client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("unable to post request: %v", err)
+		return "", fmt.Errorf("unable to post request: %w", err)
 	}
 
 	defer resp.Body.Close() //nolint:errcheck // nothing actionable if closing the response body fails
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("unable to read response body: %v", err)
+		return "", fmt.Errorf("unable to read response body: %w", err)
 	}
 	body := string(responseBody)
 
@@ -334,9 +335,9 @@ func autonomousChat(prompt string, conn1 *connection, conn2 *connection, numChat
 }
 
 // Manually interact via TCP with the GenAI endpoint
-func tcpListener(port string, genAiConn *connection) {
+func tcpListener(ctx context.Context, port string, genAiConn *connection) {
 	log.Printf("Starting TCP server, listening on port %s", port)
-	ln, err := net.Listen("tcp", ":"+port)
+	ln, err := (&net.ListenConfig{}).Listen(ctx, "tcp", ":"+port)
 	if err != nil {
 		log.Fatalf("Could not start TCP server: %v", err)
 	}

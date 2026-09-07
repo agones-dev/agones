@@ -70,6 +70,12 @@ var (
 const (
 	certDir = "/home/allocator/client-ca/"
 	tlsDir  = "/home/allocator/tls/"
+
+	// readHeaderTimeout bounds how long a client may take to send its request
+	// headers. Without it a handful of connections trickling headers one byte
+	// at a time can hold the listener open indefinitely (Slowloris). It caps
+	// the headers only, so streaming request bodies are unaffected.
+	readHeaderTimeout = 60 * time.Second
 )
 
 const (
@@ -413,13 +419,15 @@ func runHTTP(listenCtx context.Context, workerCtx context.Context, h *serviceHan
 	if !h.mTLSDisabled {
 		cfg.ClientAuth = tls.RequireAnyClientCert
 		cfg.VerifyPeerCertificate = h.verifyClientCertificate
+		cfg.VerifyConnection = h.verifyClientConnection
 	}
 
 	// Create a Server instance to listen on the http port with the TLS config.
 	server := &http.Server{
-		Addr:      fmt.Sprintf(":%d", httpPort),
-		TLSConfig: cfg,
-		Handler:   handler,
+		Addr:              fmt.Sprintf(":%d", httpPort),
+		TLSConfig:         cfg,
+		Handler:           handler,
+		ReadHeaderTimeout: readHeaderTimeout,
 	}
 
 	go func() {
@@ -447,7 +455,7 @@ func runHTTP(listenCtx context.Context, workerCtx context.Context, h *serviceHan
 
 func runGRPC(ctx context.Context, h *serviceHandler, grpcHealth *grpchealth.Server, grpcPort int) {
 	logger.WithField("port", grpcPort).Info("Running the grpc handler on port")
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", grpcPort))
+	listener, err := (&net.ListenConfig{}).Listen(ctx, "tcp", fmt.Sprintf(":%d", grpcPort))
 	if err != nil {
 		logger.WithError(err).Fatalf("failed to listen on TCP port %d", grpcPort)
 		os.Exit(1)
@@ -615,6 +623,7 @@ func (h *serviceHandler) getGRPCServerOptions() []grpc.ServerOption {
 	if !h.mTLSDisabled {
 		cfg.ClientAuth = tls.RequireAnyClientCert
 		cfg.VerifyPeerCertificate = h.verifyClientCertificate
+		cfg.VerifyConnection = h.verifyClientConnection
 	}
 
 	return append([]grpc.ServerOption{grpc.Creds(credentials.NewTLS(cfg))}, opts...)
@@ -624,6 +633,27 @@ func (h *serviceHandler) getTLSCert(_ *tls.ClientHelloInfo) (*tls.Certificate, e
 	h.tlsMutex.RLock()
 	defer h.tlsMutex.RUnlock()
 	return h.tlsCert, nil
+}
+
+// verifyClientConnection re-runs client certificate verification for every
+// connection, including resumed ones.
+//
+// VerifyPeerCertificate only fires during a full handshake. A client that
+// completed one handshake can then resume its session indefinitely without the
+// certificate being looked at again -- so removing a CA from the watched
+// certDir would not actually lock out clients holding a valid session ticket.
+// VerifyConnection runs on resumption as well, which closes that gap.
+func (h *serviceHandler) verifyClientConnection(cs tls.ConnectionState) error {
+	if len(cs.PeerCertificates) == 0 {
+		return errors.New("no client certificate presented")
+	}
+
+	rawCerts := make([][]byte, 0, len(cs.PeerCertificates))
+	for _, cert := range cs.PeerCertificates {
+		rawCerts = append(rawCerts, cert.Raw)
+	}
+
+	return h.verifyClientCertificate(rawCerts, nil)
 }
 
 // verifyClientCertificate verifies that the client certificate is accepted
@@ -700,6 +730,8 @@ func getCACertPool(path string) (*x509.CertPool, error) {
 			continue
 		}
 		certFile := filepath.Join(path, dirEntry.Name())
+		//nolint:gosec // G304: certFile is joined from certDir, a compile-time
+		// constant, and a name listed by ReadDir of that same directory.
 		caCert, err := os.ReadFile(certFile)
 		if err != nil {
 			logger.Errorf("CA cert is not readable or missing: %s", err.Error())

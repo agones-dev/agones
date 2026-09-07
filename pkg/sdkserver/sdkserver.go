@@ -83,6 +83,10 @@ const (
 // defaultNamespace is the Kubernetes namespace assumed when none is configured.
 const defaultNamespace = "default"
 
+// readHeaderTimeout bounds how long a client may take to send its request
+// headers, so a Slowloris client cannot hold the listener open indefinitely.
+const readHeaderTimeout = 60 * time.Second
+
 var (
 	_ sdk.SDKServer   = &SDKServer{}
 	_ alpha.SDKServer = &SDKServer{}
@@ -172,8 +176,9 @@ func NewSDKServer(gameServerName, namespace string, kubeClient kubernetes.Interf
 		gameServerLister: gameServers.Lister(),
 		gameServerSynced: gameServers.Informer().HasSynced,
 		server: &http.Server{
-			Addr:    fmt.Sprintf(":%d", healthPort),
-			Handler: mux,
+			Addr:              fmt.Sprintf(":%d", healthPort),
+			Handler:           mux,
+			ReadHeaderTimeout: readHeaderTimeout,
 		},
 		clock:              clock.RealClock{},
 		healthMutex:        sync.RWMutex{},
@@ -286,7 +291,7 @@ func (s *SDKServer) Run(ctx context.Context) error {
 	s.logger.Debug("Starting SDKServer http health check...")
 	go func() {
 		if err := s.server.ListenAndServe(); err != nil {
-			if err == http.ErrServerClosed {
+			if errors.Is(err, http.ErrServerClosed) {
 				s.logger.WithError(err).Error("Health check: http server closed")
 			} else {
 				err = errors.Wrap(err, "Could not listen on :8080")
@@ -570,7 +575,7 @@ func (s *SDKServer) Shutdown(_ context.Context, e *sdk.Empty) (*sdk.Empty, error
 func (s *SDKServer) Health(stream sdk.SDK_HealthServer) error {
 	for {
 		_, err := stream.Recv()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			s.logger.Debug("Health stream closed.")
 			return stream.SendAndClose(&sdk.Empty{})
 		}
@@ -1541,10 +1546,9 @@ func (s *SDKServer) updateConnectedPlayers(ctx context.Context) error {
 	}
 
 	gsCopy := gs.DeepCopy()
-	same := false
 	s.gsUpdateMutex.RLock()
 	s.logger.WithField("playerIDs", s.gsConnectedPlayers).Debug("updating connected players")
-	same = apiequality.Semantic.DeepEqual(gsCopy.Status.Players.IDs, s.gsConnectedPlayers)
+	same := apiequality.Semantic.DeepEqual(gsCopy.Status.Players.IDs, s.gsConnectedPlayers)
 	gsCopy.Status.Players.IDs = s.gsConnectedPlayers
 	gsCopy.Status.Players.Count = int64(len(s.gsConnectedPlayers))
 	s.gsUpdateMutex.RUnlock()

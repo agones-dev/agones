@@ -948,7 +948,7 @@ func TestMultiClusterAllocationOnLocalCluster(t *testing.T) {
 
 			namespace := fmt.Sprintf("gsa-multicluster-local-%s", uuid.NewUUID())
 			err := framework.CreateNamespace(namespace)
-			if !assert.Nil(t, err) {
+			if !assert.NoError(t, err) {
 				return
 			}
 			defer func() {
@@ -961,7 +961,7 @@ func TestMultiClusterAllocationOnLocalCluster(t *testing.T) {
 			fleet := defaultFleet(namespace)
 			fleet.Spec.Scheduling = strategy
 			flt, err := fleets.Create(ctx, fleet, metav1.CreateOptions{})
-			if assert.Nil(t, err) {
+			if assert.NoError(t, err) {
 				defer fleets.Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
 			}
 
@@ -985,7 +985,7 @@ func TestMultiClusterAllocationOnLocalCluster(t *testing.T) {
 				},
 			}
 			resp, err := framework.AgonesClient.MulticlusterV1().GameServerAllocationPolicies(fleet.ObjectMeta.Namespace).Create(ctx, mca, metav1.CreateOptions{})
-			if !assert.Nil(t, err) {
+			if !assert.NoError(t, err) {
 				assert.FailNowf(t, "GameServerAllocationPolicies(%v).Create(ctx, %v, metav1.CreateOptions{})", fleet.ObjectMeta.Namespace, mca)
 			}
 			assert.Equal(t, mca.Spec, resp.Spec)
@@ -1009,7 +1009,7 @@ func TestMultiClusterAllocationOnLocalCluster(t *testing.T) {
 				},
 			}
 			resp, err = framework.AgonesClient.MulticlusterV1().GameServerAllocationPolicies(fleet.ObjectMeta.Namespace).Create(ctx, mca, metav1.CreateOptions{})
-			if assert.Nil(t, err) {
+			if assert.NoError(t, err) {
 				assert.Equal(t, mca.Spec, resp.Spec)
 			}
 
@@ -1030,7 +1030,7 @@ func TestMultiClusterAllocationOnLocalCluster(t *testing.T) {
 				},
 			}
 			resp, err = framework.AgonesClient.MulticlusterV1().GameServerAllocationPolicies(fleet.ObjectMeta.Namespace).Create(ctx, mca, metav1.CreateOptions{})
-			if assert.Nil(t, err) {
+			if assert.NoError(t, err) {
 				assert.Equal(t, mca.Spec, resp.Spec)
 			}
 
@@ -1088,7 +1088,7 @@ func TestCreateFullFleetAndCantGameServerAllocate(t *testing.T) {
 			fleet := defaultFleet(framework.Namespace)
 			fleet.Spec.Scheduling = strategy
 			flt, err := fleets.Create(ctx, fleet, metav1.CreateOptions{})
-			if assert.Nil(t, err) {
+			if assert.NoError(t, err) {
 				defer fleets.Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
 			}
 
@@ -1103,7 +1103,7 @@ func TestCreateFullFleetAndCantGameServerAllocate(t *testing.T) {
 			for i := 0; i < replicasCount; i++ {
 				var gsa2 *allocationv1.GameServerAllocation
 				gsa2, err = framework.AgonesClient.AllocationV1().GameServerAllocations(framework.Namespace).Create(ctx, gsa.DeepCopy(), metav1.CreateOptions{})
-				if assert.Nil(t, err) {
+				if assert.NoError(t, err) {
 					assert.Equal(t, allocationv1.GameServerAllocationAllocated, gsa2.Status.State)
 				}
 			}
@@ -1113,7 +1113,7 @@ func TestCreateFullFleetAndCantGameServerAllocate(t *testing.T) {
 			})
 
 			gsa, err = framework.AgonesClient.AllocationV1().GameServerAllocations(framework.Namespace).Create(ctx, gsa.DeepCopy(), metav1.CreateOptions{})
-			if assert.Nil(t, err) {
+			if assert.NoError(t, err) {
 				assert.Equal(t, string(allocationv1.GameServerAllocationUnAllocated), string(gsa.Status.State))
 			}
 		})
@@ -1194,7 +1194,7 @@ func TestGameServerAllocationPreferredSelection(t *testing.T) {
 	preferred.Spec.Replicas = 1
 	preferred.Spec.Template.ObjectMeta.Labels = label
 	preferred, err := fleets.Create(ctx, preferred, metav1.CreateOptions{})
-	if assert.Nil(t, err) {
+	if assert.NoError(t, err) {
 		defer fleets.Delete(ctx, preferred.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
 	} else {
 		assert.FailNow(t, "could not create first fleet")
@@ -1205,7 +1205,7 @@ func TestGameServerAllocationPreferredSelection(t *testing.T) {
 	required.Spec.Replicas = 2
 	required.Spec.Template.ObjectMeta.Labels = label
 	required, err = fleets.Create(ctx, required, metav1.CreateOptions{})
-	if assert.Nil(t, err) {
+	if assert.NoError(t, err) {
 		defer fleets.Delete(ctx, required.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
 	} else {
 		assert.FailNow(t, "could not create second fleet")
@@ -1223,20 +1223,20 @@ func TestGameServerAllocationPreferredSelection(t *testing.T) {
 		}}
 
 	gsa1, err := framework.AgonesClient.AllocationV1().GameServerAllocations(framework.Namespace).Create(ctx, gsa.DeepCopy(), metav1.CreateOptions{})
-	if assert.Nil(t, err) {
+	if assert.NoError(t, err) {
 		assert.Equal(t, allocationv1.GameServerAllocationAllocated, gsa1.Status.State)
 		gs, err := gameServers.Get(ctx, gsa1.Status.GameServerName, metav1.GetOptions{})
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.Equal(t, preferred.ObjectMeta.Name, gs.ObjectMeta.Labels[agonesv1.FleetNameLabel])
 	} else {
 		assert.FailNow(t, "could not completed gsa1 allocation")
 	}
 
 	gs2, err := framework.AgonesClient.AllocationV1().GameServerAllocations(framework.Namespace).Create(ctx, gsa.DeepCopy(), metav1.CreateOptions{})
-	if assert.Nil(t, err) {
+	if assert.NoError(t, err) {
 		assert.Equal(t, allocationv1.GameServerAllocationAllocated, gs2.Status.State)
 		gs, err := gameServers.Get(ctx, gs2.Status.GameServerName, metav1.GetOptions{})
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.Equal(t, required.ObjectMeta.Name, gs.ObjectMeta.Labels[agonesv1.FleetNameLabel])
 	} else {
 		assert.FailNow(t, "could not completed gs2 allocation")
@@ -1245,7 +1245,7 @@ func TestGameServerAllocationPreferredSelection(t *testing.T) {
 	// delete the preferred gameserver, and then let's try allocating again, make sure it goes back to the
 	// preferred one
 	err = gameServers.Delete(ctx, gsa1.Status.GameServerName, metav1.DeleteOptions{})
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		assert.FailNow(t, "could not delete gameserver")
 	}
 
@@ -1259,16 +1259,16 @@ func TestGameServerAllocationPreferredSelection(t *testing.T) {
 
 		return false, err
 	})
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	// now wait for another one to come along
 	framework.AssertFleetCondition(t, preferred, e2e.FleetReadyCount(preferred.Spec.Replicas))
 
 	gsa3, err := framework.AgonesClient.AllocationV1().GameServerAllocations(framework.Namespace).Create(ctx, gsa.DeepCopy(), metav1.CreateOptions{})
-	if assert.Nil(t, err) {
+	if assert.NoError(t, err) {
 		assert.Equal(t, allocationv1.GameServerAllocationAllocated, gsa3.Status.State)
 		gs, err := gameServers.Get(ctx, gsa3.Status.GameServerName, metav1.GetOptions{})
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.Equal(t, preferred.ObjectMeta.Name, gs.ObjectMeta.Labels[agonesv1.FleetNameLabel])
 	}
 }
@@ -1339,7 +1339,7 @@ func TestGameServerAllocationDeletionOnUnAllocate(t *testing.T) {
 		}}
 
 	gsa, err := allocations.Create(ctx, gsa.DeepCopy(), metav1.CreateOptions{})
-	if assert.Nil(t, err) {
+	if assert.NoError(t, err) {
 		assert.Equal(t, allocationv1.GameServerAllocationUnAllocated, gsa.Status.State)
 	}
 }
@@ -1357,7 +1357,7 @@ func TestGameServerAllocationDuringMultipleAllocationClients(t *testing.T) {
 	preferred.Spec.Replicas = 150
 	preferred.Spec.Template.ObjectMeta.Labels = label
 	preferred, err := fleets.Create(ctx, preferred, metav1.CreateOptions{})
-	if assert.Nil(t, err) {
+	if assert.NoError(t, err) {
 		defer fleets.Delete(ctx, preferred.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
 	} else {
 		assert.FailNow(t, "could not create first fleet")

@@ -373,7 +373,9 @@ NAME              STATUS        AGE
 agones-system     Terminating   4d
 ```
 
-Fixing this up requires us to bypass the finalizer in Kubernetes ([article link](https://www.ibm.com/support/knowledgecenter/en/SSBS6K_3.1.1/troubleshoot/ns_terminating.html)), by manually changing the namespace details:
+Fixing this up requires us to bypass the finalizer in Kubernetes
+(<a href="https://www.ibm.com/docs/en/cloud-private/3.2.x?topic=console-namespace-is-stuck-in-terminating-state" data-proofer-ignore>article link</a>)
+by manually changing the namespace details:
 
 First get the current state of the namespace:
 ```bash

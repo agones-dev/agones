@@ -16,6 +16,7 @@ package processor
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -99,7 +100,7 @@ func (h *Handler) StreamBatches(stream allocationpb.Processor_StreamBatchesServe
 	for {
 		msg, err := stream.Recv()
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				handlerLogger.WithField(logFieldClientID, clientID).Debug("Stream closed by client")
 			} else {
 				handlerLogger.WithField(logFieldClientID, clientID).WithError(err).Warn("Stream receive error")

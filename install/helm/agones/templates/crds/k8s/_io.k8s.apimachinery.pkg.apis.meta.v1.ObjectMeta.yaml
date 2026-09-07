@@ -47,7 +47,9 @@ properties:
     items:
       type: string
     type: array
+{{- if .includeKubernetesPatchKeys }}
     x-kubernetes-patch-strategy: merge
+{{- end }}
   generateName:
     description: |-
       GenerateName is an optional prefix, used by the server, to generate a unique name ONLY IF the Name field has not been provided. If this field is used, the name returned to the client will be different than the name passed. This value will also be combined with a unique suffix. The provided value has the same validation rules as the Name field, and may be truncated by the length of the suffix required to make the value unique on the server.
@@ -132,8 +134,10 @@ properties:
       type: object
       x-kubernetes-map-type: atomic
     type: array
+{{- if .includeKubernetesPatchKeys }}
     x-kubernetes-patch-merge-key: uid
     x-kubernetes-patch-strategy: merge
+{{- end }}
   resourceVersion:
     description: |-
       An opaque value that represents the internal version of this object that can be used by clients to determine when objects have changed. May be used for optimistic concurrency, change detection, and the watch operation on a resource or set of resources. Clients must treat these values as opaque and passed unmodified back to the server. They may only be valid for a particular resource or set of resources.

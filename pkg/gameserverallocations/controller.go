@@ -23,7 +23,6 @@ import (
 
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/heptiolabs/healthcheck"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -46,6 +45,7 @@ import (
 	"agones.dev/agones/pkg/gameserverallocations/processor"
 	"agones.dev/agones/pkg/gameservers"
 	"agones.dev/agones/pkg/util/apiserver"
+	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/https"
 	"agones.dev/agones/pkg/util/runtime"
 )
@@ -61,6 +61,7 @@ type Extensions struct {
 	recorder        record.EventRecorder
 	allocator       *Allocator
 	processorClient processor.Client
+	errs            *errors.Errors
 }
 
 // NewExtensions returns the extensions controller for a GameServerAllocation
@@ -90,6 +91,7 @@ func NewExtensions(apiServer *apiserver.APIServer,
 		allocationBatchWaitTime)
 
 	c.baseLogger = runtime.NewLoggerWithType(c)
+	c.errs = errors.FromStruct(c)
 
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(c.baseLogger.Debugf)
@@ -107,6 +109,7 @@ func NewProcessorExtensions(apiServer *apiserver.APIServer, kubeClient kubernete
 	}
 
 	c.baseLogger = runtime.NewLoggerWithType(c)
+	c.errs = errors.FromStruct(c)
 
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(c.baseLogger.Debugf)
@@ -212,7 +215,7 @@ func (c *Extensions) allocationDeserialization(r *http.Request, namespace string
 
 	gvks, _, err := scheme.Scheme.ObjectKinds(gsa)
 	if err != nil {
-		return gsa, errors.Wrap(err, "error getting objectkinds for gameserverallocation")
+		return gsa, c.errs.Wrap(err, "error getting objectkinds for gameserverallocation")
 	}
 
 	gsa.TypeMeta = metav1.TypeMeta{Kind: gvks[0].Kind, APIVersion: gvks[0].Version}
@@ -220,23 +223,23 @@ func (c *Extensions) allocationDeserialization(r *http.Request, namespace string
 	mediaTypes := scheme.Codecs.SupportedMediaTypes()
 	mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if err != nil {
-		return gsa, errors.Wrap(err, "error parsing mediatype from a request header")
+		return gsa, c.errs.Wrap(err, "error parsing mediatype from a request header")
 	}
 	info, ok := k8sruntime.SerializerInfoForMediaType(mediaTypes, mt)
 	if !ok {
-		return gsa, errors.New("Could not find deserializer")
+		return gsa, c.errs.New("Could not find deserializer")
 	}
 
 	b, err := io.ReadAll(r.Body)
 	if err != nil {
-		return gsa, errors.Wrap(err, "could not read body")
+		return gsa, c.errs.Wrap(err, "could not read body")
 	}
 
 	gvk := allocationv1.SchemeGroupVersion.WithKind("GameServerAllocation")
 	_, _, err = info.Serializer.Decode(b, &gvk, gsa)
 	if err != nil {
 		c.baseLogger.WithField("body", string(b)).Error("error decoding body")
-		return gsa, errors.Wrap(err, "error decoding body")
+		return gsa, c.errs.Wrap(err, "error decoding body")
 	}
 
 	gsa.ObjectMeta.Namespace = namespace
@@ -250,7 +253,7 @@ func (c *Extensions) allocationDeserialization(r *http.Request, namespace string
 func (c *Extensions) serialisation(r *http.Request, w http.ResponseWriter, obj k8sruntime.Object, statusCode int, codecs serializer.CodecFactory) error {
 	info, err := apiserver.AcceptedSerializer(r, codecs)
 	if err != nil {
-		return errors.Wrapf(err, "failed to find serialisation info for %T object", obj)
+		return c.errs.Wrapf(err, "failed to find serialisation info for %T object", obj)
 	}
 
 	w.Header().Set("Content-Type", info.MediaType)
@@ -259,7 +262,7 @@ func (c *Extensions) serialisation(r *http.Request, w http.ResponseWriter, obj k
 	w.WriteHeader(statusCode)
 
 	err = info.Serializer.Encode(obj, w)
-	return errors.Wrapf(err, "error encoding %T", obj)
+	return c.errs.Wrapf(err, "error encoding %T", obj)
 }
 
 // convertProcessorError handles processor client errors and converts them to appropriate responses

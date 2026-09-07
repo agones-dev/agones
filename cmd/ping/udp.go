@@ -74,7 +74,7 @@ func (u *udpServer) run(ctx context.Context) {
 
 	logger.Info("Starting UDP server")
 	var err error
-	u.conn, err = net.ListenPacket("udp", ":8080")
+	u.conn, err = (&net.ListenConfig{}).ListenPacket(ctx, "udp", ":8080")
 	if err != nil {
 		logger.WithError(err).Fatal("Could not start udp server")
 	}
@@ -112,7 +112,7 @@ func (u *udpServer) readWriteLoop(ctx context.Context) {
 				b := make([]byte, 1024)
 				_, sender, err := u.conn.ReadFrom(b)
 				if err != nil {
-					if ctx.Err() != nil && err == os.ErrClosed {
+					if ctx.Err() != nil && errors.Is(err, os.ErrClosed) {
 						return
 					}
 					u.logger.WithError(err).Error("Error reading udp packet")

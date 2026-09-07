@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -34,7 +35,6 @@ import (
 	"agones.dev/agones/pkg/util/apiserver"
 	"agones.dev/agones/pkg/util/runtime"
 	"github.com/heptiolabs/healthcheck"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
@@ -190,14 +190,14 @@ func TestAllocationApiResource(t *testing.T) {
 	client := ts.Client()
 
 	resp, err := client.Get(ts.URL + "/apis/" + allocationv1.SchemeGroupVersion.String())
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		assert.FailNow(t, err.Error())
 	}
 	defer resp.Body.Close() // nolint: errcheck
 
 	list := &metav1.APIResourceList{}
 	err = json.NewDecoder(resp.Body).Decode(list)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	if assert.Len(t, list.APIResources, 1) {
 		assert.Equal(t, "gameserverallocation", list.APIResources[0].SingularName)
@@ -272,7 +272,7 @@ func TestMultiClusterAllocationFromLocal(t *testing.T) {
 		assert.Equal(t, gsa.Spec.Selectors[0].LabelSelector, ret.Spec.Selectors[0].LabelSelector)
 		assert.Equal(t, gsa.Namespace, ret.Namespace)
 		expectedState := allocationv1.GameServerAllocationAllocated
-		assert.True(t, expectedState == ret.Status.State, "Failed: %s vs %s", expectedState, ret.Status.State)
+		assert.Equal(t, expectedState, ret.Status.State, "Failed: %s vs %s", expectedState, ret.Status.State)
 	})
 
 	t.Run("Missing multicluster policy", func(t *testing.T) {
@@ -380,7 +380,7 @@ func TestMultiClusterAllocationFromLocal(t *testing.T) {
 		assert.Equal(t, gsa.Spec.Selectors[0].LabelSelector, ret.Spec.Selectors[0].LabelSelector)
 		assert.Equal(t, gsa.Namespace, ret.Namespace)
 		expectedState := allocationv1.GameServerAllocationUnAllocated
-		assert.True(t, expectedState == ret.Status.State, "Failed: %s vs %s", expectedState, ret.Status.State)
+		assert.Equal(t, expectedState, ret.Status.State, "Failed: %s vs %s", expectedState, ret.Status.State)
 	})
 }
 
@@ -429,10 +429,10 @@ func TestMultiClusterAllocationFromRemote(t *testing.T) {
 
 		// This call initializes the cache
 		err := c.allocator.allocationCache.syncCache()
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		err = c.allocator.allocationCache.counter.Run(ctx, 0)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		gsa := &allocationv1.GameServerAllocation{
 			ObjectMeta: metav1.ObjectMeta{
@@ -532,10 +532,10 @@ func TestMultiClusterAllocationFromRemote(t *testing.T) {
 
 		// This call initializes the cache
 		err := c.allocator.allocationCache.syncCache()
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		err = c.allocator.allocationCache.counter.Run(ctx, 0)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		gsa := &allocationv1.GameServerAllocation{
 			ObjectMeta: metav1.ObjectMeta{
@@ -552,9 +552,9 @@ func TestMultiClusterAllocationFromRemote(t *testing.T) {
 
 		_, err = executeAllocation(gsa, c)
 		if assert.Error(t, err) {
-			assert.Contains(t, err.Error(), "test error message")
+			assert.ErrorContains(t, err, "test error message")
 		}
-		assert.Truef(t, retry > 1, "Retry count %v. Expecting to retry on error.", retry)
+		assert.Greaterf(t, retry, 1, "Retry count %v. Expecting to retry on error.", retry)
 	})
 
 	t.Run("First server fails and second server succeeds", func(t *testing.T) {
@@ -611,10 +611,10 @@ func TestMultiClusterAllocationFromRemote(t *testing.T) {
 
 		// This call initializes the cache
 		err := c.allocator.allocationCache.syncCache()
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		err = c.allocator.allocationCache.counter.Run(ctx, 0)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		gsa := &allocationv1.GameServerAllocation{
 			ObjectMeta: metav1.ObjectMeta{
@@ -678,10 +678,10 @@ func TestMultiClusterAllocationFromRemote(t *testing.T) {
 
 		// This call initializes the cache
 		err := c.allocator.allocationCache.syncCache()
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		err = c.allocator.allocationCache.counter.Run(ctx, 0)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		gsa := &allocationv1.GameServerAllocation{
 			ObjectMeta: metav1.ObjectMeta{
@@ -700,7 +700,7 @@ func TestMultiClusterAllocationFromRemote(t *testing.T) {
 		assert.Error(t, err)
 		st, ok := status.FromError(err)
 		assert.True(t, ok)
-		assert.Equal(t, st.Code(), codes.DeadlineExceeded)
+		assert.Equal(t, codes.DeadlineExceeded, st.Code())
 		assert.Equal(t, 0, calls)
 	})
 	t.Run("First allocation fails and second succeeds on the same server", func(t *testing.T) {
@@ -751,10 +751,10 @@ func TestMultiClusterAllocationFromRemote(t *testing.T) {
 
 		// This call initializes the cache
 		err := c.allocator.allocationCache.syncCache()
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		err = c.allocator.allocationCache.counter.Run(ctx, 0)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		gsa := &allocationv1.GameServerAllocation{
 			ObjectMeta: metav1.ObjectMeta{
@@ -788,7 +788,10 @@ func executeAllocation(gsa *allocationv1.GameServerAllocation, c *Extensions) (*
 	ret := &allocationv1.GameServerAllocation{}
 	jsn := rec.Body.Bytes()
 	err = json.Unmarshal(jsn, ret)
-	return ret, errors.Wrapf(err, "failed to unmarshal allocation response: %s", jsn)
+	if err != nil {
+		return ret, fmt.Errorf("failed to unmarshal allocation response: %s: %w", jsn, err)
+	}
+	return ret, nil
 }
 
 func addReactorForGameServer(m *agtesting.Mocks) string {

@@ -164,6 +164,7 @@ const (
 	NodePodIP corev1.NodeAddressType = "PodIP"
 
 	// PassthroughPortAssignmentAnnotation is an annotation to keep track of game server container and its Passthrough ports indices
+	//nolint:gosec // G101: matches on the "Pass" in "Passthrough"; this is an annotation key, not a credential.
 	PassthroughPortAssignmentAnnotation = "agones.dev/container-passthrough-port-assignment"
 
 	// True is the string "true" to appease the goconst lint.

@@ -16,6 +16,7 @@ package e2e
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -101,11 +102,12 @@ func TestFleetStrategyValidation(t *testing.T) {
 	assert.NoError(t, err)
 	// func to check that we receive an expected error
 	verifyErr := func(err error) {
-		assert.NotNil(t, err)
-		statusErr, ok := err.(*k8serrors.StatusError)
+		require.Error(t, err)
+		var statusErr *k8serrors.StatusError
+		ok := errors.As(err, &statusErr)
 		assert.True(t, ok)
 		fmt.Println(statusErr)
-		assert.Len(t, statusErr.Status().Details.Causes, 1)
+		require.Len(t, statusErr.Status().Details.Causes, 1)
 		assert.Equal(t, metav1.CauseTypeFieldValueNotSupported, statusErr.Status().Details.Causes[0].Type)
 		assert.Contains(t, statusErr.Status().Details.Causes[0].Message, `supported values: "RollingUpdate", "Recreate"`)
 	}
@@ -912,8 +914,9 @@ func TestFleetGSSpecValidation(t *testing.T) {
 		}
 	flt.Spec.Template.Spec.Container = "testing"
 	_, err := client.Fleets(framework.Namespace).Create(ctx, flt, metav1.CreateOptions{})
-	assert.NotNil(t, err)
-	statusErr, ok := err.(*k8serrors.StatusError)
+	assert.Error(t, err)
+	var statusErr *k8serrors.StatusError
+	ok := errors.As(err, &statusErr)
 	assert.True(t, ok)
 
 	assert.Len(t, statusErr.Status().Details.Causes, 2)
@@ -924,8 +927,8 @@ func TestFleetGSSpecValidation(t *testing.T) {
 
 	flt.Spec.Template.Spec.Container = ""
 	_, err = client.Fleets(framework.Namespace).Create(ctx, flt, metav1.CreateOptions{})
-	assert.NotNil(t, err)
-	statusErr, ok = err.(*k8serrors.StatusError)
+	assert.Error(t, err)
+	ok = errors.As(err, &statusErr)
 	assert.True(t, ok)
 	if assert.Len(t, statusErr.Status().Details.Causes, 2) {
 		assert.Equal(t, metav1.CauseTypeFieldValueInvalid, statusErr.Status().Details.Causes[1].Type)
@@ -946,8 +949,8 @@ func TestFleetGSSpecValidation(t *testing.T) {
 	fltPort.Spec.Template.Spec.Ports = []agonesv1.GameServerPort{{Name: "Dyn", HostPort: 5555, PortPolicy: agonesv1.Dynamic, ContainerPort: 5555}}
 
 	_, err = client.Fleets(framework.Namespace).Create(ctx, fltPort, metav1.CreateOptions{})
-	assert.NotNil(t, err)
-	statusErr, ok = err.(*k8serrors.StatusError)
+	assert.Error(t, err)
+	ok = errors.As(err, &statusErr)
 	assert.True(t, ok)
 	assert.Len(t, statusErr.Status().Details.Causes, 1)
 	assert.Contains(t, statusErr.Status().Details.Causes[0].Message, agonesv1.ErrHostPort)
@@ -969,9 +972,10 @@ func TestFleetNameValidation(t *testing.T) {
 	nameLen := validation.LabelValueMaxLength + 1
 	flt.Name = strings.Repeat("f", nameLen)
 	_, err := client.Fleets(framework.Namespace).Create(ctx, flt, metav1.CreateOptions{})
-	require.NotNil(t, err)
-	statusErr := err.(*k8serrors.StatusError)
-	assert.True(t, len(statusErr.Status().Details.Causes) > 0)
+	require.Error(t, err)
+	var statusErr *k8serrors.StatusError
+	require.ErrorAs(t, err, &statusErr)
+	assert.NotEmpty(t, statusErr.Status().Details.Causes)
 	assert.Equal(t, metav1.CauseType("FieldValueTooLong"), statusErr.Status().Details.Causes[0].Type)
 	goodFlt := defaultFleet(framework.Namespace)
 	goodFlt.Name = flt.Name[0 : nameLen-1]
@@ -1329,7 +1333,8 @@ func TestFleetWithLongLabelsAnnotations(t *testing.T) {
 	flt.Spec.Template.ObjectMeta.Labels["label"] = longName
 	_, err := client.Fleets(framework.Namespace).Create(ctx, flt, metav1.CreateOptions{})
 	assert.Error(t, err)
-	statusErr, ok := err.(*k8serrors.StatusError)
+	var statusErr *k8serrors.StatusError
+	ok := errors.As(err, &statusErr)
 	assert.True(t, ok)
 	assert.Len(t, statusErr.Status().Details.Causes, 1)
 	assert.Equal(t, metav1.CauseTypeFieldValueInvalid, statusErr.Status().Details.Causes[0].Type)
@@ -1341,7 +1346,7 @@ func TestFleetWithLongLabelsAnnotations(t *testing.T) {
 	flt.Spec.Template.ObjectMeta.Annotations[longName] = normalLengthName
 	_, err = client.Fleets(framework.Namespace).Create(ctx, flt, metav1.CreateOptions{})
 	assert.Error(t, err)
-	statusErr, ok = err.(*k8serrors.StatusError)
+	ok = errors.As(err, &statusErr)
 	assert.True(t, ok)
 	assert.Len(t, statusErr.Status().Details.Causes, 1)
 	assert.Equal(t, "spec.template.metadata.annotations", statusErr.Status().Details.Causes[0].Field)
@@ -1364,7 +1369,7 @@ func TestFleetWithLongLabelsAnnotations(t *testing.T) {
 	goodFlt.Spec.Template.ObjectMeta.Annotations[longName] = normalLengthName
 	_, err = client.Fleets(framework.Namespace).Update(ctx, goodFlt, metav1.UpdateOptions{})
 	assert.Error(t, err)
-	statusErr, ok = err.(*k8serrors.StatusError)
+	ok = errors.As(err, &statusErr)
 	assert.True(t, ok)
 	require.Len(t, statusErr.Status().Details.Causes, 1)
 	assert.Equal(t, "spec.template.metadata.annotations", statusErr.Status().Details.Causes[0].Field)
@@ -1518,8 +1523,9 @@ func TestFleetResourceValidation(t *testing.T) {
 	containers[1].Resources.Requests[corev1.ResourceMemory] = mi128
 
 	_, err := client.Fleets(framework.Namespace).Create(ctx, flt.DeepCopy(), metav1.CreateOptions{})
-	assert.NotNil(t, err)
-	statusErr, ok := err.(*k8serrors.StatusError)
+	assert.Error(t, err)
+	var statusErr *k8serrors.StatusError
+	ok := errors.As(err, &statusErr)
 	assert.True(t, ok)
 	assert.Len(t, statusErr.Status().Details.Causes, 1)
 	assert.Equal(t, metav1.CauseTypeFieldValueInvalid, statusErr.Status().Details.Causes[0].Type)
@@ -1527,8 +1533,8 @@ func TestFleetResourceValidation(t *testing.T) {
 
 	containers[0].Resources.Limits[corev1.ResourceCPU] = resource.MustParse("-50m")
 	_, err = client.Fleets(framework.Namespace).Create(ctx, flt.DeepCopy(), metav1.CreateOptions{})
-	assert.NotNil(t, err)
-	statusErr, ok = err.(*k8serrors.StatusError)
+	assert.Error(t, err)
+	ok = errors.As(err, &statusErr)
 	assert.True(t, ok)
 
 	assert.Len(t, statusErr.Status().Details.Causes, 3)

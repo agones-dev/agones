@@ -18,11 +18,13 @@ import (
 	"net"
 
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
-	"github.com/pkg/errors"
+	"agones.dev/agones/pkg/util/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
+
+var errs = errors.FromPackage()
 
 // isGameServerPod returns if this Pod is a Pod that comes from a GameServer
 func isGameServerPod(pod *corev1.Pod) bool {
@@ -78,7 +80,7 @@ func address(node *corev1.Node) (string, []corev1.NodeAddress, error) {
 		}
 	}
 
-	return "", nil, errors.Errorf("Could not find an address for Node: %s", node.ObjectMeta.Name)
+	return "", nil, errs.Errorf("Could not find an address for Node: %s", node.ObjectMeta.Name)
 }
 
 // applyGameServerAddressAndPort gathers the address and port details from the node and pod
@@ -86,7 +88,7 @@ func address(node *corev1.Node) (string, []corev1.NodeAddress, error) {
 func applyGameServerAddressAndPort(gs *agonesv1.GameServer, node *corev1.Node, pod *corev1.Pod, syncPodPortsToGameServer func(*agonesv1.GameServer, *corev1.Pod) error) (*agonesv1.GameServer, error) {
 	addr, addrs, err := address(node)
 	if err != nil {
-		return gs, errors.Wrapf(err, "error getting external address for GameServer %s", gs.ObjectMeta.Name)
+		return gs, errs.Wrapf(err, "error getting external address for GameServer %s", gs.ObjectMeta.Name)
 	}
 
 	gs.Status.Address = addr
@@ -101,7 +103,7 @@ func applyGameServerAddressAndPort(gs *agonesv1.GameServer, node *corev1.Node, p
 	}
 
 	if err := syncPodPortsToGameServer(gs, pod); err != nil {
-		return gs, errors.Wrapf(err, "cloud product error syncing ports on GameServer %s", gs.ObjectMeta.Name)
+		return gs, errs.Wrapf(err, "cloud product error syncing ports on GameServer %s", gs.ObjectMeta.Name)
 	}
 
 	// HostPort is always going to be populated, even when dynamic
