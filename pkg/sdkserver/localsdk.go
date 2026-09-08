@@ -20,6 +20,7 @@ import (
 	"io"
 	"math/rand"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -44,6 +45,9 @@ var (
 	_ alpha.SDKServer = &LocalSDKServer{}
 	_ beta.SDKServer  = &LocalSDKServer{}
 )
+
+// defaultNamespace is the namespace given to the GameServer the local SDK server serves.
+const defaultNamespace = "default"
 
 func defaultGs() *sdk.GameServer {
 	gs := &sdk.GameServer{
@@ -103,10 +107,12 @@ type LocalSDKServer struct {
 	reserveTimer      *time.Timer
 	testMode          bool
 	testSdkName       string
+	listMaxCapacity   int64
 }
 
-// NewLocalSDKServer returns the default LocalSDKServer
-func NewLocalSDKServer(filePath string, testSdkName string) (*LocalSDKServer, error) {
+// NewLocalSDKServer returns the default LocalSDKServer. listMaxCapacity bounds the Capacity
+// accepted by UpdateList.
+func NewLocalSDKServer(filePath string, testSdkName string, listMaxCapacity int64) (*LocalSDKServer, error) {
 	l := &LocalSDKServer{
 		gsMutex:         sync.RWMutex{},
 		gs:              defaultGs(),
@@ -117,6 +123,7 @@ func NewLocalSDKServer(filePath string, testSdkName string) (*LocalSDKServer, er
 		testMode:        false,
 		testSdkName:     testSdkName,
 		gsState:         agonesv1.GameServerStateScheduled,
+		listMaxCapacity: listMaxCapacity,
 	}
 	l.logger = runtime.NewLoggerWithType(l)
 
@@ -741,15 +748,8 @@ func (l *LocalSDKServer) UpdateList(_ context.Context, in *beta.UpdateListReques
 		return nil, errors.Errorf("invalid argument. Field Mask Path(s): %v are invalid for List. Use valid field name(s): %v", in.UpdateMask.GetPaths(), in.List.ProtoReflect().Descriptor().Fields())
 	}
 
-	if GameServerListMaxCapacity == 0 {
-		err := l.GsLocalListsMaxItems()
-		if err != nil {
-			return nil, fmt.Errorf("%w", err)
-		}
-	}
-
-	if in.List.Capacity < 0 || in.List.Capacity > GameServerListMaxCapacity {
-		return nil, errors.Errorf("out of range. Capacity must be within range [0,1000]. Found Capacity: %d", in.List.Capacity)
+	if in.List.Capacity < 0 || in.List.Capacity > l.listMaxCapacity {
+		return nil, errors.Errorf("out of range. Capacity must be within range [0,%d]. Found Capacity: %d", l.listMaxCapacity, in.List.Capacity)
 	}
 
 	name := in.List.Name
@@ -796,10 +796,8 @@ func (l *LocalSDKServer) AddListValue(_ context.Context, in *beta.AddListValueRe
 			return nil, errors.Errorf("out of range. No available capacity. Current Capacity: %d, List Size: %d", list.Capacity, len(list.Values))
 		}
 		// Verify value does not already exist in the list
-		for _, val := range l.gs.Status.Lists[in.Name].Values {
-			if in.Value == val {
-				return nil, errors.Errorf("already exists. Value: %s already in List: %s", in.Value, in.Name)
-			}
+		if slices.Contains(l.gs.Status.Lists[in.Name].Values, in.Value) {
+			return nil, errors.Errorf("already exists. Value: %s already in List: %s", in.Value, in.Name)
 		}
 		// Add new value to gameserverstatus.
 		l.gs.Status.Lists[in.Name].Values = append(l.gs.Status.Lists[in.Name].Values, in.Value)
@@ -925,18 +923,5 @@ func (l *LocalSDKServer) setGameServerFromFilePath(filePath string) error {
 		l.logger.WithError(err).Warn("Specified wrong Logging.SdkServer. Setting default loglevel - Info")
 		l.logger.Logger.SetLevel(logrus.InfoLevel)
 	}
-	return nil
-}
-
-// GsLocalListsMaxItems retrieves or sets the maximum number of items allowed
-// in any GameServer list for the local SDK.
-func (l *LocalSDKServer) GsLocalListsMaxItems() error {
-
-	if playersList, found := l.gs.Status.Lists["players"]; found {
-		GameServerListMaxCapacity = playersList.Capacity
-	} else {
-		return fmt.Errorf("no players for list")
-	}
-
 	return nil
 }

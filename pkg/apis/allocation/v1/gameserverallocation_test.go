@@ -836,6 +836,9 @@ func TestGameServerCounterActions(t *testing.T) {
 	}
 }
 
+// defaultTestListMaxCapacity mirrors the `gameservers.lists.maxItems` Helm default.
+const defaultTestListMaxCapacity = int64(1000)
+
 func TestGameServerListActions(t *testing.T) {
 	t.Parallel()
 
@@ -844,11 +847,14 @@ func TestGameServerListActions(t *testing.T) {
 	require.NoError(t, runtime.ParseFeatures(fmt.Sprintf("%s=true", runtime.FeatureCountsAndLists)))
 
 	testScenarios := map[string]struct {
-		la      ListAction
-		list    string
-		gs      *agonesv1.GameServer
-		want    *agonesv1.GameServer
-		wantErr bool
+		la ListAction
+		// maxCapacity bounds a capacity change; left unset in scenarios that do not exercise the
+		// limit, in which case defaultTestListMaxCapacity is used.
+		maxCapacity int64
+		list        string
+		gs          *agonesv1.GameServer
+		want        *agonesv1.GameServer
+		wantErr     bool
 	}{
 		"update list capacity truncates list": {
 			la: ListAction{
@@ -929,11 +935,35 @@ func TestGameServerListActions(t *testing.T) {
 					}}}},
 			wantErr: false,
 		},
+		"capacity above a configured max below the old hardcoded 1000 errors": {
+			la: ListAction{
+				Capacity: int64Pointer(26),
+			},
+			maxCapacity: 25,
+			list:        "pages",
+			gs: &agonesv1.GameServer{Status: agonesv1.GameServerStatus{
+				Lists: map[string]agonesv1.ListStatus{
+					"pages": {
+						Values:   []string{"page1"},
+						Capacity: 5,
+					}}}},
+			want: &agonesv1.GameServer{Status: agonesv1.GameServerStatus{
+				Lists: map[string]agonesv1.ListStatus{
+					"pages": {
+						Values:   []string{"page1"},
+						Capacity: 5,
+					}}}},
+			wantErr: true,
+		},
 	}
 
 	for test, testScenario := range testScenarios {
 		t.Run(test, func(t *testing.T) {
-			errs := testScenario.la.ListActions(testScenario.list, testScenario.gs)
+			maxCapacity := testScenario.maxCapacity
+			if maxCapacity == 0 {
+				maxCapacity = defaultTestListMaxCapacity
+			}
+			errs := testScenario.la.ListActions(testScenario.list, testScenario.gs, maxCapacity)
 			if errs != nil {
 				assert.True(t, testScenario.wantErr)
 			} else {

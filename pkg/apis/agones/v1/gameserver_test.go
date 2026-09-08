@@ -2272,11 +2272,12 @@ func TestGameServerUpdateListCapacity(t *testing.T) {
 	t.Parallel()
 
 	testCases := map[string]struct {
-		gs       GameServer
-		name     string
-		capacity int64
-		want     ListStatus
-		wantErr  bool
+		gs          GameServer
+		name        string
+		capacity    int64
+		maxCapacity int64
+		want        ListStatus
+		wantErr     bool
 	}{
 		"list not in game server no-op with error": {
 			gs: GameServer{Status: GameServerStatus{
@@ -2287,9 +2288,10 @@ func TestGameServerUpdateListCapacity(t *testing.T) {
 					},
 				},
 			}},
-			name:     "thing",
-			capacity: 1000,
-			wantErr:  true,
+			name:        "thing",
+			capacity:    1000,
+			maxCapacity: 1000,
+			wantErr:     true,
 		},
 		"update list capacity": {
 			gs: GameServer{Status: GameServerStatus{
@@ -2300,8 +2302,9 @@ func TestGameServerUpdateListCapacity(t *testing.T) {
 					},
 				},
 			}},
-			name:     "things",
-			capacity: 1000,
+			name:        "things",
+			capacity:    1000,
+			maxCapacity: 1000,
 			want: ListStatus{
 				Values:   []string{},
 				Capacity: 1000,
@@ -2317,8 +2320,9 @@ func TestGameServerUpdateListCapacity(t *testing.T) {
 					},
 				},
 			}},
-			name:     "slings",
-			capacity: 10000,
+			name:        "slings",
+			capacity:    10000,
+			maxCapacity: 1000,
 			want: ListStatus{
 				Values:   []string{},
 				Capacity: 100,
@@ -2334,11 +2338,48 @@ func TestGameServerUpdateListCapacity(t *testing.T) {
 					},
 				},
 			}},
-			name:     "flings",
-			capacity: -100,
+			name:        "flings",
+			capacity:    -100,
+			maxCapacity: 1000,
 			want: ListStatus{
 				Values:   []string{},
 				Capacity: 999,
+			},
+			wantErr: true,
+		},
+		"capacity within a configured max below the old hardcoded 1000": {
+			gs: GameServer{Status: GameServerStatus{
+				Lists: map[string]ListStatus{
+					"things": {
+						Values:   []string{},
+						Capacity: 5,
+					},
+				},
+			}},
+			name:        "things",
+			capacity:    25,
+			maxCapacity: 25,
+			want: ListStatus{
+				Values:   []string{},
+				Capacity: 25,
+			},
+			wantErr: false,
+		},
+		"capacity above a configured max below the old hardcoded 1000 no-op with error": {
+			gs: GameServer{Status: GameServerStatus{
+				Lists: map[string]ListStatus{
+					"things": {
+						Values:   []string{},
+						Capacity: 5,
+					},
+				},
+			}},
+			name:        "things",
+			capacity:    26,
+			maxCapacity: 25,
+			want: ListStatus{
+				Values:   []string{},
+				Capacity: 5,
 			},
 			wantErr: true,
 		},
@@ -2346,7 +2387,7 @@ func TestGameServerUpdateListCapacity(t *testing.T) {
 
 	for test, testCase := range testCases {
 		t.Run(test, func(t *testing.T) {
-			err := testCase.gs.UpdateListCapacity(testCase.name, testCase.capacity)
+			err := testCase.gs.UpdateListCapacity(testCase.name, testCase.capacity, testCase.maxCapacity)
 			if err != nil {
 				assert.True(t, testCase.wantErr)
 			} else {

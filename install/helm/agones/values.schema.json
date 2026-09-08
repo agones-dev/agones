@@ -1573,7 +1573,8 @@
           "type": "object",
           "properties": {
             "maxItems": {
-              "type": "integer"
+              "type": "integer",
+              "minimum": 1
             }
           },
           "required": [

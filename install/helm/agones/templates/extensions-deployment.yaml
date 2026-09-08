@@ -133,6 +133,8 @@ spec:
           value: {{ .Values.agones.featureGates | quote }}
         - name: ALLOCATION_BATCH_WAIT_TIME
           value: {{ .Values.agones.extensions.allocationBatchWaitTime | quote }}
+        - name: MAX_LIST_ITEMS
+          value: {{ .Values.gameservers.lists.maxItems | quote }}
         - name: CLOUD_PRODUCT
           value: {{ .Values.agones.cloudProduct | quote }}
 {{- if .Values.agones.extensions.persistentLogs }}

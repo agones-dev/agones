@@ -42,7 +42,7 @@ import (
 func TestLocal(t *testing.T) {
 	ctx := context.Background()
 	e := &sdk.Empty{}
-	l, err := NewLocalSDKServer("", "")
+	l, err := NewLocalSDKServer("", "", defaultTestListMaxCapacity)
 	assert.NoError(t, err)
 
 	_, err = l.Ready(ctx, e)
@@ -82,7 +82,7 @@ func TestLocal(t *testing.T) {
 }
 
 func TestLocalSDKWithTestMode(t *testing.T) {
-	l, err := NewLocalSDKServer("", "")
+	l, err := NewLocalSDKServer("", "", defaultTestListMaxCapacity)
 	assert.NoError(t, err, "Should be able to create local SDK server")
 	a := []string{"ready", "allocate", "setlabel", "setannotation", "gameserver", "health", "shutdown", "watch"}
 	b := []string{"ready", "health", "ready", "watch", "allocate", "gameserver", "setlabel", "setannotation", "health", "health", "shutdown"}
@@ -107,7 +107,7 @@ func TestLocalSDKWithGameServer(t *testing.T) {
 	path, err := gsToTmpFile(fixture.DeepCopy())
 	assert.NoError(t, err)
 
-	l, err := NewLocalSDKServer(path, "")
+	l, err := NewLocalSDKServer(path, "", defaultTestListMaxCapacity)
 	assert.NoError(t, err)
 
 	gs, err := l.GetGameServer(ctx, e)
@@ -130,7 +130,7 @@ func TestLocalSDKWithLogLevel(t *testing.T) {
 	path, err := gsToTmpFile(fixture.DeepCopy())
 	assert.NoError(t, err)
 
-	l, err := NewLocalSDKServer(path, "test")
+	l, err := NewLocalSDKServer(path, "test", defaultTestListMaxCapacity)
 	assert.NoError(t, err)
 
 	_, err = l.GetGameServer(ctx, e)
@@ -165,7 +165,7 @@ func TestLocalSDKServerSetLabel(t *testing.T) {
 			path, err := gsToTmpFile(v.gs)
 			assert.NoError(t, err)
 
-			l, err := NewLocalSDKServer(path, "")
+			l, err := NewLocalSDKServer(path, "", defaultTestListMaxCapacity)
 			assert.NoError(t, err)
 			kv := &sdk.KeyValue{Key: "foo", Value: "bar"}
 
@@ -233,7 +233,7 @@ func TestLocalSDKServerSetAnnotation(t *testing.T) {
 			path, err := gsToTmpFile(v.gs)
 			assert.NoError(t, err)
 
-			l, err := NewLocalSDKServer(path, "")
+			l, err := NewLocalSDKServer(path, "", defaultTestListMaxCapacity)
 			assert.NoError(t, err)
 
 			kv := &sdk.KeyValue{Key: "bar", Value: "foo"}
@@ -285,7 +285,7 @@ func TestLocalSDKServerWatchGameServer(t *testing.T) {
 	assert.NoError(t, err)
 
 	e := &sdk.Empty{}
-	l, err := NewLocalSDKServer(path, "")
+	l, err := NewLocalSDKServer(path, "", defaultTestListMaxCapacity)
 	assert.NoError(t, err)
 
 	stream := newGameServerMockStream()
@@ -338,7 +338,7 @@ func TestLocalSDKServerGetCounter(t *testing.T) {
 
 	path, err := gsToTmpFile(fixture)
 	assert.NoError(t, err)
-	l, err := NewLocalSDKServer(path, "")
+	l, err := NewLocalSDKServer(path, "", defaultTestListMaxCapacity)
 	assert.NoError(t, err)
 
 	stream := newGameServerMockStream()
@@ -414,7 +414,7 @@ func TestLocalSDKServerUpdateCounter(t *testing.T) {
 
 	path, err := gsToTmpFile(fixture)
 	assert.NoError(t, err)
-	l, err := NewLocalSDKServer(path, "")
+	l, err := NewLocalSDKServer(path, "", defaultTestListMaxCapacity)
 	assert.NoError(t, err)
 
 	stream := newGameServerMockStream()
@@ -562,7 +562,7 @@ func TestLocalSDKServerGetList(t *testing.T) {
 
 	path, err := gsToTmpFile(fixture)
 	assert.NoError(t, err)
-	l, err := NewLocalSDKServer(path, "")
+	l, err := NewLocalSDKServer(path, "", defaultTestListMaxCapacity)
 	assert.NoError(t, err)
 
 	stream := newGameServerMockStream()
@@ -639,7 +639,7 @@ func TestLocalSDKServerUpdateList(t *testing.T) {
 
 	path, err := gsToTmpFile(fixture)
 	assert.NoError(t, err)
-	l, err := NewLocalSDKServer(path, "")
+	l, err := NewLocalSDKServer(path, "", defaultTestListMaxCapacity)
 	assert.NoError(t, err)
 
 	stream := newGameServerMockStream()
@@ -835,7 +835,7 @@ func TestLocalSDKServerAddListValue(t *testing.T) {
 
 	path, err := gsToTmpFile(fixture)
 	assert.NoError(t, err)
-	l, err := NewLocalSDKServer(path, "")
+	l, err := NewLocalSDKServer(path, "", defaultTestListMaxCapacity)
 	assert.NoError(t, err)
 
 	stream := newGameServerMockStream()
@@ -927,7 +927,7 @@ func TestLocalSDKServerRemoveListValue(t *testing.T) {
 
 	path, err := gsToTmpFile(fixture)
 	assert.NoError(t, err)
-	l, err := NewLocalSDKServer(path, "")
+	l, err := NewLocalSDKServer(path, "", defaultTestListMaxCapacity)
 	assert.NoError(t, err)
 
 	stream := newGameServerMockStream()
@@ -996,7 +996,7 @@ func TestLocalSDKServerRemoveListValue(t *testing.T) {
 // GameServer object
 func TestLocalSDKServerStateUpdates(t *testing.T) {
 	t.Parallel()
-	l, err := NewLocalSDKServer("", "")
+	l, err := NewLocalSDKServer("", "", defaultTestListMaxCapacity)
 	assert.NoError(t, err)
 
 	ctx := context.Background()
@@ -1035,7 +1035,7 @@ func TestLocalSDKServerStateUpdates(t *testing.T) {
 func TestSDKConformanceFunctionality(t *testing.T) {
 	t.Parallel()
 
-	l, err := NewLocalSDKServer("", "")
+	l, err := NewLocalSDKServer("", "", defaultTestListMaxCapacity)
 	assert.NoError(t, err)
 	l.testMode = true
 	l.recordRequest("")
@@ -1102,5 +1102,58 @@ func assertInitialWatchUpdate(t *testing.T, stream *gameServerMockStream) {
 	case <-stream.msgs:
 	case <-time.After(time.Second):
 		assert.Fail(t, "timeout on receiving initial message")
+	}
+}
+
+// TestLocalSDKServerUpdateListMaxCapacity verifies the local SDK server range-checks UpdateList
+// against the limit it was constructed with. Locally that comes from the --max-list-items flag,
+// which defaults to defaultMaxListItems rather than being discovered from the GameServer.
+func TestLocalSDKServerUpdateListMaxCapacity(t *testing.T) {
+	t.Parallel()
+
+	runtime.FeatureTestMutex.Lock()
+	defer runtime.FeatureTestMutex.Unlock()
+	require.NoError(t, runtime.ParseFeatures(string(runtime.FeatureCountsAndLists)+"=true"))
+
+	const listMaxCapacity = int64(25)
+
+	fixture := &agonesv1.GameServer{
+		ObjectMeta: metav1.ObjectMeta{Name: "stuff"},
+		Status: agonesv1.GameServerStatus{
+			// Deliberately not named "players": the removed GsLocalListsMaxItems only ever
+			// discovered a limit from a list with that name.
+			Lists: map[string]agonesv1.ListStatus{"rooms": {Capacity: 5, Values: []string{"one"}}},
+		},
+	}
+
+	path, err := gsToTmpFile(fixture)
+	require.NoError(t, err)
+	l, err := NewLocalSDKServer(path, "", listMaxCapacity)
+	require.NoError(t, err)
+
+	testScenarios := map[string]struct {
+		capacity int64
+		wantErr  bool
+	}{
+		"at the configured maximum":    {capacity: listMaxCapacity, wantErr: false},
+		"above the configured maximum": {capacity: listMaxCapacity + 1, wantErr: true},
+		// Would have been accepted under the old hardcoded [0,1000] check.
+		"between the configured maximum and the old hardcoded 1000": {capacity: 500, wantErr: true},
+		"negative": {capacity: -1, wantErr: true},
+	}
+
+	for test, testScenario := range testScenarios {
+		t.Run(test, func(t *testing.T) {
+			_, err := l.UpdateList(context.Background(), &beta.UpdateListRequest{
+				List:       &beta.List{Name: "rooms", Capacity: testScenario.capacity},
+				UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"capacity"}},
+			})
+			if testScenario.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "Capacity must be within range [0,25]")
+			} else {
+				require.NoError(t, err)
+			}
+		})
 	}
 }
