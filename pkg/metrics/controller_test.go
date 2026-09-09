@@ -16,6 +16,7 @@ package metrics
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 	"testing"
@@ -25,7 +26,6 @@ import (
 	agtesting "agones.dev/agones/pkg/testing"
 	"agones.dev/agones/pkg/util/runtime"
 	"github.com/google/go-cmp/cmp"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opencensus.io/metric/metricdata"
@@ -699,7 +699,7 @@ func TestCalcDuration(t *testing.T) {
 			gs1:         gameServerWithFleetStateCreationTimestamp(fleet1, gsName1, "", creationTimestamp),
 			gs2:         gameServerWithFleetStateCreationTimestamp(fleet1, gsName1, agonesv1.GameServerStateRequestReady, creationTimestamp),
 			expected: result{
-				err:      errors.Errorf("unable to calculate '' state duration of '%s' GameServer", gsName1),
+				err:      fmt.Errorf("unable to calculate '' state duration of '%s' GameServer", gsName1),
 				duration: 0,
 			},
 		},
@@ -717,7 +717,7 @@ func TestCalcDuration(t *testing.T) {
 			gs1:         gameServerWithFleetStateCreationTimestamp(fleet1, gsName1, agonesv1.GameServerStateRequestReady, creationTimestamp),
 			gs2:         gameServerWithFleetStateCreationTimestamp(fleet1, gsName1, agonesv1.GameServerStateShutdown, creationTimestamp),
 			expected: result{
-				err:      errors.Errorf("unable to calculate 'RequestReady' state duration of '%s' GameServer", gsName1),
+				err:      fmt.Errorf("unable to calculate 'RequestReady' state duration of '%s' GameServer", gsName1),
 				duration: 0,
 			},
 		},
@@ -726,7 +726,7 @@ func TestCalcDuration(t *testing.T) {
 			gs1:         gameServerWithFleetStateCreationTimestamp(fleet2, gsName2, "", futureTimestamp),
 			gs2:         gameServerWithFleetStateCreationTimestamp(fleet2, gsName2, agonesv1.GameServerStateCreating, futureTimestamp),
 			expected: result{
-				err:      errors.Errorf("negative duration for '' state of '%s' GameServer", gsName2),
+				err:      fmt.Errorf("negative duration for '' state of '%s' GameServer", gsName2),
 				duration: 0,
 			},
 		},

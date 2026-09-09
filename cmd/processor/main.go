@@ -32,13 +32,13 @@ import (
 	"agones.dev/agones/pkg/gameserverallocations/processor"
 	"agones.dev/agones/pkg/gameservers"
 	"agones.dev/agones/pkg/metrics"
+	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/httpserver"
 	"agones.dev/agones/pkg/util/runtime"
 	"agones.dev/agones/pkg/util/signals"
 
 	"github.com/google/uuid"
 	"github.com/heptiolabs/healthcheck"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -77,6 +77,7 @@ const (
 
 var (
 	logger = runtime.NewLoggerWithSource("main")
+	errs   = errors.FromPackage()
 )
 
 type processorConfig struct {
@@ -356,7 +357,7 @@ func getClients(ctlConfig processorConfig) (*kubernetes.Clientset, *versioned.Cl
 	// Create the in-cluster config
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "Could not create in cluster config")
+		return nil, nil, errs.Wrap(err, "Could not create in cluster config")
 	}
 
 	config.QPS = float32(ctlConfig.APIServerSustainedQPS)
@@ -365,13 +366,13 @@ func getClients(ctlConfig processorConfig) (*kubernetes.Clientset, *versioned.Cl
 	// Access to the Agones resources through the Agones Clientset
 	kubeClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "Could not create the kubernetes api clientset")
+		return nil, nil, errs.Wrap(err, "Could not create the kubernetes api clientset")
 	}
 
 	// Access to the Agones resources through the Agones Clientset
 	agonesClient, err := versioned.NewForConfig(config)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "Could not create the agones api clientset")
+		return nil, nil, errs.Wrap(err, "Could not create the agones api clientset")
 	}
 	return kubeClient, agonesClient, nil
 }

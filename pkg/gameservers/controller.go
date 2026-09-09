@@ -61,10 +61,11 @@ import (
 )
 
 const (
-	sdkserverSidecarName  = "agones-gameserver-sidecar"
-	grpcPortEnvVar        = "AGONES_SDK_GRPC_PORT"
-	httpPortEnvVar        = "AGONES_SDK_HTTP_PORT"
-	passthroughPortEnvVar = "PASSTHROUGH"
+	sdkserverSidecarName    = "agones-gameserver-sidecar"
+	grpcPortEnvVar          = "AGONES_SDK_GRPC_PORT"
+	httpPortEnvVar          = "AGONES_SDK_HTTP_PORT"
+	passthroughPortEnvVar   = "PASSTHROUGH"
+	defaultSidecarRunAsUser = 1000
 )
 
 // Extensions struct contains what is needed to bind webhook handlers
@@ -87,7 +88,7 @@ type Controller struct {
 	sidecarCPULimit          resource.Quantity
 	sidecarMemoryRequest     resource.Quantity
 	sidecarMemoryLimit       resource.Quantity
-	sidecarRunAsUser         int
+	sidecarSecurityContext   *corev1.SecurityContext
 	sidecarRequestsRateLimit time.Duration
 	sdkServiceAccount        string
 	crdGetter                apiextclientv1.CustomResourceDefinitionInterface
@@ -121,7 +122,7 @@ func NewController(
 	sidecarCPULimit resource.Quantity,
 	sidecarMemoryRequest resource.Quantity,
 	sidecarMemoryLimit resource.Quantity,
-	sidecarRunAsUser int,
+	sidecarSecurityContext *corev1.SecurityContext,
 	sidecarRequestsRateLimit time.Duration,
 	sdkServiceAccount string,
 	kubeClient kubernetes.Interface,
@@ -135,6 +136,10 @@ func NewController(
 	gameServers := agonesInformerFactory.Agones().V1().GameServers()
 	gsInformer := gameServers.Informer()
 
+	if sidecarSecurityContext == nil {
+		sidecarSecurityContext = DefaultSidecarSecurityContext(defaultSidecarRunAsUser)
+	}
+
 	c := &Controller{
 		controllerHooks:          controllerHooks,
 		sidecarImage:             sidecarImage,
@@ -142,7 +147,7 @@ func NewController(
 		sidecarCPURequest:        sidecarCPURequest,
 		sidecarMemoryLimit:       sidecarMemoryLimit,
 		sidecarMemoryRequest:     sidecarMemoryRequest,
-		sidecarRunAsUser:         sidecarRunAsUser,
+		sidecarSecurityContext:   sidecarSecurityContext,
 		sidecarRequestsRateLimit: sidecarRequestsRateLimit,
 		alwaysPullSidecarImage:   alwaysPullSidecarImage,
 		sdkServiceAccount:        sdkServiceAccount,
@@ -811,13 +816,21 @@ func (c *Controller) sidecar(gs *agonesv1.GameServer) corev1.Container {
 		sidecar.ImagePullPolicy = corev1.PullAlways
 	}
 
-	sidecar.SecurityContext = &corev1.SecurityContext{
-		AllowPrivilegeEscalation: ptr.To(false),
-		RunAsNonRoot:             ptr.To(true),
-		RunAsUser:                ptr.To(int64(c.sidecarRunAsUser)),
-	}
+	sidecar.SecurityContext = c.sidecarSecurityContext.DeepCopy()
 
 	return sidecar
+}
+
+// DefaultSidecarSecurityContext returns the default security context for the sidecar container,
+// which is compatible with the `restricted` Pod Security Standard.
+func DefaultSidecarSecurityContext(runAsUser int64) *corev1.SecurityContext {
+	return &corev1.SecurityContext{
+		AllowPrivilegeEscalation: ptr.To(false),
+		RunAsNonRoot:             ptr.To(true),
+		RunAsUser:                ptr.To(runAsUser),
+		Capabilities:             &corev1.Capabilities{Drop: []corev1.Capability{"ALL"}},
+		SeccompProfile:           &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
+	}
 }
 
 // addGameServerHealthCheck adds the http health check to the GameServer container

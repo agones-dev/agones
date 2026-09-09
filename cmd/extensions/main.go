@@ -36,13 +36,13 @@ import (
 	"agones.dev/agones/pkg/gameserversets"
 	"agones.dev/agones/pkg/metrics"
 	"agones.dev/agones/pkg/util/apiserver"
+	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/https"
 	"agones.dev/agones/pkg/util/httpserver"
 	"agones.dev/agones/pkg/util/runtime"
 	"agones.dev/agones/pkg/util/signals"
 	"agones.dev/agones/pkg/util/webhooks"
 	"github.com/heptiolabs/healthcheck"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -78,6 +78,7 @@ const (
 var (
 	podReady bool
 	logger   = runtime.NewLoggerWithSource("main")
+	errs     = errors.FromPackage()
 )
 
 func setupLogging(logDir string, logSizeLimitMB int) {
@@ -174,7 +175,7 @@ func main() {
 	podReady = true
 	health.AddReadinessCheck("agones-extensions", func() error {
 		if !podReady {
-			return errors.New("asked to shut down, failed readiness check")
+			return errs.New("asked to shut down, failed readiness check")
 		}
 		return nil
 	})

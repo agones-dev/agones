@@ -17,24 +17,25 @@ package sdk
 import (
 	"context"
 
-	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	"agones.dev/agones/pkg/sdk/beta"
+	"agones.dev/agones/pkg/util/errors"
 )
 
 // Beta is the struct for Beta SDK functionality.
 type Beta struct {
 	client beta.SDKClient
+	errs   *errors.Errors
 }
 
 // newBeta creates a new Beta SDK with the passed in connection.
 func newBeta(conn *grpc.ClientConn) *Beta {
-	return &Beta{
-		client: beta.NewSDKClient(conn),
-	}
+	b := &Beta{client: beta.NewSDKClient(conn)}
+	b.errs = errors.FromStruct(b)
+	return b
 }
 
 // GetCounterCount returns the Count for a Counter, given the Counter's key (name).
@@ -42,7 +43,7 @@ func newBeta(conn *grpc.ClientConn) *Beta {
 func (b *Beta) GetCounterCount(key string) (int64, error) {
 	counter, err := b.client.GetCounter(context.Background(), &beta.GetCounterRequest{Name: key})
 	if err != nil {
-		return -1, errors.Wrapf(err, "could not get Counter %s count", key)
+		return -1, b.errs.Wrapf(err, "could not get Counter %s count", key)
 	}
 	return counter.Count, nil
 }
@@ -58,7 +59,7 @@ func (b *Beta) GetCounterCount(key string) (int64, error) {
 // value is batched asynchronous any value incremented past the capacity will be silently truncated.
 func (b *Beta) IncrementCounter(key string, amount int64) error {
 	if amount < 0 {
-		return errors.Errorf("amount must be a positive int64, found %d", amount)
+		return b.errs.Errorf("amount must be a positive int64, found %d", amount)
 	}
 	_, err := b.client.UpdateCounter(context.Background(), &beta.UpdateCounterRequest{
 		CounterUpdateRequest: &beta.CounterUpdateRequest{
@@ -66,7 +67,7 @@ func (b *Beta) IncrementCounter(key string, amount int64) error {
 			CountDiff: amount,
 		}})
 	if err != nil {
-		return errors.Wrapf(err, "could not increment Counter %s by amount %d", key, amount)
+		return b.errs.Wrapf(err, "could not increment Counter %s by amount %d", key, amount)
 	}
 	return nil
 }
@@ -76,7 +77,7 @@ func (b *Beta) IncrementCounter(key string, amount int64) error {
 // Will error if the count is at 0 (to the latest knowledge of the SDK), and no decrement will occur.
 func (b *Beta) DecrementCounter(key string, amount int64) error {
 	if amount < 0 {
-		return errors.Errorf("amount must be a positive int64, found %d", amount)
+		return b.errs.Errorf("amount must be a positive int64, found %d", amount)
 	}
 	_, err := b.client.UpdateCounter(context.Background(), &beta.UpdateCounterRequest{
 		CounterUpdateRequest: &beta.CounterUpdateRequest{
@@ -84,7 +85,7 @@ func (b *Beta) DecrementCounter(key string, amount int64) error {
 			CountDiff: amount * -1,
 		}})
 	if err != nil {
-		return errors.Wrapf(err, "could not decrement Counter %s by amount %d", key, amount)
+		return b.errs.Wrapf(err, "could not decrement Counter %s by amount %d", key, amount)
 	}
 	return nil
 }
@@ -98,7 +99,7 @@ func (b *Beta) SetCounterCount(key string, amount int64) error {
 			Count: wrapperspb.Int64(amount),
 		}})
 	if err != nil {
-		return errors.Wrapf(err, "could not set Counter %s count to amount %d", key, amount)
+		return b.errs.Wrapf(err, "could not set Counter %s count to amount %d", key, amount)
 	}
 	return nil
 }
@@ -108,7 +109,7 @@ func (b *Beta) SetCounterCount(key string, amount int64) error {
 func (b *Beta) GetCounterCapacity(key string) (int64, error) {
 	counter, err := b.client.GetCounter(context.Background(), &beta.GetCounterRequest{Name: key})
 	if err != nil {
-		return -1, errors.Wrapf(err, "could not get Counter %s capacity", key)
+		return -1, b.errs.Wrapf(err, "could not get Counter %s capacity", key)
 	}
 	return counter.Capacity, nil
 }
@@ -121,7 +122,7 @@ func (b *Beta) SetCounterCapacity(key string, amount int64) error {
 			Capacity: wrapperspb.Int64(amount),
 		}})
 	if err != nil {
-		return errors.Wrapf(err, "could not set Counter %s capacity to amount %d", key, amount)
+		return b.errs.Wrapf(err, "could not set Counter %s capacity to amount %d", key, amount)
 	}
 	return nil
 }
@@ -131,7 +132,7 @@ func (b *Beta) SetCounterCapacity(key string, amount int64) error {
 func (b *Beta) GetListCapacity(key string) (int64, error) {
 	list, err := b.client.GetList(context.Background(), &beta.GetListRequest{Name: key})
 	if err != nil {
-		return -1, errors.Wrapf(err, "could not get List %s", key)
+		return -1, b.errs.Wrapf(err, "could not get List %s", key)
 	}
 	return list.Capacity, nil
 }
@@ -147,7 +148,7 @@ func (b *Beta) SetListCapacity(key string, amount int64) error {
 		UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"capacity"}},
 	})
 	if err != nil {
-		return errors.Wrapf(err, "could not set List %s capacity to amount %d", key, amount)
+		return b.errs.Wrapf(err, "could not set List %s capacity to amount %d", key, amount)
 	}
 	return nil
 }
@@ -158,7 +159,7 @@ func (b *Beta) SetListCapacity(key string, amount int64) error {
 func (b *Beta) ListContains(key, value string) (bool, error) {
 	list, err := b.client.GetList(context.Background(), &beta.GetListRequest{Name: key})
 	if err != nil {
-		return false, errors.Wrapf(err, "could not get List %s", key)
+		return false, b.errs.Wrapf(err, "could not get List %s", key)
 	}
 	for _, val := range list.Values {
 		if val == value {
@@ -173,7 +174,7 @@ func (b *Beta) ListContains(key, value string) (bool, error) {
 func (b *Beta) GetListLength(key string) (int, error) {
 	list, err := b.client.GetList(context.Background(), &beta.GetListRequest{Name: key})
 	if err != nil {
-		return -1, errors.Wrapf(err, "could not get List %s", key)
+		return -1, b.errs.Wrapf(err, "could not get List %s", key)
 	}
 	return len(list.Values), nil
 }
@@ -183,7 +184,7 @@ func (b *Beta) GetListLength(key string) (int, error) {
 func (b *Beta) GetListValues(key string) ([]string, error) {
 	list, err := b.client.GetList(context.Background(), &beta.GetListRequest{Name: key})
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not get List %s", key)
+		return nil, b.errs.Wrapf(err, "could not get List %s", key)
 	}
 	return list.Values, nil
 }
@@ -194,7 +195,7 @@ func (b *Beta) GetListValues(key string) ([]string, error) {
 func (b *Beta) AppendListValue(key, value string) error {
 	_, err := b.client.AddListValue(context.Background(), &beta.AddListValueRequest{Name: key, Value: value})
 	if err != nil {
-		return errors.Wrapf(err, "could not get List %s", key)
+		return b.errs.Wrapf(err, "could not get List %s", key)
 	}
 	return nil
 }
@@ -205,7 +206,7 @@ func (b *Beta) AppendListValue(key, value string) error {
 func (b *Beta) DeleteListValue(key, value string) error {
 	_, err := b.client.RemoveListValue(context.Background(), &beta.RemoveListValueRequest{Name: key, Value: value})
 	if err != nil {
-		return errors.Wrapf(err, "could not get List %s", key)
+		return b.errs.Wrapf(err, "could not get List %s", key)
 	}
 	return nil
 }

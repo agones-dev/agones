@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -42,7 +41,7 @@ func (c *Controller) cleanupUnhealthyReplicasRollingUpdateFix(ctx context.Contex
 		gsSetCopy.Spec.Replicas = newReplicasCount
 		totalScaledDown += scaledDownCount
 		if _, err := c.gameServerSetGetter.GameServerSets(gsSetCopy.ObjectMeta.Namespace).Update(ctx, gsSetCopy, metav1.UpdateOptions{}); err != nil {
-			return nil, totalScaledDown, errors.Wrapf(err, "error updating gameserverset %s", gsSetCopy.ObjectMeta.Name)
+			return nil, totalScaledDown, c.errs.Wrapf(err, "error updating gameserverset %s", gsSetCopy.ObjectMeta.Name)
 		}
 		c.recorder.Eventf(fleet, corev1.EventTypeNormal, "ScalingGameServerSet",
 			"Scaling inactive GameServerSet %s from %d to %d", gsSetCopy.ObjectMeta.Name, gsSet.Spec.Replicas, gsSetCopy.Spec.Replicas)
@@ -60,7 +59,7 @@ func (c *Controller) rollingUpdateRestFixedOnReadyRollingUpdateFix(ctx context.C
 	// Look at Kubernetes Deployment util ResolveFenceposts() function
 	r, err := intstr.GetValueFromIntOrPercent(fleet.Spec.Strategy.RollingUpdate.MaxUnavailable, int(fleet.Status.ReadyReplicas), false)
 	if err != nil {
-		return errors.Wrapf(err, "error parsing MaxUnavailable value: %s", fleet.ObjectMeta.Name)
+		return c.errs.Wrapf(err, "error parsing MaxUnavailable value: %s", fleet.ObjectMeta.Name)
 	}
 	if r == 0 {
 		r = 1
@@ -150,7 +149,7 @@ func (c *Controller) rollingUpdateRestFixedOnReadyRollingUpdateFix(ctx context.C
 				Debug("applying rolling update to inactive gameserverset")
 
 			if _, err := c.gameServerSetGetter.GameServerSets(gsSetCopy.ObjectMeta.Namespace).Update(ctx, gsSetCopy, metav1.UpdateOptions{}); err != nil {
-				return errors.Wrapf(err, "error updating gameserverset %s", gsSetCopy.ObjectMeta.Name)
+				return c.errs.Wrapf(err, "error updating gameserverset %s", gsSetCopy.ObjectMeta.Name)
 			}
 			c.recorder.Eventf(fleet, corev1.EventTypeNormal, "ScalingGameServerSet",
 				"Scaling inactive GameServerSet %s from %d to %d", gsSetCopy.ObjectMeta.Name, gsSet.Spec.Replicas, gsSetCopy.Spec.Replicas)

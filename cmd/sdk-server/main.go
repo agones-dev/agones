@@ -26,7 +26,6 @@ import (
 	"time"
 
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -42,6 +41,7 @@ import (
 	sdkalpha "agones.dev/agones/pkg/sdk/alpha"
 	sdkbeta "agones.dev/agones/pkg/sdk/beta"
 	"agones.dev/agones/pkg/sdkserver"
+	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/runtime"
 	"agones.dev/agones/pkg/util/signals"
 )
@@ -76,6 +76,7 @@ const (
 
 var (
 	logger = runtime.NewLoggerWithSource("main")
+	errs   = errors.FromPackage()
 )
 
 func main() {
@@ -201,7 +202,7 @@ func registerLocal(grpcServer *grpc.Server, ctlConf config) (func(), error) {
 		}
 
 		if _, err = os.Stat(filePath); os.IsNotExist(err) {
-			return nil, errors.Errorf("Could not find file: %s", filePath)
+			return nil, errs.Errorf("Could not find file: %s", filePath)
 		}
 	}
 

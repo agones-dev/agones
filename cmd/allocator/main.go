@@ -17,6 +17,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	stderrors "errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -36,9 +37,9 @@ import (
 	"agones.dev/agones/pkg/gameserverallocations/processor"
 	"agones.dev/agones/pkg/gameservers"
 	"agones.dev/agones/pkg/metrics"
+	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/fswatch"
 	"github.com/heptiolabs/healthcheck"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -65,6 +66,7 @@ import (
 var (
 	podReady bool
 	logger   = runtime.NewLoggerWithSource("main")
+	errs     = errors.FromPackage()
 )
 
 const (
@@ -270,7 +272,7 @@ func main() {
 	grpcHealth := grpchealth.NewServer() // only used for gRPC, ignored o/w
 	health.AddReadinessCheck("allocator-agones-client", func() error {
 		if !podReady {
-			return errors.New("asked to shut down, failed readiness check")
+			return errs.New("asked to shut down, failed readiness check")
 		}
 		_, err := agonesClient.ServerVersion()
 		if err != nil {
@@ -443,7 +445,7 @@ func runHTTP(listenCtx context.Context, workerCtx context.Context, h *serviceHan
 			err = server.ListenAndServe()
 		}
 
-		if err == http.ErrServerClosed {
+		if stderrors.Is(err, http.ErrServerClosed) {
 			logger.WithError(err).Info("HTTP/HTTPS server closed")
 			os.Exit(0)
 		}
@@ -488,6 +490,7 @@ func newProcessorServiceHandler(processorClient processor.Client, mTLSDisabled, 
 		tlsDisabled:     tlsDisabled,
 		processorClient: processorClient,
 	}
+	h.errs = errors.FromStruct(&h)
 
 	if !h.tlsDisabled {
 		tlsCert, err := readTLSCert()
@@ -536,6 +539,7 @@ func newServiceHandler(ctx context.Context, kubeClient kubernetes.Interface, ago
 		tlsDisabled:               tlsDisabled,
 		grpcUnallocatedStatusCode: grpcUnallocatedStatusCode,
 	}
+	h.errs = errors.FromStruct(&h)
 
 	kubeInformerFactory.Start(ctx.Done())
 	agonesInformerFactory.Start(ctx.Done())
@@ -645,7 +649,7 @@ func (h *serviceHandler) getTLSCert(_ *tls.ClientHelloInfo) (*tls.Certificate, e
 // VerifyConnection runs on resumption as well, which closes that gap.
 func (h *serviceHandler) verifyClientConnection(cs tls.ConnectionState) error {
 	if len(cs.PeerCertificates) == 0 {
-		return errors.New("no client certificate presented")
+		return h.errs.New("no client certificate presented")
 	}
 
 	rawCerts := make([][]byte, 0, len(cs.PeerCertificates))
@@ -670,7 +674,7 @@ func (h *serviceHandler) verifyClientCertificate(rawCerts [][]byte, _ [][]*x509.
 		cert, err := x509.ParseCertificate(rawCert)
 		if err != nil {
 			logger.WithError(err).Warning("cannot parse intermediate certificate")
-			return errors.New("bad intermediate certificate: " + err.Error())
+			return h.errs.Wrap(err, "bad intermediate certificate")
 		}
 		opts.Intermediates.AddCert(cert)
 	}
@@ -678,7 +682,7 @@ func (h *serviceHandler) verifyClientCertificate(rawCerts [][]byte, _ [][]*x509.
 	c, err := x509.ParseCertificate(rawCerts[0])
 	if err != nil {
 		logger.WithError(err).Warning("cannot parse client certificate")
-		return errors.New("bad client certificate: " + err.Error())
+		return h.errs.Wrap(err, "bad client certificate")
 	}
 
 	h.certMutex.RLock()
@@ -686,7 +690,7 @@ func (h *serviceHandler) verifyClientCertificate(rawCerts [][]byte, _ [][]*x509.
 	_, err = c.Verify(opts)
 	if err != nil {
 		logger.WithError(err).Warning("failed to verify client certificate")
-		return errors.New("failed to verify client certificate: " + err.Error())
+		return h.errs.Wrap(err, "failed to verify client certificate")
 	}
 	return nil
 }
@@ -696,7 +700,7 @@ func getClients(ctlConfig config) (*kubernetes.Clientset, *versioned.Clientset, 
 	// Create the in-cluster config
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		return nil, nil, errors.New("Could not create in cluster config")
+		return nil, nil, errs.Wrap(err, "Could not create in cluster config")
 	}
 
 	config.QPS = float32(ctlConfig.APIServerSustainedQPS)
@@ -705,13 +709,13 @@ func getClients(ctlConfig config) (*kubernetes.Clientset, *versioned.Clientset, 
 	// Access to the Agones resources through the Agones Clientset
 	kubeClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return nil, nil, errors.New("Could not create the kubernetes api clientset")
+		return nil, nil, errs.Wrap(err, "Could not create the kubernetes api clientset")
 	}
 
 	// Access to the Agones resources through the Agones Clientset
 	agonesClient, err := versioned.NewForConfig(config)
 	if err != nil {
-		return nil, nil, errors.New("Could not create the agones api clientset")
+		return nil, nil, errs.Wrap(err, "Could not create the agones api clientset")
 	}
 	return kubeClient, agonesClient, nil
 }
@@ -762,6 +766,8 @@ type serviceHandler struct {
 	grpcUnallocatedStatusCode codes.Code
 
 	processorClient processor.Client
+
+	errs *errors.Errors
 }
 
 // Allocate implements the Allocate gRPC method definition

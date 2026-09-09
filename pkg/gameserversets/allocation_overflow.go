@@ -25,11 +25,11 @@ import (
 	"agones.dev/agones/pkg/client/informers/externalversions"
 	listerv1 "agones.dev/agones/pkg/client/listers/agones/v1"
 	"agones.dev/agones/pkg/gameservers"
+	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/logfields"
 	"agones.dev/agones/pkg/util/runtime"
 	"agones.dev/agones/pkg/util/workerqueue"
 	"github.com/heptiolabs/healthcheck"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,6 +48,7 @@ type AllocationOverflowController struct {
 	gameServerSetSynced cache.InformerSynced
 	gameServerSetLister listerv1.GameServerSetLister
 	workerqueue         *workerqueue.WorkerQueue
+	errs                *errors.Errors
 }
 
 // NewAllocatorOverflowController returns a new AllocationOverflowController
@@ -70,6 +71,7 @@ func NewAllocatorOverflowController(
 	}
 
 	c.baseLogger = runtime.NewLoggerWithType(c)
+	c.errs = errors.FromStruct(c)
 	c.baseLogger.Debug("Created!")
 	c.workerqueue = workerqueue.NewWorkerQueueWithRateLimiter(c.syncGameServerSet, c.baseLogger, logfields.GameServerSetKey, agones.GroupName+".GameServerSetController", workerqueue.FastRateLimiter(3*time.Second))
 	health.AddLivenessCheck("gameserverset-allocationoverflow-workerqueue", c.workerqueue.Healthy)
@@ -97,7 +99,7 @@ func NewAllocatorOverflowController(
 func (c *AllocationOverflowController) Run(ctx context.Context) error {
 	c.baseLogger.Debug("Wait for cache sync")
 	if !cache.WaitForCacheSync(ctx.Done(), c.gameServerSynced, c.gameServerSetSynced) {
-		return errors.New("failed to wait for caches to sync")
+		return c.errs.New("failed to wait for caches to sync")
 	}
 
 	c.workerqueue.Run(ctx, 1)
@@ -111,7 +113,7 @@ func (c *AllocationOverflowController) syncGameServerSet(ctx context.Context, ke
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		// don't return an error, as we don't want this retried
-		runtime.HandleError(loggerForGameServerSetKey(c.baseLogger, key), errors.Wrapf(err, "invalid resource key"))
+		runtime.HandleError(loggerForGameServerSetKey(c.baseLogger, key), c.errs.Wrapf(err, "invalid resource key"))
 		return nil
 	}
 
@@ -121,7 +123,7 @@ func (c *AllocationOverflowController) syncGameServerSet(ctx context.Context, ke
 			loggerForGameServerSetKey(c.baseLogger, key).Debug("GameServerSet is no longer available for syncing")
 			return nil
 		}
-		return errors.Wrapf(err, "error retrieving GameServerSet %s from namespace %s", name, namespace)
+		return c.errs.Wrapf(err, "error retrieving GameServerSet %s from namespace %s", name, namespace)
 	}
 
 	// just in case something changed, double check to avoid panics and/or sending work to the K8s API that we don't
@@ -154,7 +156,7 @@ func (c *AllocationOverflowController) syncGameServerSet(ctx context.Context, ke
 		gsSet.Spec.AllocationOverflow.Apply(gsCopy)
 
 		if _, err := c.gameServerGetter.GameServers(gs.ObjectMeta.Namespace).Update(ctx, gsCopy, opts); err != nil {
-			return errors.Wrapf(err, "error updating GameServer %s with overflow labels and/or annotations", gs.ObjectMeta.Name)
+			return c.errs.Wrapf(err, "error updating GameServer %s with overflow labels and/or annotations", gs.ObjectMeta.Name)
 		}
 	}
 

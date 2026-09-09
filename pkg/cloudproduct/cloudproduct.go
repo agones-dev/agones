@@ -22,8 +22,8 @@ import (
 	"agones.dev/agones/pkg/cloudproduct/generic"
 	"agones.dev/agones/pkg/cloudproduct/gke"
 	"agones.dev/agones/pkg/portallocator"
+	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/runtime"
-	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	corev1 "k8s.io/api/core/v1"
@@ -67,6 +67,7 @@ const (
 )
 
 var (
+	errs             = errors.FromPackage()
 	logger           = runtime.NewLoggerWithSource("cloudproduct")
 	productDetectors = []func(context.Context, *kubernetes.Clientset) string{gke.Detect}
 )
@@ -92,7 +93,7 @@ func NewFromFlag(ctx context.Context, kc *kubernetes.Clientset) (ControllerHooks
 	case GenericProduct:
 		return generic.New(), nil
 	}
-	return nil, errors.Errorf("unknown cloud product: %q", product)
+	return nil, errs.Errorf("unknown cloud product: %q", product)
 }
 
 func autoDetect(ctx context.Context, product string, kc *kubernetes.Clientset) string {

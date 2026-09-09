@@ -15,13 +15,53 @@
 package main
 
 import (
+	"strings"
 	"testing"
 
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
+	"agones.dev/agones/pkg/gameservers"
 	"agones.dev/agones/pkg/portallocator"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/utils/ptr"
 )
+
+func TestParseSidecarSecurityContext(t *testing.T) {
+	t.Parallel()
+
+	t.Run("empty or null falls back to the default", func(t *testing.T) {
+		sc, err := parseSidecarSecurityContext("", 1000)
+		require.NoError(t, err)
+		assert.Equal(t, gameservers.DefaultSidecarSecurityContext(1000), sc)
+
+		sc, err = parseSidecarSecurityContext("  ", 2000)
+		require.NoError(t, err)
+		assert.Equal(t, int64(2000), *sc.RunAsUser)
+
+		sc, err = parseSidecarSecurityContext("null", 3000)
+		require.NoError(t, err)
+		assert.Equal(t, gameservers.DefaultSidecarSecurityContext(3000), sc)
+	})
+
+	t.Run("json is used as is", func(t *testing.T) {
+		sc, err := parseSidecarSecurityContext(`{"runAsNonRoot":true,"runAsUser":2000,"runAsGroup":3000,"capabilities":{"drop":["ALL"]},"seccompProfile":{"type":"Localhost","localhostProfile":"profiles/agones.json"}}`, 1000)
+		require.NoError(t, err)
+		assert.Equal(t, &corev1.SecurityContext{
+			RunAsNonRoot:   ptr.To(true),
+			RunAsUser:      ptr.To(int64(2000)),
+			RunAsGroup:     ptr.To(int64(3000)),
+			Capabilities:   &corev1.Capabilities{Drop: []corev1.Capability{"ALL"}},
+			SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeLocalhost, LocalhostProfile: ptr.To("profiles/agones.json")},
+		}, sc)
+	})
+
+	t.Run("invalid json", func(t *testing.T) {
+		_, err := parseSidecarSecurityContext(`{"runAsUser":`, 1000)
+		require.Error(t, err)
+	})
+}
 
 func TestControllerConfigValidation(t *testing.T) {
 	t.Parallel()
@@ -77,7 +117,7 @@ func TestControllerConfigValidation_PortRangeOverlap(t *testing.T) {
 func errorsContainString(t *testing.T, errs []error, expected string) {
 	found := false
 	for _, v := range errs {
-		if expected == v.Error() {
+		if strings.Contains(v.Error(), expected) {
 			found = true
 			break
 		}

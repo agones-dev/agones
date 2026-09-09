@@ -17,6 +17,7 @@ package gameserversets
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -31,8 +32,8 @@ import (
 	agtesting "agones.dev/agones/pkg/testing"
 	utilruntime "agones.dev/agones/pkg/util/runtime"
 	"agones.dev/agones/pkg/util/webhooks"
+
 	"github.com/heptiolabs/healthcheck"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -562,7 +563,7 @@ func TestGameServerSetDropCountsAndListsStatus(t *testing.T) {
 				assert.Nil(t, gsSet.Status.Counters)
 				assert.Nil(t, gsSet.Status.Lists)
 			default:
-				return false, nil, errors.Errorf("Flag string(utilruntime.FeatureCountsAndLists) should be set")
+				return false, nil, errors.New("Flag string(utilruntime.FeatureCountsAndLists) should be set")
 			}
 
 			return true, gsSet, nil
@@ -974,7 +975,7 @@ func TestControllerSyncUnhealthyGameServers(t *testing.T) {
 
 		err := c.deleteGameServers(ctx, gsSet, []*agonesv1.GameServer{gs1, gs2, gs3})
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "error updating gameserver")
+		assert.ErrorContains(t, err, "error updating gameserver")
 	})
 }
 
@@ -1025,7 +1026,7 @@ func TestSyncMoreGameServers(t *testing.T) {
 
 		err := c.addMoreGameServers(ctx, gsSet, expected)
 		require.Error(t, err)
-		assert.Equal(t, "error creating gameserver for gameserverset test: create-err", err.Error())
+		assert.ErrorContains(t, err, "error creating gameserver for gameserverset test: create-err")
 	})
 }
 
@@ -1146,7 +1147,7 @@ func TestControllerUpdateValidationHandler(t *testing.T) {
 
 		_, err := ext.updateValidationHandler(review)
 		require.Error(t, err)
-		assert.Equal(t, "error unmarshalling new GameServerSet json: : unexpected end of JSON input", err.Error())
+		assert.ErrorContains(t, err, "error unmarshalling new GameServerSet json: : unexpected end of JSON input")
 	})
 
 	t.Run("old object is nil, err excpected", func(t *testing.T) {
@@ -1171,7 +1172,7 @@ func TestControllerUpdateValidationHandler(t *testing.T) {
 
 		_, err = ext.updateValidationHandler(review)
 		require.Error(t, err)
-		assert.Equal(t, "error unmarshalling old GameServerSet json: : unexpected end of JSON input", err.Error())
+		assert.ErrorContains(t, err, "error unmarshalling old GameServerSet json: : unexpected end of JSON input")
 	})
 
 	t.Run("invalid gameserverset update", func(t *testing.T) {
@@ -1277,7 +1278,7 @@ func TestCreationValidationHandler(t *testing.T) {
 
 		_, err := ext.creationValidationHandler(review)
 		require.Error(t, err)
-		assert.Equal(t, "error unmarshalling GameServerSet json after schema validation: : unexpected end of JSON input", err.Error())
+		assert.ErrorContains(t, err, "error unmarshalling GameServerSet json after schema validation: : unexpected end of JSON input")
 	})
 
 	t.Run("invalid gameserverset create", func(t *testing.T) {

@@ -17,14 +17,16 @@ package eviction
 
 import (
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
-	"github.com/pkg/errors"
+	"agones.dev/agones/pkg/util/errors"
 	corev1 "k8s.io/api/core/v1"
 )
+
+var errs = errors.FromPackage()
 
 // SetEviction sets disruptions controls on a Pod based on GameServer.Status.Eviction.
 func SetEviction(eviction *agonesv1.Eviction, pod *corev1.Pod) error {
 	if eviction == nil {
-		return errors.New("No eviction value set. Should be the default value")
+		return errs.New("No eviction value set. Should be the default value")
 	}
 	if _, exists := pod.ObjectMeta.Annotations[agonesv1.PodSafeToEvictAnnotation]; !exists {
 		switch eviction.Safe {
@@ -35,7 +37,7 @@ func SetEviction(eviction *agonesv1.Eviction, pod *corev1.Pod) error {
 			// (on Autopilot, this enables Extended Duration pods, which is equivalent).
 			pod.ObjectMeta.Annotations[agonesv1.PodSafeToEvictAnnotation] = agonesv1.False
 		default:
-			return errors.Errorf("unknown eviction.safe value %q", string(eviction.Safe))
+			return errs.Errorf("unknown eviction.safe value %q", string(eviction.Safe))
 		}
 	}
 	if _, exists := pod.ObjectMeta.Labels[agonesv1.SafeToEvictLabel]; !exists {
@@ -50,7 +52,7 @@ func SetEviction(eviction *agonesv1.Eviction, pod *corev1.Pod) error {
 			// For EvictionSafeNever, match gones-gameserver-safe-to-evict-false PDB.
 			pod.ObjectMeta.Labels[agonesv1.SafeToEvictLabel] = agonesv1.False
 		default:
-			return errors.Errorf("unknown eviction.safe value %q", string(eviction.Safe))
+			return errs.Errorf("unknown eviction.safe value %q", string(eviction.Safe))
 		}
 	}
 	return nil
