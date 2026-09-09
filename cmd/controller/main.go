@@ -527,7 +527,7 @@ func (c *config) validate() []error {
 	resourceErrors = validateResource(c.SidecarMemoryRequest, c.SidecarMemoryLimit, corev1.ResourceMemory)
 	validationErrors = append(validationErrors, resourceErrors...)
 	if c.MaxListItems <= 0 {
-		validationErrors = append(validationErrors, errors.Errorf("%s must be greater than 0", maxListItemsFlag))
+		validationErrors = append(validationErrors, errs.Errorf("%s must be greater than 0", maxListItemsFlag))
 	}
 	return validationErrors
 }
