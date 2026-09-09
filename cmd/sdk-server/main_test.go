@@ -16,7 +16,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -33,8 +32,7 @@ func TestRegisterTestSdkServer(t *testing.T) {
 	grpcServer := grpc.NewServer()
 	_, err := registerTestSdkServer(grpcServer, ctlConf)
 	assert.NoError(t, err)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	ctx.Done()
 	ctlConf.LocalFile = "@@"
 	_, err = registerLocal(grpcServer, ctlConf)

@@ -1100,7 +1100,7 @@ func TestCreateFullFleetAndCantGameServerAllocate(t *testing.T) {
 					Selectors:  []allocationv1.GameServerSelector{{LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{agonesv1.FleetNameLabel: flt.ObjectMeta.Name}}}},
 				}}
 
-			for i := 0; i < replicasCount; i++ {
+			for range replicasCount {
 				var gsa2 *allocationv1.GameServerAllocation
 				gsa2, err = framework.AgonesClient.AllocationV1().GameServerAllocations(framework.Namespace).Create(ctx, gsa.DeepCopy(), metav1.CreateOptions{})
 				if assert.NoError(t, err) {
@@ -1382,12 +1382,10 @@ func TestGameServerAllocationDuringMultipleAllocationClients(t *testing.T) {
 	var wg sync.WaitGroup
 
 	// Allocate GS by 10 clients in parallel while the fleet is scaling down
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
+	for range 10 {
 
-		go func() {
-			defer wg.Done()
-			for j := 0; j < 10; j++ {
+		wg.Go(func() {
+			for range 10 {
 				gsa1, err := framework.AgonesClient.AllocationV1().GameServerAllocations(framework.Namespace).Create(ctx, gsa.DeepCopy(), metav1.CreateOptions{})
 				if err == nil {
 					allocatedGS.LoadOrStore(gsa1.Status.GameServerName, true)
@@ -1395,7 +1393,7 @@ func TestGameServerAllocationDuringMultipleAllocationClients(t *testing.T) {
 					log.Infof("Allocation error: %v", err)
 				}
 			}
-		}()
+		})
 	}
 
 	// scale down further while allocating
@@ -1409,7 +1407,7 @@ func TestGameServerAllocationDuringMultipleAllocationClients(t *testing.T) {
 	// count the number of unique game servers allocated
 	// there should not be any duplicate
 	uniqueAllocatedGSs := 0
-	allocatedGS.Range(func(_, _ interface{}) bool {
+	allocatedGS.Range(func(_, _ any) bool {
 		uniqueAllocatedGSs++
 		return true
 	})

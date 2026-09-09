@@ -952,8 +952,8 @@ func (f *Framework) LogPodContainers(t *testing.T, pod *corev1.Pod) {
 		}
 
 		log.Info("---Logs for container---")
-		lines := strings.Split(string(logBytes), "\n")
-		for _, line := range lines {
+		lines := strings.SplitSeq(string(logBytes), "\n")
+		for line := range lines {
 			if line == "" {
 				continue
 			}

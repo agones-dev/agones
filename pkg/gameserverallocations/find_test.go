@@ -303,7 +303,7 @@ func TestFindGameServerForAllocationDistributed(t *testing.T) {
 
 	past := gs
 	// we should get a different result in 10 tries, so we can see we get some randomness.
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		gs, index, err = findGameServerForAllocation(gsa, list)
 		assert.NoError(t, err)
 		assert.Equal(t, gs, list[index])

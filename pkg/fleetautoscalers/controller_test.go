@@ -62,7 +62,7 @@ func TestControllerCreationMutationHandler(t *testing.T) {
 
 	var testCases = []struct {
 		description string
-		fixture     interface{}
+		fixture     any
 		expected    expected
 	}{
 		{
@@ -121,8 +121,8 @@ func TestControllerCreationMutationHandler(t *testing.T) {
 					{
 						Operation: "add",
 						Path:      "/spec/sync",
-						Value: map[string]interface{}{
-							"fixedInterval": map[string]interface{}{
+						Value: map[string]any{
+							"fixedInterval": map[string]any{
 								"seconds": float64(30),
 							},
 							"type": "FixedInterval",
@@ -1076,10 +1076,10 @@ func TestControllerEvents(t *testing.T) {
 func TestControllerAddUpdateDeleteFasThread(t *testing.T) {
 	t.Parallel()
 
-	var counter int64
+	var counter atomic.Int64
 	c, m := newFakeController()
 	c.workerqueue.SyncHandler = func(_ context.Context, _ string) error {
-		atomic.AddInt64(&counter, 1)
+		counter.Add(1)
 		return nil
 	}
 
@@ -1101,7 +1101,7 @@ func TestControllerAddUpdateDeleteFasThread(t *testing.T) {
 	// unfortunately we can't mock the timer, so we'll confirm that two enqueue processes fire. One on method execution,
 	// and then one based on the ticker.
 	require.Eventuallyf(t, func() bool {
-		return atomic.LoadInt64(&counter) >= 2
+		return counter.Load() >= 2
 	}, 10*time.Second, time.Second, "Should have at least two counters")
 
 	c.fasThreadMutex.Lock()
@@ -1154,7 +1154,7 @@ func TestControllerAddUpdateDeleteFasThread(t *testing.T) {
 	// same counter amount to prove that there aren't any changes for a while.
 	var check []int64
 	require.Eventually(t, func() bool {
-		check = append(check, atomic.LoadInt64(&counter))
+		check = append(check, counter.Load())
 		l := len(check)
 		if l < 3 {
 			return false

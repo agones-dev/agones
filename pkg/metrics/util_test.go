@@ -147,7 +147,7 @@ func gameServerWithFleetAndState(fleetName string, state agonesv1.GameServerStat
 }
 
 func generateGsEvents(count int, state agonesv1.GameServerState, fleetName string, fakew *watch.FakeWatcher) {
-	for i := 0; i < count; i++ {
+	for range count {
 		gs := gameServerWithFleetAndState(fleetName, agonesv1.GameServerState(""))
 		fakew.Add(gs)
 		gsUpdated := gs.DeepCopy()

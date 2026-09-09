@@ -120,10 +120,10 @@ func NewController(
 
 	_, _ = fInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: c.workerqueue.Enqueue,
-		UpdateFunc: func(_, newObj interface{}) {
+		UpdateFunc: func(_, newObj any) {
 			c.workerqueue.Enqueue(newObj)
 		},
-		DeleteFunc: func(obj interface{}) {
+		DeleteFunc: func(obj any) {
 			fleet := obj.(*agonesv1.Fleet)
 
 			c.allocs.remove(fleet.ObjectMeta.Namespace, fleet.ObjectMeta.Name)
@@ -132,7 +132,7 @@ func NewController(
 
 	_, _ = gsSetInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: c.gameServerSetEventHandler,
-		UpdateFunc: func(_, newObj interface{}) {
+		UpdateFunc: func(_, newObj any) {
 			gsSet := newObj.(*agonesv1.GameServerSet)
 			// ignore if already being deleted
 			if gsSet.ObjectMeta.DeletionTimestamp.IsZero() {
@@ -142,7 +142,7 @@ func NewController(
 	})
 
 	_, _ = gsInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		UpdateFunc: func(oldObj, newObj interface{}) {
+		UpdateFunc: func(oldObj, newObj any) {
 			oldGs := oldObj.(*agonesv1.GameServer)
 			newGs := newObj.(*agonesv1.GameServer)
 
@@ -281,7 +281,7 @@ func loggerForFleet(f *agonesv1.Fleet, logger *logrus.Entry) *logrus.Entry {
 
 // gameServerSetEventHandler enqueues the owning Fleet for this GameServerSet,
 // assuming that it has one
-func (c *Controller) gameServerSetEventHandler(obj interface{}) {
+func (c *Controller) gameServerSetEventHandler(obj any) {
 	gsSet := obj.(*agonesv1.GameServerSet)
 	ref := metav1.GetControllerOf(gsSet)
 	if ref == nil {
@@ -430,10 +430,7 @@ func (c *Controller) applyDeploymentStrategy(ctx context.Context, fleet *agonesv
 		blocked := agonesv1.SumGameServerSets(rest, func(gsSet *agonesv1.GameServerSet) int32 {
 			return gsSet.Status.ReservedReplicas + gsSet.Status.AllocatedReplicas
 		})
-		replicas := fleet.Spec.Replicas - blocked
-		if replicas < 0 {
-			replicas = 0
-		}
+		replicas := max(fleet.Spec.Replicas-blocked, 0)
 		return replicas, nil
 	}
 

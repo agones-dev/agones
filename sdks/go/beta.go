@@ -16,6 +16,7 @@ package sdk
 
 import (
 	"context"
+	"slices"
 
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
@@ -161,10 +162,8 @@ func (b *Beta) ListContains(key, value string) (bool, error) {
 	if err != nil {
 		return false, b.errs.Wrapf(err, "could not get List %s", key)
 	}
-	for _, val := range list.Values {
-		if val == value {
-			return true, nil
-		}
+	if slices.Contains(list.Values, value) {
+		return true, nil
 	}
 	return false, nil
 }

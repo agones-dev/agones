@@ -88,11 +88,11 @@ func (m *emptyMockStream) Context() context.Context {
 	panic("implement me")
 }
 
-func (m *emptyMockStream) SendMsg(_ interface{}) error {
+func (m *emptyMockStream) SendMsg(_ any) error {
 	panic("implement me")
 }
 
-func (m *emptyMockStream) RecvMsg(_ interface{}) error {
+func (m *emptyMockStream) RecvMsg(_ any) error {
 	panic("implement me")
 }
 
@@ -130,10 +130,10 @@ func (m *gameServerMockStream) Context() context.Context {
 	return m.ctx
 }
 
-func (*gameServerMockStream) SendMsg(_ interface{}) error {
+func (*gameServerMockStream) SendMsg(_ any) error {
 	panic("implement me")
 }
 
-func (*gameServerMockStream) RecvMsg(_ interface{}) error {
+func (*gameServerMockStream) RecvMsg(_ any) error {
 	panic("implement me")
 }

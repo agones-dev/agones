@@ -228,13 +228,11 @@ func TestSidecarRun(t *testing.T) {
 			}
 
 			wg := sync.WaitGroup{}
-			wg.Add(1)
 
-			go func() {
+			wg.Go(func() {
 				err := sc.Run(ctx)
 				assert.NoError(t, err)
-				wg.Done()
-			}()
+			})
 			v.f(sc, ctx)
 
 			select {
@@ -340,8 +338,7 @@ func TestSDKServerSyncGameServer(t *testing.T) {
 				return false, gsCopy, nil
 			})
 
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+			ctx := t.Context()
 			sc.informerFactory.Start(ctx.Done())
 			assert.True(t, cache.WaitForCacheSync(ctx.Done(), sc.gameServerSynced))
 			sc.gsWaitForSync.Done()
@@ -402,8 +399,7 @@ func TestSidecarUpdateState(t *testing.T) {
 				return true, nil, nil
 			})
 
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+			ctx := t.Context()
 			sc.informerFactory.Start(ctx.Done())
 			assert.True(t, cache.WaitForCacheSync(ctx.Done(), sc.gameServerSynced))
 			sc.gsWaitForSync.Done()
@@ -430,12 +426,10 @@ func TestSidecarHealthLastUpdated(t *testing.T) {
 	stream := newEmptyMockStream()
 
 	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		err := sc.Health(stream)
 		assert.NoError(t, err)
-		wg.Done()
-	}()
+	})
 
 	// Test once with a single message
 	fc.Step(3 * time.Second)
@@ -492,8 +486,7 @@ func TestSidecarUnhealthyMessage(t *testing.T) {
 		return true, gsCopy, nil
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	stop := make(chan struct{})
 	defer close(stop)
 
@@ -538,12 +531,10 @@ func TestSidecarHealthy(t *testing.T) {
 	stream := newEmptyMockStream()
 
 	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		err := sc.Health(stream)
 		assert.NoError(t, err)
-		wg.Done()
-	}()
+	})
 
 	fixtures := map[string]struct {
 		timeAdd         time.Duration
@@ -722,8 +713,7 @@ func TestSDKServerWatchGameServer(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, sc.connectedStreams)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	sc.ctx = ctx
 	sc.informerFactory.Start(ctx.Done())
 
@@ -795,8 +785,7 @@ func TestSDKServerSendGameServerUpdate(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, sc.connectedStreams)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	sc.ctx = ctx
 	sc.informerFactory.Start(ctx.Done())
 
@@ -904,8 +893,7 @@ func TestSDKServerUpdateEventHandler(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, sc.connectedStreams)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	sc.ctx = ctx
 	sc.informerFactory.Start(ctx.Done())
 
@@ -978,13 +966,11 @@ func TestSDKServerReserveTimeoutOnRun(t *testing.T) {
 	assert.True(t, cache.WaitForCacheSync(ctx.Done(), sc.gameServerSynced))
 
 	wg := sync.WaitGroup{}
-	wg.Add(1)
 
-	go func() {
+	wg.Go(func() {
 		err = sc.Run(ctx)
 		assert.NoError(t, err)
-		wg.Done()
-	}()
+	})
 
 	select {
 	case gsStatus := <-updated:
@@ -1033,13 +1019,11 @@ func TestSDKServerReserveTimeout(t *testing.T) {
 	assert.True(t, cache.WaitForCacheSync(ctx.Done(), sc.gameServerSynced))
 
 	wg := sync.WaitGroup{}
-	wg.Add(1)
 
-	go func() {
+	wg.Go(func() {
 		err = sc.Run(ctx)
 		assert.NoError(t, err)
-		wg.Done()
-	}()
+	})
 
 	assertStateChange := func(expected agonesv1.GameServerState, additional func(status agonesv1.GameServerStatus)) {
 		select {
@@ -1331,13 +1315,11 @@ func TestSDKServerUpdateCounter(t *testing.T) {
 			assert.True(t, cache.WaitForCacheSync(ctx.Done(), sc.gameServerSynced))
 
 			wg := sync.WaitGroup{}
-			wg.Add(1)
 
-			go func() {
+			wg.Go(func() {
 				err = sc.Run(ctx)
 				assert.NoError(t, err)
-				wg.Done()
-			}()
+			})
 
 			// check initial value comes through
 			require.Eventually(t, func() bool {
@@ -1840,13 +1822,11 @@ func TestSDKServerUpdateList(t *testing.T) {
 			assert.True(t, cache.WaitForCacheSync(ctx.Done(), sc.gameServerSynced))
 
 			wg := sync.WaitGroup{}
-			wg.Add(1)
 
-			go func() {
+			wg.Go(func() {
 				err = sc.Run(ctx)
 				assert.NoError(t, err)
-				wg.Done()
-			}()
+			})
 
 			// check initial value comes through
 			require.Eventually(t, func() bool {
@@ -1951,13 +1931,11 @@ func TestSDKServerGracefulTerminationInterrupt(t *testing.T) {
 	assert.True(t, cache.WaitForCacheSync(sdkCtx.Done(), sc.gameServerSynced))
 
 	wg := sync.WaitGroup{}
-	wg.Add(1)
 
-	go func() {
+	wg.Go(func() {
 		err := sc.Run(sdkCtx)
 		assert.NoError(t, err)
-		wg.Done()
-	}()
+	})
 
 	assertContextCancelled := func(expected error, timeout time.Duration, ctx context.Context) {
 		select {
@@ -2017,13 +1995,11 @@ func TestSDKServerGracefulTerminationShutdown(t *testing.T) {
 	assert.True(t, cache.WaitForCacheSync(sdkCtx.Done(), sc.gameServerSynced))
 
 	wg := sync.WaitGroup{}
-	wg.Add(1)
 
-	go func() {
+	wg.Go(func() {
 		err = sc.Run(sdkCtx)
 		assert.NoError(t, err)
-		wg.Done()
-	}()
+	})
 
 	assertContextCancelled := func(expected error, timeout time.Duration, ctx context.Context) {
 		select {
@@ -2075,8 +2051,7 @@ func TestSDKServerGracefulTerminationGameServerStateChannel(t *testing.T) {
 	sc, err := defaultSidecar(m)
 	assert.NoError(t, err)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	sdkCtx := sc.NewSDKServerContext(ctx)
 	sc.informerFactory.Start(sdkCtx.Done())
 	assert.True(t, cache.WaitForCacheSync(sdkCtx.Done(), sc.gameServerSynced))
@@ -2231,8 +2206,7 @@ func TestSDKServerUpdateListMaxCapacity(t *testing.T) {
 				return true, patchGameServer(t, action, &gs), nil
 			})
 
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+			ctx := t.Context()
 
 			sc, err := NewSDKServer("test", "default", m.KubeClient, m.AgonesClient,
 				logrus.DebugLevel, 8080, 500*time.Millisecond, listMaxCapacity)

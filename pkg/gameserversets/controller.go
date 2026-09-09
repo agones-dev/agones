@@ -148,21 +148,21 @@ func NewController(
 
 	_, _ = gsSetInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: c.workerqueue.Enqueue,
-		UpdateFunc: func(oldObj, newObj interface{}) {
+		UpdateFunc: func(oldObj, newObj any) {
 			oldGss := oldObj.(*agonesv1.GameServerSet)
 			newGss := newObj.(*agonesv1.GameServerSet)
 			if oldGss.Spec.Replicas != newGss.Spec.Replicas {
 				c.workerqueue.Enqueue(newGss)
 			}
 		},
-		DeleteFunc: func(gsSet interface{}) {
+		DeleteFunc: func(gsSet any) {
 			c.stateCache.deleteGameServerSet(gsSet.(*agonesv1.GameServerSet))
 		},
 	})
 
 	_, _ = gsInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: c.gameServerEventHandler,
-		UpdateFunc: func(_, newObj interface{}) {
+		UpdateFunc: func(_, newObj any) {
 			gs := newObj.(*agonesv1.GameServer)
 			// ignore if already being deleted
 			if gs.ObjectMeta.DeletionTimestamp == nil {
@@ -270,7 +270,7 @@ func (ext *Extensions) creationValidationHandler(review admissionv1.AdmissionRev
 	return review, nil
 }
 
-func (c *Controller) gameServerEventHandler(obj interface{}) {
+func (c *Controller) gameServerEventHandler(obj any) {
 	gs, ok := obj.(*agonesv1.GameServer)
 	if !ok {
 		return
@@ -479,10 +479,7 @@ func computeReconciliationAction(strategy apis.SchedulingStrategy, list []*agone
 		}
 
 		if numServersToAdd+podPendingCount > maxPending {
-			numServersToAdd = maxPending - podPendingCount
-			if numServersToAdd < 0 {
-				numServersToAdd = 0
-			}
+			numServersToAdd = max(maxPending-podPendingCount, 0)
 		}
 
 		if originalNumServersToAdd != numServersToAdd {
@@ -570,7 +567,7 @@ func newGameServersChannel(n int, gsSet *agonesv1.GameServerSet) chan *agonesv1.
 	go func() {
 		defer close(gameServers)
 
-		for i := 0; i < n; i++ {
+		for range n {
 			gameServers <- gsSet.GameServer()
 		}
 	}()
@@ -598,11 +595,9 @@ func parallelize(gameServers chan *agonesv1.GameServer, parallelism int, work fu
 
 	var wg sync.WaitGroup
 
-	for i := 0; i < parallelism; i++ {
-		wg.Add(1)
+	for range parallelism {
 
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for it := range gameServers {
 				err := work(it)
 				if err != nil {
@@ -610,7 +605,7 @@ func parallelize(gameServers chan *agonesv1.GameServer, parallelism int, work fu
 					break
 				}
 			}
-		}()
+		})
 	}
 	wg.Wait()
 	close(errch)

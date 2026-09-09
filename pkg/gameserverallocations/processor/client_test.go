@@ -48,8 +48,8 @@ func (m *mockStream) CloseSend() error             { close(m.sendChan); return n
 func (m *mockStream) Context() context.Context     { return context.Background() }
 func (m *mockStream) Header() (metadata.MD, error) { return metadata.MD{}, nil }
 func (m *mockStream) Trailer() metadata.MD         { return metadata.MD{} }
-func (m *mockStream) SendMsg(interface{}) error    { return nil }
-func (m *mockStream) RecvMsg(interface{}) error    { return nil }
+func (m *mockStream) SendMsg(any) error            { return nil }
+func (m *mockStream) RecvMsg(any) error            { return nil }
 
 func TestProcessorClient_Allocate(t *testing.T) {
 	testCases := []struct {
@@ -89,7 +89,7 @@ func TestProcessorClient_Allocate(t *testing.T) {
 				msg := <-stream.sendChan
 				batchID := msg.GetBatchRequest().BatchId
 				responses := make([]*allocationpb.ResponseWrapper, 3)
-				for i := 0; i < 3; i++ {
+				for i := range 3 {
 					responses[i] = &allocationpb.ResponseWrapper{
 						RequestId: reqIDs[i],
 						Result: &allocationpb.ResponseWrapper_Response{
@@ -173,8 +173,7 @@ func TestProcessorClient_Allocate(t *testing.T) {
 			}
 
 			// Start handleStream in a goroutine
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+			ctx := t.Context()
 			go func() {
 				_ = p.handleStream(ctx, stream)
 			}()

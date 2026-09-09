@@ -55,7 +55,7 @@ func serialize(args []string) string {
 
 type expectedMetricData struct {
 	labels []string
-	val    interface{}
+	val    any
 }
 
 // Asserts that the given metric exporter contains the expected metric data within a timeout (10s).

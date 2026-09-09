@@ -171,18 +171,16 @@ func TestLocalSDKServerSetLabel(t *testing.T) {
 
 			stream := newGameServerMockStream()
 			wg := sync.WaitGroup{}
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				err := l.WatchGameServer(e, stream)
 				assert.NoError(t, err)
-			}()
+			})
 			assertInitialWatchUpdate(t, stream)
 
 			// make sure length of l.updateObservers is at least 1
 			err = wait.PollUntilContextTimeout(context.Background(), time.Second, 10*time.Second, true, func(_ context.Context) (bool, error) {
 				ret := false
-				l.updateObservers.Range(func(_, _ interface{}) bool {
+				l.updateObservers.Range(func(_, _ any) bool {
 					ret = true
 					return false
 				})
@@ -198,7 +196,7 @@ func TestLocalSDKServerSetLabel(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, "bar", gs.ObjectMeta.Labels[metadataPrefix+"foo"])
 
-			assertWatchUpdate(t, stream, "bar", func(gs *sdk.GameServer) interface{} {
+			assertWatchUpdate(t, stream, "bar", func(gs *sdk.GameServer) any {
 				return gs.ObjectMeta.Labels[metadataPrefix+"foo"]
 			})
 
@@ -240,18 +238,16 @@ func TestLocalSDKServerSetAnnotation(t *testing.T) {
 
 			stream := newGameServerMockStream()
 			wg := sync.WaitGroup{}
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				err := l.WatchGameServer(e, stream)
 				assert.NoError(t, err)
-			}()
+			})
 			assertInitialWatchUpdate(t, stream)
 
 			// make sure length of l.updateObservers is at least 1
 			err = wait.PollUntilContextTimeout(context.Background(), time.Second, 10*time.Second, true, func(_ context.Context) (bool, error) {
 				ret := false
-				l.updateObservers.Range(func(_, _ interface{}) bool {
+				l.updateObservers.Range(func(_, _ any) bool {
 					ret = true
 					return false
 				})
@@ -267,7 +263,7 @@ func TestLocalSDKServerSetAnnotation(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, "foo", gs.ObjectMeta.Annotations[metadataPrefix+"bar"])
 
-			assertWatchUpdate(t, stream, "foo", func(gs *sdk.GameServer) interface{} {
+			assertWatchUpdate(t, stream, "foo", func(gs *sdk.GameServer) any {
 				return gs.ObjectMeta.Annotations[metadataPrefix+"bar"]
 			})
 
@@ -298,7 +294,7 @@ func TestLocalSDKServerWatchGameServer(t *testing.T) {
 	// wait for watching to begin
 	err = wait.PollUntilContextTimeout(context.Background(), time.Second, 10*time.Second, true, func(_ context.Context) (bool, error) {
 		found := false
-		l.updateObservers.Range(func(_, _ interface{}) bool {
+		l.updateObservers.Range(func(_, _ any) bool {
 			found = true
 			return false
 		})
@@ -314,7 +310,7 @@ func TestLocalSDKServerWatchGameServer(t *testing.T) {
 	err = os.WriteFile(path, j, os.ModeDevice)
 	assert.NoError(t, err)
 
-	assertWatchUpdate(t, stream, "bar", func(gs *sdk.GameServer) interface{} {
+	assertWatchUpdate(t, stream, "bar", func(gs *sdk.GameServer) any {
 		return gs.ObjectMeta.Annotations["foo"]
 	})
 }
@@ -351,7 +347,7 @@ func TestLocalSDKServerGetCounter(t *testing.T) {
 	// wait for watching to begin
 	err = wait.PollUntilContextTimeout(context.Background(), time.Second, 10*time.Second, true, func(_ context.Context) (bool, error) {
 		found := false
-		l.updateObservers.Range(func(_, _ interface{}) bool {
+		l.updateObservers.Range(func(_, _ any) bool {
 			found = true
 			return false
 		})
@@ -427,7 +423,7 @@ func TestLocalSDKServerUpdateCounter(t *testing.T) {
 	// wait for watching to begin
 	err = wait.PollUntilContextTimeout(context.Background(), time.Second, 10*time.Second, true, func(_ context.Context) (bool, error) {
 		found := false
-		l.updateObservers.Range(func(_, _ interface{}) bool {
+		l.updateObservers.Range(func(_, _ any) bool {
 			found = true
 			return false
 		})
@@ -575,7 +571,7 @@ func TestLocalSDKServerGetList(t *testing.T) {
 	// wait for watching to begin
 	err = wait.PollUntilContextTimeout(context.Background(), time.Second, 10*time.Second, true, func(_ context.Context) (bool, error) {
 		found := false
-		l.updateObservers.Range(func(_, _ interface{}) bool {
+		l.updateObservers.Range(func(_, _ any) bool {
 			found = true
 			return false
 		})
@@ -652,7 +648,7 @@ func TestLocalSDKServerUpdateList(t *testing.T) {
 	// wait for watching to begin
 	err = wait.PollUntilContextTimeout(context.Background(), time.Second, 10*time.Second, true, func(_ context.Context) (bool, error) {
 		found := false
-		l.updateObservers.Range(func(_, _ interface{}) bool {
+		l.updateObservers.Range(func(_, _ any) bool {
 			found = true
 			return false
 		})
@@ -848,7 +844,7 @@ func TestLocalSDKServerAddListValue(t *testing.T) {
 	// wait for watching to begin
 	err = wait.PollUntilContextTimeout(context.Background(), time.Second, 10*time.Second, true, func(_ context.Context) (bool, error) {
 		found := false
-		l.updateObservers.Range(func(_, _ interface{}) bool {
+		l.updateObservers.Range(func(_, _ any) bool {
 			found = true
 			return false
 		})
@@ -940,7 +936,7 @@ func TestLocalSDKServerRemoveListValue(t *testing.T) {
 	// wait for watching to begin
 	err = wait.PollUntilContextTimeout(context.Background(), time.Second, 10*time.Second, true, func(_ context.Context) (bool, error) {
 		found := false
-		l.updateObservers.Range(func(_, _ interface{}) bool {
+		l.updateObservers.Range(func(_, _ any) bool {
 			found = true
 			return false
 		})
@@ -1049,7 +1045,7 @@ func TestSDKConformanceFunctionality(t *testing.T) {
 	expected = append(expected, "", setAnnotation)
 
 	wg := sync.WaitGroup{}
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		wg.Add(1)
 		str := fmt.Sprintf("%d", i)
 		expected = append(expected, str)
@@ -1078,7 +1074,7 @@ func gsToTmpFile(gs *agonesv1.GameServer) (string, error) {
 }
 
 // assertWatchUpdate checks the values of an update message when a GameServer value has been changed
-func assertWatchUpdate(t *testing.T, stream *gameServerMockStream, expected interface{}, actual func(gs *sdk.GameServer) interface{}) {
+func assertWatchUpdate(t *testing.T, stream *gameServerMockStream, expected any, actual func(gs *sdk.GameServer) any) {
 	select {
 	case msg := <-stream.msgs:
 		assert.Equal(t, expected, actual(msg))

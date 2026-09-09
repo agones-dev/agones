@@ -17,6 +17,7 @@ package sdk
 import (
 	"context"
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -372,10 +373,8 @@ func (b *betaMock) AddListValue(_ context.Context, in *beta.AddListValueRequest,
 	if int(list.Capacity) <= len(list.Values) {
 		return nil, fmt.Errorf("out of range. No available capacity. Current Capacity: %d, List Size: %d", list.Capacity, len(list.Values))
 	}
-	for _, val := range list.Values {
-		if in.Value == val {
-			return nil, fmt.Errorf("already exists. Value: %s already in List: %s", in.Value, in.Name)
-		}
+	if slices.Contains(list.Values, in.Value) {
+		return nil, fmt.Errorf("already exists. Value: %s already in List: %s", in.Value, in.Name)
 	}
 	list.Values = append(list.Values, in.Value)
 	b.lists[in.Name] = list

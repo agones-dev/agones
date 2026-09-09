@@ -175,7 +175,7 @@ func NewLocalSDKServer(filePath string, testSdkName string, listMaxCapacity int6
 	go func() {
 		for value := range l.update {
 			l.logger.Info("Gameserver update received")
-			l.updateObservers.Range(func(observer, _ interface{}) bool {
+			l.updateObservers.Range(func(observer, _ any) bool {
 				observer.(chan struct{}) <- value
 				return true
 			})
@@ -447,10 +447,8 @@ func (l *LocalSDKServer) PlayerConnect(_ context.Context, id *alpha.PlayerID) (*
 	}
 
 	// the player is already connected, return false.
-	for _, playerID := range l.gs.Status.Players.Ids {
-		if playerID == id.PlayerID {
-			return &alpha.Bool{Bool: false}, nil
-		}
+	if slices.Contains(l.gs.Status.Players.Ids, id.PlayerID) {
+		return &alpha.Bool{Bool: false}, nil
 	}
 
 	if l.gs.Status.Players.Count >= l.gs.Status.Players.Capacity {
@@ -518,11 +516,8 @@ func (l *LocalSDKServer) IsPlayerConnected(_ context.Context, id *alpha.PlayerID
 		return result, nil
 	}
 
-	for _, playerID := range l.gs.Status.Players.Ids {
-		if id.PlayerID == playerID {
-			result.Bool = true
-			break
-		}
+	if slices.Contains(l.gs.Status.Players.Ids, id.PlayerID) {
+		result.Bool = true
 	}
 
 	return result, nil
@@ -837,7 +832,7 @@ func (l *LocalSDKServer) RemoveListValue(_ context.Context, in *beta.RemoveListV
 
 // Close tears down all the things
 func (l *LocalSDKServer) Close() {
-	l.updateObservers.Range(func(observer, _ interface{}) bool {
+	l.updateObservers.Range(func(observer, _ any) bool {
 		close(observer.(chan struct{}))
 		return true
 	})

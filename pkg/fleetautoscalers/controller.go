@@ -159,13 +159,13 @@ func NewController(
 
 	ctx := context.Background()
 	_, _ = autoscaler.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
+		AddFunc: func(obj any) {
 			c.addFasThread(obj.(*autoscalingv1.FleetAutoscaler), true)
 		},
-		UpdateFunc: func(_, newObj interface{}) {
+		UpdateFunc: func(_, newObj any) {
 			c.updateFasThread(ctx, newObj.(*autoscalingv1.FleetAutoscaler))
 		},
-		DeleteFunc: func(obj interface{}) {
+		DeleteFunc: func(obj any) {
 			// Could be a DeletedFinalStateUnknown, in which case, just ignore it
 			fas, ok := obj.(*autoscalingv1.FleetAutoscaler)
 			if !ok {

@@ -197,7 +197,7 @@ func NewSDKServer(gameServerName, namespace string, kubeClient kubernetes.Interf
 	s.logger.Logger.SetLevel(logLevel)
 
 	_, _ = gameServers.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		UpdateFunc: func(_, newObj interface{}) {
+		UpdateFunc: func(_, newObj any) {
 			gs := newObj.(*agonesv1.GameServer)
 			s.sendGameServerUpdate(gs)
 		},
@@ -733,10 +733,8 @@ func (s *SDKServer) PlayerConnect(_ context.Context, id *alpha.PlayerID) (*alpha
 	defer s.gsUpdateMutex.Unlock()
 
 	// the player is already connected, return false.
-	for _, playerID := range s.gsConnectedPlayers {
-		if playerID == id.PlayerID {
-			return &alpha.Bool{Bool: false}, nil
-		}
+	if slices.Contains(s.gsConnectedPlayers, id.PlayerID) {
+		return &alpha.Bool{Bool: false}, nil
 	}
 
 	if int64(len(s.gsConnectedPlayers)) >= s.gsPlayerCapacity {
@@ -793,11 +791,8 @@ func (s *SDKServer) IsPlayerConnected(_ context.Context, id *alpha.PlayerID) (*a
 
 	result := &alpha.Bool{Bool: false}
 
-	for _, playerID := range s.gsConnectedPlayers {
-		if playerID == id.PlayerID {
-			result.Bool = true
-			break
-		}
+	if slices.Contains(s.gsConnectedPlayers, id.PlayerID) {
+		result.Bool = true
 	}
 
 	return result, nil
@@ -1246,10 +1241,8 @@ func (s *SDKServer) AddListValue(ctx context.Context, in *beta.AddListValueReque
 		return nil, errors.Errorf("out of range. No available capacity. Current Capacity: %d, List Size: %d", list.Capacity, len(list.Values))
 	}
 	// Verify value does not already exist in the list
-	for _, val := range list.Values {
-		if in.Value == val {
-			return nil, errors.Errorf("already exists. Value: %s already in List: %s", in.Value, in.Name)
-		}
+	if slices.Contains(list.Values, in.Value) {
+		return nil, errors.Errorf("already exists. Value: %s already in List: %s", in.Value, in.Name)
 	}
 	list.Values = append(list.Values, in.Value)
 	batchList := s.gsListUpdates[in.Name]
