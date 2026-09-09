@@ -36,7 +36,6 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -64,11 +63,6 @@ import (
 // Operation is a synchronisation action
 type Operation string
 
-var (
-	// GameServerListMaxCapacity is the maximum capacity for List in the gamerserver spec and status CRDs.
-	GameServerListMaxCapacity int64
-)
-
 const (
 	updateState            Operation     = "updateState"
 	updateLabel            Operation     = "updateLabel"
@@ -79,9 +73,6 @@ const (
 	updateLists            Operation     = "updateLists"
 	updatePeriod           time.Duration = time.Second
 )
-
-// defaultNamespace is the Kubernetes namespace assumed when none is configured.
-const defaultNamespace = "default"
 
 // readHeaderTimeout bounds how long a client may take to send its request
 // headers, so a Slowloris client cannot hold the listener open indefinitely.
@@ -152,12 +143,14 @@ type SDKServer struct {
 	gsCounterUpdates    map[string]counterUpdateRequest
 	gsListUpdates       map[string]listUpdateRequest
 	gsCopy              *agonesv1.GameServer
+	listMaxCapacity     int64
 }
 
 // NewSDKServer creates a SDKServer that sets up an
 // InClusterConfig for Kubernetes
 func NewSDKServer(gameServerName, namespace string, kubeClient kubernetes.Interface,
-	agonesClient versioned.Interface, logLevel logrus.Level, healthPort int, requestsRateLimit time.Duration) (*SDKServer, error) {
+	agonesClient versioned.Interface, logLevel logrus.Level, healthPort int, requestsRateLimit time.Duration,
+	listMaxCapacity int64) (*SDKServer, error) {
 	mux := http.NewServeMux()
 	resync := 0 * time.Second
 
@@ -190,6 +183,7 @@ func NewSDKServer(gameServerName, namespace string, kubeClient kubernetes.Interf
 		gsWaitForSync:      sync.WaitGroup{},
 		gsConnectedPlayers: []string{},
 		gsStateChannel:     make(chan agonesv1.GameServerState, 2),
+		listMaxCapacity:    listMaxCapacity,
 	}
 
 	if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
@@ -1139,7 +1133,7 @@ func (s *SDKServer) GetList(_ context.Context, in *beta.GetListRequest) (*beta.L
 // UpdateList collapses all update capacity requests for a given List into a single UpdateList request.
 // This function currently only updates the Capacity of a List.
 // Returns error if the List does not exist (name cannot be updated).
-// Returns error if the List update capacity is out of range [0,1000].
+// Returns error if the List update capacity is out of range [0,listMaxCapacity].
 // [Stage:Beta]
 // [FeatureFlag:CountsAndLists]
 func (s *SDKServer) UpdateList(ctx context.Context, in *beta.UpdateListRequest) (*beta.List, error) {
@@ -1156,14 +1150,8 @@ func (s *SDKServer) UpdateList(ctx context.Context, in *beta.UpdateListRequest) 
 		return nil, errors.Errorf("invalid argument. Field Mask Path(s): %v are invalid for List. Use valid field name(s): %v", in.UpdateMask.GetPaths(), in.List.ProtoReflect().Descriptor().Fields())
 	}
 
-	if GameServerListMaxCapacity == 0 {
-		err := s.GsListsMaxItems(ctx)
-		if err != nil {
-			return nil, errors.Errorf("%v", err)
-		}
-	}
-	if in.List.Capacity < 0 || in.List.Capacity > GameServerListMaxCapacity {
-		return nil, errors.Errorf("out of range. Capacity must be within range [0,1000]. Found Capacity: %d", in.List.Capacity)
+	if in.List.Capacity < 0 || in.List.Capacity > s.listMaxCapacity {
+		return nil, errors.Errorf("out of range. Capacity must be within range [0,%d]. Found Capacity: %d", s.listMaxCapacity, in.List.Capacity)
 	}
 
 	list, err := s.GetList(ctx, &beta.GetListRequest{Name: in.List.Name})
@@ -1600,63 +1588,4 @@ func (s *SDKServer) gsListUpdatesLen() int {
 	s.gsUpdateMutex.RLock()
 	defer s.gsUpdateMutex.RUnlock()
 	return len(s.gsListUpdates)
-}
-
-// GsListsMaxItems lists all GameServers belonging to a specific fleet and attempts
-// to retrieve the maximum capacity defined for a given listName in the GameServer's Spec.
-// It returns the capacity of the first GameServer found that defines the list.
-func (s *SDKServer) GsListsMaxItems(ctx context.Context) error {
-
-	var labelsName string
-	if s.namespace == defaultNamespace {
-		labelsName = "fleet-example"
-	} else {
-		gs, err := s.gameServerGetter.GameServers(s.namespace).Get(
-			ctx,
-			s.gameServerName,
-			metav1.GetOptions{},
-		)
-		if err != nil {
-			return errors.Wrapf(err, "failed to get GameServer %s", s.gameServerName)
-		}
-		if gs == nil {
-			return errors.Errorf("retrieved nil GameServer %s", s.gameServerName)
-		}
-		labelsName = gs.ObjectMeta.Labels[agonesv1.FleetNameLabel]
-	}
-	selector := labels.Set{
-		agonesv1.FleetNameLabel: labelsName,
-	}
-
-	labelSelector := selector.String()
-	gsList, err := s.gameServerGetter.GameServers(s.namespace).List(
-		ctx,
-		metav1.ListOptions{
-			LabelSelector: labelSelector,
-		},
-	)
-	if err != nil {
-		return fmt.Errorf("failed to list GameServers for fleet %s: %w", "fleet-example", err)
-	}
-
-	if len(gsList.Items) == 0 {
-		return fmt.Errorf("no gameservers for fleet")
-	}
-	for i := range gsList.Items {
-		// Get a pointer to the listed item (only for accessing the name)
-		listedGS := &gsList.Items[i]
-		// Fetch the current GameServer resource
-		gs, err := s.gameServerGetter.GameServers(s.namespace).Get(
-			ctx,
-			listedGS.Name, // Use the name from the listed item
-			metav1.GetOptions{},
-		)
-		if err != nil {
-			return fmt.Errorf("failed to get GameServer %s: %w", listedGS.Name, err)
-		}
-		if playersList, found := gs.Spec.Lists["players"]; found {
-			GameServerListMaxCapacity = playersList.Capacity
-		}
-	}
-	return nil
 }

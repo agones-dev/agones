@@ -38,11 +38,6 @@ import (
 type GameServerState string
 
 const (
-	// ListMaxCapacity is the maximum capacity for List in the gamerserver spec and status CRDs.
-	ListMaxCapacity = int64(1000)
-)
-
-const (
 	// GameServerStatePortAllocation is for when a dynamically allocating GameServer
 	// is being created, an open port needs to be allocated
 	GameServerStatePortAllocation GameServerState = "PortAllocation"
@@ -240,7 +235,8 @@ type GameServerSpec struct {
 	// Keys must be declared at GameServer creation time.
 	// +optional
 	Counters map[string]CounterStatus `json:"counters,omitempty"`
-	// (Beta, CountsAndLists feature flag) Lists provides the configuration for tracking of lists of up to 1000 values against a GameServer.
+	// (Beta, CountsAndLists feature flag) Lists provides the configuration for tracking of lists of values against a GameServer,
+	// up to the maximum configured by the `gameservers.lists.maxItems` Helm value.
 	// Keys must be declared at GameServer creation time.
 	// +optional
 	Lists map[string]ListStatus `json:"lists,omitempty"`
@@ -1045,11 +1041,12 @@ func (gs *GameServer) UpdateCounterCapacity(name string, capacity int64) error {
 	return gameserverErrors.Errorf("unable to UpdateCounterCapacity: Name %s, Capacity %d. Counter not found in GameServer %s", name, capacity, gs.ObjectMeta.GetName())
 }
 
-// UpdateListCapacity updates the ListStatus Capacity to the given capacity.
-func (gs *GameServer) UpdateListCapacity(name string, capacity int64) error {
+// UpdateListCapacity updates the ListStatus Capacity to the given capacity. The capacity must be
+// within [0, maxCapacity], where maxCapacity comes from the `gameservers.lists.maxItems` Helm value.
+func (gs *GameServer) UpdateListCapacity(name string, capacity, maxCapacity int64) error {
 
-	if capacity < 0 || capacity > ListMaxCapacity {
-		return gameserverErrors.Errorf("unable to UpdateListCapacity: Name %s, Capacity %d. Capacity must be between 0 and 1000, inclusive", name, capacity)
+	if capacity < 0 || capacity > maxCapacity {
+		return gameserverErrors.Errorf("unable to UpdateListCapacity: Name %s, Capacity %d. Capacity must be between 0 and %d, inclusive", name, capacity, maxCapacity)
 	}
 	if list, ok := gs.Status.Lists[name]; ok {
 		list.Capacity = capacity

@@ -288,7 +288,7 @@ func (s *GameServerSelector) matchCounters(gs *agonesv1.GameServer) bool {
 	return true
 }
 
-// CounterActions attempts to peform any actions from the CounterAction on the GameServer Counter.
+// CounterActions attempts to perform any actions from the CounterAction on the GameServer Counter.
 // Returns the errors of any actions that could not be performed.
 func (ca *CounterAction) CounterActions(counter string, gs *agonesv1.GameServer) error {
 	var errs error
@@ -307,12 +307,13 @@ func (ca *CounterAction) CounterActions(counter string, gs *agonesv1.GameServer)
 	return errs
 }
 
-// ListActions attempts to peform any actions from the ListAction on the GameServer List.
-// Returns a string list of any actions that could not be performed.
-func (la *ListAction) ListActions(list string, gs *agonesv1.GameServer) error {
+// ListActions attempts to perform any actions from the ListAction on the GameServer List.
+// maxCapacity bounds any capacity change, and comes from the `gameservers.lists.maxItems` Helm value.
+// Returns an error containing any actions that could not be performed.
+func (la *ListAction) ListActions(list string, gs *agonesv1.GameServer, maxCapacity int64) error {
 	var errs error
 	if la.Capacity != nil {
-		capErr := gs.UpdateListCapacity(list, *la.Capacity)
+		capErr := gs.UpdateListCapacity(list, *la.Capacity, maxCapacity)
 		if capErr != nil {
 			errs = errors.Join(errs, capErr)
 		}

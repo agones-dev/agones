@@ -20791,6 +20791,8 @@ spec:
           value: "{\"allowPrivilegeEscalation\":false,\"capabilities\":{\"drop\":[\"ALL\"]},\"runAsNonRoot\":true,\"runAsUser\":1000,\"seccompProfile\":{\"type\":\"RuntimeDefault\"}}"
         - name: SIDECAR_REQUESTS_RATE_LIMIT
           value: "500ms"
+        - name: MAX_LIST_ITEMS
+          value: "1000"
         - name: SDK_SERVICE_ACCOUNT
           value: "agones-sdk"
         - name: PROMETHEUS_EXPORTER
@@ -20967,6 +20969,8 @@ spec:
           value: ""
         - name: ALLOCATION_BATCH_WAIT_TIME
           value: "500ms"
+        - name: MAX_LIST_ITEMS
+          value: "1000"
         - name: CLOUD_PRODUCT
           value: "auto"
         - name: LOG_DIR
@@ -21227,6 +21231,8 @@ spec:
           value: ""
         - name: ALLOCATION_BATCH_WAIT_TIME
           value: "500ms"
+        - name: MAX_LIST_ITEMS
+          value: "1000"
         - name: READINESS_SHUTDOWN_DURATION
           value: 18s
         ports:

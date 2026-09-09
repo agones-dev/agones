@@ -92,6 +92,7 @@ const (
 	maxDeletionParallelismFlag         = "max-deletion-parallelism"
 	maxGameServerDeletionsPerBatchFlag = "max-game-server-deletions-per-batch"
 	maxPodPendingCountFlag             = "max-pod-pending-count"
+	maxListItemsFlag                   = "max-list-items"
 )
 
 var (
@@ -208,7 +209,8 @@ func main() {
 	gsController := gameservers.NewController(controllerHooks, health,
 		ctlConf.PortRanges, ctlConf.SidecarImage, ctlConf.AlwaysPullSidecar,
 		ctlConf.SidecarCPURequest, ctlConf.SidecarCPULimit,
-		ctlConf.SidecarMemoryRequest, ctlConf.SidecarMemoryLimit, ctlConf.SidecarSecurityContext, ctlConf.SidecarRequestsRateLimit, ctlConf.SdkServiceAccount,
+		ctlConf.SidecarMemoryRequest, ctlConf.SidecarMemoryLimit, ctlConf.SidecarSecurityContext, ctlConf.SidecarRequestsRateLimit,
+		ctlConf.MaxListItems, ctlConf.SdkServiceAccount,
 		kubeClient, kubeInformerFactory, extClient, agonesClient, agonesInformerFactory)
 	gsSetController := gameserversets.NewController(health, gsCounter,
 		kubeClient, extClient, agonesClient, agonesInformerFactory, ctlConf.MaxCreationParallelism, ctlConf.MaxDeletionParallelism, ctlConf.MaxGameServerCreationsPerBatch, ctlConf.MaxGameServerDeletionsPerBatch, ctlConf.MaxPodPendingCount)
@@ -281,6 +283,7 @@ func parseEnvFlags() config {
 	viper.SetDefault(maxDeletionParallelismFlag, 64)
 	viper.SetDefault(maxGameServerDeletionsPerBatchFlag, 64)
 	viper.SetDefault(maxPodPendingCountFlag, 5000)
+	viper.SetDefault(maxListItemsFlag, 1000)
 
 	pflag.String(sidecarImageFlag, viper.GetString(sidecarImageFlag), "Flag to overwrite the GameServer sidecar image that is used. Can also use SIDECAR env variable")
 	pflag.String(sidecarCPULimitFlag, viper.GetString(sidecarCPULimitFlag), "Flag to overwrite the GameServer sidecar container's cpu limit. Can also use SIDECAR_CPU_LIMIT env variable")
@@ -290,6 +293,7 @@ func parseEnvFlags() config {
 	pflag.Int32(sidecarRunAsUserFlag, viper.GetInt32(sidecarRunAsUserFlag), "Flag to indicate the GameServer sidecar container's UID. Only used when --sidecar-security-context is empty. Can also use SIDECAR_RUN_AS_USER env variable")
 	pflag.String(sidecarSecurityContextFlag, viper.GetString(sidecarSecurityContextFlag), `Optional. JSON encoded Kubernetes SecurityContext for the GameServer sidecar container. Defaults to a context compatible with the "restricted" Pod Security Standard. Can also use SIDECAR_SECURITY_CONTEXT env variable`)
 	pflag.String(sidecarRequestsRateLimitFlag, viper.GetString(sidecarRequestsRateLimitFlag), "Flag to indicate the GameServer sidecar requests rate limit. Can also use SIDECAR_REQUESTS_RATE_LIMIT env variable")
+	pflag.Int64(maxListItemsFlag, viper.GetInt64(maxListItemsFlag), "Flag to set the maximum Capacity a GameServer List may be set to, passed on to the SDK sidecar. Can also use MAX_LIST_ITEMS env variable")
 	pflag.Bool(pullSidecarFlag, viper.GetBool(pullSidecarFlag), "For development purposes, set the sidecar image to have a ImagePullPolicy of Always. Can also use ALWAYS_PULL_SIDECAR env variable")
 	pflag.String(sdkServerAccountFlag, viper.GetString(sdkServerAccountFlag), "Overwrite what service account default for GameServer Pods. Defaults to Can also use SDK_SERVICE_ACCOUNT")
 	pflag.Int32(minPortFlag, 0, "Required. The minimum port that that a GameServer can be allocated to. Can also use MIN_PORT env variable.")
@@ -329,6 +333,7 @@ func parseEnvFlags() config {
 	runtime.Must(viper.BindEnv(sidecarRunAsUserFlag))
 	runtime.Must(viper.BindEnv(sidecarSecurityContextFlag))
 	runtime.Must(viper.BindEnv(sidecarRequestsRateLimitFlag))
+	runtime.Must(viper.BindEnv(maxListItemsFlag))
 	runtime.Must(viper.BindEnv(pullSidecarFlag))
 	runtime.Must(viper.BindEnv(sdkServerAccountFlag))
 	runtime.Must(viper.BindEnv(minPortFlag))
@@ -409,6 +414,7 @@ func parseEnvFlags() config {
 		SidecarMemoryLimit:             limitMemory,
 		SidecarSecurityContext:         sidecarSecurityContext,
 		SidecarRequestsRateLimit:       requestsRateLimit,
+		MaxListItems:                   viper.GetInt64(maxListItemsFlag),
 		SdkServiceAccount:              viper.GetString(sdkServerAccountFlag),
 		AlwaysPullSidecar:              viper.GetBool(pullSidecarFlag),
 		KeyFile:                        viper.GetString(keyFileFlag),
@@ -485,6 +491,7 @@ type config struct {
 	SidecarMemoryLimit             resource.Quantity
 	SidecarSecurityContext         *corev1.SecurityContext
 	SidecarRequestsRateLimit       time.Duration
+	MaxListItems                   int64
 	SdkServiceAccount              string
 	AlwaysPullSidecar              bool
 	PrometheusMetrics              bool
@@ -519,6 +526,9 @@ func (c *config) validate() []error {
 	validationErrors = append(validationErrors, resourceErrors...)
 	resourceErrors = validateResource(c.SidecarMemoryRequest, c.SidecarMemoryLimit, corev1.ResourceMemory)
 	validationErrors = append(validationErrors, resourceErrors...)
+	if c.MaxListItems <= 0 {
+		validationErrors = append(validationErrors, errs.Errorf("%s must be greater than 0", maxListItemsFlag))
+	}
 	return validationErrors
 }
 

@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -36,7 +35,6 @@ import (
 
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
 	"agones.dev/agones/pkg/sdk"
-	"agones.dev/agones/pkg/sdk/alpha"
 	"agones.dev/agones/pkg/sdk/beta"
 	"agones.dev/agones/pkg/util/runtime"
 )
@@ -44,7 +42,7 @@ import (
 func TestLocal(t *testing.T) {
 	ctx := context.Background()
 	e := &sdk.Empty{}
-	l, err := NewLocalSDKServer("", "")
+	l, err := NewLocalSDKServer("", "", defaultTestListMaxCapacity)
 	assert.NoError(t, err)
 
 	_, err = l.Ready(ctx, e)
@@ -84,7 +82,7 @@ func TestLocal(t *testing.T) {
 }
 
 func TestLocalSDKWithTestMode(t *testing.T) {
-	l, err := NewLocalSDKServer("", "")
+	l, err := NewLocalSDKServer("", "", defaultTestListMaxCapacity)
 	assert.NoError(t, err, "Should be able to create local SDK server")
 	a := []string{"ready", "allocate", "setlabel", "setannotation", "gameserver", "health", "shutdown", "watch"}
 	b := []string{"ready", "health", "ready", "watch", "allocate", "gameserver", "setlabel", "setannotation", "health", "health", "shutdown"}
@@ -109,7 +107,7 @@ func TestLocalSDKWithGameServer(t *testing.T) {
 	path, err := gsToTmpFile(fixture.DeepCopy())
 	assert.NoError(t, err)
 
-	l, err := NewLocalSDKServer(path, "")
+	l, err := NewLocalSDKServer(path, "", defaultTestListMaxCapacity)
 	assert.NoError(t, err)
 
 	gs, err := l.GetGameServer(ctx, e)
@@ -132,7 +130,7 @@ func TestLocalSDKWithLogLevel(t *testing.T) {
 	path, err := gsToTmpFile(fixture.DeepCopy())
 	assert.NoError(t, err)
 
-	l, err := NewLocalSDKServer(path, "test")
+	l, err := NewLocalSDKServer(path, "test", defaultTestListMaxCapacity)
 	assert.NoError(t, err)
 
 	_, err = l.GetGameServer(ctx, e)
@@ -167,7 +165,7 @@ func TestLocalSDKServerSetLabel(t *testing.T) {
 			path, err := gsToTmpFile(v.gs)
 			assert.NoError(t, err)
 
-			l, err := NewLocalSDKServer(path, "")
+			l, err := NewLocalSDKServer(path, "", defaultTestListMaxCapacity)
 			assert.NoError(t, err)
 			kv := &sdk.KeyValue{Key: "foo", Value: "bar"}
 
@@ -235,7 +233,7 @@ func TestLocalSDKServerSetAnnotation(t *testing.T) {
 			path, err := gsToTmpFile(v.gs)
 			assert.NoError(t, err)
 
-			l, err := NewLocalSDKServer(path, "")
+			l, err := NewLocalSDKServer(path, "", defaultTestListMaxCapacity)
 			assert.NoError(t, err)
 
 			kv := &sdk.KeyValue{Key: "bar", Value: "foo"}
@@ -287,7 +285,7 @@ func TestLocalSDKServerWatchGameServer(t *testing.T) {
 	assert.NoError(t, err)
 
 	e := &sdk.Empty{}
-	l, err := NewLocalSDKServer(path, "")
+	l, err := NewLocalSDKServer(path, "", defaultTestListMaxCapacity)
 	assert.NoError(t, err)
 
 	stream := newGameServerMockStream()
@@ -321,294 +319,6 @@ func TestLocalSDKServerWatchGameServer(t *testing.T) {
 	})
 }
 
-func TestLocalSDKServerPlayerCapacity(t *testing.T) {
-	t.Parallel()
-
-	runtime.FeatureTestMutex.Lock()
-	defer runtime.FeatureTestMutex.Unlock()
-	require.NoError(t, runtime.ParseFeatures(string(runtime.FeaturePlayerTracking)+"=true"))
-
-	fixture := &agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "stuff"}}
-
-	e := &alpha.Empty{}
-	path, err := gsToTmpFile(fixture)
-	assert.NoError(t, err)
-	l, err := NewLocalSDKServer(path, "")
-	assert.NoError(t, err)
-
-	stream := newGameServerMockStream()
-	go func() {
-		err := l.WatchGameServer(&sdk.Empty{}, stream)
-		assert.NoError(t, err)
-	}()
-	assertInitialWatchUpdate(t, stream)
-
-	// wait for watching to begin
-	err = wait.PollUntilContextTimeout(context.Background(), time.Second, 10*time.Second, true, func(_ context.Context) (bool, error) {
-		found := false
-		l.updateObservers.Range(func(_, _ interface{}) bool {
-			found = true
-			return false
-		})
-		return found, nil
-	})
-	assert.NoError(t, err)
-
-	c, err := l.GetPlayerCapacity(context.Background(), e)
-	assert.NoError(t, err)
-	assert.Equal(t, int64(0), c.Count)
-
-	_, err = l.SetPlayerCapacity(context.Background(), &alpha.Count{Count: 10})
-	assert.NoError(t, err)
-
-	select {
-	case msg := <-stream.msgs:
-		assert.Equal(t, int64(10), msg.Status.Players.Capacity)
-	case <-time.After(10 * time.Second):
-		assert.Fail(t, "timeout getting watch")
-	}
-
-	c, err = l.GetPlayerCapacity(context.Background(), e)
-	assert.NoError(t, err)
-	assert.Equal(t, int64(10), c.Count)
-
-	gs, err := l.GetGameServer(context.Background(), &sdk.Empty{})
-	assert.NoError(t, err)
-	assert.Equal(t, int64(10), gs.Status.Players.Capacity)
-}
-
-func TestLocalSDKServerPlayerConnectAndDisconnectWithoutPlayerTracking(t *testing.T) {
-	t.Parallel()
-	runtime.FeatureTestMutex.Lock()
-	defer runtime.FeatureTestMutex.Unlock()
-
-	require.NoError(t, runtime.ParseFeatures(string(runtime.FeaturePlayerTracking)+"=false"))
-
-	l, err := NewLocalSDKServer("", "")
-	assert.NoError(t, err)
-
-	e := &alpha.Empty{}
-	capacity, err := l.GetPlayerCapacity(context.Background(), e)
-	assert.Nil(t, capacity)
-	assert.Error(t, err)
-
-	count, err := l.GetPlayerCount(context.Background(), e)
-	assert.Error(t, err)
-	assert.Nil(t, count)
-
-	list, err := l.GetConnectedPlayers(context.Background(), e)
-	assert.Error(t, err)
-	assert.Nil(t, list)
-
-	id := &alpha.PlayerID{PlayerID: "test-player"}
-
-	ok, err := l.PlayerConnect(context.Background(), id)
-	assert.Error(t, err)
-	assert.False(t, ok.Bool)
-
-	ok, err = l.IsPlayerConnected(context.Background(), id)
-	assert.Error(t, err)
-	assert.False(t, ok.Bool)
-
-	ok, err = l.PlayerDisconnect(context.Background(), id)
-	assert.Error(t, err)
-	assert.False(t, ok.Bool)
-}
-
-func TestLocalSDKServerPlayerConnectAndDisconnect(t *testing.T) {
-	t.Parallel()
-
-	runtime.FeatureTestMutex.Lock()
-	defer runtime.FeatureTestMutex.Unlock()
-	require.NoError(t, runtime.ParseFeatures(string(runtime.FeaturePlayerTracking)+"=true"))
-
-	gs := func() *agonesv1.GameServer {
-		return &agonesv1.GameServer{
-			ObjectMeta: metav1.ObjectMeta{Name: "stuff"},
-			Status: agonesv1.GameServerStatus{
-				Players: &agonesv1.PlayerStatus{
-					Capacity: 1,
-				},
-			}}
-	}
-
-	e := &alpha.Empty{}
-
-	fixtures := map[string]struct {
-		testMode bool
-		gs       *agonesv1.GameServer
-		useFile  bool
-	}{
-		"test mode on, gs with Status.Players": {
-			testMode: true,
-			gs:       gs(),
-			useFile:  true,
-		},
-		"test mode off, gs with Status.Players": {
-			testMode: false,
-			gs:       gs(),
-			useFile:  true,
-		},
-		"test mode on, gs without Status.Players": {
-			testMode: true,
-			useFile:  true,
-		},
-		"test mode off, gs without Status.Players": {
-			testMode: false,
-			useFile:  true,
-		},
-		"test mode on, no filePath": {
-			testMode: true,
-			useFile:  false,
-		},
-		"test mode off, no filePath": {
-			testMode: false,
-			useFile:  false,
-		},
-	}
-
-	for k, v := range fixtures {
-		t.Run(k, func(t *testing.T) {
-			var l *LocalSDKServer
-			var err error
-			if v.useFile {
-				path, pathErr := gsToTmpFile(v.gs)
-				assert.NoError(t, pathErr)
-				l, err = NewLocalSDKServer(path, "")
-			} else {
-				l, err = NewLocalSDKServer("", "")
-			}
-			assert.NoError(t, err)
-			l.SetTestMode(v.testMode)
-
-			stream := newGameServerMockStream()
-			go func() {
-				err := l.WatchGameServer(&sdk.Empty{}, stream)
-				assert.NoError(t, err)
-			}()
-			assertInitialWatchUpdate(t, stream)
-
-			// wait for watching to begin
-			err = wait.PollUntilContextTimeout(context.Background(), time.Second, 10*time.Second, true, func(_ context.Context) (bool, error) {
-				found := false
-				l.updateObservers.Range(func(_, _ interface{}) bool {
-					found = true
-					return false
-				})
-				return found, nil
-			})
-			assert.NoError(t, err)
-
-			if !v.useFile || v.gs == nil {
-				_, err := l.SetPlayerCapacity(context.Background(), &alpha.Count{
-					Count: 1,
-				})
-				assert.NoError(t, err)
-				expected := &sdk.GameServer_Status_PlayerStatus{
-					Capacity: 1,
-				}
-				assertWatchUpdate(t, stream, expected, func(gs *sdk.GameServer) interface{} {
-					return gs.Status.Players
-				})
-			}
-
-			id := &alpha.PlayerID{PlayerID: "one"}
-			ok, err := l.IsPlayerConnected(context.Background(), id)
-			assert.NoError(t, err)
-			if assert.NotNil(t, ok) {
-				assert.False(t, ok.Bool, "player should not be connected")
-			}
-
-			count, err := l.GetPlayerCount(context.Background(), e)
-			assert.NoError(t, err)
-			assert.Equal(t, int64(0), count.Count)
-
-			list, err := l.GetConnectedPlayers(context.Background(), e)
-			assert.NoError(t, err)
-			assert.Empty(t, list.List)
-
-			// connect a player
-			ok, err = l.PlayerConnect(context.Background(), id)
-			assert.NoError(t, err)
-			assert.True(t, ok.Bool, "Player should not exist yet")
-
-			count, err = l.GetPlayerCount(context.Background(), e)
-			assert.NoError(t, err)
-			assert.Equal(t, int64(1), count.Count)
-
-			expected := &sdk.GameServer_Status_PlayerStatus{
-				Count:    1,
-				Capacity: 1,
-				Ids:      []string{id.PlayerID},
-			}
-			assertWatchUpdate(t, stream, expected, func(gs *sdk.GameServer) interface{} {
-				return gs.Status.Players
-			})
-
-			ok, err = l.IsPlayerConnected(context.Background(), id)
-			assert.NoError(t, err)
-			assert.True(t, ok.Bool, "player should be connected")
-
-			list, err = l.GetConnectedPlayers(context.Background(), e)
-			assert.NoError(t, err)
-			assert.Equal(t, []string{id.PlayerID}, list.List)
-
-			// add same player
-			ok, err = l.PlayerConnect(context.Background(), id)
-			assert.NoError(t, err)
-			assert.False(t, ok.Bool, "Player already exists")
-
-			count, err = l.GetPlayerCount(context.Background(), e)
-			assert.NoError(t, err)
-			assert.Equal(t, int64(1), count.Count)
-			assertNoWatchUpdate(t, stream)
-
-			list, err = l.GetConnectedPlayers(context.Background(), e)
-			assert.NoError(t, err)
-			assert.Equal(t, []string{id.PlayerID}, list.List)
-
-			// should return an error if we try to add another, since we're at capacity
-			nopePlayer := &alpha.PlayerID{PlayerID: "nope"}
-			_, err = l.PlayerConnect(context.Background(), nopePlayer)
-			assert.EqualError(t, err, "Players are already at capacity")
-
-			ok, err = l.IsPlayerConnected(context.Background(), nopePlayer)
-			assert.NoError(t, err)
-			assert.False(t, ok.Bool)
-
-			// disconnect a player
-			ok, err = l.PlayerDisconnect(context.Background(), id)
-			assert.NoError(t, err)
-			assert.True(t, ok.Bool, "Player should be removed")
-			count, err = l.GetPlayerCount(context.Background(), e)
-			assert.NoError(t, err)
-			assert.Equal(t, int64(0), count.Count)
-
-			expected = &sdk.GameServer_Status_PlayerStatus{
-				Count:    0,
-				Capacity: 1,
-				Ids:      []string{},
-			}
-			assertWatchUpdate(t, stream, expected, func(gs *sdk.GameServer) interface{} {
-				return gs.Status.Players
-			})
-
-			list, err = l.GetConnectedPlayers(context.Background(), e)
-			assert.NoError(t, err)
-			assert.Empty(t, list.List)
-
-			// remove same player
-			ok, err = l.PlayerDisconnect(context.Background(), id)
-			assert.NoError(t, err)
-			assert.False(t, ok.Bool, "Player already be gone")
-			count, err = l.GetPlayerCount(context.Background(), e)
-			assert.NoError(t, err)
-			assert.Equal(t, int64(0), count.Count)
-			assertNoWatchUpdate(t, stream)
-		})
-	}
-}
-
 func TestLocalSDKServerGetCounter(t *testing.T) {
 	t.Parallel()
 
@@ -628,7 +338,7 @@ func TestLocalSDKServerGetCounter(t *testing.T) {
 
 	path, err := gsToTmpFile(fixture)
 	assert.NoError(t, err)
-	l, err := NewLocalSDKServer(path, "")
+	l, err := NewLocalSDKServer(path, "", defaultTestListMaxCapacity)
 	assert.NoError(t, err)
 
 	stream := newGameServerMockStream()
@@ -704,7 +414,7 @@ func TestLocalSDKServerUpdateCounter(t *testing.T) {
 
 	path, err := gsToTmpFile(fixture)
 	assert.NoError(t, err)
-	l, err := NewLocalSDKServer(path, "")
+	l, err := NewLocalSDKServer(path, "", defaultTestListMaxCapacity)
 	assert.NoError(t, err)
 
 	stream := newGameServerMockStream()
@@ -852,7 +562,7 @@ func TestLocalSDKServerGetList(t *testing.T) {
 
 	path, err := gsToTmpFile(fixture)
 	assert.NoError(t, err)
-	l, err := NewLocalSDKServer(path, "")
+	l, err := NewLocalSDKServer(path, "", defaultTestListMaxCapacity)
 	assert.NoError(t, err)
 
 	stream := newGameServerMockStream()
@@ -929,7 +639,7 @@ func TestLocalSDKServerUpdateList(t *testing.T) {
 
 	path, err := gsToTmpFile(fixture)
 	assert.NoError(t, err)
-	l, err := NewLocalSDKServer(path, "")
+	l, err := NewLocalSDKServer(path, "", defaultTestListMaxCapacity)
 	assert.NoError(t, err)
 
 	stream := newGameServerMockStream()
@@ -1125,7 +835,7 @@ func TestLocalSDKServerAddListValue(t *testing.T) {
 
 	path, err := gsToTmpFile(fixture)
 	assert.NoError(t, err)
-	l, err := NewLocalSDKServer(path, "")
+	l, err := NewLocalSDKServer(path, "", defaultTestListMaxCapacity)
 	assert.NoError(t, err)
 
 	stream := newGameServerMockStream()
@@ -1217,7 +927,7 @@ func TestLocalSDKServerRemoveListValue(t *testing.T) {
 
 	path, err := gsToTmpFile(fixture)
 	assert.NoError(t, err)
-	l, err := NewLocalSDKServer(path, "")
+	l, err := NewLocalSDKServer(path, "", defaultTestListMaxCapacity)
 	assert.NoError(t, err)
 
 	stream := newGameServerMockStream()
@@ -1286,7 +996,7 @@ func TestLocalSDKServerRemoveListValue(t *testing.T) {
 // GameServer object
 func TestLocalSDKServerStateUpdates(t *testing.T) {
 	t.Parallel()
-	l, err := NewLocalSDKServer("", "")
+	l, err := NewLocalSDKServer("", "", defaultTestListMaxCapacity)
 	assert.NoError(t, err)
 
 	ctx := context.Background()
@@ -1325,7 +1035,7 @@ func TestLocalSDKServerStateUpdates(t *testing.T) {
 func TestSDKConformanceFunctionality(t *testing.T) {
 	t.Parallel()
 
-	l, err := NewLocalSDKServer("", "")
+	l, err := NewLocalSDKServer("", "", defaultTestListMaxCapacity)
 	assert.NoError(t, err)
 	l.testMode = true
 	l.recordRequest("")
@@ -1355,26 +1065,6 @@ func TestSDKConformanceFunctionality(t *testing.T) {
 	l.SetExpectedSequence(expected)
 	b := l.EqualSets(l.expectedSequence, l.requestSequence)
 	assert.True(t, b, "we should receive strings from all go routines %v %v", l.expectedSequence, l.requestSequence)
-}
-
-func TestAlphaSDKConformanceFunctionality(t *testing.T) {
-	t.Parallel()
-	lStable, err := NewLocalSDKServer("", "")
-	assert.NoError(t, err)
-	v := int64(0)
-	lStable.recordRequestWithValue("setplayercapacity", strconv.FormatInt(v, 10), "PlayerCapacity")
-	lStable.recordRequestWithValue("isplayerconnected", "", "PlayerIDs")
-
-	runtime.FeatureTestMutex.Lock()
-	defer runtime.FeatureTestMutex.Unlock()
-
-	require.NoError(t, runtime.ParseFeatures(string(runtime.FeaturePlayerTracking)+"=true"))
-	l, err := NewLocalSDKServer("", "")
-	assert.NoError(t, err)
-	l.testMode = true
-	l.recordRequestWithValue("setplayercapacity", strconv.FormatInt(v, 10), "PlayerCapacity")
-	l.recordRequestWithValue("isplayerconnected", "", "PlayerIDs")
-
 }
 
 func gsToTmpFile(gs *agonesv1.GameServer) (string, error) {
@@ -1412,5 +1102,58 @@ func assertInitialWatchUpdate(t *testing.T, stream *gameServerMockStream) {
 	case <-stream.msgs:
 	case <-time.After(time.Second):
 		assert.Fail(t, "timeout on receiving initial message")
+	}
+}
+
+// TestLocalSDKServerUpdateListMaxCapacity verifies the local SDK server range-checks UpdateList
+// against the limit it was constructed with. Locally that comes from the --max-list-items flag,
+// which defaults to defaultMaxListItems rather than being discovered from the GameServer.
+func TestLocalSDKServerUpdateListMaxCapacity(t *testing.T) {
+	t.Parallel()
+
+	runtime.FeatureTestMutex.Lock()
+	defer runtime.FeatureTestMutex.Unlock()
+	require.NoError(t, runtime.ParseFeatures(string(runtime.FeatureCountsAndLists)+"=true"))
+
+	const listMaxCapacity = int64(25)
+
+	fixture := &agonesv1.GameServer{
+		ObjectMeta: metav1.ObjectMeta{Name: "stuff"},
+		Status: agonesv1.GameServerStatus{
+			// Deliberately not named "players": the removed GsLocalListsMaxItems only ever
+			// discovered a limit from a list with that name.
+			Lists: map[string]agonesv1.ListStatus{"rooms": {Capacity: 5, Values: []string{"one"}}},
+		},
+	}
+
+	path, err := gsToTmpFile(fixture)
+	require.NoError(t, err)
+	l, err := NewLocalSDKServer(path, "", listMaxCapacity)
+	require.NoError(t, err)
+
+	testScenarios := map[string]struct {
+		capacity int64
+		wantErr  bool
+	}{
+		"at the configured maximum":    {capacity: listMaxCapacity, wantErr: false},
+		"above the configured maximum": {capacity: listMaxCapacity + 1, wantErr: true},
+		// Would have been accepted under the old hardcoded [0,1000] check.
+		"between the configured maximum and the old hardcoded 1000": {capacity: 500, wantErr: true},
+		"negative": {capacity: -1, wantErr: true},
+	}
+
+	for test, testScenario := range testScenarios {
+		t.Run(test, func(t *testing.T) {
+			_, err := l.UpdateList(context.Background(), &beta.UpdateListRequest{
+				List:       &beta.List{Name: "rooms", Capacity: testScenario.capacity},
+				UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"capacity"}},
+			})
+			if testScenario.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "Capacity must be within range [0,25]")
+			} else {
+				require.NoError(t, err)
+			}
+		})
 	}
 }

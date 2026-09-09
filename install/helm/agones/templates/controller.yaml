@@ -141,6 +141,8 @@ spec:
           value: {{ .Values.agones.image.sdk.securityContext | toJson | quote }}
         - name: SIDECAR_REQUESTS_RATE_LIMIT
           value: {{ .Values.agones.sdkServer.requestsRateLimit | quote }}
+        - name: MAX_LIST_ITEMS
+          value: {{ .Values.gameservers.lists.maxItems | quote }}
         - name: SDK_SERVICE_ACCOUNT
           value: {{ .Values.agones.serviceaccount.sdk.name | quote }}
         - name: PROMETHEUS_EXPORTER

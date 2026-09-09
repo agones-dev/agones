@@ -90,6 +90,7 @@ type Controller struct {
 	sidecarMemoryLimit       resource.Quantity
 	sidecarSecurityContext   *corev1.SecurityContext
 	sidecarRequestsRateLimit time.Duration
+	listMaxCapacity          int64
 	sdkServiceAccount        string
 	crdGetter                apiextclientv1.CustomResourceDefinitionInterface
 	podGetter                typedcorev1.PodsGetter
@@ -124,6 +125,7 @@ func NewController(
 	sidecarMemoryLimit resource.Quantity,
 	sidecarSecurityContext *corev1.SecurityContext,
 	sidecarRequestsRateLimit time.Duration,
+	listMaxCapacity int64,
 	sdkServiceAccount string,
 	kubeClient kubernetes.Interface,
 	kubeInformerFactory informers.SharedInformerFactory,
@@ -149,6 +151,7 @@ func NewController(
 		sidecarMemoryRequest:     sidecarMemoryRequest,
 		sidecarSecurityContext:   sidecarSecurityContext,
 		sidecarRequestsRateLimit: sidecarRequestsRateLimit,
+		listMaxCapacity:          listMaxCapacity,
 		alwaysPullSidecarImage:   alwaysPullSidecarImage,
 		sdkServiceAccount:        sdkServiceAccount,
 		crdGetter:                extClient.ApiextensionsV1().CustomResourceDefinitions(),
@@ -771,6 +774,10 @@ func (c *Controller) sidecar(gs *agonesv1.GameServer) corev1.Container {
 			{
 				Name:  "REQUESTS_RATE_LIMIT",
 				Value: c.sidecarRequestsRateLimit.String(),
+			},
+			{
+				Name:  "MAX_LIST_ITEMS",
+				Value: strconv.FormatInt(c.listMaxCapacity, 10),
 			},
 		},
 		Resources: corev1.ResourceRequirements{},

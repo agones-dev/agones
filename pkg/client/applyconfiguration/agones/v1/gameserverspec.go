@@ -46,7 +46,8 @@ type GameServerSpecApplyConfiguration struct {
 	// (Beta, CountsAndLists feature flag) Counters provides the configuration for tracking of int64 values against a GameServer.
 	// Keys must be declared at GameServer creation time.
 	Counters map[string]CounterStatusApplyConfiguration `json:"counters,omitempty"`
-	// (Beta, CountsAndLists feature flag) Lists provides the configuration for tracking of lists of up to 1000 values against a GameServer.
+	// (Beta, CountsAndLists feature flag) Lists provides the configuration for tracking of lists of values against a GameServer,
+	// up to the maximum configured by the `gameservers.lists.maxItems` Helm value.
 	// Keys must be declared at GameServer creation time.
 	Lists map[string]ListStatusApplyConfiguration `json:"lists,omitempty"`
 	// Eviction specifies the eviction tolerance of the GameServer. Defaults to "Never".

@@ -146,6 +146,8 @@ spec:
           value: {{ .Values.agones.allocator.totalRemoteAllocationTimeout | quote }}
         - name: ALLOCATION_BATCH_WAIT_TIME
           value: {{ .Values.agones.allocator.processor.allocationBatchWaitTime | quote }}
+        - name: MAX_LIST_ITEMS
+          value: {{ .Values.gameservers.lists.maxItems | quote }}
         {{- if .Values.agones.allocator.processor.env }}
          {{- toYaml .Values.agones.allocator.processor.env | nindent 8 }}
         {{- end }}

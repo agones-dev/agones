@@ -95,6 +95,7 @@ const (
 	apiServerBurstQPSFlag            = "api-server-qps-burst"
 	logLevelFlag                     = "log-level"
 	allocationBatchWaitTime          = "allocation-batch-wait-time"
+	maxListItemsFlag                 = "max-list-items"
 	readinessShutdownDuration        = "readiness-shutdown-duration"
 	httpUnallocatedStatusCode        = "http-unallocated-status-code"
 	processorGRPCAddress             = "processor-grpc-address"
@@ -117,6 +118,7 @@ func parseEnvFlags() config {
 	viper.SetDefault(totalRemoteAllocationTimeoutFlag, 30*time.Second)
 	viper.SetDefault(logLevelFlag, "Info")
 	viper.SetDefault(allocationBatchWaitTime, 500*time.Millisecond)
+	viper.SetDefault(maxListItemsFlag, 1000)
 	viper.SetDefault(httpUnallocatedStatusCode, http.StatusTooManyRequests)
 	viper.SetDefault(processorGRPCAddress, "agones-processor.agones-system.svc.cluster.local")
 	viper.SetDefault(processorGRPCPort, 9090)
@@ -136,6 +138,7 @@ func parseEnvFlags() config {
 	pflag.Duration(totalRemoteAllocationTimeoutFlag, viper.GetDuration(totalRemoteAllocationTimeoutFlag), "Flag to set total remote allocation timeout including retries.")
 	pflag.String(logLevelFlag, viper.GetString(logLevelFlag), "Agones Log level")
 	pflag.Duration(allocationBatchWaitTime, viper.GetDuration(allocationBatchWaitTime), "Flag to configure the waiting period between allocations batches")
+	pflag.Int64(maxListItemsFlag, viper.GetInt64(maxListItemsFlag), "Flag to set the maximum Capacity a GameServer List may be set to during allocation. Can also use MAX_LIST_ITEMS env variable")
 	pflag.Duration(readinessShutdownDuration, viper.GetDuration(readinessShutdownDuration), "Time in seconds for SIGTERM/SIGINT handler to sleep for.")
 	pflag.Int32(httpUnallocatedStatusCode, viper.GetInt32(httpUnallocatedStatusCode), "HTTP status code to return when no GameServer is available")
 	pflag.String(processorGRPCAddress, viper.GetString(processorGRPCAddress), "The gRPC address of the Agones Processor service")
@@ -160,6 +163,7 @@ func parseEnvFlags() config {
 	runtime.Must(viper.BindEnv(totalRemoteAllocationTimeoutFlag))
 	runtime.Must(viper.BindEnv(logLevelFlag))
 	runtime.Must(viper.BindEnv(allocationBatchWaitTime))
+	runtime.Must(viper.BindEnv(maxListItemsFlag))
 	runtime.Must(viper.BindEnv(readinessShutdownDuration))
 	runtime.Must(viper.BindEnv(httpUnallocatedStatusCode))
 	runtime.Must(viper.BindPFlags(pflag.CommandLine))
@@ -182,6 +186,7 @@ func parseEnvFlags() config {
 		remoteAllocationTimeout:      viper.GetDuration(remoteAllocationTimeoutFlag),
 		totalRemoteAllocationTimeout: viper.GetDuration(totalRemoteAllocationTimeoutFlag),
 		allocationBatchWaitTime:      viper.GetDuration(allocationBatchWaitTime),
+		maxListItems:                 viper.GetInt64(maxListItemsFlag),
 		ReadinessShutdownDuration:    viper.GetDuration(readinessShutdownDuration),
 		httpUnallocatedStatusCode:    int(viper.GetInt32(httpUnallocatedStatusCode)),
 		processorGRPCAddress:         viper.GetString(processorGRPCAddress),
@@ -205,6 +210,7 @@ type config struct {
 	totalRemoteAllocationTimeout time.Duration
 	remoteAllocationTimeout      time.Duration
 	allocationBatchWaitTime      time.Duration
+	maxListItems                 int64
 	ReadinessShutdownDuration    time.Duration
 	httpUnallocatedStatusCode    int
 	processorGRPCAddress         string
@@ -231,6 +237,10 @@ func main() {
 	logger.WithField("version", pkg.Version).WithField("ctlConf", conf).
 		WithField("featureGates", runtime.EncodeFeatures()).
 		Info("Starting agones-allocator")
+
+	if conf.maxListItems <= 0 {
+		logger.Fatalf("%s must be greater than 0", maxListItemsFlag)
+	}
 
 	logger.WithField("logLevel", conf.LogLevel).Info("Setting LogLevel configuration")
 	level, err := logrus.ParseLevel(strings.ToLower(conf.LogLevel))
@@ -318,7 +328,7 @@ func main() {
 		h = newProcessorServiceHandler(processorClient, conf.MTLSDisabled, conf.TLSDisabled)
 	} else {
 		grpcUnallocatedStatusCode := processor.GRPCCodeFromHTTPStatus(conf.httpUnallocatedStatusCode)
-		h = newServiceHandler(workerCtx, kubeClient, agonesClient, health, conf.MTLSDisabled, conf.TLSDisabled, conf.remoteAllocationTimeout, conf.totalRemoteAllocationTimeout, conf.allocationBatchWaitTime, grpcUnallocatedStatusCode)
+		h = newServiceHandler(workerCtx, kubeClient, agonesClient, health, conf.MTLSDisabled, conf.TLSDisabled, conf.remoteAllocationTimeout, conf.totalRemoteAllocationTimeout, conf.allocationBatchWaitTime, grpcUnallocatedStatusCode, conf.maxListItems)
 	}
 
 	if !h.tlsDisabled {
@@ -515,7 +525,7 @@ func newProcessorServiceHandler(processorClient processor.Client, mTLSDisabled, 
 	return &h
 }
 
-func newServiceHandler(ctx context.Context, kubeClient kubernetes.Interface, agonesClient versioned.Interface, health healthcheck.Handler, mTLSDisabled bool, tlsDisabled bool, remoteAllocationTimeout time.Duration, totalRemoteAllocationTimeout time.Duration, allocationBatchWaitTime time.Duration, grpcUnallocatedStatusCode codes.Code) *serviceHandler {
+func newServiceHandler(ctx context.Context, kubeClient kubernetes.Interface, agonesClient versioned.Interface, health healthcheck.Handler, mTLSDisabled bool, tlsDisabled bool, remoteAllocationTimeout time.Duration, totalRemoteAllocationTimeout time.Duration, allocationBatchWaitTime time.Duration, grpcUnallocatedStatusCode codes.Code, listMaxCapacity int64) *serviceHandler {
 	defaultResync := 30 * time.Second
 	agonesInformerFactory := externalversions.NewSharedInformerFactory(agonesClient, defaultResync)
 	kubeInformerFactory := informers.NewSharedInformerFactory(kubeClient, defaultResync)
@@ -529,7 +539,8 @@ func newServiceHandler(ctx context.Context, kubeClient kubernetes.Interface, ago
 		gameserverallocations.NewAllocationCache(agonesInformerFactory.Agones().V1().GameServers(), gsCounter, health),
 		remoteAllocationTimeout,
 		totalRemoteAllocationTimeout,
-		allocationBatchWaitTime)
+		allocationBatchWaitTime,
+		listMaxCapacity)
 
 	h := serviceHandler{
 		allocationCallback: func(allocationCtx context.Context, gsa *allocationv1.GameServerAllocation) (k8sruntime.Object, error) {

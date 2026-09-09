@@ -51,6 +51,8 @@ const (
 	defaultHTTPPort   = 9358
 	defaultHealthPort = 8080
 
+	defaultMaxListItems = 1000
+
 	// readHeaderTimeout bounds how long a client may take to send its request
 	// headers, so a Slowloris client cannot hold the listener open indefinitely.
 	readHeaderTimeout = 60 * time.Second
@@ -71,7 +73,8 @@ const (
 	httpPortFlag            = "http-port"
 	healthPortFlag          = "health-port"
 	logLevelFlag            = "log-level"
-	requestRateLimitFlag    = "request-rate-limit"
+	requestsRateLimitFlag   = "requests-rate-limit"
+	maxListItemsFlag        = "max-list-items"
 )
 
 var (
@@ -89,6 +92,10 @@ func main() {
 	logger.Logger.SetLevel(logLevel)
 	logger.WithField("version", pkg.Version).WithField("featureGates", runtime.EncodeFeatures()).
 		WithField("ctlConf", ctlConf).Info("Starting sdk sidecar")
+
+	if ctlConf.MaxListItems <= 0 {
+		logger.Fatalf("%s must be greater than 0", maxListItemsFlag)
+	}
 
 	if ctlConf.Delay > 0 {
 		logger.Infof("Waiting %d seconds before starting", ctlConf.Delay)
@@ -156,7 +163,8 @@ func main() {
 
 		var s *sdkserver.SDKServer
 		s, err = sdkserver.NewSDKServer(ctlConf.GameServerName, ctlConf.PodNamespace,
-			kubeClient, agonesClient, logLevel, ctlConf.HealthPort, ctlConf.RequestsRateLimit)
+			kubeClient, agonesClient, logLevel, ctlConf.HealthPort, ctlConf.RequestsRateLimit,
+			ctlConf.MaxListItems)
 		if err != nil {
 			logger.WithError(err).Fatalf("Could not start sidecar")
 		}
@@ -206,7 +214,7 @@ func registerLocal(grpcServer *grpc.Server, ctlConf config) (func(), error) {
 		}
 	}
 
-	s, err := sdkserver.NewLocalSDKServer(filePath, ctlConf.TestSdkName)
+	s, err := sdkserver.NewLocalSDKServer(filePath, ctlConf.TestSdkName, ctlConf.MaxListItems)
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +231,7 @@ func registerLocal(grpcServer *grpc.Server, ctlConf config) (func(), error) {
 // registerLocal registers the local test SDK servers, and returns a cancel func that
 // closes all the SDK implementations
 func registerTestSdkServer(grpcServer *grpc.Server, ctlConf config) (func(), error) {
-	s, err := sdkserver.NewLocalSDKServer("", "")
+	s, err := sdkserver.NewLocalSDKServer("", "", ctlConf.MaxListItems)
 	if err != nil {
 		return nil, err
 	}
@@ -301,7 +309,8 @@ func parseEnvFlags() config {
 	viper.SetDefault(httpPortFlag, defaultHTTPPort)
 	viper.SetDefault(healthPortFlag, defaultHealthPort)
 	viper.SetDefault(logLevelFlag, "Info")
-	viper.SetDefault(requestRateLimitFlag, "500ms")
+	viper.SetDefault(requestsRateLimitFlag, "500ms")
+	viper.SetDefault(maxListItemsFlag, defaultMaxListItems)
 	pflag.String(gameServerNameFlag, viper.GetString(gameServerNameFlag),
 		"Optional flag to set GameServer name. Overrides value given from `GAMESERVER_NAME` environment variable.")
 	pflag.String(podNamespaceFlag, viper.GetString(gameServerNameFlag),
@@ -321,7 +330,8 @@ func parseEnvFlags() config {
 		"Optional. kubeconfig to run the SDK server out of the cluster.")
 	pflag.Bool(gracefulTerminationFlag, viper.GetBool(gracefulTerminationFlag),
 		"When false, immediately quits when receiving interrupt instead of waiting for GameServer state to progress to \"Shutdown\".")
-	pflag.String(requestRateLimitFlag, viper.GetString(requestRateLimitFlag), "Time to delay between requests to the API server. Defaults to 500ms.")
+	pflag.String(requestsRateLimitFlag, viper.GetString(requestsRateLimitFlag), "Time to delay between requests to the API server. Defaults to 500ms.")
+	pflag.Int64(maxListItemsFlag, viper.GetInt64(maxListItemsFlag), fmt.Sprintf("Maximum Capacity a List may be set to. Supplied by the Agones controller in a cluster. Defaults to %d", defaultMaxListItems))
 	runtime.FeaturesBindFlags()
 	pflag.Parse()
 
@@ -341,7 +351,8 @@ func parseEnvFlags() config {
 	runtime.Must(viper.BindEnv(healthPortFlag))
 	runtime.Must(viper.BindPFlags(pflag.CommandLine))
 	runtime.Must(viper.BindEnv(logLevelFlag))
-	runtime.Must(viper.BindEnv(requestRateLimitFlag))
+	runtime.Must(viper.BindEnv(requestsRateLimitFlag))
+	runtime.Must(viper.BindEnv(maxListItemsFlag))
 	runtime.Must(runtime.FeaturesBindEnv())
 	runtime.Must(runtime.ParseFeaturesFromEnv())
 
@@ -361,7 +372,8 @@ func parseEnvFlags() config {
 		HTTPPort:            viper.GetInt(httpPortFlag),
 		HealthPort:          viper.GetInt(healthPortFlag),
 		LogLevel:            viper.GetString(logLevelFlag),
-		RequestsRateLimit:   viper.GetDuration(requestRateLimitFlag),
+		RequestsRateLimit:   viper.GetDuration(requestsRateLimitFlag),
+		MaxListItems:        viper.GetInt64(maxListItemsFlag),
 	}
 }
 
@@ -383,6 +395,7 @@ type config struct {
 	HealthPort          int
 	LogLevel            string
 	RequestsRateLimit   time.Duration
+	MaxListItems        int64
 }
 
 // healthCheckWrapper ensures that an http 400 response is returned

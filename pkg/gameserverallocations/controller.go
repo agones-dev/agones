@@ -75,6 +75,7 @@ func NewExtensions(apiServer *apiserver.APIServer,
 	remoteAllocationTimeout time.Duration,
 	totalAllocationTimeout time.Duration,
 	allocationBatchWaitTime time.Duration,
+	listMaxCapacity int64,
 ) *Extensions {
 	c := &Extensions{
 		api: apiServer,
@@ -88,7 +89,8 @@ func NewExtensions(apiServer *apiserver.APIServer,
 		NewAllocationCache(agonesInformerFactory.Agones().V1().GameServers(), counter, health),
 		remoteAllocationTimeout,
 		totalAllocationTimeout,
-		allocationBatchWaitTime)
+		allocationBatchWaitTime,
+		listMaxCapacity)
 
 	c.baseLogger = runtime.NewLoggerWithType(c)
 	c.errs = errors.FromStruct(c)
