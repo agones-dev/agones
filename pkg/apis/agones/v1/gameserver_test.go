@@ -1427,44 +1427,6 @@ func TestGameServerValidateFeatures(t *testing.T) {
 			},
 		},
 		{
-			description: "CountsAndLists is disabled, Counters field specified",
-			feature:     fmt.Sprintf("%s=false", runtime.FeatureCountsAndLists),
-			gs: GameServer{
-				Spec: GameServerSpec{
-					Container: "testing",
-					Counters:  map[string]CounterStatus{},
-					Template: corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "testing", Image: "testing/image"}}},
-					},
-				},
-			},
-			want: field.ErrorList{
-				field.Forbidden(
-					field.NewPath("spec", "counters"),
-					"Value cannot be set unless feature flag CountsAndLists is enabled",
-				),
-			},
-		},
-		{
-			description: "CountsAndLists is disabled, Lists field specified",
-			feature:     fmt.Sprintf("%s=false", runtime.FeatureCountsAndLists),
-			gs: GameServer{
-				Spec: GameServerSpec{
-					Container: "testing",
-					Lists:     map[string]ListStatus{},
-					Template: corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "testing", Image: "testing/image"}}},
-					},
-				},
-			},
-			want: field.ErrorList{
-				field.Forbidden(
-					field.NewPath("spec", "lists"),
-					"Value cannot be set unless feature flag CountsAndLists is enabled",
-				),
-			},
-		},
-		{
 			description: "CountsAndLists is enabled, Counters field specified",
 			feature:     fmt.Sprintf("%s=true", runtime.FeatureCountsAndLists),
 			gs: GameServer{

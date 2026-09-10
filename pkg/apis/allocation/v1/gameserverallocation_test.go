@@ -16,7 +16,6 @@ package v1
 
 import (
 	"fmt"
-	"sort"
 	"testing"
 
 	"agones.dev/agones/pkg/apis"
@@ -1196,10 +1195,6 @@ func TestValidateListActions(t *testing.T) {
 func TestGameServerAllocationValidate(t *testing.T) {
 	t.Parallel()
 
-	runtime.FeatureTestMutex.Lock()
-	defer runtime.FeatureTestMutex.Unlock()
-	require.NoError(t, runtime.ParseFeatures(fmt.Sprintf("%s=false", runtime.FeatureCountsAndLists)))
-
 	gsa := &GameServerAllocation{}
 	gsa.ApplyDefaults()
 
@@ -1214,7 +1209,7 @@ func TestGameServerAllocationValidate(t *testing.T) {
 	assert.Equal(t, field.ErrorTypeNotSupported, allErrs[0].Type)
 	assert.Equal(t, "spec.scheduling", allErrs[0].Field)
 
-	// invalid player selection
+	// invalid label
 	gsa = &GameServerAllocation{
 		Spec: GameServerAllocationSpec{
 			MetaPatch: MetaPatch{
@@ -1228,21 +1223,10 @@ func TestGameServerAllocationValidate(t *testing.T) {
 	gsa.ApplyDefaults()
 
 	allErrs = gsa.Validate()
-	sort.Slice(allErrs, func(i, j int) bool {
-		return allErrs[i].Field > allErrs[j].Field
-	})
-	assert.Len(t, allErrs, 4)
+	assert.Len(t, allErrs, 1)
 
-	fields := []string{}
-	for _, err := range allErrs {
-		fields = append(fields, err.Field)
-	}
-	assert.ElementsMatch(t, []string{
-		"spec.priorities",
-		"spec.metadata.labels",
-		"spec.lists",
-		"spec.counters",
-	}, fields)
+	assert.Equal(t, field.ErrorTypeInvalid, allErrs[0].Type)
+	assert.Equal(t, "spec.metadata.labels", allErrs[0].Field)
 }
 
 func TestSortKey(t *testing.T) {
