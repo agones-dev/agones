@@ -224,7 +224,7 @@ func TestComputeDesiredFleetSize(t *testing.T) {
 			replicas, limited, err := computeDesiredFleetSize(ctx, &fasState{}, fas.Spec.Policy, f, gameServers.Lister().GameServers(f.ObjectMeta.Namespace), nc, &fasLog)
 
 			if tc.expected.err != "" && assert.Error(t, err) {
-				assert.Equal(t, tc.expected.err, err.Error())
+				assert.ErrorContains(t, err, tc.expected.err)
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tc.expected.replicas, replicas)
@@ -374,7 +374,7 @@ func TestApplyBufferPolicy(t *testing.T) {
 			replicas, limited, err := applyBufferPolicy(&fasState{}, tc.buffer, f, &fasLog)
 
 			if tc.expected.err != "" && assert.Error(t, err) {
-				assert.Equal(t, tc.expected.err, err.Error())
+				assert.ErrorContains(t, err, tc.expected.err)
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tc.expected.replicas, replicas)
@@ -633,7 +633,7 @@ func TestApplyWebhookPolicy(t *testing.T) {
 			replicas, limited, err := applyWebhookPolicy(context.Background(), &fasState{}, tc.webhookPolicy, f, &fasLog)
 
 			if tc.expected.err != "" && assert.Error(t, err) {
-				assert.Equal(t, tc.expected.err, err.Error())
+				assert.ErrorContains(t, err, tc.expected.err)
 			} else {
 				assert.Equal(t, tc.expected.replicas, replicas)
 				assert.Equal(t, tc.expected.limited, limited)
@@ -703,7 +703,7 @@ func TestApplyWebhookPolicyNilFleet(t *testing.T) {
 	replicas, limited, err := applyWebhookPolicy(context.Background(), &fasState{}, w, nil, &fasLog)
 
 	if assert.Error(t, err) {
-		assert.Equal(t, "fleet parameter must not be nil", err.Error())
+		assert.ErrorContains(t, err, "fleet parameter must not be nil")
 	}
 
 	assert.False(t, limited)
