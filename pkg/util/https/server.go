@@ -17,13 +17,14 @@ package https
 import (
 	"context"
 	cryptotls "crypto/tls"
+	stderrors "errors"
 	"net/http"
 	"sync"
 	"time"
 
+	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/fswatch"
 	"agones.dev/agones/pkg/util/runtime"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -53,6 +54,7 @@ type certServer struct {
 type Server struct {
 	certServer certServer
 	logger     *logrus.Entry
+	errs       *errors.Errors
 	Mux        *http.ServeMux
 	tls        tls
 	certFile   string
@@ -71,6 +73,7 @@ func NewServer(certFile, keyFile string, port string) *Server {
 		port:     port,
 	}
 	wh.logger = runtime.NewLoggerWithType(wh)
+	wh.errs = errors.FromStruct(wh)
 	wh.setupServer()
 	wh.Mux.HandleFunc("/", wh.defaultHandler)
 
@@ -143,12 +146,12 @@ func (s *Server) Run(ctx context.Context, _ int) error {
 	s.logger.WithField("server", s).Infof("https server started on port :%s", s.port)
 
 	err := s.tls.ListenAndServeTLS(s.certFile, s.keyFile)
-	if errors.Is(err, http.ErrServerClosed) {
+	if stderrors.Is(err, http.ErrServerClosed) {
 		s.logger.WithError(err).Info("https server closed")
 		return nil
 	}
 
-	return errors.Wrap(err, "Could not listen on :"+s.port)
+	return s.errs.Wrap(err, "Could not listen on :"+s.port)
 }
 
 // defaultHandler Handles all the HTTP requests

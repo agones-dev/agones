@@ -38,7 +38,7 @@ func TestFeatures(t *testing.T) {
 
 	t.Run("invalid Feature gate", func(t *testing.T) {
 		err := ParseFeatures("Foo")
-		assert.EqualError(t, err, "Feature Gate \"Foo\" is not a valid Feature Gate")
+		assert.ErrorContains(t, err, "Feature Gate \"Foo\" is not a valid Feature Gate")
 	})
 
 	t.Run("Empty query string", func(t *testing.T) {

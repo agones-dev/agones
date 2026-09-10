@@ -17,12 +17,12 @@ package webhooks
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -195,7 +195,7 @@ func TestWebHookFleetValidationHandler(t *testing.T) {
 					err := json.Unmarshal(obj.Raw, fleet)
 					assert.Error(t, err)
 					if err != nil {
-						return review, errors.Wrapf(err, "error unmarshalling original Fleet json: %s", obj.Raw)
+						return review, fmt.Errorf("error unmarshalling original Fleet json: %s: %w", obj.Raw, err)
 					}
 					return review, nil
 				})

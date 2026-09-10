@@ -19,10 +19,12 @@ import (
 	"io"
 	"net/http"
 
+	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/runtime"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
+
+var errs = errors.FromPackage()
 
 // ErrorHandlerFunc is a http handler that can return an error
 // for standard logging and a 500 response
@@ -60,7 +62,7 @@ func FourZeroFour(logger *logrus.Entry, w http.ResponseWriter, r *http.Request) 
 	f := ErrorHTTPHandler(logger, func(_ http.ResponseWriter, _ *http.Request) error {
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
-			return errors.Wrap(err, "error in default handler")
+			return errs.Wrap(err, "error in default handler")
 		}
 		defer r.Body.Close() // nolint: errcheck
 

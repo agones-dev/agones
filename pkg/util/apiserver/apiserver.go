@@ -22,11 +22,11 @@ import (
 	"reflect"
 	"strings"
 
+	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/https"
 	"agones.dev/agones/pkg/util/runtime"
 	"github.com/go-openapi/spec"
 	"github.com/munnerz/goautoneg"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
@@ -50,6 +50,8 @@ var (
 		&metav1.Status{},
 		&metav1.APIResourceList{},
 	}
+
+	errs = errors.FromPackage()
 )
 
 const (
@@ -71,6 +73,7 @@ type CRDHandler func(http.ResponseWriter, *http.Request, string) error
 // for Kubernetes APIServer extensions.
 type APIServer struct {
 	logger             *logrus.Entry
+	errs               *errors.Errors
 	mux                *http.ServeMux
 	resourceList       map[string]*metav1.APIResourceList
 	openapiv2          *spec.Swagger
@@ -89,6 +92,7 @@ func NewAPIServer(mux *http.ServeMux) *APIServer {
 		delegates:          map[string]CRDHandler{},
 	}
 	s.logger = runtime.NewLoggerWithType(s)
+	s.errs = errors.FromStruct(s)
 	s.logger.Debug("API Server Started")
 
 	// We don't *have* to have a v3 openapi api, so just do an empty one for now, and we can expand as needed.
@@ -98,7 +102,7 @@ func NewAPIServer(mux *http.ServeMux) *APIServer {
 		w.Header().Set(ContentTypeHeader, k8sruntime.ContentTypeJSON)
 		err := json.NewEncoder(w).Encode(s.openapiv3Discovery)
 		if err != nil {
-			return errors.Wrap(err, "error encoding openapi/v3")
+			return s.errs.Wrap(err, "error encoding openapi/v3")
 		}
 		return nil
 	}))
@@ -111,7 +115,7 @@ func NewAPIServer(mux *http.ServeMux) *APIServer {
 		w.Header().Set(ContentTypeHeader, k8sruntime.ContentTypeJSON)
 		err := json.NewEncoder(w).Encode(s.openapiv2)
 		if err != nil {
-			return errors.Wrap(err, "error encoding openapi/v2")
+			return s.errs.Wrap(err, "error encoding openapi/v2")
 		}
 		return nil
 	}))
@@ -194,7 +198,7 @@ func (as *APIServer) addSerializedHandler(pattern string, m k8sruntime.Object) {
 			w.Header().Set(ContentTypeHeader, info.MediaType)
 			err = Codecs.EncoderForVersion(info.Serializer, unversionedVersion).Encode(shallowCopy, w)
 			if err != nil {
-				return errors.New("error marshalling")
+				return as.errs.New("error marshalling")
 			}
 		} else {
 			https.FourZeroFour(as.logger, w, r)
@@ -231,7 +235,7 @@ func AcceptedSerializer(r *http.Request, codecs serializer.CodecFactory) (k8srun
 	}
 	info, ok := k8sruntime.SerializerInfoForMediaType(mediaTypes, accept)
 	if !ok {
-		return info, errors.Errorf("Could not find serializer for Accept: %s", header)
+		return info, errs.Errorf("Could not find serializer for Accept: %s", header)
 	}
 
 	return info, nil
@@ -241,12 +245,12 @@ func AcceptedSerializer(r *http.Request, codecs serializer.CodecFactory) (k8srun
 func splitNameSpaceResource(path string) (namespace, resource string, err error) {
 	list := strings.Split(strings.Trim(path, "/"), "/")
 	if len(list) < 3 {
-		return namespace, resource, errors.Errorf("could not find namespace and resource in path: %s", path)
+		return namespace, resource, errs.Errorf("could not find namespace and resource in path: %s", path)
 	}
 	last := list[len(list)-3:]
 
 	if last[0] != "namespaces" {
-		return namespace, resource, errors.Errorf("wrong format in path: %s", path)
+		return namespace, resource, errs.Errorf("wrong format in path: %s", path)
 	}
 
 	return last[1], last[2], err
