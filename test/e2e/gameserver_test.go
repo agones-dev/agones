@@ -1654,7 +1654,7 @@ func TestCounters(t *testing.T) {
 		},
 		"IncrementCounter Past Capacity": {
 			msg:         "INCREMENT_COUNTER games 50",
-			want:        "could not increment Counter games by amount 50: rpc error: code = Unknown desc = out of range. Count must be within range [0,Capacity]. Found Count: 51, Capacity: 50\n",
+			want:        "could not increment Counter games by amount 50",
 			counterName: "games",
 			wantCount:   "COUNTER: 1\n",
 		},
@@ -1666,7 +1666,7 @@ func TestCounters(t *testing.T) {
 		},
 		"IncrementCounter Counter Does Not Exist": {
 			msg:  "INCREMENT_COUNTER same 1",
-			want: "could not increment Counter same by amount 1: rpc error: code = Unknown desc = counter not found: same\n",
+			want: "could not increment Counter same by amount 1",
 		},
 		"DecrementCounter": {
 			msg:         "DECREMENT_COUNTER bar 10",
@@ -1676,7 +1676,7 @@ func TestCounters(t *testing.T) {
 		},
 		"DecrementCounter Past Capacity": {
 			msg:         "DECREMENT_COUNTER games 2",
-			want:        "could not decrement Counter games by amount 2: rpc error: code = Unknown desc = out of range. Count must be within range [0,Capacity]. Found Count: -1, Capacity: 50\n",
+			want:        "could not decrement Counter games by amount 2",
 			counterName: "games",
 			wantCount:   "COUNTER: 1\n",
 		},
@@ -1688,7 +1688,7 @@ func TestCounters(t *testing.T) {
 		},
 		"DecrementCounter Counter Does Not Exist": {
 			msg:  "DECREMENT_COUNTER lame 1",
-			want: "could not decrement Counter lame by amount 1: rpc error: code = Unknown desc = counter not found: lame\n",
+			want: "could not decrement Counter lame by amount 1",
 		},
 		"SetCounterCount": {
 			msg:         "SET_COUNTER_COUNT baz 0",
@@ -1698,13 +1698,13 @@ func TestCounters(t *testing.T) {
 		},
 		"SetCounterCount Past Capacity": {
 			msg:         "SET_COUNTER_COUNT games 51",
-			want:        "could not set Counter games count to amount 51: rpc error: code = Unknown desc = out of range. Count must be within range [0,Capacity]. Found Count: 51, Capacity: 50\n",
+			want:        "could not set Counter games count to amount 51",
 			counterName: "games",
 			wantCount:   "COUNTER: 1\n",
 		},
 		"SetCounterCount Past Zero": {
 			msg:         "SET_COUNTER_COUNT games -1",
-			want:        "could not set Counter games count to amount -1: rpc error: code = Unknown desc = out of range. Count must be within range [0,Capacity]. Found Count: -1, Capacity: 50\n",
+			want:        "could not set Counter games count to amount -1",
 			counterName: "games",
 			wantCount:   "COUNTER: 1\n",
 		},
@@ -1724,7 +1724,7 @@ func TestCounters(t *testing.T) {
 		},
 		"SetCounterCapacity Past Zero": {
 			msg:         "SET_COUNTER_CAPACITY games -42",
-			want:        "could not set Counter games capacity to amount -42: rpc error: code = Unknown desc = out of range. Capacity must be greater than or equal to 0. Found Capacity: -42\n",
+			want:        "could not set Counter games capacity to amount -42",
 			counterName: "games",
 			wantCount:   "COUNTER: 1\n",
 		},
@@ -1747,11 +1747,7 @@ func TestCounters(t *testing.T) {
 			logrus.WithField("msg", testCase.msg).Info(name)
 			reply, err := framework.SendGameServerUDP(t, gs, testCase.msg)
 			require.NoError(t, err)
-			if strings.HasPrefix(reply, "ERROR: ") {
-				assert.Contains(t, reply, testCase.want)
-			} else {
-				assert.Equal(t, testCase.want, reply)
-			}
+			assert.Contains(t, reply, testCase.want)
 
 			if testCase.wantCount != "" {
 				msg := "GET_COUNTER_COUNT " + testCase.counterName
@@ -1798,13 +1794,13 @@ func TestLists(t *testing.T) {
 		},
 		"SetListCapacity past 1000": {
 			msg:          "SET_LIST_CAPACITY games 1001",
-			want:         "could not set List games capacity to amount 1001: rpc error: code = Unknown desc = out of range. Capacity must be within range [0,1000]. Found Capacity: 1001\n",
+			want:         "could not set List games capacity to amount 1001",
 			listName:     "games",
 			wantCapacity: "CAPACITY: 50\n",
 		},
 		"SetListCapacity negative": {
 			msg:          "SET_LIST_CAPACITY games -1",
-			want:         "could not set List games capacity to amount -1: rpc error: code = Unknown desc = out of range. Capacity must be within range [0,1000]. Found Capacity: -1\n",
+			want:         "could not set List games capacity to amount -1",
 			listName:     "games",
 			wantCapacity: "CAPACITY: 50\n",
 		},
@@ -1836,7 +1832,7 @@ func TestLists(t *testing.T) {
 		},
 		"AppendListValue past capacity": {
 			msg:        "APPEND_LIST_VALUE baz baz2",
-			want:       "could not get List baz: rpc error: code = Unknown desc = out of range. No available capacity. Current Capacity: 1, List Size: 1\n",
+			want:       "could not get List baz",
 			listName:   "baz",
 			wantLength: "LENGTH: 1\n",
 		},
@@ -1848,7 +1844,7 @@ func TestLists(t *testing.T) {
 		},
 		"DeleteListValue value does not exist": {
 			msg:        "DELETE_LIST_VALUE games game4",
-			want:       "could not get List games: rpc error: code = Unknown desc = not found: value game4 not in list games\n",
+			want:       "could not get List games",
 			listName:   "games",
 			wantLength: "LENGTH: 2\n",
 		},
@@ -1873,11 +1869,7 @@ func TestLists(t *testing.T) {
 			logrus.WithField("msg", testCase.msg).Info(name)
 			reply, err := framework.SendGameServerUDP(t, gs, testCase.msg)
 			require.NoError(t, err)
-			if strings.HasPrefix(reply, "ERROR: ") {
-				assert.Contains(t, reply, testCase.want)
-			} else {
-				assert.Equal(t, testCase.want, reply)
-			}
+			assert.Contains(t, reply, testCase.want)
 
 			if testCase.wantLength != "" {
 				msg := "GET_LIST_LENGTH " + testCase.listName

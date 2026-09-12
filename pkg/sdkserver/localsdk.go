@@ -16,6 +16,7 @@ package sdkserver
 
 import (
 	"context"
+	stderrors "errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -28,7 +29,6 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/mennanov/fmutils"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 	"k8s.io/apimachinery/pkg/util/yaml"
@@ -37,6 +37,7 @@ import (
 	"agones.dev/agones/pkg/sdk"
 	"agones.dev/agones/pkg/sdk/alpha"
 	"agones.dev/agones/pkg/sdk/beta"
+	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/runtime"
 )
 
@@ -97,6 +98,7 @@ type LocalSDKServer struct {
 	gsMutex           sync.RWMutex
 	gs                *sdk.GameServer
 	logger            *logrus.Entry
+	errs              *errors.Errors
 	update            chan struct{}
 	updateObservers   sync.Map
 	testMutex         sync.Mutex
@@ -126,6 +128,7 @@ func NewLocalSDKServer(filePath string, testSdkName string, listMaxCapacity int6
 		listMaxCapacity: listMaxCapacity,
 	}
 	l.logger = runtime.NewLoggerWithType(l)
+	l.errs = errors.FromStruct(l)
 
 	if filePath != "" {
 		err := l.setGameServerFromFilePath(filePath)
@@ -306,12 +309,12 @@ func (l *LocalSDKServer) Shutdown(context.Context, *sdk.Empty) (*sdk.Empty, erro
 func (l *LocalSDKServer) Health(stream sdk.SDK_HealthServer) error {
 	for {
 		_, err := stream.Recv()
-		if errors.Is(err, io.EOF) {
+		if stderrors.Is(err, io.EOF) {
 			l.logger.Info("Health stream closed.")
 			return stream.SendAndClose(&sdk.Empty{})
 		}
 		if err != nil {
-			return errors.Wrap(err, "Error with Health check")
+			return l.errs.Wrap(err, "Error with Health check")
 		}
 		l.recordRequest("health")
 		l.logger.Info("Health Ping Received!")
@@ -436,7 +439,7 @@ func (l *LocalSDKServer) stopReserveTimer() {
 // [FeatureFlag:PlayerTracking]
 func (l *LocalSDKServer) PlayerConnect(_ context.Context, id *alpha.PlayerID) (*alpha.Bool, error) {
 	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return &alpha.Bool{Bool: false}, errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
+		return &alpha.Bool{Bool: false}, l.errs.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
 	}
 	l.logger.WithField("playerID", id.PlayerID).Info("Player Connected")
 	l.gsMutex.Lock()
@@ -452,7 +455,7 @@ func (l *LocalSDKServer) PlayerConnect(_ context.Context, id *alpha.PlayerID) (*
 	}
 
 	if l.gs.Status.Players.Count >= l.gs.Status.Players.Capacity {
-		return &alpha.Bool{Bool: false}, errors.New("Players are already at capacity")
+		return &alpha.Bool{Bool: false}, l.errs.New("Players are already at capacity")
 	}
 
 	l.gs.Status.Players.Ids = append(l.gs.Status.Players.Ids, id.PlayerID)
@@ -468,7 +471,7 @@ func (l *LocalSDKServer) PlayerConnect(_ context.Context, id *alpha.PlayerID) (*
 // [FeatureFlag:PlayerTracking]
 func (l *LocalSDKServer) PlayerDisconnect(_ context.Context, id *alpha.PlayerID) (*alpha.Bool, error) {
 	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return &alpha.Bool{Bool: false}, errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
+		return &alpha.Bool{Bool: false}, l.errs.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
 	}
 	l.logger.WithField("playerID", id.PlayerID).Info("Player Disconnected")
 	l.gsMutex.Lock()
@@ -502,7 +505,7 @@ func (l *LocalSDKServer) PlayerDisconnect(_ context.Context, id *alpha.PlayerID)
 // [FeatureFlag:PlayerTracking]
 func (l *LocalSDKServer) IsPlayerConnected(_ context.Context, id *alpha.PlayerID) (*alpha.Bool, error) {
 	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return &alpha.Bool{Bool: false}, errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
+		return &alpha.Bool{Bool: false}, l.errs.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
 	}
 
 	result := &alpha.Bool{Bool: false}
@@ -528,7 +531,7 @@ func (l *LocalSDKServer) IsPlayerConnected(_ context.Context, id *alpha.PlayerID
 // [FeatureFlag:PlayerTracking]
 func (l *LocalSDKServer) GetConnectedPlayers(_ context.Context, _ *alpha.Empty) (*alpha.PlayerIDList, error) {
 	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
+		return nil, l.errs.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
 	}
 	l.logger.Info("Getting Connected Players")
 
@@ -550,7 +553,7 @@ func (l *LocalSDKServer) GetConnectedPlayers(_ context.Context, _ *alpha.Empty) 
 // [FeatureFlag:PlayerTracking]
 func (l *LocalSDKServer) GetPlayerCount(_ context.Context, _ *alpha.Empty) (*alpha.Count, error) {
 	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
+		return nil, l.errs.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
 	}
 	l.logger.Info("Getting Player Count")
 	l.recordRequest("getplayercount")
@@ -570,7 +573,7 @@ func (l *LocalSDKServer) GetPlayerCount(_ context.Context, _ *alpha.Empty) (*alp
 // [FeatureFlag:PlayerTracking]
 func (l *LocalSDKServer) SetPlayerCapacity(_ context.Context, count *alpha.Count) (*alpha.Empty, error) {
 	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
+		return nil, l.errs.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
 	}
 
 	l.logger.WithField("capacity", count.Count).Info("Setting Player Capacity")
@@ -593,7 +596,7 @@ func (l *LocalSDKServer) SetPlayerCapacity(_ context.Context, count *alpha.Count
 // [FeatureFlag:PlayerTracking]
 func (l *LocalSDKServer) GetPlayerCapacity(_ context.Context, _ *alpha.Empty) (*alpha.Count, error) {
 	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
+		return nil, l.errs.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
 	}
 	l.logger.Info("Getting Player Capacity")
 	l.recordRequest("getplayercapacity")
@@ -616,11 +619,11 @@ func (l *LocalSDKServer) GetPlayerCapacity(_ context.Context, _ *alpha.Empty) (*
 // [FeatureFlag:CountsAndLists]
 func (l *LocalSDKServer) GetCounter(_ context.Context, in *beta.GetCounterRequest) (*beta.Counter, error) {
 	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
+		return nil, l.errs.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
 	}
 
 	if in == nil {
-		return nil, errors.Errorf("invalid argument. GetCounterRequest cannot be nil")
+		return nil, l.errs.Errorf("invalid argument. GetCounterRequest cannot be nil")
 	}
 
 	l.logger.WithField("name", in.Name).Info("Getting Counter")
@@ -631,7 +634,7 @@ func (l *LocalSDKServer) GetCounter(_ context.Context, in *beta.GetCounterReques
 	if counter, ok := l.gs.Status.Counters[in.Name]; ok {
 		return &beta.Counter{Name: in.Name, Count: counter.Count, Capacity: counter.Capacity}, nil
 	}
-	return nil, errors.Errorf("not found. %s Counter not found", in.Name)
+	return nil, l.errs.Errorf("not found. %s Counter not found", in.Name)
 }
 
 // UpdateCounter updates the given Counter. Unlike the SDKServer, this LocalSDKServer UpdateCounter
@@ -642,11 +645,11 @@ func (l *LocalSDKServer) GetCounter(_ context.Context, in *beta.GetCounterReques
 // [FeatureFlag:CountsAndLists]
 func (l *LocalSDKServer) UpdateCounter(_ context.Context, in *beta.UpdateCounterRequest) (*beta.Counter, error) {
 	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
+		return nil, l.errs.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
 	}
 
 	if in.CounterUpdateRequest == nil {
-		return nil, errors.Errorf("invalid argument. CounterUpdateRequest cannot be nil")
+		return nil, l.errs.Errorf("invalid argument. CounterUpdateRequest cannot be nil")
 	}
 
 	name := in.CounterUpdateRequest.Name
@@ -657,7 +660,7 @@ func (l *LocalSDKServer) UpdateCounter(_ context.Context, in *beta.UpdateCounter
 
 	counter, ok := l.gs.Status.Counters[name]
 	if !ok {
-		return nil, errors.Errorf("not found. %s Counter not found", name)
+		return nil, l.errs.Errorf("not found. %s Counter not found", name)
 	}
 
 	tmpCounter := beta.Counter{Name: name, Count: counter.Count, Capacity: counter.Capacity}
@@ -666,7 +669,7 @@ func (l *LocalSDKServer) UpdateCounter(_ context.Context, in *beta.UpdateCounter
 		l.recordRequest("setcapacitycounter")
 		tmpCounter.Capacity = in.CounterUpdateRequest.Capacity.GetValue()
 		if tmpCounter.Capacity < 0 {
-			return nil, errors.Errorf("out of range. Capacity must be greater than or equal to 0. Found Capacity: %d",
+			return nil, l.errs.Errorf("out of range. Capacity must be greater than or equal to 0. Found Capacity: %d",
 				tmpCounter.Capacity)
 		}
 	}
@@ -675,7 +678,7 @@ func (l *LocalSDKServer) UpdateCounter(_ context.Context, in *beta.UpdateCounter
 		l.recordRequest("setcountcounter")
 		tmpCounter.Count = in.CounterUpdateRequest.Count.GetValue()
 		if tmpCounter.Count < 0 || tmpCounter.Count > tmpCounter.Capacity {
-			return nil, errors.Errorf("out of range. Count must be within range [0,Capacity]. Found Count: %d, Capacity: %d",
+			return nil, l.errs.Errorf("out of range. Count must be within range [0,Capacity]. Found Count: %d, Capacity: %d",
 				tmpCounter.Count, tmpCounter.Capacity)
 		}
 	}
@@ -684,7 +687,7 @@ func (l *LocalSDKServer) UpdateCounter(_ context.Context, in *beta.UpdateCounter
 		l.recordRequest("updatecounter")
 		tmpCounter.Count += in.CounterUpdateRequest.CountDiff
 		if tmpCounter.Count < 0 || tmpCounter.Count > tmpCounter.Capacity {
-			return nil, errors.Errorf("out of range. Count must be within range [0,Capacity]. Found Count: %d, Capacity: %d",
+			return nil, l.errs.Errorf("out of range. Count must be within range [0,Capacity]. Found Count: %d, Capacity: %d",
 				tmpCounter.Count, tmpCounter.Capacity)
 		}
 	}
@@ -701,7 +704,7 @@ func (l *LocalSDKServer) UpdateCounter(_ context.Context, in *beta.UpdateCounter
 // [FeatureFlag:CountsAndLists]
 func (l *LocalSDKServer) GetList(_ context.Context, in *beta.GetListRequest) (*beta.List, error) {
 	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
+		return nil, l.errs.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
 	}
 
 	l.logger.WithField("name", in.Name).Info("Getting List")
@@ -712,7 +715,7 @@ func (l *LocalSDKServer) GetList(_ context.Context, in *beta.GetListRequest) (*b
 	if list, ok := l.gs.Status.Lists[in.Name]; ok {
 		return &beta.List{Name: in.Name, Capacity: list.Capacity, Values: list.Values}, nil
 	}
-	return nil, errors.Errorf("not found. %s List not found", in.Name)
+	return nil, l.errs.Errorf("not found. %s List not found", in.Name)
 }
 
 // UpdateList returns the updated List. Returns not found if the List does not exist (name cannot be updated).
@@ -725,11 +728,11 @@ func (l *LocalSDKServer) GetList(_ context.Context, in *beta.GetListRequest) (*b
 // [FeatureFlag:CountsAndLists]
 func (l *LocalSDKServer) UpdateList(_ context.Context, in *beta.UpdateListRequest) (*beta.List, error) {
 	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
+		return nil, l.errs.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
 	}
 
 	if in.List == nil || in.UpdateMask == nil {
-		return nil, errors.Errorf("invalid argument. List: %v and UpdateMask %v cannot be nil", in.List, in.UpdateMask)
+		return nil, l.errs.Errorf("invalid argument. List: %v and UpdateMask %v cannot be nil", in.List, in.UpdateMask)
 	}
 
 	l.logger.WithField("name", in.List.Name).Info("Updating List")
@@ -740,11 +743,11 @@ func (l *LocalSDKServer) UpdateList(_ context.Context, in *beta.UpdateListReques
 	// TODO: https://google.aip.dev/134, "Update masks must support a special value *, meaning full replacement."
 	// Check if the UpdateMask paths are valid, return invalid argument if not.
 	if !in.UpdateMask.IsValid(in.List.ProtoReflect().Interface()) {
-		return nil, errors.Errorf("invalid argument. Field Mask Path(s): %v are invalid for List. Use valid field name(s): %v", in.UpdateMask.GetPaths(), in.List.ProtoReflect().Descriptor().Fields())
+		return nil, l.errs.Errorf("invalid argument. Field Mask Path(s): %v are invalid for List. Use valid field name(s): %v", in.UpdateMask.GetPaths(), in.List.ProtoReflect().Descriptor().Fields())
 	}
 
 	if in.List.Capacity < 0 || in.List.Capacity > l.listMaxCapacity {
-		return nil, errors.Errorf("out of range. Capacity must be within range [0,%d]. Found Capacity: %d", l.listMaxCapacity, in.List.Capacity)
+		return nil, l.errs.Errorf("out of range. Capacity must be within range [0,%d]. Found Capacity: %d", l.listMaxCapacity, in.List.Capacity)
 	}
 
 	name := in.List.Name
@@ -766,7 +769,7 @@ func (l *LocalSDKServer) UpdateList(_ context.Context, in *beta.UpdateListReques
 		l.gs.Status.Lists[name].Values = tmpList.Values
 		return &beta.List{Name: name, Capacity: l.gs.Status.Lists[name].Capacity, Values: l.gs.Status.Lists[name].Values}, nil
 	}
-	return nil, errors.Errorf("not found. %s List not found", name)
+	return nil, l.errs.Errorf("not found. %s List not found", name)
 }
 
 // AddListValue appends a value to the end of a List and returns updated List.
@@ -777,7 +780,7 @@ func (l *LocalSDKServer) UpdateList(_ context.Context, in *beta.UpdateListReques
 // [FeatureFlag:CountsAndLists]
 func (l *LocalSDKServer) AddListValue(_ context.Context, in *beta.AddListValueRequest) (*beta.List, error) {
 	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
+		return nil, l.errs.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
 	}
 
 	l.logger.WithField("name", in.Name).Info("Adding Value to List")
@@ -788,17 +791,17 @@ func (l *LocalSDKServer) AddListValue(_ context.Context, in *beta.AddListValueRe
 	if list, ok := l.gs.Status.Lists[in.Name]; ok {
 		// Verify room to add another value
 		if list.Capacity <= int64(len(list.Values)) {
-			return nil, errors.Errorf("out of range. No available capacity. Current Capacity: %d, List Size: %d", list.Capacity, len(list.Values))
+			return nil, l.errs.Errorf("out of range. No available capacity. Current Capacity: %d, List Size: %d", list.Capacity, len(list.Values))
 		}
 		// Verify value does not already exist in the list
 		if slices.Contains(l.gs.Status.Lists[in.Name].Values, in.Value) {
-			return nil, errors.Errorf("already exists. Value: %s already in List: %s", in.Value, in.Name)
+			return nil, l.errs.Errorf("already exists. Value: %s already in List: %s", in.Value, in.Name)
 		}
 		// Add new value to gameserverstatus.
 		l.gs.Status.Lists[in.Name].Values = append(l.gs.Status.Lists[in.Name].Values, in.Value)
 		return &beta.List{Name: in.Name, Capacity: l.gs.Status.Lists[in.Name].Capacity, Values: l.gs.Status.Lists[in.Name].Values}, nil
 	}
-	return nil, errors.Errorf("not found. %s List not found", in.Name)
+	return nil, l.errs.Errorf("not found. %s List not found", in.Name)
 }
 
 // RemoveListValue removes a value from a List and returns updated List.
@@ -808,7 +811,7 @@ func (l *LocalSDKServer) AddListValue(_ context.Context, in *beta.AddListValueRe
 // [FeatureFlag:CountsAndLists]
 func (l *LocalSDKServer) RemoveListValue(_ context.Context, in *beta.RemoveListValueRequest) (*beta.List, error) {
 	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
+		return nil, l.errs.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
 	}
 
 	l.logger.WithField("name", in.Name).Info("Removing Value from List")
@@ -825,9 +828,9 @@ func (l *LocalSDKServer) RemoveListValue(_ context.Context, in *beta.RemoveListV
 				return &beta.List{Name: in.Name, Capacity: l.gs.Status.Lists[in.Name].Capacity, Values: l.gs.Status.Lists[in.Name].Values}, nil
 			}
 		}
-		return nil, errors.Errorf("not found. Value: %s not found in List: %s", in.Value, in.Name)
+		return nil, l.errs.Errorf("not found. Value: %s not found in List: %s", in.Value, in.Name)
 	}
-	return nil, errors.Errorf("not found. %s List not found", in.Name)
+	return nil, l.errs.Errorf("not found. %s List not found", in.Name)
 }
 
 // Close tears down all the things

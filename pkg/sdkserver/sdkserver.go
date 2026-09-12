@@ -16,6 +16,7 @@ package sdkserver
 
 import (
 	"context"
+	stderrors "errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -29,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 
 	"github.com/mennanov/fmutils"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -55,6 +55,7 @@ import (
 	"agones.dev/agones/pkg/sdk"
 	"agones.dev/agones/pkg/sdk/alpha"
 	"agones.dev/agones/pkg/sdk/beta"
+	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/logfields"
 	"agones.dev/agones/pkg/util/runtime"
 	"agones.dev/agones/pkg/util/workerqueue"
@@ -110,6 +111,7 @@ type listUpdateRequest struct {
 //nolint:govet // ignore fieldalignment, singleton
 type SDKServer struct {
 	logger              *logrus.Entry
+	errs                *errors.Errors
 	gameServerName      string
 	namespace           string
 	informerFactory     externalversions.SharedInformerFactory
@@ -194,6 +196,7 @@ func NewSDKServer(gameServerName, namespace string, kubeClient kubernetes.Interf
 
 	s.informerFactory = factory
 	s.logger = runtime.NewLoggerWithType(s).WithField("gsKey", namespace+"/"+gameServerName)
+	s.errs = errors.FromStruct(s)
 	s.logger.Logger.SetLevel(logLevel)
 
 	_, _ = gameServers.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -247,7 +250,7 @@ func NewSDKServer(gameServerName, namespace string, kubeClient kubernetes.Interf
 func (s *SDKServer) Run(ctx context.Context) error {
 	s.informerFactory.Start(ctx.Done())
 	if !cache.WaitForCacheSync(ctx.Done(), s.gameServerSynced) {
-		return errors.New("failed to wait for caches to sync")
+		return s.errs.New("failed to wait for caches to sync")
 	}
 
 	// need this for streaming gRPC commands
@@ -285,10 +288,10 @@ func (s *SDKServer) Run(ctx context.Context) error {
 	s.logger.Debug("Starting SDKServer http health check...")
 	go func() {
 		if err := s.server.ListenAndServe(); err != nil {
-			if errors.Is(err, http.ErrServerClosed) {
+			if stderrors.Is(err, http.ErrServerClosed) {
 				s.logger.WithError(err).Error("Health check: http server closed")
 			} else {
-				err = errors.Wrap(err, "Could not listen on :8080")
+				err = s.errs.Wrap(err, "Could not listen on :8080")
 				runtime.HandleError(s.logger.WithError(err), err)
 			}
 		}
@@ -354,7 +357,7 @@ func (s *SDKServer) syncGameServer(ctx context.Context, key string) error {
 		return s.updateList(ctx)
 	}
 
-	return errors.Errorf("could not sync game server key: %s", key)
+	return s.errs.Errorf("could not sync game server key: %s", key)
 }
 
 // updateState sets the GameServer Status's state to the one persisted in SDKServer,
@@ -364,7 +367,7 @@ func (s *SDKServer) updateState(ctx context.Context) error {
 	s.logger.WithField("state", s.gsState).Debug("Updating state")
 	if len(s.gsState) == 0 {
 		s.gsUpdateMutex.RUnlock()
-		return errors.Errorf("could not update GameServer %s/%s to empty state", s.namespace, s.gameServerName)
+		return s.errs.Errorf("could not update GameServer %s/%s to empty state", s.namespace, s.gameServerName)
 	}
 	s.gsUpdateMutex.RUnlock()
 
@@ -420,7 +423,7 @@ func (s *SDKServer) updateState(ctx context.Context) error {
 
 	gs, err = s.patchGameServer(ctx, gs, gsCopy)
 	if err != nil {
-		return errors.Wrapf(err, "could not update GameServer %s/%s to state %s", s.namespace, s.gameServerName, gsCopy.Status.State)
+		return s.errs.Wrapf(err, "could not update GameServer %s/%s to state %s", s.namespace, s.gameServerName, gsCopy.Status.State)
 	}
 
 	message := "SDK state change"
@@ -451,7 +454,7 @@ func (s *SDKServer) gameServer() (*agonesv1.GameServer, error) {
 	s.gsWaitForSync.Wait()
 	gs, err := s.gameServerLister.GameServers(s.namespace).Get(s.gameServerName)
 	if err != nil {
-		return gs, errors.Wrapf(err, "could not retrieve GameServer %s/%s", s.namespace, s.gameServerName)
+		return gs, s.errs.Wrapf(err, "could not retrieve GameServer %s/%s", s.namespace, s.gameServerName)
 	}
 	s.gsUpdateMutex.RLock()
 	defer s.gsUpdateMutex.RUnlock()
@@ -474,7 +477,7 @@ func (s *SDKServer) patchGameServer(ctx context.Context, gs, gsCopy *agonesv1.Ga
 	if err != nil && k8serrors.IsInvalid(err) {
 		err = workerqueue.NewTraceError(err)
 	}
-	return gs, errors.Wrapf(err, "error attempting to patch gameserver: %s/%s", gsCopy.ObjectMeta.Namespace, gsCopy.ObjectMeta.Name)
+	return gs, s.errs.Wrapf(err, "error attempting to patch gameserver: %s/%s", gsCopy.ObjectMeta.Namespace, gsCopy.ObjectMeta.Name)
 }
 
 // updateLabels updates the labels on this GameServer to the ones persisted in SDKServer,
@@ -569,12 +572,12 @@ func (s *SDKServer) Shutdown(_ context.Context, e *sdk.Empty) (*sdk.Empty, error
 func (s *SDKServer) Health(stream sdk.SDK_HealthServer) error {
 	for {
 		_, err := stream.Recv()
-		if errors.Is(err, io.EOF) {
+		if stderrors.Is(err, io.EOF) {
 			s.logger.Debug("Health stream closed.")
 			return stream.SendAndClose(&sdk.Empty{})
 		}
 		if err != nil {
-			return errors.Wrap(err, "Error with Health check")
+			return s.errs.Wrap(err, "Error with Health check")
 		}
 		s.logger.Debug("Health Ping Received")
 		s.touchHealthLastUpdated()
@@ -704,7 +707,7 @@ func (s *SDKServer) resetReserveAfter(ctx context.Context, duration time.Duratio
 
 	s.reserveTimer = time.AfterFunc(duration, func() {
 		if _, err := s.Ready(ctx, &sdk.Empty{}); err != nil {
-			s.logger.WithError(errors.WithStack(err)).Error("error returning to Ready after reserved")
+			s.logger.WithError(err).Error("error returning to Ready after reserved")
 		}
 	})
 }
@@ -725,7 +728,7 @@ func (s *SDKServer) stopReserveTimer() {
 // [FeatureFlag:PlayerTracking]
 func (s *SDKServer) PlayerConnect(_ context.Context, id *alpha.PlayerID) (*alpha.Bool, error) {
 	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return &alpha.Bool{Bool: false}, errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
+		return &alpha.Bool{Bool: false}, s.errs.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
 	}
 	s.logger.WithField("playerID", id.PlayerID).Debug("Player Connected")
 
@@ -738,7 +741,7 @@ func (s *SDKServer) PlayerConnect(_ context.Context, id *alpha.PlayerID) (*alpha
 	}
 
 	if int64(len(s.gsConnectedPlayers)) >= s.gsPlayerCapacity {
-		return &alpha.Bool{Bool: false}, errors.New("players are already at capacity")
+		return &alpha.Bool{Bool: false}, s.errs.New("players are already at capacity")
 	}
 
 	// let's retain the original order, as it should be a smaller patch on data change
@@ -753,7 +756,7 @@ func (s *SDKServer) PlayerConnect(_ context.Context, id *alpha.PlayerID) (*alpha
 // [FeatureFlag:PlayerTracking]
 func (s *SDKServer) PlayerDisconnect(_ context.Context, id *alpha.PlayerID) (*alpha.Bool, error) {
 	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return &alpha.Bool{Bool: false}, errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
+		return &alpha.Bool{Bool: false}, s.errs.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
 	}
 	s.logger.WithField("playerID", id.PlayerID).Debug("Player Disconnected")
 
@@ -784,7 +787,7 @@ func (s *SDKServer) PlayerDisconnect(_ context.Context, id *alpha.PlayerID) (*al
 // [FeatureFlag:PlayerTracking]
 func (s *SDKServer) IsPlayerConnected(_ context.Context, id *alpha.PlayerID) (*alpha.Bool, error) {
 	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return &alpha.Bool{Bool: false}, errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
+		return &alpha.Bool{Bool: false}, s.errs.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
 	}
 	s.gsUpdateMutex.RLock()
 	defer s.gsUpdateMutex.RUnlock()
@@ -804,7 +807,7 @@ func (s *SDKServer) IsPlayerConnected(_ context.Context, id *alpha.PlayerID) (*a
 // [FeatureFlag:PlayerTracking]
 func (s *SDKServer) GetConnectedPlayers(_ context.Context, _ *alpha.Empty) (*alpha.PlayerIDList, error) {
 	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
+		return nil, s.errs.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
 	}
 	s.gsUpdateMutex.RLock()
 	defer s.gsUpdateMutex.RUnlock()
@@ -817,7 +820,7 @@ func (s *SDKServer) GetConnectedPlayers(_ context.Context, _ *alpha.Empty) (*alp
 // [FeatureFlag:PlayerTracking]
 func (s *SDKServer) GetPlayerCount(_ context.Context, _ *alpha.Empty) (*alpha.Count, error) {
 	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
+		return nil, s.errs.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
 	}
 	s.gsUpdateMutex.RLock()
 	defer s.gsUpdateMutex.RUnlock()
@@ -829,7 +832,7 @@ func (s *SDKServer) GetPlayerCount(_ context.Context, _ *alpha.Empty) (*alpha.Co
 // [FeatureFlag:PlayerTracking]
 func (s *SDKServer) SetPlayerCapacity(_ context.Context, count *alpha.Count) (*alpha.Empty, error) {
 	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
+		return nil, s.errs.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
 	}
 	s.gsUpdateMutex.Lock()
 	s.gsPlayerCapacity = count.Count
@@ -844,7 +847,7 @@ func (s *SDKServer) SetPlayerCapacity(_ context.Context, count *alpha.Count) (*a
 // [FeatureFlag:PlayerTracking]
 func (s *SDKServer) GetPlayerCapacity(_ context.Context, _ *alpha.Empty) (*alpha.Count, error) {
 	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
+		return nil, s.errs.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
 	}
 	s.gsUpdateMutex.RLock()
 	defer s.gsUpdateMutex.RUnlock()
@@ -856,7 +859,7 @@ func (s *SDKServer) GetPlayerCapacity(_ context.Context, _ *alpha.Empty) (*alpha
 // [FeatureFlag:CountsAndLists]
 func (s *SDKServer) GetCounter(_ context.Context, in *beta.GetCounterRequest) (*beta.Counter, error) {
 	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
+		return nil, s.errs.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
 	}
 
 	s.logger.WithField("name", in.Name).Debug("Getting Counter")
@@ -871,7 +874,7 @@ func (s *SDKServer) GetCounter(_ context.Context, in *beta.GetCounterRequest) (*
 
 	counter, ok := gs.Status.Counters[in.Name]
 	if !ok {
-		return nil, errors.Errorf("counter not found: %s", in.Name)
+		return nil, s.errs.Errorf("counter not found: %s", in.Name)
 	}
 	s.logger.WithField("Get Counter", counter).Debugf("Got Counter %s", in.Name)
 	protoCounter := &beta.Counter{Name: in.Name, Count: counter.Count, Capacity: counter.Capacity}
@@ -907,14 +910,14 @@ func (s *SDKServer) GetCounter(_ context.Context, in *beta.GetCounterRequest) (*
 // [FeatureFlag:CountsAndLists]
 func (s *SDKServer) UpdateCounter(_ context.Context, in *beta.UpdateCounterRequest) (*beta.Counter, error) {
 	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
+		return nil, s.errs.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
 	}
 
 	if in.CounterUpdateRequest == nil {
-		return nil, errors.Errorf("invalid argument. CounterUpdateRequest: %v cannot be nil", in.CounterUpdateRequest)
+		return nil, s.errs.Errorf("invalid argument. CounterUpdateRequest: %v cannot be nil", in.CounterUpdateRequest)
 	}
 	if in.CounterUpdateRequest.CountDiff == 0 && in.CounterUpdateRequest.Count == nil && in.CounterUpdateRequest.Capacity == nil {
-		return nil, errors.Errorf("invalid argument. Malformed CounterUpdateRequest: %v", in.CounterUpdateRequest)
+		return nil, s.errs.Errorf("invalid argument. Malformed CounterUpdateRequest: %v", in.CounterUpdateRequest)
 	}
 
 	s.logger.WithField("name", in.CounterUpdateRequest.Name).Debug("Update Counter Request")
@@ -935,7 +938,7 @@ func (s *SDKServer) UpdateCounter(_ context.Context, in *beta.UpdateCounterReque
 	counter, ok := gs.Status.Counters[name]
 	// We didn't find the Counter named key in the gameserver.
 	if !ok {
-		return nil, errors.Errorf("counter not found: %s", name)
+		return nil, s.errs.Errorf("counter not found: %s", name)
 	}
 
 	batchCounter.counter = *counter.DeepCopy()
@@ -943,7 +946,7 @@ func (s *SDKServer) UpdateCounter(_ context.Context, in *beta.UpdateCounterReque
 	// Updated based on if client call is CapacitySet
 	if in.CounterUpdateRequest.Capacity != nil {
 		if in.CounterUpdateRequest.Capacity.GetValue() < 0 {
-			return nil, errors.Errorf("out of range. Capacity must be greater than or equal to 0. Found Capacity: %d", in.CounterUpdateRequest.Capacity.GetValue())
+			return nil, s.errs.Errorf("out of range. Capacity must be greater than or equal to 0. Found Capacity: %d", in.CounterUpdateRequest.Capacity.GetValue())
 		}
 		capacitySet := in.CounterUpdateRequest.Capacity.GetValue()
 		batchCounter.capacitySet = &capacitySet
@@ -958,7 +961,7 @@ func (s *SDKServer) UpdateCounter(_ context.Context, in *beta.UpdateCounterReque
 			capacity = *batchCounter.capacitySet
 		}
 		if countSet < 0 || countSet > capacity {
-			return nil, errors.Errorf("out of range. Count must be within range [0,Capacity]. Found Count: %d, Capacity: %d", countSet, capacity)
+			return nil, s.errs.Errorf("out of range. Count must be within range [0,Capacity]. Found Count: %d, Capacity: %d", countSet, capacity)
 		}
 		batchCounter.countSet = &countSet
 		// Clear any previous CountIncrement or CountDecrement requests, and add the CountSet as the first item.
@@ -978,7 +981,7 @@ func (s *SDKServer) UpdateCounter(_ context.Context, in *beta.UpdateCounterReque
 			capacity = *batchCounter.capacitySet
 		}
 		if count < 0 || count > capacity {
-			return nil, errors.Errorf("out of range. Count must be within range [0,Capacity]. Found Count: %d, Capacity: %d", count, capacity)
+			return nil, s.errs.Errorf("out of range. Count must be within range [0,Capacity]. Found Count: %d, Capacity: %d", count, capacity)
 		}
 		batchCounter.diff += in.CounterUpdateRequest.CountDiff
 	}
@@ -1081,10 +1084,10 @@ func (s *SDKServer) updateCounter(ctx context.Context) error {
 // [FeatureFlag:CountsAndLists]
 func (s *SDKServer) GetList(_ context.Context, in *beta.GetListRequest) (*beta.List, error) {
 	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
+		return nil, s.errs.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
 	}
 	if in == nil {
-		return nil, errors.Errorf("GetListRequest cannot be nil")
+		return nil, s.errs.Errorf("GetListRequest cannot be nil")
 	}
 	s.logger.WithField("name", in.Name).Debug("Getting List")
 
@@ -1098,7 +1101,7 @@ func (s *SDKServer) GetList(_ context.Context, in *beta.GetListRequest) (*beta.L
 
 	list, ok := gs.Status.Lists[in.Name]
 	if !ok {
-		return nil, errors.Errorf("list not found: %s", in.Name)
+		return nil, s.errs.Errorf("list not found: %s", in.Name)
 	}
 
 	s.logger.WithField("Get List", list).Debugf("Got List %s", in.Name)
@@ -1133,26 +1136,26 @@ func (s *SDKServer) GetList(_ context.Context, in *beta.GetListRequest) (*beta.L
 // [FeatureFlag:CountsAndLists]
 func (s *SDKServer) UpdateList(ctx context.Context, in *beta.UpdateListRequest) (*beta.List, error) {
 	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
+		return nil, s.errs.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
 	}
 	if in == nil {
-		return nil, errors.Errorf("UpdateListRequest cannot be nil")
+		return nil, s.errs.Errorf("UpdateListRequest cannot be nil")
 	}
 	if in.List == nil || in.UpdateMask == nil {
-		return nil, errors.Errorf("invalid argument. List: %v and UpdateMask %v cannot be nil", in.List, in.UpdateMask)
+		return nil, s.errs.Errorf("invalid argument. List: %v and UpdateMask %v cannot be nil", in.List, in.UpdateMask)
 	}
 	if !in.UpdateMask.IsValid(in.List.ProtoReflect().Interface()) {
-		return nil, errors.Errorf("invalid argument. Field Mask Path(s): %v are invalid for List. Use valid field name(s): %v", in.UpdateMask.GetPaths(), in.List.ProtoReflect().Descriptor().Fields())
+		return nil, s.errs.Errorf("invalid argument. Field Mask Path(s): %v are invalid for List. Use valid field name(s): %v", in.UpdateMask.GetPaths(), in.List.ProtoReflect().Descriptor().Fields())
 	}
 
 	if in.List.Capacity < 0 || in.List.Capacity > s.listMaxCapacity {
-		return nil, errors.Errorf("out of range. Capacity must be within range [0,%d]. Found Capacity: %d", s.listMaxCapacity, in.List.Capacity)
+		return nil, s.errs.Errorf("out of range. Capacity must be within range [0,%d]. Found Capacity: %d", s.listMaxCapacity, in.List.Capacity)
 	}
 
 	list, err := s.GetList(ctx, &beta.GetListRequest{Name: in.List.Name})
 	if err != nil {
 
-		return nil, errors.Errorf("not found. %s List not found", in.List.Name)
+		return nil, s.errs.Errorf("not found. %s List not found", in.List.Name)
 	}
 
 	s.gsUpdateMutex.Lock()
@@ -1221,10 +1224,10 @@ func (s *SDKServer) UpdateList(ctx context.Context, in *beta.UpdateListRequest) 
 // [FeatureFlag:CountsAndLists]
 func (s *SDKServer) AddListValue(ctx context.Context, in *beta.AddListValueRequest) (*beta.List, error) {
 	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
+		return nil, s.errs.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
 	}
 	if in == nil {
-		return nil, errors.Errorf("AddListValueRequest cannot be nil")
+		return nil, s.errs.Errorf("AddListValueRequest cannot be nil")
 	}
 	s.logger.WithField("name", in.Name).Debug("Add List Value")
 
@@ -1238,11 +1241,11 @@ func (s *SDKServer) AddListValue(ctx context.Context, in *beta.AddListValueReque
 
 	// Verify room to add another value
 	if int(list.Capacity) <= len(list.Values) {
-		return nil, errors.Errorf("out of range. No available capacity. Current Capacity: %d, List Size: %d", list.Capacity, len(list.Values))
+		return nil, s.errs.Errorf("out of range. No available capacity. Current Capacity: %d, List Size: %d", list.Capacity, len(list.Values))
 	}
 	// Verify value does not already exist in the list
 	if slices.Contains(list.Values, in.Value) {
-		return nil, errors.Errorf("already exists. Value: %s already in List: %s", in.Value, in.Name)
+		return nil, s.errs.Errorf("already exists. Value: %s already in List: %s", in.Value, in.Name)
 	}
 	list.Values = append(list.Values, in.Value)
 	batchList := s.gsListUpdates[in.Name]
@@ -1260,10 +1263,10 @@ func (s *SDKServer) AddListValue(ctx context.Context, in *beta.AddListValueReque
 // [FeatureFlag:CountsAndLists]
 func (s *SDKServer) RemoveListValue(ctx context.Context, in *beta.RemoveListValueRequest) (*beta.List, error) {
 	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return nil, errors.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
+		return nil, s.errs.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
 	}
 	if in == nil {
-		return nil, errors.Errorf("RemoveListValueRequest cannot be nil")
+		return nil, s.errs.Errorf("RemoveListValueRequest cannot be nil")
 	}
 	s.logger.WithField("name", in.Name).WithField("value", in.Value).Debug("Remove List Value")
 
@@ -1408,7 +1411,7 @@ func (s *SDKServer) sendGameServerUpdate(gs *agonesv1.GameServer) {
 			err := stream.Context().Err()
 			switch {
 			case err != nil:
-				s.logger.WithError(errors.WithStack(err)).Error("stream closed with error")
+				s.logger.WithError(err).Error("stream closed with error")
 			default:
 				s.logger.Debug("Stream closed")
 			}
@@ -1417,7 +1420,7 @@ func (s *SDKServer) sendGameServerUpdate(gs *agonesv1.GameServer) {
 			remainingStreams = append(remainingStreams, stream)
 
 			if err := stream.Send(convert(gs)); err != nil {
-				s.logger.WithError(errors.WithStack(err)).
+				s.logger.WithError(err).
 					Error("error sending game server update event")
 			}
 		}
@@ -1494,7 +1497,7 @@ func (s *SDKServer) healthy() bool {
 // updatePlayerCapacity updates the Player Capacity field in the GameServer's Status.
 func (s *SDKServer) updatePlayerCapacity(ctx context.Context) error {
 	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
+		return s.errs.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
 	}
 	s.logger.WithField("capacity", s.gsPlayerCapacity).Debug("updating player capacity")
 	gs, err := s.gameServer()
@@ -1519,7 +1522,7 @@ func (s *SDKServer) updatePlayerCapacity(ctx context.Context) error {
 // updateConnectedPlayers updates the Player IDs and Count fields in the GameServer's Status.
 func (s *SDKServer) updateConnectedPlayers(ctx context.Context) error {
 	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		return errors.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
+		return s.errs.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
 	}
 	gs, err := s.gameServer()
 	if err != nil {
