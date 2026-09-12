@@ -93,13 +93,13 @@ func NewMigrationController(health healthcheck.Handler,
 	mc.recorder = eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "migration-controller"})
 
 	_, _ = podInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
+		AddFunc: func(obj any) {
 			pod := obj.(*corev1.Pod)
 			if _, _, ok, err := mc.isMigratingGameServerPod(pod); err != nil || ok {
 				mc.workerqueue.Enqueue(pod)
 			}
 		},
-		UpdateFunc: func(_, newObj interface{}) {
+		UpdateFunc: func(_, newObj any) {
 			pod := newObj.(*corev1.Pod)
 			if _, _, ok, err := mc.isMigratingGameServerPod(pod); err != nil || ok {
 				mc.workerqueue.Enqueue(pod)

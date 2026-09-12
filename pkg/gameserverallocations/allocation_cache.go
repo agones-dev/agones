@@ -63,7 +63,7 @@ func NewAllocationCache(informer informerv1.GameServerInformer, counter *gameser
 	}
 
 	_, _ = informer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		UpdateFunc: func(oldObj, newObj interface{}) {
+		UpdateFunc: func(oldObj, newObj any) {
 			// only interested in if the old / new state was/is Ready
 			oldGs := oldObj.(*agonesv1.GameServer)
 			newGs := newObj.(*agonesv1.GameServer)
@@ -83,7 +83,7 @@ func NewAllocationCache(informer informerv1.GameServerInformer, counter *gameser
 				c.cache.Delete(key)
 			}
 		},
-		DeleteFunc: func(obj interface{}) {
+		DeleteFunc: func(obj any) {
 			gs, ok := obj.(*agonesv1.GameServer)
 			if !ok {
 				return

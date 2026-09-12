@@ -17,6 +17,7 @@ package v1
 import (
 	"errors"
 	"fmt"
+	"slices"
 
 	"agones.dev/agones/pkg/apis"
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
@@ -353,13 +354,7 @@ func (s *GameServerSelector) matchLists(gs *agonesv1.GameServer) bool {
 		}
 		// Check if List contains ContainsValue (if a value has been specified)
 		if listSelector.ContainsValue != "" {
-			valueExists := false
-			for _, value := range listStatus.Values {
-				if value == listSelector.ContainsValue {
-					valueExists = true
-					break
-				}
-			}
+			valueExists := slices.Contains(listStatus.Values, listSelector.ContainsValue)
 			if !valueExists {
 				return false
 			}

@@ -190,7 +190,7 @@ func NewController(
 
 	_, _ = gsInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: c.enqueueGameServerBasedOnState,
-		UpdateFunc: func(oldObj, newObj interface{}) {
+		UpdateFunc: func(oldObj, newObj any) {
 			// no point in processing unless there is a State change
 			oldGs := oldObj.(*agonesv1.GameServer)
 			newGs := newObj.(*agonesv1.GameServer)
@@ -202,7 +202,7 @@ func NewController(
 
 	// track pod deletions, for when GameServers are deleted
 	_, _ = pods.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		UpdateFunc: func(oldObj, newObj interface{}) {
+		UpdateFunc: func(oldObj, newObj any) {
 			oldPod := oldObj.(*corev1.Pod)
 			enqueue := false
 			if isGameServerPod(oldPod) {
@@ -221,7 +221,7 @@ func NewController(
 				}
 			}
 		},
-		DeleteFunc: func(obj interface{}) {
+		DeleteFunc: func(obj any) {
 			// Could be a DeletedFinalStateUnknown, in which case, just ignore it
 			pod, ok := obj.(*corev1.Pod)
 			if ok && isGameServerPod(pod) {
@@ -249,7 +249,7 @@ func NewExtensions(apiHooks agonesv1.APIHooks, wh *webhooks.WebHook) *Extensions
 	return ext
 }
 
-func (c *Controller) enqueueGameServerBasedOnState(item interface{}) {
+func (c *Controller) enqueueGameServerBasedOnState(item any) {
 	gs := item.(*agonesv1.GameServer)
 
 	switch gs.Status.State {
@@ -464,11 +464,9 @@ func (c *Controller) Run(ctx context.Context, workers int) error {
 	var wg sync.WaitGroup
 
 	startWorkQueue := func(wq *workerqueue.WorkerQueue) {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			wq.Run(ctx, workers)
-		}()
+		})
 	}
 
 	startWorkQueue(c.workerqueue)

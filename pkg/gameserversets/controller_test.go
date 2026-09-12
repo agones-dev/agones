@@ -1333,7 +1333,7 @@ func defaultFixture() *agonesv1.GameServerSet {
 // createGameServers create an array of GameServers from the GameServerSet
 func createGameServers(gsSet *agonesv1.GameServerSet, size int) []agonesv1.GameServer {
 	var list []agonesv1.GameServer
-	for i := 0; i < size; i++ {
+	for i := range size {
 		gs := gsSet.GameServer()
 		gs.Name = gs.GenerateName + strconv.Itoa(i)
 		gs.Status = agonesv1.GameServerStatus{State: agonesv1.GameServerStateReady}

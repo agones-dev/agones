@@ -310,7 +310,7 @@ func (pa *portRangeAllocator) DeAllocate(gs *agonesv1.GameServer) {
 
 // syncDeleteGameServer when a GameServer Pod is deleted
 // make the HostPort available
-func (pa *portRangeAllocator) syncDeleteGameServer(object interface{}) {
+func (pa *portRangeAllocator) syncDeleteGameServer(object any) {
 	if gs, ok := object.(*agonesv1.GameServer); ok {
 		pa.logger.WithField("gs", gs).Debug("Syncing deleted GameServer")
 		pa.DeAllocate(gs)

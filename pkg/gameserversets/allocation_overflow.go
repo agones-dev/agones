@@ -77,7 +77,7 @@ func NewAllocatorOverflowController(
 	health.AddLivenessCheck("gameserverset-allocationoverflow-workerqueue", c.workerqueue.Healthy)
 
 	_, _ = gsSetInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		UpdateFunc: func(_, newObj interface{}) {
+		UpdateFunc: func(_, newObj any) {
 			newGss := newObj.(*agonesv1.GameServerSet)
 
 			// Only process if there is an AllocationOverflow, and it has labels or annotations.

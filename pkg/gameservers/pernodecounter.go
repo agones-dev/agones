@@ -83,7 +83,7 @@ func NewPerNodeCounter(
 	pnc.errs = errors.FromStruct(pnc)
 
 	_, _ = gsInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
+		AddFunc: func(obj any) {
 			gs := obj.(*agonesv1.GameServer)
 
 			pnc.countMutex.Lock()
@@ -117,7 +117,7 @@ func NewPerNodeCounter(
 				pnc.inc(gs, 0, 1)
 			}
 		},
-		UpdateFunc: func(oldObj, newObj interface{}) {
+		UpdateFunc: func(oldObj, newObj any) {
 			oldGS := oldObj.(*agonesv1.GameServer)
 			newGS := newObj.(*agonesv1.GameServer)
 
@@ -143,7 +143,7 @@ func NewPerNodeCounter(
 			updateProcessed(pnc.processed, newGS)
 			pnc.inc(newGS, ready, allocated)
 		},
-		DeleteFunc: func(obj interface{}) {
+		DeleteFunc: func(obj any) {
 			gs, ok := obj.(*agonesv1.GameServer)
 			if !ok {
 				return
@@ -181,7 +181,7 @@ func NewPerNodeCounter(
 
 	// remove the record when the node is deleted
 	_, _ = kubeInformerFactory.Core().V1().Nodes().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		DeleteFunc: func(obj interface{}) {
+		DeleteFunc: func(obj any) {
 			node, ok := obj.(*corev1.Node)
 			if !ok {
 				return

@@ -53,7 +53,7 @@ func findGameServerForAllocation(gsa *allocationv1.GameServerAllocation, list []
 		if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) || len(gsa.Spec.Priorities) == 0 {
 			l := len(list)
 			indices := make([]int, l)
-			for i := 0; i < l; i++ {
+			for i := range l {
 				indices[i] = i
 			}
 			rand.Shuffle(l, func(i, j int) {

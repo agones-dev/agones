@@ -297,7 +297,7 @@ func TestAutoscalerStressCreate(t *testing.T) {
 
 	fleetautoscalers := framework.AgonesClient.AutoscalingV1().FleetAutoscalers(framework.Namespace)
 
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		fas := defaultFleetAutoscaler(flt, framework.Namespace)
 		bufferSize := r.Int31n(5)
 		minReplicas := r.Int31n(5)
@@ -323,13 +323,7 @@ func TestAutoscalerStressCreate(t *testing.T) {
 				require.True(t, valid,
 					"FleetAutoscaler created even if the parameters are NOT valid: %d %d %d", bufferSize, fas.Spec.Policy.Buffer.MinReplicas, fas.Spec.Policy.Buffer.MaxReplicas)
 
-				expectedReplicas := bufferSize
-				if expectedReplicas < fas.Spec.Policy.Buffer.MinReplicas {
-					expectedReplicas = fas.Spec.Policy.Buffer.MinReplicas
-				}
-				if expectedReplicas > fas.Spec.Policy.Buffer.MaxReplicas {
-					expectedReplicas = fas.Spec.Policy.Buffer.MaxReplicas
-				}
+				expectedReplicas := min(max(bufferSize, fas.Spec.Policy.Buffer.MinReplicas), fas.Spec.Policy.Buffer.MaxReplicas)
 				// the fleet autoscaler should scale the fleet now to expectedReplicas
 				framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(expectedReplicas))
 			} else {

@@ -34,7 +34,7 @@ func TestHandleError(t *testing.T) {
 	var result error
 	//nolint:reassign // deliberate test seam, restored by the defer above.
 	runtime.ErrorHandlers = []runtime.ErrorHandler{
-		func(_ context.Context, err error, _ string, _ ...interface{}) {
+		func(_ context.Context, err error, _ string, _ ...any) {
 			result = err
 		},
 	}

@@ -16,7 +16,7 @@ package v1
 
 import (
 	"math/rand"
-	"sort"
+	"slices"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -126,7 +126,7 @@ func NewConnectionInfoIterator(policies []*GameServerAllocationPolicy) *Connecti
 	for k := range priorityToCluster {
 		priorities = append(priorities, k)
 	}
-	sort.Slice(priorities, func(i, j int) bool { return priorities[i] < priorities[j] })
+	slices.Sort(priorities)
 
 	// 4. Store initial values for the iterator
 	return &ConnectionInfoIterator{priorityToCluster: priorityToCluster, currPriority: 0, orderedPriorities: priorities, clusterBlackList: make(map[string]bool)}

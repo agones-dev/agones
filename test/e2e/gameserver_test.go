@@ -463,13 +463,13 @@ func TestGameServerUnhealthyAfterReadyCrash(t *testing.T) {
 
 	// keep crashing, until we move to Unhealthy. Solves potential issues with controller Informer cache
 	// race conditions in which it has yet to see a GameServer is Ready before the crash.
-	var stop int32
+	var stop atomic.Int32
 	defer func() {
-		atomic.StoreInt32(&stop, 1)
+		stop.Store(1)
 	}()
 	go func() {
 		for {
-			if atomic.LoadInt32(&stop) > 0 {
+			if stop.Load() > 0 {
 				log.Info("UDP Crash stop signal received. Stopping.")
 				return
 			}
@@ -593,8 +593,7 @@ func TestGameServerPodCompletedAfterCleanExit(t *testing.T) {
 	}
 
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	log := e2eframework.TestLogger(t)
 
 	gs := framework.DefaultGameServer(framework.Namespace)

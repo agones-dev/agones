@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"strconv"
 	"testing"
@@ -528,7 +529,7 @@ func TestControllerCreationMutationHandler(t *testing.T) {
 
 	var testCases = []struct {
 		description string
-		fixture     interface{}
+		fixture     any
 		expected    expected
 	}{
 		{
@@ -538,7 +539,7 @@ func TestControllerCreationMutationHandler(t *testing.T) {
 			expected: expected{
 				responseAllowed: true,
 				patches: []jsonpatch.JsonPatchOperation{
-					{Operation: "add", Path: "/metadata/finalizers", Value: []interface{}{"agones.dev/controller"}},
+					{Operation: "add", Path: "/metadata/finalizers", Value: []any{"agones.dev/controller"}},
 					{Operation: "add", Path: "/spec/ports/0/protocol", Value: "UDP"}},
 			},
 		},
@@ -1974,9 +1975,7 @@ func TestControllerSyncGameServerRequestReadyState(t *testing.T) {
 			}
 			gsFixture.ApplyDefaults()
 			gsFixture.Status.NodeName = fixture.gsNodeName
-			for k, v := range fixture.gsAnnotations {
-				gsFixture.Annotations[k] = v
-			}
+			maps.Copy(gsFixture.Annotations, fixture.gsAnnotations)
 
 			pod, err := gsFixture.Pod(agtesting.FakeAPIHooks{})
 			require.NoError(t, err)
