@@ -26,10 +26,12 @@ import (
 	"time"
 
 	pb "agones.dev/agones/pkg/allocation/go"
-	"github.com/pkg/errors"
+	"agones.dev/agones/pkg/util/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
+
+var errs = errors.FromPackage()
 
 func main() {
 	keyFile := flag.String("key", "missing key", "the private key file for the client certificate in PEM format")
@@ -126,7 +128,7 @@ func createRemoteClusterDialOption(clientCert, clientKey, caCert []byte) (grpc.D
 		// This is required for self-signed certs.
 		tlsConfig.RootCAs = x509.NewCertPool()
 		if !tlsConfig.RootCAs.AppendCertsFromPEM(caCert) {
-			return nil, errors.New("only PEM format is accepted for server CA")
+			return nil, errs.New("only PEM format is accepted for server CA")
 		}
 	}
 

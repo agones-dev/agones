@@ -32,8 +32,8 @@ import (
 	pb "agones.dev/agones/pkg/allocation/go"
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
 	multiclusterv1 "agones.dev/agones/pkg/apis/multicluster/v1"
+	"agones.dev/agones/pkg/util/errors"
 	e2e "agones.dev/agones/test/e2e/framework"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -45,6 +45,8 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
+
+var errs = errors.FromPackage()
 
 const (
 	agonesSystemNamespace          = "agones-system"
@@ -148,14 +150,14 @@ func GetTLSConfig(ctx context.Context, namespace, clientSecretName string, tlsCA
 	kubeCore := framework.KubeClient.CoreV1()
 	clientSecret, err := kubeCore.Secrets(namespace).Get(ctx, clientSecretName, metav1.GetOptions{})
 	if err != nil {
-		return nil, errors.Errorf("getting client secret %s/%s failed: %s", namespace, clientSecretName, err)
+		return nil, errs.Errorf("getting client secret %s/%s failed: %s", namespace, clientSecretName, err)
 	}
 
 	// Create http client using cert
 	clientCert := clientSecret.Data[tlsCrtTag]
 	clientKey := clientSecret.Data[tlsKeyTag]
 	if clientCert == nil || clientKey == nil {
-		return nil, errors.New("missing certificate")
+		return nil, errs.New("missing certificate")
 	}
 
 	// Load client cert
@@ -166,7 +168,7 @@ func GetTLSConfig(ctx context.Context, namespace, clientSecretName string, tlsCA
 
 	rootCA := x509.NewCertPool()
 	if !rootCA.AppendCertsFromPEM(tlsCA) {
-		return nil, errors.New("could not append PEM format CA cert")
+		return nil, errs.New("could not append PEM format CA cert")
 	}
 
 	return &tls.Config{
@@ -366,14 +368,13 @@ func CleanupNamespaces(ctx context.Context, framework *e2e.Framework) error {
 	// loop through them, and delete them
 	for _, ns := range list.Items {
 		if err := framework.DeleteNamespace(ns.ObjectMeta.Name); err != nil {
-			cause := errors.Cause(err)
-			if k8serrors.IsConflict(cause) {
-				logrus.WithError(cause).Warn("namespace already being deleted")
+			if k8serrors.IsConflict(err) {
+				logrus.WithError(err).Warn("namespace already being deleted")
 				continue
 			}
 			// here just in case we need to catch other errors
-			logrus.WithField("reason", k8serrors.ReasonForError(cause)).Info("cause for namespace deletion error")
-			return cause
+			logrus.WithField("reason", k8serrors.ReasonForError(err)).Info("cause for namespace deletion error")
+			return err
 		}
 	}
 

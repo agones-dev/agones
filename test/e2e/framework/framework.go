@@ -32,7 +32,7 @@ import (
 	"time"
 
 	"agones.dev/agones/pkg/cloudproduct"
-	"github.com/pkg/errors"
+	"agones.dev/agones/pkg/util/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -88,13 +88,17 @@ type Framework struct {
 	Namespace       string
 	CloudProduct    string
 	WaitForState    time.Duration // default time to wait for state changes, may change based on cloud product.
+	errs            *errors.Errors
 }
 
 func newFramework(kubeconfig string, qps float32, burst int) (*Framework, error) {
+	f := &Framework{}
+	f.errs = errors.FromStruct(f)
+
 	logger := runtime.NewLoggerWithSource("framework")
 	config, err := runtime.InClusterBuildConfig(logger, kubeconfig)
 	if err != nil {
-		return nil, errors.Wrap(err, "build config from flags failed")
+		return nil, f.errs.Wrap(err, "build config from flags failed")
 	}
 
 	if qps > 0 {
@@ -106,18 +110,17 @@ func newFramework(kubeconfig string, qps float32, burst int) (*Framework, error)
 
 	kubeClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return nil, errors.Wrap(err, "creating new kube-client failed")
+		return nil, f.errs.Wrap(err, "creating new kube-client failed")
 	}
 
 	agonesClient, err := versioned.NewForConfig(config)
 	if err != nil {
-		return nil, errors.Wrap(err, "creating new agones-client failed")
+		return nil, f.errs.Wrap(err, "creating new agones-client failed")
 	}
 
-	return &Framework{
-		KubeClient:   kubeClient,
-		AgonesClient: agonesClient,
-	}, nil
+	f.KubeClient = kubeClient
+	f.AgonesClient = agonesClient
+	return f, nil
 }
 
 const (
@@ -291,7 +294,7 @@ func (f *Framework) WaitForGameServerState(t *testing.T, gs *agonesv1.GameServer
 			log.WithField("gs", checkGs.ObjectMeta.Name).
 				WithField("currentState", checkState).
 				WithField("awaitingState", state).Error("GameServer reached terminal state")
-			return false, errors.Errorf("GameServer reached terminal state %s", checkState)
+			return false, f.errs.Errorf("GameServer reached terminal state %s", checkState)
 		}
 		log.WithField("gs", checkGs.ObjectMeta.Name).
 			WithField("currentState", checkState).
@@ -300,7 +303,7 @@ func (f *Framework) WaitForGameServerState(t *testing.T, gs *agonesv1.GameServer
 		return false, nil
 	})
 
-	return checkGs, errors.Wrapf(err, "waiting for GameServer %v/%v to be %v",
+	return checkGs, f.errs.Wrapf(err, "waiting for GameServer %v/%v to be %v",
 		gs.Namespace, gs.Name, state)
 }
 
@@ -538,7 +541,7 @@ func (f *Framework) CreateAndApplyAllocation(t *testing.T, flt *agonesv1.Fleet) 
 // returns error if no Ports were allocated
 func (f *Framework) SendGameServerUDP(t *testing.T, gs *agonesv1.GameServer, msg string) (string, error) {
 	if len(gs.Status.Ports) == 0 {
-		return "", errors.New("Empty Ports array")
+		return "", f.errs.New("Empty Ports array")
 	}
 
 	// use first udp port
@@ -547,7 +550,7 @@ func (f *Framework) SendGameServerUDP(t *testing.T, gs *agonesv1.GameServer, msg
 			return f.SendGameServerUDPToPort(t, gs, p.Name, msg)
 		}
 	}
-	return "", errors.New("No UDP ports")
+	return "", f.errs.New("No UDP ports")
 }
 
 // SendGameServerUDPToPort sends a message to a gameserver at the named port and returns its reply
@@ -555,7 +558,7 @@ func (f *Framework) SendGameServerUDP(t *testing.T, gs *agonesv1.GameServer, msg
 func (f *Framework) SendGameServerUDPToPort(t *testing.T, gs *agonesv1.GameServer, portName string, msg string) (string, error) {
 	log := TestLogger(t)
 	if len(gs.Status.Ports) == 0 {
-		return "", errors.New("Empty Ports array")
+		return "", f.errs.New("Empty Ports array")
 	}
 	var port agonesv1.GameServerStatusPort
 	for _, p := range gs.Status.Ports {
@@ -613,7 +616,7 @@ func (f *Framework) SendUDP(t *testing.T, address, msg string) (string, error) {
 	})
 
 	if err != nil {
-		return "", errors.Wrap(err, "timed out attempting to send UDP packet to address")
+		return "", f.errs.Wrap(err, "timed out attempting to send UDP packet to address")
 	}
 
 	return string(b[:n]), nil
@@ -624,7 +627,7 @@ func (f *Framework) SendUDP(t *testing.T, address, msg string) (string, error) {
 // returns error if no Ports were allocated
 func (f *Framework) SendGameServerTCP(gs *agonesv1.GameServer, msg string) (string, error) {
 	if len(gs.Status.Ports) == 0 {
-		return "", errors.New("Empty Ports array")
+		return "", f.errs.New("Empty Ports array")
 	}
 
 	// use first tcp port
@@ -633,14 +636,14 @@ func (f *Framework) SendGameServerTCP(gs *agonesv1.GameServer, msg string) (stri
 			return f.SendGameServerTCPToPort(gs, p.Name, msg)
 		}
 	}
-	return "", errors.New("No TCP ports")
+	return "", f.errs.New("No TCP ports")
 }
 
 // SendGameServerTCPToPort sends a message to a gameserver at the named port and returns its reply
 // returns error if no Ports were allocated or a port of the specified name doesn't exist
 func (f *Framework) SendGameServerTCPToPort(gs *agonesv1.GameServer, portName string, msg string) (string, error) {
 	if len(gs.Status.Ports) == 0 {
-		return "", errors.New("Empty Ports array")
+		return "", f.errs.New("Empty Ports array")
 	}
 	var port agonesv1.GameServerStatusPort
 	var found bool
@@ -652,7 +655,7 @@ func (f *Framework) SendGameServerTCPToPort(gs *agonesv1.GameServer, portName st
 		}
 	}
 	if !found {
-		return "", errors.Errorf("port %q not found in GameServer status", portName)
+		return "", f.errs.Errorf("port %q not found in GameServer status", portName)
 	}
 	address := fmt.Sprintf("%s:%d", gs.Status.Address, port.Port)
 	return f.SendTCP(address, msg)
@@ -678,7 +681,7 @@ func (f *Framework) SendTCP(address, msg string) (string, error) {
 			return true, nil
 		})
 		if err != nil {
-			return "", errors.Wrap(err, "timed out attempting to dial TCP address")
+			return "", f.errs.Wrap(err, "timed out attempting to dial TCP address")
 		}
 	} else {
 		var err error
@@ -740,7 +743,7 @@ func (f *Framework) CreateNamespace(namespace string) error {
 		},
 	}
 	if _, err := kubeCore.Namespaces().Create(ctx, ns, options); err != nil {
-		return errors.Errorf("creating namespace %s failed: %s", namespace, err.Error())
+		return f.errs.Errorf("creating namespace %s failed: %s", namespace, err.Error())
 	}
 	logrus.Infof("Namespace %s is created", namespace)
 
@@ -751,7 +754,7 @@ func (f *Framework) CreateNamespace(namespace string) error {
 			Labels:    map[string]string{appLabelKey: agonesAppLabelValue},
 		},
 	}, options); err != nil {
-		err = errors.Errorf("creating ServiceAccount %s in namespace %s failed: %s", saName, namespace, err.Error())
+		err = f.errs.Errorf("creating ServiceAccount %s in namespace %s failed: %s", saName, namespace, err.Error())
 		_ = f.DeleteNamespace(namespace) // Use _ to ignore derr since we return err anyway
 		return err
 	}
@@ -772,7 +775,7 @@ func (f *Framework) CreateNamespace(namespace string) error {
 		},
 	}
 	if _, err := kubeRbac.Roles(namespace).Create(ctx, role, options); err != nil {
-		err = errors.Errorf("creating Role %s in namespace %s failed: %s", roleName, namespace, err.Error())
+		err = f.errs.Errorf("creating Role %s in namespace %s failed: %s", roleName, namespace, err.Error())
 		_ = f.DeleteNamespace(namespace)
 		return err
 	}
@@ -798,7 +801,7 @@ func (f *Framework) CreateNamespace(namespace string) error {
 		},
 	}
 	if _, err := kubeRbac.RoleBindings(namespace).Create(ctx, rb, options); err != nil {
-		err = errors.Errorf("creating RoleBinding for service account %q in namespace %q failed: %s", saName, namespace, err.Error())
+		err = f.errs.Errorf("creating RoleBinding for service account %q in namespace %q failed: %s", saName, namespace, err.Error())
 		_ = f.DeleteNamespace(namespace)
 		return err
 	}
@@ -838,7 +841,7 @@ func (f *Framework) DeleteNamespace(namespace string) error {
 	// Remove finalizers
 	pods, err := kubeCore.Pods(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return errors.Errorf("listing pods in namespace %s failed: %s", namespace, err)
+		return f.errs.Errorf("listing pods in namespace %s failed: %s", namespace, err)
 	}
 	for i := range pods.Items {
 		pod := &pods.Items[i]
@@ -850,13 +853,13 @@ func (f *Framework) DeleteNamespace(namespace string) error {
 			}}
 			payloadBytes, _ := json.Marshal(payload)
 			if _, err := kubeCore.Pods(namespace).Patch(ctx, pod.Name, types.JSONPatchType, payloadBytes, metav1.PatchOptions{}); err != nil {
-				return errors.Wrapf(err, "updating pod %s failed", pod.GetName())
+				return f.errs.Wrapf(err, "updating pod %s failed", pod.GetName())
 			}
 		}
 	}
 
 	if err := kubeCore.Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{}); err != nil {
-		return errors.Wrapf(err, "deleting namespace %s failed", namespace)
+		return f.errs.Wrapf(err, "deleting namespace %s failed", namespace)
 	}
 	logrus.Infof("Namespace %s is deleted", namespace)
 	return nil
