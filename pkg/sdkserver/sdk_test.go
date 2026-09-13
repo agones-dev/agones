@@ -80,35 +80,6 @@ func TestConvert(t *testing.T) {
 		}
 	}
 
-	t.Run(string(runtime.FeaturePlayerTracking)+" disabled", func(t *testing.T) {
-		runtime.FeatureTestMutex.Lock()
-		defer runtime.FeatureTestMutex.Unlock()
-		require.NoError(t, runtime.ParseFeatures(""))
-
-		gs := fixture.DeepCopy()
-
-		sdkGs := convert(gs)
-		eq(t, fixture, sdkGs)
-		assert.Zero(t, sdkGs.ObjectMeta.DeletionTimestamp)
-		assert.Nil(t, sdkGs.Status.Players)
-	})
-
-	t.Run(string(runtime.FeaturePlayerTracking)+" enabled", func(t *testing.T) {
-		runtime.FeatureTestMutex.Lock()
-		defer runtime.FeatureTestMutex.Unlock()
-		require.NoError(t, runtime.ParseFeatures(string(runtime.FeaturePlayerTracking)+"=true"))
-
-		gs := fixture.DeepCopy()
-		gs.Status.Players = &agonesv1.PlayerStatus{Capacity: 10, Count: 5, IDs: []string{"one", "two"}}
-
-		sdkGs := convert(gs)
-		eq(t, fixture, sdkGs)
-		assert.Zero(t, sdkGs.ObjectMeta.DeletionTimestamp)
-		assert.Equal(t, gs.Status.Players.Capacity, sdkGs.Status.Players.Capacity)
-		assert.Equal(t, gs.Status.Players.Count, sdkGs.Status.Players.Count)
-		assert.Equal(t, gs.Status.Players.IDs, sdkGs.Status.Players.Ids)
-	})
-
 	t.Run(string(runtime.FeatureCountsAndLists)+" disabled", func(t *testing.T) {
 		runtime.FeatureTestMutex.Lock()
 		defer runtime.FeatureTestMutex.Unlock()

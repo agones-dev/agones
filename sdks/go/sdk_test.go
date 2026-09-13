@@ -214,11 +214,11 @@ func (h *healthMock) Context() context.Context {
 	panic("implement me")
 }
 
-func (h *healthMock) SendMsg(_ interface{}) error {
+func (h *healthMock) SendMsg(_ any) error {
 	panic("implement me")
 }
 
-func (h *healthMock) RecvMsg(_ interface{}) error {
+func (h *healthMock) RecvMsg(_ any) error {
 	panic("implement me")
 }
 
@@ -246,10 +246,10 @@ func (*watchMock) Context() context.Context {
 	panic("implement me")
 }
 
-func (*watchMock) SendMsg(_ interface{}) error {
+func (*watchMock) SendMsg(_ any) error {
 	panic("implement me")
 }
 
-func (*watchMock) RecvMsg(_ interface{}) error {
+func (*watchMock) RecvMsg(_ any) error {
 	panic("implement me")
 }

@@ -36,12 +36,12 @@ import (
 	"agones.dev/agones/pkg/gameserversets"
 	"agones.dev/agones/pkg/metrics"
 	"agones.dev/agones/pkg/portallocator"
+	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/httpserver"
 	"agones.dev/agones/pkg/util/runtime"
 	"agones.dev/agones/pkg/util/signals"
 	"github.com/google/uuid"
 	"github.com/heptiolabs/healthcheck"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -67,6 +67,7 @@ const (
 	sidecarMemoryRequestFlag           = "sidecar-memory-request"
 	sidecarMemoryLimitFlag             = "sidecar-memory-limit"
 	sidecarRunAsUserFlag               = "sidecar-run-as-user"
+	sidecarSecurityContextFlag         = "sidecar-security-context"
 	sidecarRequestsRateLimitFlag       = "sidecar-requests-rate-limit"
 	sdkServerAccountFlag               = "sdk-service-account"
 	pullSidecarFlag                    = "always-pull-sidecar"
@@ -91,10 +92,12 @@ const (
 	maxDeletionParallelismFlag         = "max-deletion-parallelism"
 	maxGameServerDeletionsPerBatchFlag = "max-game-server-deletions-per-batch"
 	maxPodPendingCountFlag             = "max-pod-pending-count"
+	maxListItemsFlag                   = "max-list-items"
 )
 
 var (
 	logger = runtime.NewLoggerWithSource("main")
+	errs   = errors.FromPackage()
 )
 
 func setupLogging(logDir string, logSizeLimitMB int) {
@@ -206,7 +209,8 @@ func main() {
 	gsController := gameservers.NewController(controllerHooks, health,
 		ctlConf.PortRanges, ctlConf.SidecarImage, ctlConf.AlwaysPullSidecar,
 		ctlConf.SidecarCPURequest, ctlConf.SidecarCPULimit,
-		ctlConf.SidecarMemoryRequest, ctlConf.SidecarMemoryLimit, ctlConf.SidecarRunAsUser, ctlConf.SidecarRequestsRateLimit, ctlConf.SdkServiceAccount,
+		ctlConf.SidecarMemoryRequest, ctlConf.SidecarMemoryLimit, ctlConf.SidecarSecurityContext, ctlConf.SidecarRequestsRateLimit,
+		ctlConf.MaxListItems, ctlConf.SdkServiceAccount,
 		kubeClient, kubeInformerFactory, extClient, agonesClient, agonesInformerFactory)
 	gsSetController := gameserversets.NewController(health, gsCounter,
 		kubeClient, extClient, agonesClient, agonesInformerFactory, ctlConf.MaxCreationParallelism, ctlConf.MaxDeletionParallelism, ctlConf.MaxGameServerCreationsPerBatch, ctlConf.MaxGameServerDeletionsPerBatch, ctlConf.MaxPodPendingCount)
@@ -253,6 +257,7 @@ func parseEnvFlags() config {
 	viper.SetDefault(sidecarMemoryRequestFlag, "0")
 	viper.SetDefault(sidecarMemoryLimitFlag, "0")
 	viper.SetDefault(sidecarRunAsUserFlag, "1000")
+	viper.SetDefault(sidecarSecurityContextFlag, "")
 	viper.SetDefault(sidecarRequestsRateLimitFlag, "500ms")
 	viper.SetDefault(pullSidecarFlag, false)
 	viper.SetDefault(sdkServerAccountFlag, "agones-sdk")
@@ -278,14 +283,17 @@ func parseEnvFlags() config {
 	viper.SetDefault(maxDeletionParallelismFlag, 64)
 	viper.SetDefault(maxGameServerDeletionsPerBatchFlag, 64)
 	viper.SetDefault(maxPodPendingCountFlag, 5000)
+	viper.SetDefault(maxListItemsFlag, 1000)
 
 	pflag.String(sidecarImageFlag, viper.GetString(sidecarImageFlag), "Flag to overwrite the GameServer sidecar image that is used. Can also use SIDECAR env variable")
 	pflag.String(sidecarCPULimitFlag, viper.GetString(sidecarCPULimitFlag), "Flag to overwrite the GameServer sidecar container's cpu limit. Can also use SIDECAR_CPU_LIMIT env variable")
 	pflag.String(sidecarCPURequestFlag, viper.GetString(sidecarCPURequestFlag), "Flag to overwrite the GameServer sidecar container's cpu request. Can also use SIDECAR_CPU_REQUEST env variable")
 	pflag.String(sidecarMemoryLimitFlag, viper.GetString(sidecarMemoryLimitFlag), "Flag to overwrite the GameServer sidecar container's memory limit. Can also use SIDECAR_MEMORY_LIMIT env variable")
 	pflag.String(sidecarMemoryRequestFlag, viper.GetString(sidecarMemoryRequestFlag), "Flag to overwrite the GameServer sidecar container's memory request. Can also use SIDECAR_MEMORY_REQUEST env variable")
-	pflag.Int32(sidecarRunAsUserFlag, viper.GetInt32(sidecarRunAsUserFlag), "Flag to indicate the GameServer sidecar container's UID. Can also use SIDECAR_RUN_AS_USER env variable")
+	pflag.Int32(sidecarRunAsUserFlag, viper.GetInt32(sidecarRunAsUserFlag), "Flag to indicate the GameServer sidecar container's UID. Only used when --sidecar-security-context is empty. Can also use SIDECAR_RUN_AS_USER env variable")
+	pflag.String(sidecarSecurityContextFlag, viper.GetString(sidecarSecurityContextFlag), `Optional. JSON encoded Kubernetes SecurityContext for the GameServer sidecar container. Defaults to a context compatible with the "restricted" Pod Security Standard. Can also use SIDECAR_SECURITY_CONTEXT env variable`)
 	pflag.String(sidecarRequestsRateLimitFlag, viper.GetString(sidecarRequestsRateLimitFlag), "Flag to indicate the GameServer sidecar requests rate limit. Can also use SIDECAR_REQUESTS_RATE_LIMIT env variable")
+	pflag.Int64(maxListItemsFlag, viper.GetInt64(maxListItemsFlag), "Flag to set the maximum Capacity a GameServer List may be set to, passed on to the SDK sidecar. Can also use MAX_LIST_ITEMS env variable")
 	pflag.Bool(pullSidecarFlag, viper.GetBool(pullSidecarFlag), "For development purposes, set the sidecar image to have a ImagePullPolicy of Always. Can also use ALWAYS_PULL_SIDECAR env variable")
 	pflag.String(sdkServerAccountFlag, viper.GetString(sdkServerAccountFlag), "Overwrite what service account default for GameServer Pods. Defaults to Can also use SDK_SERVICE_ACCOUNT")
 	pflag.Int32(minPortFlag, 0, "Required. The minimum port that that a GameServer can be allocated to. Can also use MIN_PORT env variable.")
@@ -323,7 +331,9 @@ func parseEnvFlags() config {
 	runtime.Must(viper.BindEnv(sidecarMemoryLimitFlag))
 	runtime.Must(viper.BindEnv(sidecarMemoryRequestFlag))
 	runtime.Must(viper.BindEnv(sidecarRunAsUserFlag))
+	runtime.Must(viper.BindEnv(sidecarSecurityContextFlag))
 	runtime.Must(viper.BindEnv(sidecarRequestsRateLimitFlag))
+	runtime.Must(viper.BindEnv(maxListItemsFlag))
 	runtime.Must(viper.BindEnv(pullSidecarFlag))
 	runtime.Must(viper.BindEnv(sdkServerAccountFlag))
 	runtime.Must(viper.BindEnv(minPortFlag))
@@ -381,6 +391,11 @@ func parseEnvFlags() config {
 		logger.WithError(err).Fatalf("could not parse %s", sidecarRequestsRateLimitFlag)
 	}
 
+	sidecarSecurityContext, err := parseSidecarSecurityContext(viper.GetString(sidecarSecurityContextFlag), int64(viper.GetInt32(sidecarRunAsUserFlag)))
+	if err != nil {
+		logger.WithError(err).Fatalf("could not parse %s", sidecarSecurityContextFlag)
+	}
+
 	portRanges, err := parsePortRanges(viper.GetString(additionalPortRangesFlag))
 	if err != nil {
 		logger.WithError(err).Fatalf("could not parse %s", additionalPortRangesFlag)
@@ -397,8 +412,9 @@ func parseEnvFlags() config {
 		SidecarCPULimit:                limitCPU,
 		SidecarMemoryRequest:           requestMemory,
 		SidecarMemoryLimit:             limitMemory,
-		SidecarRunAsUser:               int(viper.GetInt32(sidecarRunAsUserFlag)),
+		SidecarSecurityContext:         sidecarSecurityContext,
 		SidecarRequestsRateLimit:       requestsRateLimit,
+		MaxListItems:                   viper.GetInt64(maxListItemsFlag),
 		SdkServiceAccount:              viper.GetString(sdkServerAccountFlag),
 		AlwaysPullSidecar:              viper.GetBool(pullSidecarFlag),
 		KeyFile:                        viper.GetString(keyFileFlag),
@@ -448,6 +464,23 @@ func parsePortRanges(s string) (map[string]portallocator.PortRange, error) {
 	return portRanges, nil
 }
 
+// parseSidecarSecurityContext parses the JSON encoded sidecar security context, falling back to
+// the default restricted-compatible context with the given UID when none is provided.
+func parseSidecarSecurityContext(s string, runAsUser int64) (*corev1.SecurityContext, error) {
+	if strings.TrimSpace(s) == "" {
+		return gameservers.DefaultSidecarSecurityContext(runAsUser), nil
+	}
+
+	var sc *corev1.SecurityContext
+	if err := json.Unmarshal([]byte(s), &sc); err != nil {
+		return nil, fmt.Errorf("invalid sidecar security context format: %w", err)
+	}
+	if sc == nil {
+		return gameservers.DefaultSidecarSecurityContext(runAsUser), nil
+	}
+	return sc, nil
+}
+
 // config stores all required configuration to create a game server controller.
 type config struct {
 	PortRanges                     map[string]portallocator.PortRange
@@ -456,8 +489,9 @@ type config struct {
 	SidecarCPULimit                resource.Quantity
 	SidecarMemoryRequest           resource.Quantity
 	SidecarMemoryLimit             resource.Quantity
-	SidecarRunAsUser               int
+	SidecarSecurityContext         *corev1.SecurityContext
 	SidecarRequestsRateLimit       time.Duration
+	MaxListItems                   int64
 	SdkServiceAccount              string
 	AlwaysPullSidecar              bool
 	PrometheusMetrics              bool
@@ -492,6 +526,9 @@ func (c *config) validate() []error {
 	validationErrors = append(validationErrors, resourceErrors...)
 	resourceErrors = validateResource(c.SidecarMemoryRequest, c.SidecarMemoryLimit, corev1.ResourceMemory)
 	validationErrors = append(validationErrors, resourceErrors...)
+	if c.MaxListItems <= 0 {
+		validationErrors = append(validationErrors, errs.Errorf("%s must be greater than 0", maxListItemsFlag))
+	}
 	return validationErrors
 }
 
@@ -503,13 +540,13 @@ func (c *config) validate() []error {
 func validateResource(request resource.Quantity, limit resource.Quantity, resourceName corev1.ResourceName) []error {
 	validationErrors := make([]error, 0)
 	if !limit.IsZero() && request.Cmp(limit) > 0 {
-		validationErrors = append(validationErrors, errors.Errorf("Request must be less than or equal to %s limit", resourceName))
+		validationErrors = append(validationErrors, errs.Errorf("Request must be less than or equal to %s limit", resourceName))
 	}
 	if request.Cmp(resource.Quantity{}) < 0 {
-		validationErrors = append(validationErrors, errors.Errorf("Resource %s request value must be non negative", resourceName))
+		validationErrors = append(validationErrors, errs.Errorf("Resource %s request value must be non negative", resourceName))
 	}
 	if limit.Cmp(resource.Quantity{}) < 0 {
-		validationErrors = append(validationErrors, errors.Errorf("Resource %s limit value must be non negative", resourceName))
+		validationErrors = append(validationErrors, errs.Errorf("Resource %s limit value must be non negative", resourceName))
 	}
 
 	return validationErrors
@@ -539,11 +576,11 @@ func validatePorts(portRanges map[string]portallocator.PortRange) []error {
 			if overlaps(values[j].MinPort, values[j].MaxPort, pr.MinPort, pr.MaxPort) {
 				switch {
 				case keys[j] == agonesv1.DefaultPortRange:
-					validationErrors = append(validationErrors, errors.Errorf("port range %s overlaps with min/max port", keys[i]))
+					validationErrors = append(validationErrors, errs.Errorf("port range %s overlaps with min/max port", keys[i]))
 				case keys[i] == agonesv1.DefaultPortRange:
-					validationErrors = append(validationErrors, errors.Errorf("port range %s overlaps with min/max port", keys[j]))
+					validationErrors = append(validationErrors, errs.Errorf("port range %s overlaps with min/max port", keys[j]))
 				default:
-					validationErrors = append(validationErrors, errors.Errorf("port range %s overlaps with min/max port of range %s", keys[i], keys[j]))
+					validationErrors = append(validationErrors, errs.Errorf("port range %s overlaps with min/max port of range %s", keys[i], keys[j]))
 				}
 			}
 		}
@@ -558,10 +595,10 @@ func validatePortRange(minPort, maxPort int32, rangeName string) []error {
 		rangeCtx = " for port range " + rangeName
 	}
 	if minPort <= 0 || maxPort <= 0 {
-		validationErrors = append(validationErrors, errors.New("min Port and Max Port values are required"+rangeCtx))
+		validationErrors = append(validationErrors, errs.New("min Port and Max Port values are required"+rangeCtx))
 	}
 	if maxPort < minPort {
-		validationErrors = append(validationErrors, errors.New("max Port cannot be set less that the Min Port"+rangeCtx))
+		validationErrors = append(validationErrors, errs.New("max Port cannot be set less that the Min Port"+rangeCtx))
 	}
 	return validationErrors
 }

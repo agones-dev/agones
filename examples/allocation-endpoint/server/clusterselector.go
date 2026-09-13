@@ -16,11 +16,11 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
 
@@ -64,7 +64,7 @@ func (cc *ClusterConns) Set(index int, conn *grpc.ClientConn, time time.Time) er
 	cc.m.Lock()
 	defer cc.m.Unlock()
 	if len(cc.conns) <= index || len(cc.createdTSs) <= index {
-		return errors.Errorf("current connections are less than %d", index)
+		return fmt.Errorf("current connections are less than %d", index)
 	}
 	cc.conns[index] = conn
 	cc.createdTSs[index] = time

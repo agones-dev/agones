@@ -20,6 +20,7 @@ import (
 	"crypto/x509"
 	goErrors "errors"
 	"fmt"
+	"maps"
 	"strings"
 	"time"
 
@@ -33,9 +34,9 @@ import (
 	multiclusterinformerv1 "agones.dev/agones/pkg/client/informers/externalversions/multicluster/v1"
 	multiclusterlisterv1 "agones.dev/agones/pkg/client/listers/multicluster/v1"
 	"agones.dev/agones/pkg/util/apiserver"
+	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/logfields"
 	"agones.dev/agones/pkg/util/runtime"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/tag"
 	"google.golang.org/grpc"
@@ -61,13 +62,13 @@ import (
 var (
 	// ErrNoGameServer is returned when there are no Allocatable GameServers
 	// available
-	ErrNoGameServer = errors.New("Could not find an Allocatable GameServer")
+	ErrNoGameServer = errs.New("Could not find an Allocatable GameServer")
 	// ErrConflictInGameServerSelection is returned when the candidate gameserver already allocated
-	ErrConflictInGameServerSelection = errors.New("The Gameserver was already allocated")
+	ErrConflictInGameServerSelection = errs.New("The Gameserver was already allocated")
 	// ErrTotalTimeoutExceeded is used to signal that total retry timeout has been exceeded and no additional retries should be made
 	ErrTotalTimeoutExceeded = status.Errorf(codes.DeadlineExceeded, "remote allocation total timeout exceeded")
 	// ErrGameServerUpdateConflict is returned when the game server selected for applying the allocation cannot be updated
-	ErrGameServerUpdateConflict = errors.New("could not update the selected GameServer")
+	ErrGameServerUpdateConflict = errs.New("could not update the selected GameServer")
 )
 
 const (
@@ -98,6 +99,8 @@ var remoteAllocationRetry = wait.Backoff{
 }
 
 // Allocator handles game server allocation
+//
+//nolint:govet // fieldalignment: struct alignment is not critical for our use case
 type Allocator struct {
 	baseLogger                   *logrus.Entry
 	allocationPolicyLister       multiclusterlisterv1.GameServerAllocationPolicyLister
@@ -112,6 +115,8 @@ type Allocator struct {
 	remoteAllocationTimeout      time.Duration
 	totalRemoteAllocationTimeout time.Duration
 	batchWaitTime                time.Duration
+	listMaxCapacity              int64
+	errs                         *errors.Errors
 }
 
 // request is an async request for allocation
@@ -130,7 +135,8 @@ type response struct {
 
 // NewAllocator creates an instance of Allocator
 func NewAllocator(policyInformer multiclusterinformerv1.GameServerAllocationPolicyInformer, secretInformer informercorev1.SecretInformer, gameServerGetter getterv1.GameServersGetter,
-	kubeClient kubernetes.Interface, allocationCache *AllocationCache, remoteAllocationTimeout time.Duration, totalRemoteAllocationTimeout time.Duration, batchWaitTime time.Duration) *Allocator {
+	kubeClient kubernetes.Interface, allocationCache *AllocationCache, remoteAllocationTimeout time.Duration, totalRemoteAllocationTimeout time.Duration, batchWaitTime time.Duration,
+	listMaxCapacity int64) *Allocator {
 	ah := &Allocator{
 		pendingRequests:              make(chan request, maxBatchQueue),
 		allocationPolicyLister:       policyInformer.Lister(),
@@ -140,6 +146,7 @@ func NewAllocator(policyInformer multiclusterinformerv1.GameServerAllocationPoli
 		gameServerGetter:             gameServerGetter,
 		allocationCache:              allocationCache,
 		batchWaitTime:                batchWaitTime,
+		listMaxCapacity:              listMaxCapacity,
 		remoteAllocationTimeout:      remoteAllocationTimeout,
 		totalRemoteAllocationTimeout: totalRemoteAllocationTimeout,
 		remoteAllocationCallback: func(ctx context.Context, endpoint string, dialOpts grpc.DialOption, request *pb.AllocationRequest) (*pb.AllocationResponse, error) {
@@ -157,6 +164,7 @@ func NewAllocator(policyInformer multiclusterinformerv1.GameServerAllocationPoli
 	}
 
 	ah.baseLogger = runtime.NewLoggerWithType(ah)
+	ah.errs = errors.FromStruct(ah)
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(ah.baseLogger.Debugf)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeClient.CoreV1().Events("")})
@@ -185,7 +193,7 @@ func (c *Allocator) Run(ctx context.Context) error {
 func (c *Allocator) Sync(ctx context.Context) error {
 	c.baseLogger.Debug("Wait for Allocator cache sync")
 	if !cache.WaitForCacheSync(ctx.Done(), c.secretSynced, c.allocationPolicySynced) {
-		return errors.New("failed to wait for caches to sync")
+		return c.errs.New("failed to wait for caches to sync")
 	}
 	return nil
 }
@@ -212,7 +220,7 @@ func (c *Allocator) Allocate(ctx context.Context, gsa *allocationv1.GameServerAl
 		var gvks []schema.GroupVersionKind
 		gvks, _, err := apiserver.Scheme.ObjectKinds(s)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not find objectkinds for status")
+			return nil, c.errs.Wrap(err, "could not find objectkinds for status")
 		}
 
 		c.loggerForGameServerAllocation(gsa).Debug("GameServerAllocation is invalid")
@@ -318,7 +326,7 @@ func (c *Allocator) applyMultiClusterAllocation(ctx context.Context, gsa *alloca
 	if err != nil {
 		return nil, err
 	} else if len(policies) == 0 {
-		return nil, errors.New("no multi-cluster allocation policy is specified")
+		return nil, c.errs.New("no multi-cluster allocation policy is specified")
 	}
 
 	it := multiclusterv1.NewConnectionInfoIterator(policies)
@@ -426,7 +434,7 @@ func (c *Allocator) createRemoteClusterDialOption(namespace string, connectionIn
 		// This is required for self-signed certs.
 		tlsConfig.RootCAs = x509.NewCertPool()
 		if len(connectionInfo.ServerCA) != 0 && !tlsConfig.RootCAs.AppendCertsFromPEM(connectionInfo.ServerCA) {
-			return nil, errors.New("only PEM format is accepted for server CA")
+			return nil, c.errs.New("only PEM format is accepted for server CA")
 		}
 		// Add client CA cert, which can be used instead of / as well as the specified ServerCA cert
 		if len(caCert) != 0 {
@@ -601,14 +609,14 @@ func (c *Allocator) ListenAndAllocate(ctx context.Context, updateWorkerCount int
 func (c *Allocator) allocationUpdateWorkers(ctx context.Context, workerCount int) chan<- response {
 	updateQueue := make(chan response)
 
-	for i := 0; i < workerCount; i++ {
+	for range workerCount {
 		go func() {
 			for {
 				select {
 				case res := <-updateQueue:
 					gs, err := c.applyAllocationToGameServer(ctx, res.request.gsa.Spec.MetaPatch, res.gs, res.request.gsa)
 					if err != nil {
-						if !k8serrors.IsConflict(errors.Cause(err)) {
+						if !k8serrors.IsConflict(err) {
 							// since we could not allocate, we should put it back
 							// but not if it's a conflict, as the cache is no longer up to date, and
 							// we should wait for it to get updated with fresh info.
@@ -649,18 +657,14 @@ func (c *Allocator) applyAllocationToGameServer(ctx context.Context, mp allocati
 		if gs.ObjectMeta.Labels == nil {
 			gs.ObjectMeta.Labels = make(map[string]string, len(mp.Labels))
 		}
-		for key, value := range mp.Labels {
-			gs.ObjectMeta.Labels[key] = value
-		}
+		maps.Copy(gs.ObjectMeta.Labels, mp.Labels)
 	}
 
 	if gs.ObjectMeta.Annotations == nil {
 		gs.ObjectMeta.Annotations = make(map[string]string, len(mp.Annotations))
 	}
 	// apply annotations patch
-	for key, value := range mp.Annotations {
-		gs.ObjectMeta.Annotations[key] = value
-	}
+	maps.Copy(gs.ObjectMeta.Annotations, mp.Annotations)
 
 	// add last allocated, so it always gets updated, even if it is already Allocated
 	ts, err := time.Now().MarshalText()
@@ -670,7 +674,7 @@ func (c *Allocator) applyAllocationToGameServer(ctx context.Context, mp allocati
 	gs.ObjectMeta.Annotations[LastAllocatedAnnotationKey] = string(ts)
 	gs.Status.State = agonesv1.GameServerStateAllocated
 
-	// perfom any Counter or List actions
+	// perform any Counter or List actions
 	var counterErrors error
 	var listErrors error
 	if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
@@ -681,7 +685,7 @@ func (c *Allocator) applyAllocationToGameServer(ctx context.Context, mp allocati
 		}
 		if gsa.Spec.Lists != nil {
 			for list, la := range gsa.Spec.Lists {
-				listErrors = goErrors.Join(listErrors, la.ListActions(list, gs))
+				listErrors = goErrors.Join(listErrors, la.ListActions(list, gs, c.listMaxCapacity))
 			}
 		}
 	}

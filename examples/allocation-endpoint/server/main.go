@@ -28,7 +28,6 @@ import (
 	"time"
 
 	pb "agones.dev/agones/pkg/allocation/go"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"golang.org/x/oauth2"
@@ -214,7 +213,7 @@ func getConnection(ctx context.Context, clusterInfo *ClusterInfo) (*grpc.ClientC
 		return currentConn, randIndex, nil
 	}
 
-	return nil, -1, errors.Errorf("could not connect to %s with endpoint %s", clusterInfo.Name, clusterInfo.Endpoint)
+	return nil, -1, fmt.Errorf("could not connect to %s with endpoint %s", clusterInfo.Name, clusterInfo.Endpoint)
 }
 
 func (s *allocationEndpointService) Allocate(ctx context.Context, req *pb.AllocationRequest) (*pb.AllocationResponse, error) {
@@ -274,7 +273,7 @@ func connectToAgonesCluster(ctx context.Context, clusterInfo *ClusterInfo) (*grp
 	// nolint: staticcheck	
 	conn, err := grpc.DialContext(ctx, fmt.Sprintf("%s:443", clusterInfo.Endpoint), grpc.WithTransportCredentials(cred))
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not connect to %s with endpoint %s", clusterInfo.Name, clusterInfo.Endpoint)
+		return nil, fmt.Errorf("could not connect to %s with endpoint %s: %w", clusterInfo.Name, clusterInfo.Endpoint, err)
 	}
 	return conn, nil
 }

@@ -115,8 +115,7 @@ func TestMetrics_Endpoint_ExposesAllMetrics(t *testing.T) {
 	assert.NotNil(t, health, "Health check handler should not be nil")
 	server.Handle("/", health)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	// Start the HTTP server
 	go func() {

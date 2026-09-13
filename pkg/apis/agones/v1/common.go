@@ -15,6 +15,7 @@
 package v1
 
 import (
+	"maps"
 	"math"
 
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
@@ -161,17 +162,13 @@ func (ao *AllocationOverflow) Apply(gs *GameServer) {
 		if gs.ObjectMeta.Annotations == nil {
 			gs.ObjectMeta.Annotations = map[string]string{}
 		}
-		for k, v := range ao.Annotations {
-			gs.ObjectMeta.Annotations[k] = v
-		}
+		maps.Copy(gs.ObjectMeta.Annotations, ao.Annotations)
 	}
 	if ao.Labels != nil {
 		if gs.ObjectMeta.Labels == nil {
 			gs.ObjectMeta.Labels = map[string]string{}
 		}
-		for k, v := range ao.Labels {
-			gs.ObjectMeta.Labels[k] = v
-		}
+		maps.Copy(gs.ObjectMeta.Labels, ao.Labels)
 	}
 }
 

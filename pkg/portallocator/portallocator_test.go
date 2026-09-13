@@ -198,8 +198,8 @@ func TestPortRangeAllocatorAllocate(t *testing.T) {
 		require.NoError(t, err)
 
 		// two nodes
-		for x := 0; x < 2; x++ {
-			for i := 0; i < 11; i++ {
+		for range 2 {
+			for range 11 {
 				var p int32
 				gs := pa.Allocate(fixture.DeepCopy())
 				require.NotNil(t, gs)
@@ -240,8 +240,8 @@ func TestPortRangeAllocatorAllocate(t *testing.T) {
 		require.NoError(t, err)
 
 		// two nodes
-		for x := 0; x < 2; x++ {
-			for i := 0; i < 3; i++ {
+		for x := range 2 {
+			for i := range 3 {
 				gsCopy := morePortFixture.DeepCopy()
 				gsCopy.ObjectMeta.UID = types.UID(strconv.Itoa(x) + ":" + strconv.Itoa(i))
 				gs := pa.Allocate(gsCopy)
@@ -390,10 +390,10 @@ func TestPortRangeAllocatorMultithreadAllocate(t *testing.T) {
 
 	// do this for more than the nodes that are pre-allocated, to make sure
 	// it works for dynamic node addition
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		wg.Add(1)
 		go func(i int) {
-			for x := 0; x < 10; x++ {
+			for x := range 10 {
 				logrus.WithField("x", x).WithField("i", i).Info("allocating!")
 				gs := pa.Allocate(fixture.DeepCopy())
 				if !assert.NotNil(t, gs) {

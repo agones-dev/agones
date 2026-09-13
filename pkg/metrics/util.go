@@ -63,8 +63,8 @@ func parseLabels(s string) (*stackdriver.Labels, error) {
 	if s == "" {
 		return res, nil
 	}
-	pairs := strings.Split(s, ",")
-	for _, p := range pairs {
+	pairs := strings.SplitSeq(s, ",")
+	for p := range pairs {
 		keyValue := strings.Split(p, "=")
 		if len(keyValue) != 2 {
 			return nil, fmt.Errorf("invalid labels: %s, expect key=value,key2=value2", s)

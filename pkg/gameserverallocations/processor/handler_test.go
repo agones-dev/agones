@@ -581,8 +581,7 @@ func TestStreamBatches(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+			ctx := t.Context()
 
 			allocFunc := tc.allocFunc
 			if allocFunc == nil {
@@ -658,8 +657,7 @@ func TestStartPullRequestTicker(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+			ctx := t.Context()
 
 			fc := testclocks.NewFakeClock(time.Now())
 			h := newTestHandler(ctx, nil)
@@ -697,8 +695,7 @@ func TestStartPullRequestTicker(t *testing.T) {
 func TestStartPullRequestTickerRemovesFailingClient(t *testing.T) {
 	t.Parallel()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	h := newTestHandler(ctx, nil)
 	h.addClient("failing-client", &failingSendStream{
@@ -759,8 +756,8 @@ func (m *mockServerStream) SetHeader(metadata.MD) error  { return nil }
 func (m *mockServerStream) SendHeader(metadata.MD) error { return nil }
 func (m *mockServerStream) SetTrailer(metadata.MD)       {}
 func (m *mockServerStream) Context() context.Context     { return m.ctx }
-func (m *mockServerStream) SendMsg(interface{}) error    { return nil }
-func (m *mockServerStream) RecvMsg(interface{}) error    { return nil }
+func (m *mockServerStream) SendMsg(any) error            { return nil }
+func (m *mockServerStream) RecvMsg(any) error            { return nil }
 
 type failingSendStream struct {
 	mockServerStream

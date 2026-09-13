@@ -89,13 +89,13 @@ func NewHealthController(
 	hc.recorder = eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "health-controller"})
 
 	_, _ = podInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		UpdateFunc: func(_, newObj interface{}) {
+		UpdateFunc: func(_, newObj any) {
 			pod := newObj.(*corev1.Pod)
 			if pod.ObjectMeta.DeletionTimestamp.IsZero() && isGameServerPod(pod) && hc.isUnhealthy(pod) {
 				hc.workerqueue.Enqueue(pod)
 			}
 		},
-		DeleteFunc: func(obj interface{}) {
+		DeleteFunc: func(obj any) {
 			// Could be a DeletedFinalStateUnknown, in which case, just ignore it
 			pod, ok := obj.(*corev1.Pod)
 			if ok && isGameServerPod(pod) {

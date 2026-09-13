@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
+	"agones.dev/agones/pkg/util/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -83,6 +83,7 @@ type client struct {
 	batchMutex sync.RWMutex
 	// requestIDMapping is a map to correlate request IDs to pendingRequest objects for response handling
 	requestIDMapping map[string]*pendingRequest
+	errs             *errors.Errors
 }
 
 // pendingRequest represents a request waiting for processing
@@ -119,7 +120,7 @@ func NewClient(config Config, logger logrus.FieldLogger) Client {
 		config.ClientID = string(uuid.NewUUID())
 	}
 
-	return &client{
+	c := &client{
 		config: config,
 		logger: logger,
 		hotBatch: &allocationpb.BatchRequest{
@@ -128,6 +129,8 @@ func NewClient(config Config, logger logrus.FieldLogger) Client {
 		pendingRequests:  make([]*pendingRequest, 0, config.MaxBatchSize),
 		requestIDMapping: make(map[string]*pendingRequest),
 	}
+	c.errs = errors.FromStruct(c)
+	return c
 }
 
 // Run starts the processor client and manages the connection lifecycle
@@ -231,7 +234,7 @@ func (p *client) handleStream(ctx context.Context, stream allocationpb.Processor
 				return ctx.Err()
 			}
 			p.logger.WithError(err).Error("Failed to receive message from processor")
-			return errors.Wrap(err, "stream recv error")
+			return p.errs.Wrap(err, "stream recv error")
 		}
 
 		// Handle message based on its payload type
@@ -481,7 +484,7 @@ func (p *client) connectAndRun(ctx context.Context) error {
 	// Connect to the processor
 	conn, err := p.connect(ctx)
 	if err != nil {
-		return errors.Wrap(err, "failed to connect")
+		return p.errs.Wrap(err, "failed to connect")
 	}
 	defer func() { _ = conn.Close() }()
 
@@ -491,12 +494,12 @@ func (p *client) connectAndRun(ctx context.Context) error {
 	// Open a streaming RPC to the processor
 	stream, err := client.StreamBatches(ctx)
 	if err != nil {
-		return errors.Wrap(err, "failed to create stream")
+		return p.errs.Wrap(err, "failed to create stream")
 	}
 
 	// Register this client instance with the processor
 	if err := p.registerClient(stream); err != nil {
-		return errors.Wrap(err, "failed to register")
+		return p.errs.Wrap(err, "failed to register")
 	}
 
 	p.logger.Info("Connected to processor")
@@ -546,7 +549,7 @@ func (p *client) healthCheck(ctx context.Context, conn *grpc.ClientConn) error {
 	}
 
 	if resp.Status != grpc_health_v1.HealthCheckResponse_SERVING {
-		return errors.Errorf("processor not serving: %v", resp.Status)
+		return p.errs.Errorf("processor not serving: %v", resp.Status)
 	}
 
 	return nil

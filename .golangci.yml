@@ -44,6 +44,7 @@ linters:
     - gosec
     - makezero
     - misspell
+    - modernize
     - nakedret
     - nilerr
     - nilnesserr
@@ -78,6 +79,15 @@ linters:
         # are structurally safe. Triaging it is worthwhile but it needs its own
         # pass -- bundling it here would bury every other gosec finding.
         - G115
+    modernize:
+      disable:
+        # omitzero would rewrite the json tags on the published CRD API types in
+        # pkg/apis. Those tags are copied from the upstream Kubernetes types and
+        # feed CRD schema generation, so changing them changes the wire format.
+        - omitzero
+        # newexpr rewrites ptr.To(false) as Go 1.26's new(false). k8s.io/utils/ptr
+        # is the convention across the Kubernetes ecosystem and reads better here.
+        - newexpr
     testifylint:
       disable:
         # require-error wants every assert.NoError that guards later statements

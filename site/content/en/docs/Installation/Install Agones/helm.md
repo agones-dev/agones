@@ -105,11 +105,21 @@ The following tables lists the configurable parameters of the Agones chart and t
 
 ### Custom Resource Definitions
 
+{{% feature expiryVersion="1.61.0" %}}
 | Parameter                     | Description                                                                                                                                                                                                                         | Default |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
 | `agones.crds.install`         | Install the CRDs with this chart. Useful to disable if you want to subchart (since crd-install hook is broken), so you can copy the CRDs into your own chart.                                                                       | `true`  |
 | `agones.crds.cleanupOnDelete` | Run the pre-delete hook to delete all GameServers and their backing Pods when deleting the helm chart, so that all CRDs can be removed on chart deletion                                                                            | `true`  |
 | `agones.crds.cleanupJobTTL`   | The number of seconds for Kubernetes to delete the associated Job and Pods of the pre-delete hook after it completes, regardless if the Job is successful or not. Set to `0` to disable cleaning up the Job or the associated Pods. | `60`    |
+{{% /feature %}}
+{{% feature publishVersion="1.61.0" %}}
+| Parameter                                | Description                                                                                                                                                                                                                         | Default |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `agones.crds.install`                    | Install the CRDs with this chart. Useful to disable if you want to subchart (since crd-install hook is broken), so you can copy the CRDs into your own chart.                                                                       | `true`  |
+| `agones.crds.cleanupOnDelete`            | Run the pre-delete hook to delete all GameServers and their backing Pods when deleting the helm chart, so that all CRDs can be removed on chart deletion                                                                            | `true`  |
+| `agones.crds.cleanupJobTTL`              | The number of seconds for Kubernetes to delete the associated Job and Pods of the pre-delete hook after it completes, regardless if the Job is successful or not. Set to `0` to disable cleaning up the Job or the associated Pods. | `60`    |
+| `agones.crds.includeKubernetesPatchKeys` | Include the `x-kubernetes-patch-strategy` and `x-kubernetes-patch-merge-key` fields in the embedded `PodTemplateSpec` and `ObjectMeta` CRD schemas. These are not valid CustomResourceDefinition fields, so enabling this produces `unknown field` warnings on install, and fails on Kubernetes distributions that decode strictly, such as K3s. Tools such as [Kustomize][kustomize-openapi] can make use of them. | `false` |
+{{% /feature %}}
 
 ### Metrics
 
@@ -139,6 +149,7 @@ The following tables lists the configurable parameters of the Agones chart and t
 
 ### Container Images
 
+{{% feature expiryVersion="1.61.0" %}}
 | Parameter                            | Description                                                                                                                             | Default                                   |
 | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
 | `agones.image.registry`              | Global image registry for all the Agones system images                                                                                  | `us-docker.pkg.dev/agones-images/release` |
@@ -158,6 +169,29 @@ The following tables lists the configurable parameters of the Agones chart and t
 | `agones.image.ping.pullPolicy`       | Image pull policy for the ping service                                                                                                  | `IfNotPresent`                            |
 | `agones.image.extensions.name`       | Image name for extensions                                                                                                               | `agones-extensions`                       |
 | `agones.image.extensions.pullPolicy` | Image pull policy for extensions                                                                                                        | `IfNotPresent`                            |
+{{% /feature %}}
+{{% feature publishVersion="1.61.0" %}}
+| Parameter                            | Description                                                                                                                             | Default                                   |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `agones.image.registry`              | Global image registry for all the Agones system images                                                                                  | `us-docker.pkg.dev/agones-images/release` |
+| `agones.image.tag`                   | Global image tag for all images                                                                                                         | `{{< release-version >}}`                 |
+| `agones.image.controller.name`       | Image name for the controller                                                                                                           | `agones-controller`                       |
+| `agones.image.controller.pullPolicy` | Image pull policy for the controller                                                                                                    | `IfNotPresent`                            |
+| `agones.image.controller.pullSecret` | Image pull secret for the controller, allocator, sdk and ping image. Should be created both in `agones-system` and `default` namespaces | \`\`                                      |
+| `agones.image.sdk.name`              | Image name for the sdk                                                                                                                  | `agones-sdk`                              |
+| `agones.image.sdk.tag`               | Image tag for the sdk                                                                                                                   | value of `agones.image.tag`               |
+| `agones.image.sdk.cpuRequest`        | The [cpu request][cpu-constraints] for sdk server container                                                                             | `30m`                                     |
+| `agones.image.sdk.cpuLimit`          | The [cpu limit][cpu-constraints] for the sdk server container                                                                           | `0` (none)                                |
+| `agones.image.sdk.memoryRequest`     | The [memory request][memory-constraints] for sdk server container                                                                       | `0` (none)                                |
+| `agones.image.sdk.memoryLimit`       | The [memory limit][memory-constraints] for the sdk server container                                                                     | `0` (none)                                |
+| `agones.image.sdk.alwaysPull`        | Tells if the sdk image should always be pulled                                                                                          | `false`                                   |
+| `agones.image.sdk.securityContext`   | The [security context][security-context] for the sdk server container, passed to the container as-is. The default is compatible with the `restricted` [Pod Security Standard][pod-security-standards]. Set a key to `null` to remove it. Example: <br /> securityContext: <br />&nbsp;&nbsp;runAsUser: 2000 | see `values.yaml` |
+| `agones.image.ping.name`             | Image name for the ping service                                                                                                         | `agones-ping`                             |
+| `agones.image.ping.tag`              | Image tag for the ping service                                                                                                          | value of `agones.image.tag`               |
+| `agones.image.ping.pullPolicy`       | Image pull policy for the ping service                                                                                                  | `IfNotPresent`                            |
+| `agones.image.extensions.name`       | Image name for extensions                                                                                                               | `agones-extensions`                       |
+| `agones.image.extensions.pullPolicy` | Image pull policy for extensions                                                                                                        | `IfNotPresent`                            |
+{{% /feature %}}
 
 ### Agones Controller
 
@@ -390,7 +424,7 @@ The following tables lists the configurable parameters of the Agones chart and t
 | `gameservers.additionalPortRanges`     | Port ranges from which to do named dynamic port allocation. Example: <br /> additionalPortRanges: <br />&nbsp;&nbsp;game: [9000, 10000] | `{}`                                   |
 | `gameservers.podPreserveUnknownFields` | Disable [field pruning][pruning] and schema validation on the Pod template for a [GameServer][gameserver] definition                    | `false`                                |
 | `gameservers.selectableFields`         | spec fields available for querying [GameServer][gameserver] resources.                                                                  | `[".status.state", "status.nodeName"]` |
-| `gameservers.lists.maxItems`           | The maximum number of items that can be specified for a list.                                                                           | `1000`                                 |
+| `gameservers.lists.maxItems`           | The maximum number of items that can be specified for a list. Also bounds the Capacity accepted by the SDK's `UpdateList` and by list actions during allocation. | `1000`                                 |
 
 ### Helm Installation
 
@@ -402,6 +436,8 @@ The following tables lists the configurable parameters of the Agones chart and t
 [nodeSelector]: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
 [affinity]: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
 [cpu-constraints]: https://kubernetes.io/docs/tasks/administer-cluster/manage-resources/cpu-constraint-namespace/
+[security-context]: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+[pod-security-standards]: https://kubernetes.io/docs/concepts/security/pod-security-standards/
 [memory-constraints]: https://kubernetes.io/docs/tasks/administer-cluster/manage-resources/memory-constraint-namespace/
 [ping]: {{< ref "/docs/Guides/ping-service.md" >}}
 [service]: https://kubernetes.io/docs/concepts/services-networking/service/
@@ -417,6 +453,7 @@ The following tables lists the configurable parameters of the Agones chart and t
 [rest-requests]: {{< ref "/docs/Advanced/allocator-service.md#using-rest" >}}
 [grpc-requests]: {{< ref "/docs/Advanced/allocator-service.md#using-grpc" >}}
 [split-controller]: {{< ref "/docs/Advanced/high-availability-agones" >}}
+[kustomize-openapi]: https://github.com/kubernetes-sigs/kustomize/blob/master/examples/customOpenAPIschema.md
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`. For example,
 

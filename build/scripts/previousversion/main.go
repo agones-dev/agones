@@ -26,7 +26,6 @@ import (
 	"strings"
 
 	semver "github.com/blang/semver/v4"
-	"github.com/pkg/errors"
 )
 
 // gcsLister defines an interface for listing GCS objects, allowing for mocking in tests.
@@ -45,7 +44,7 @@ func (g gsutilLister) List(prefix string) (string, error) {
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if err != nil {
-		return "", errors.Errorf("gsutil command failed: %v: %s", err, stderr.String())
+		return "", fmt.Errorf("gsutil command failed: %v: %s", err, stderr.String())
 	}
 	return out.String(), nil
 }

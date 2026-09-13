@@ -117,7 +117,7 @@ func NewWorkerQueueWithRateLimiter(handler Handler, logger *logrus.Entry, keyNam
 // Enqueue puts the name of the runtime.Object in the
 // queue to be processed. If you need to send through an
 // explicit key, use an cache.ExplicitKey
-func (wq *WorkerQueue) Enqueue(obj interface{}) {
+func (wq *WorkerQueue) Enqueue(obj any) {
 	var key string
 	var err error
 	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
@@ -132,7 +132,7 @@ func (wq *WorkerQueue) Enqueue(obj interface{}) {
 // EnqueueImmediately performs Enqueue but without rate-limiting.
 // This should be used to continue partially completed work after giving other
 // items in the queue a chance of running.
-func (wq *WorkerQueue) EnqueueImmediately(obj interface{}) {
+func (wq *WorkerQueue) EnqueueImmediately(obj any) {
 	var key string
 	var err error
 	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
@@ -145,7 +145,7 @@ func (wq *WorkerQueue) EnqueueImmediately(obj interface{}) {
 }
 
 // EnqueueAfter delays an enqueue operation by duration
-func (wq *WorkerQueue) EnqueueAfter(obj interface{}, duration time.Duration) {
+func (wq *WorkerQueue) EnqueueAfter(obj any, duration time.Duration) {
 	var key string
 	var err error
 	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
@@ -209,7 +209,7 @@ func (wq *WorkerQueue) processNextWorkItem(ctx context.Context) bool {
 func (wq *WorkerQueue) Run(ctx context.Context, workers int) {
 	wq.setWorkerCount(workers)
 	wq.logger.WithField("workers", workers).Info("Starting workers...")
-	for i := 0; i < workers; i++ {
+	for range workers {
 		go wq.run(ctx)
 	}
 

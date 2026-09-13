@@ -83,13 +83,13 @@ func NewSucceededController(health healthcheck.Handler,
 	c.recorder = eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "succeeded-controller"})
 
 	_, _ = podInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
+		AddFunc: func(obj any) {
 			pod := obj.(*corev1.Pod)
 			if isGameServerPod(pod) && pod.Status.Phase == corev1.PodSucceeded {
 				c.workerqueue.Enqueue(pod)
 			}
 		},
-		UpdateFunc: func(_, newObj interface{}) {
+		UpdateFunc: func(_, newObj any) {
 			pod := newObj.(*corev1.Pod)
 			if isGameServerPod(pod) && pod.Status.Phase == corev1.PodSucceeded {
 				c.workerqueue.Enqueue(pod)
@@ -100,7 +100,7 @@ func NewSucceededController(health healthcheck.Handler,
 	// Recovery path: if a pod Succeeded event was missed (e.g. during controller restart),
 	// the GameServer informer resync will re-check the pod phase and re-enqueue.
 	_, _ = gameServers.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		UpdateFunc: func(_, newObj interface{}) {
+		UpdateFunc: func(_, newObj any) {
 			gs := newObj.(*agonesv1.GameServer)
 			if _, isDev := gs.GetDevAddress(); isDev {
 				return

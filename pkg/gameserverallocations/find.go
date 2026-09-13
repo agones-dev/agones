@@ -21,7 +21,6 @@ import (
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
 	allocationv1 "agones.dev/agones/pkg/apis/allocation/v1"
 	"agones.dev/agones/pkg/util/runtime"
-	"github.com/pkg/errors"
 )
 
 // findGameServerForAllocation finds an optimal gameserver, given the
@@ -54,7 +53,7 @@ func findGameServerForAllocation(gsa *allocationv1.GameServerAllocation, list []
 		if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) || len(gsa.Spec.Priorities) == 0 {
 			l := len(list)
 			indices := make([]int, l)
-			for i := 0; i < l; i++ {
+			for i := range l {
 				indices[i] = i
 			}
 			rand.Shuffle(l, func(i, j int) {
@@ -77,7 +76,7 @@ func findGameServerForAllocation(gsa *allocationv1.GameServerAllocation, list []
 			}
 		}
 	default:
-		return nil, -1, errors.Errorf("scheduling strategy of '%s' is not supported", gsa.Spec.Scheduling)
+		return nil, -1, errs.Errorf("scheduling strategy of '%s' is not supported", gsa.Spec.Scheduling)
 	}
 
 	loop(list, func(i int, gs *agonesv1.GameServer) {

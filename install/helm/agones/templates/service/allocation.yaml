@@ -305,6 +305,8 @@ spec:
           value: {{ .Values.agones.featureGates | quote }}
         - name: ALLOCATION_BATCH_WAIT_TIME
           value: {{ .Values.agones.allocator.allocationBatchWaitTime | quote }}
+        - name: MAX_LIST_ITEMS
+          value: {{ .Values.gameservers.lists.maxItems | quote }}
         - name: READINESS_SHUTDOWN_DURATION
           value: {{ mul .Values.agones.allocator.readiness.periodSeconds .Values.agones.extensions.readiness.failureThreshold 2 }}s
 {{- $featureGates := include "agones.featureGates" . | fromYaml }}

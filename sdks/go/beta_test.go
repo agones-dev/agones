@@ -16,13 +16,15 @@ package sdk
 
 import (
 	"context"
+	"fmt"
+	"slices"
 	"testing"
 
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 
 	"agones.dev/agones/pkg/sdk/beta"
+	"agones.dev/agones/pkg/util/errors"
 )
 
 func TestBetaGetAndUpdateCounter(t *testing.T) {
@@ -65,6 +67,7 @@ func TestBetaGetAndUpdateCounter(t *testing.T) {
 	b := Beta{
 		client: mock,
 	}
+	b.errs = errors.FromStruct(&b)
 
 	t.Parallel()
 
@@ -206,6 +209,7 @@ func TestBetaGetAndUpdateList(t *testing.T) {
 	b := Beta{
 		client: mock,
 	}
+	b.errs = errors.FromStruct(&b)
 
 	t.Parallel()
 
@@ -286,7 +290,7 @@ func (b *betaMock) GetCounter(_ context.Context, in *beta.GetCounterRequest, _ .
 	if counter, ok := b.counters[in.Name]; ok {
 		return counter, nil
 	}
-	return nil, errors.Errorf("counter not found: %s", in.Name)
+	return nil, fmt.Errorf("counter not found: %s", in.Name)
 }
 
 func (b *betaMock) UpdateCounter(ctx context.Context, in *beta.UpdateCounterRequest, _ ...grpc.CallOption) (*beta.Counter, error) {
@@ -299,23 +303,23 @@ func (b *betaMock) UpdateCounter(ctx context.Context, in *beta.UpdateCounterRequ
 	case in.CounterUpdateRequest.CountDiff != 0:
 		count := counter.Count + in.CounterUpdateRequest.CountDiff
 		if count < 0 || count > counter.Capacity {
-			return nil, errors.Errorf("out of range. Count must be within range [0,Capacity]. Found Count: %d, Capacity: %d", count, counter.Capacity)
+			return nil, fmt.Errorf("out of range. Count must be within range [0,Capacity]. Found Count: %d, Capacity: %d", count, counter.Capacity)
 		}
 		counter.Count = count
 	case in.CounterUpdateRequest.Count != nil:
 		countSet := in.CounterUpdateRequest.Count.GetValue()
 		if countSet < 0 || countSet > counter.Capacity {
-			return nil, errors.Errorf("out of range. Count must be within range [0,Capacity]. Found Count: %d, Capacity: %d", countSet, counter.Capacity)
+			return nil, fmt.Errorf("out of range. Count must be within range [0,Capacity]. Found Count: %d, Capacity: %d", countSet, counter.Capacity)
 		}
 		counter.Count = countSet
 	case in.CounterUpdateRequest.Capacity != nil:
 		capacity := in.CounterUpdateRequest.Capacity.GetValue()
 		if capacity < 0 {
-			return nil, errors.Errorf("out of range. Capacity must be greater than or equal to 0. Found Capacity: %d", capacity)
+			return nil, fmt.Errorf("out of range. Capacity must be greater than or equal to 0. Found Capacity: %d", capacity)
 		}
 		counter.Capacity = capacity
 	default:
-		return nil, errors.Errorf("invalid argument. Malformed CounterUpdateRequest: %v",
+		return nil, fmt.Errorf("invalid argument. Malformed CounterUpdateRequest: %v",
 			in.CounterUpdateRequest)
 	}
 
@@ -327,26 +331,26 @@ func (b *betaMock) UpdateCounter(ctx context.Context, in *beta.UpdateCounterRequ
 // a list with any pending batched changes applied.
 func (b *betaMock) GetList(_ context.Context, in *beta.GetListRequest, _ ...grpc.CallOption) (*beta.List, error) {
 	if in == nil {
-		return nil, errors.Errorf("GetListRequest cannot be nil")
+		return nil, fmt.Errorf("GetListRequest cannot be nil")
 	}
 	if list, ok := b.lists[in.Name]; ok {
 		return list, nil
 	}
-	return nil, errors.Errorf("list not found: %s", in.Name)
+	return nil, fmt.Errorf("list not found: %s", in.Name)
 }
 
 // Note: unlike the SDK Server, UpdateList does not batch changes and instead updates the list
 // directly.
 func (b *betaMock) UpdateList(_ context.Context, in *beta.UpdateListRequest, _ ...grpc.CallOption) (*beta.List, error) {
 	if in == nil {
-		return nil, errors.Errorf("UpdateListRequest cannot be nil")
+		return nil, fmt.Errorf("UpdateListRequest cannot be nil")
 	}
 	list, ok := b.lists[in.List.Name]
 	if !ok {
-		return nil, errors.Errorf("list not found: %s", in.List.Name)
+		return nil, fmt.Errorf("list not found: %s", in.List.Name)
 	}
 	if in.List.Capacity < 0 || in.List.Capacity > 1000 {
-		return nil, errors.Errorf("out of range. Capacity must be within range [0,1000]. Found Capacity: %d", in.List.Capacity)
+		return nil, fmt.Errorf("out of range. Capacity must be within range [0,1000]. Found Capacity: %d", in.List.Capacity)
 	}
 	list.Capacity = in.List.Capacity
 	if len(list.Values) > int(list.Capacity) {
@@ -360,19 +364,17 @@ func (b *betaMock) UpdateList(_ context.Context, in *beta.UpdateListRequest, _ .
 // directly.
 func (b *betaMock) AddListValue(_ context.Context, in *beta.AddListValueRequest, _ ...grpc.CallOption) (*beta.List, error) {
 	if in == nil {
-		return nil, errors.Errorf("AddListValueRequest cannot be nil")
+		return nil, fmt.Errorf("AddListValueRequest cannot be nil")
 	}
 	list, ok := b.lists[in.Name]
 	if !ok {
-		return nil, errors.Errorf("list not found: %s", in.Name)
+		return nil, fmt.Errorf("list not found: %s", in.Name)
 	}
 	if int(list.Capacity) <= len(list.Values) {
-		return nil, errors.Errorf("out of range. No available capacity. Current Capacity: %d, List Size: %d", list.Capacity, len(list.Values))
+		return nil, fmt.Errorf("out of range. No available capacity. Current Capacity: %d, List Size: %d", list.Capacity, len(list.Values))
 	}
-	for _, val := range list.Values {
-		if in.Value == val {
-			return nil, errors.Errorf("already exists. Value: %s already in List: %s", in.Value, in.Name)
-		}
+	if slices.Contains(list.Values, in.Value) {
+		return nil, fmt.Errorf("already exists. Value: %s already in List: %s", in.Value, in.Name)
 	}
 	list.Values = append(list.Values, in.Value)
 	b.lists[in.Name] = list
@@ -383,11 +385,11 @@ func (b *betaMock) AddListValue(_ context.Context, in *beta.AddListValueRequest,
 // directly.
 func (b *betaMock) RemoveListValue(_ context.Context, in *beta.RemoveListValueRequest, _ ...grpc.CallOption) (*beta.List, error) {
 	if in == nil {
-		return nil, errors.Errorf("RemoveListValueRequest cannot be nil")
+		return nil, fmt.Errorf("RemoveListValueRequest cannot be nil")
 	}
 	list, ok := b.lists[in.Name]
 	if !ok {
-		return nil, errors.Errorf("list not found: %s", in.Name)
+		return nil, fmt.Errorf("list not found: %s", in.Name)
 	}
 	for i, val := range list.Values {
 		if in.Value != val {
@@ -397,5 +399,5 @@ func (b *betaMock) RemoveListValue(_ context.Context, in *beta.RemoveListValueRe
 		b.lists[in.Name] = list
 		return &beta.List{}, nil
 	}
-	return nil, errors.Errorf("not found. Value: %s not found in List: %s", in.Value, in.Name)
+	return nil, fmt.Errorf("not found. Value: %s not found in List: %s", in.Value, in.Name)
 }

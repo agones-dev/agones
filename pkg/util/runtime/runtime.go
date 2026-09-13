@@ -48,7 +48,7 @@ func init() {
 		},
 	})
 
-	runtime.ErrorHandlers[0] = func(_ context.Context, err error, _ string, _ ...interface{}) {
+	runtime.ErrorHandlers[0] = func(_ context.Context, err error, _ string, _ ...any) {
 		if stackTrace, ok := err.(stackTracer); ok {
 			var stack []string
 			for _, f := range stackTrace.StackTrace() {
@@ -90,7 +90,7 @@ func NewLoggerWithSource(source string) *logrus.Entry {
 
 // NewLoggerWithType returns a logrus.Entry to use when you want to use a data type as the source
 // such as when you have a struct with methods
-func NewLoggerWithType(obj interface{}) *logrus.Entry {
+func NewLoggerWithType(obj any) *logrus.Entry {
 	return NewLoggerWithSource(fmt.Sprintf("%T", obj))
 }
 

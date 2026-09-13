@@ -15,6 +15,7 @@
 package runtime
 
 import (
+	"maps"
 	"net/url"
 	"strconv"
 	"sync"
@@ -217,9 +218,7 @@ func ParseFeatures(queryString string) error {
 
 	features := map[Feature]bool{}
 	// copy the defaults into this map
-	for k, v := range featureDefaults {
-		features[k] = v
-	}
+	maps.Copy(features, featureDefaults)
 
 	values, err := url.ParseQuery(queryString)
 	if err != nil {

@@ -36,13 +36,13 @@ import (
 	"agones.dev/agones/pkg/gameserversets"
 	"agones.dev/agones/pkg/metrics"
 	"agones.dev/agones/pkg/util/apiserver"
+	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/https"
 	"agones.dev/agones/pkg/util/httpserver"
 	"agones.dev/agones/pkg/util/runtime"
 	"agones.dev/agones/pkg/util/signals"
 	"agones.dev/agones/pkg/util/webhooks"
 	"github.com/heptiolabs/healthcheck"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -63,6 +63,7 @@ const (
 	logLevelFlag                 = "log-level"
 	logSizeLimitMBFlag           = "log-size-limit-mb"
 	allocationBatchWaitTime      = "allocation-batch-wait-time"
+	maxListItemsFlag             = "max-list-items"
 	kubeconfigFlag               = "kubeconfig"
 	defaultResync                = 30 * time.Second
 	apiServerSustainedQPSFlag    = "api-server-qps"
@@ -78,6 +79,7 @@ const (
 var (
 	podReady bool
 	logger   = runtime.NewLoggerWithSource("main")
+	errs     = errors.FromPackage()
 )
 
 func setupLogging(logDir string, logSizeLimitMB int) {
@@ -118,6 +120,10 @@ func main() {
 
 	logger.WithField("version", pkg.Version).WithField("featureGates", runtime.EncodeFeatures()).
 		WithField("ctlConf", ctlConf).Info("starting extensions operator...")
+
+	if ctlConf.MaxListItems <= 0 {
+		logger.Fatalf("%s must be greater than 0", maxListItemsFlag)
+	}
 
 	// if the kubeconfig fails InClusterBuildConfig will try in cluster config
 	clientConf, err := runtime.InClusterBuildConfig(logger, ctlConf.KubeConfig)
@@ -174,7 +180,7 @@ func main() {
 	podReady = true
 	health.AddReadinessCheck("agones-extensions", func() error {
 		if !podReady {
-			return errors.New("asked to shut down, failed readiness check")
+			return errs.New("asked to shut down, failed readiness check")
 		}
 		return nil
 	})
@@ -222,7 +228,8 @@ func main() {
 		gsCounter := gameservers.NewPerNodeCounter(kubeInformerFactory, agonesInformerFactory)
 
 		gasExtensions = gameserverallocations.NewExtensions(api, health, gsCounter, kubeClient, kubeInformerFactory,
-			agonesClient, agonesInformerFactory, 10*time.Second, 30*time.Second, ctlConf.AllocationBatchWaitTime)
+			agonesClient, agonesInformerFactory, 10*time.Second, 30*time.Second, ctlConf.AllocationBatchWaitTime,
+			ctlConf.MaxListItems)
 
 		kubeInformerFactory.Start(ctx.Done())
 		agonesInformerFactory.Start(ctx.Done())
@@ -270,6 +277,7 @@ func parseEnvFlags() config {
 	viper.SetDefault(logSizeLimitMBFlag, 10000) // 10 GB, will be split into 100 MB chunks
 	viper.SetDefault(httpPort, "8080")
 	viper.SetDefault(webhookPort, "8081")
+	viper.SetDefault(maxListItemsFlag, 1000)
 
 	viper.SetDefault(processorGRPCAddress, "agones-processor.agones-system.svc.cluster.local")
 	viper.SetDefault(processorGRPCPort, 9090)
@@ -293,6 +301,7 @@ func parseEnvFlags() config {
 	pflag.Int32(logSizeLimitMBFlag, 1000, "Log file size limit in MB")
 	pflag.String(logLevelFlag, viper.GetString(logLevelFlag), "Agones Log level")
 	pflag.Duration(allocationBatchWaitTime, viper.GetDuration(allocationBatchWaitTime), "Flag to configure the waiting period between allocations batches")
+	pflag.Int64(maxListItemsFlag, viper.GetInt64(maxListItemsFlag), "Flag to set the maximum Capacity a GameServer List may be set to during allocation. Can also use MAX_LIST_ITEMS env variable")
 	pflag.Duration(readinessShutdownDuration, viper.GetDuration(readinessShutdownDuration), "Time in seconds for SIGTERM handler to sleep for.")
 
 	pflag.String(processorGRPCAddress, viper.GetString(processorGRPCAddress), "The gRPC address of the Agones Processor service")
@@ -323,6 +332,7 @@ func parseEnvFlags() config {
 	runtime.Must(viper.BindEnv(httpPort))
 	runtime.Must(viper.BindEnv(webhookPort))
 	runtime.Must(viper.BindEnv(allocationBatchWaitTime))
+	runtime.Must(viper.BindEnv(maxListItemsFlag))
 	runtime.Must(viper.BindPFlags(pflag.CommandLine))
 	runtime.Must(viper.BindEnv(readinessShutdownDuration))
 	runtime.Must(cloudproduct.BindEnv())
@@ -348,6 +358,7 @@ func parseEnvFlags() config {
 		HTTPPort:                  viper.GetString(httpPort),
 		WebhookPort:               viper.GetString(webhookPort),
 		AllocationBatchWaitTime:   viper.GetDuration(allocationBatchWaitTime),
+		MaxListItems:              viper.GetInt64(maxListItemsFlag),
 		ReadinessShutdownDuration: viper.GetDuration(readinessShutdownDuration),
 
 		processorGRPCAddress:  viper.GetString(processorGRPCAddress),
@@ -376,6 +387,7 @@ type config struct {
 	HTTPPort                  string
 	WebhookPort               string
 	AllocationBatchWaitTime   time.Duration
+	MaxListItems              int64
 	ReadinessShutdownDuration time.Duration
 
 	processorGRPCAddress  string

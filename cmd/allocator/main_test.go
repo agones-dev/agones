@@ -24,6 +24,7 @@ import (
 
 	pb "agones.dev/agones/pkg/allocation/go"
 	allocationv1 "agones.dev/agones/pkg/apis/allocation/v1"
+	"agones.dev/agones/pkg/util/errors"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -186,6 +187,7 @@ func TestVerifyClientCertificateFails(t *testing.T) {
 	h := serviceHandler{
 		caCertPool: certPool,
 	}
+	h.errs = errors.FromStruct(&h)
 
 	block, _ := pem.Decode(crt)
 	input := [][]byte{block.Bytes}

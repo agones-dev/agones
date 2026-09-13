@@ -15,9 +15,9 @@
 package main
 
 import (
+	"errors"
 	"testing"
 
-	"github.com/pkg/errors"
 	semver "github.com/blang/semver/v4"
 )
 

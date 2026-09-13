@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"sync"
 	"time"
 
@@ -173,9 +174,7 @@ func (h *Handler) StartPullRequestTicker(ctx context.Context) {
 func (h *Handler) sendPullRequestsToClients() {
 	h.mu.RLock()
 	snapshot := make(map[string]allocationpb.Processor_StreamBatchesServer, len(h.clients))
-	for id, s := range h.clients {
-		snapshot[id] = s
-	}
+	maps.Copy(snapshot, h.clients)
 	h.mu.RUnlock()
 
 	for clientID, stream := range snapshot {

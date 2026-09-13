@@ -32,13 +32,13 @@ import (
 	"agones.dev/agones/pkg/gameserverallocations/processor"
 	"agones.dev/agones/pkg/gameservers"
 	"agones.dev/agones/pkg/metrics"
+	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/httpserver"
 	"agones.dev/agones/pkg/util/runtime"
 	"agones.dev/agones/pkg/util/signals"
 
 	"github.com/google/uuid"
 	"github.com/heptiolabs/healthcheck"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -55,6 +55,7 @@ import (
 
 const (
 	allocationBatchWaitTime          = "allocation-batch-wait-time"
+	maxListItemsFlag                 = "max-list-items"
 	apiServerBurstQPSFlag            = "api-server-qps-burst"
 	apiServerSustainedQPSFlag        = "api-server-qps"
 	defaultResync                    = 30 * time.Second
@@ -77,6 +78,7 @@ const (
 
 var (
 	logger = runtime.NewLoggerWithSource("main")
+	errs   = errors.FromPackage()
 )
 
 type processorConfig struct {
@@ -92,6 +94,7 @@ type processorConfig struct {
 	PrometheusMetrics            bool
 	Stackdriver                  bool
 	AllocationBatchWaitTime      time.Duration
+	MaxListItems                 int64
 	LeaseDuration                time.Duration
 	PullInterval                 time.Duration
 	RenewDeadline                time.Duration
@@ -111,6 +114,7 @@ func parseEnvFlags() processorConfig {
 	viper.SetDefault(leaderElectionFlag, false)
 	viper.SetDefault(leaseDurationFlag, 15*time.Second)
 	viper.SetDefault(logLevelFlag, "Info")
+	viper.SetDefault(maxListItemsFlag, 1000)
 	viper.SetDefault(podNamespace, "")
 	viper.SetDefault(projectIDFlag, "")
 	viper.SetDefault(pullIntervalFlag, 200*time.Millisecond)
@@ -121,6 +125,7 @@ func parseEnvFlags() processorConfig {
 	viper.SetDefault(totalRemoteAllocationTimeoutFlag, 30*time.Second)
 
 	pflag.Duration(allocationBatchWaitTime, viper.GetDuration(allocationBatchWaitTime), "Flag to configure the waiting period between allocations batches")
+	pflag.Int64(maxListItemsFlag, viper.GetInt64(maxListItemsFlag), "Flag to set the maximum Capacity a GameServer List may be set to during allocation. Can also use MAX_LIST_ITEMS env variable")
 	pflag.Int32(apiServerBurstQPSFlag, viper.GetInt32(apiServerBurstQPSFlag), "Maximum burst queries per second to send to the API server")
 	pflag.Int32(apiServerSustainedQPSFlag, viper.GetInt32(apiServerSustainedQPSFlag), "Maximum sustained queries per second to send to the API server")
 	pflag.Bool(enablePrometheusMetricsFlag, viper.GetBool(enablePrometheusMetricsFlag), "Flag to activate metrics of Agones. Can also use PROMETHEUS_EXPORTER env variable.")
@@ -142,6 +147,7 @@ func parseEnvFlags() processorConfig {
 
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	runtime.Must(viper.BindEnv(allocationBatchWaitTime))
+	runtime.Must(viper.BindEnv(maxListItemsFlag))
 	runtime.Must(viper.BindEnv(apiServerBurstQPSFlag))
 	runtime.Must(viper.BindEnv(apiServerSustainedQPSFlag))
 	runtime.Must(viper.BindEnv(enablePrometheusMetricsFlag))
@@ -165,6 +171,7 @@ func parseEnvFlags() processorConfig {
 
 	return processorConfig{
 		AllocationBatchWaitTime:      viper.GetDuration(allocationBatchWaitTime),
+		MaxListItems:                 viper.GetInt64(maxListItemsFlag),
 		APIServerBurstQPS:            int(viper.GetInt32(apiServerBurstQPSFlag)),
 		APIServerSustainedQPS:        int(viper.GetInt32(apiServerSustainedQPSFlag)),
 		GCPProjectID:                 viper.GetString(projectIDFlag),
@@ -194,6 +201,10 @@ func main() {
 	logger.WithField("version", pkg.Version).WithField("processorConf", conf).
 		WithField("featureGates", runtime.EncodeFeatures()).
 		Info("Starting agones-processor")
+
+	if conf.MaxListItems <= 0 {
+		logger.Fatalf("%s must be greater than 0", maxListItemsFlag)
+	}
 
 	logger.WithField("logLevel", conf.LogLevel).Info("Setting LogLevel configuration")
 	level, err := logrus.ParseLevel(strings.ToLower(conf.LogLevel))
@@ -235,7 +246,8 @@ func main() {
 		gameserverallocations.NewAllocationCache(agonesInformerFactory.Agones().V1().GameServers(), gsCounter, health),
 		conf.RemoteAllocationTimeout,
 		conf.TotalRemoteAllocationTimeout,
-		conf.AllocationBatchWaitTime)
+		conf.AllocationBatchWaitTime,
+		conf.MaxListItems)
 	kubeInformerFactory.Start(ctx.Done())
 	agonesInformerFactory.Start(ctx.Done())
 	if err := allocator.Run(ctx); err != nil {
@@ -356,7 +368,7 @@ func getClients(ctlConfig processorConfig) (*kubernetes.Clientset, *versioned.Cl
 	// Create the in-cluster config
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "Could not create in cluster config")
+		return nil, nil, errs.Wrap(err, "Could not create in cluster config")
 	}
 
 	config.QPS = float32(ctlConfig.APIServerSustainedQPS)
@@ -365,13 +377,13 @@ func getClients(ctlConfig processorConfig) (*kubernetes.Clientset, *versioned.Cl
 	// Access to the Agones resources through the Agones Clientset
 	kubeClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "Could not create the kubernetes api clientset")
+		return nil, nil, errs.Wrap(err, "Could not create the kubernetes api clientset")
 	}
 
 	// Access to the Agones resources through the Agones Clientset
 	agonesClient, err := versioned.NewForConfig(config)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "Could not create the agones api clientset")
+		return nil, nil, errs.Wrap(err, "Could not create the agones api clientset")
 	}
 	return kubeClient, agonesClient, nil
 }

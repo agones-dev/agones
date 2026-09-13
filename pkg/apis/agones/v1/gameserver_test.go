@@ -140,8 +140,6 @@ func TestIsBeingDeleted(t *testing.T) {
 func TestGameServerApplyDefaults(t *testing.T) {
 	t.Parallel()
 
-	ten := int64(10)
-
 	defaultGameServerAnd := func(f func(gss *GameServerSpec)) GameServer {
 		gs := GameServer{
 			Spec: GameServerSpec{
@@ -205,15 +203,6 @@ func TestGameServerApplyDefaults(t *testing.T) {
 		"set basic defaults on a very simple gameserver": {
 			gameServer: defaultGameServerAnd(func(_ *GameServerSpec) {}),
 			expected:   wantDefaultAnd(func(_ *expected) {}),
-		},
-		"PlayerTracking=true": {
-			featureFlags: string(runtime.FeaturePlayerTracking) + "=true",
-			gameServer: defaultGameServerAnd(func(gss *GameServerSpec) {
-				gss.Players = &PlayersSpec{InitialCapacity: 10}
-			}),
-			expected: wantDefaultAnd(func(e *expected) {
-				e.alphaPlayerCapacity = &ten
-			}),
 		},
 		"CountsAndLists=true, Counters": {
 			featureFlags: string(runtime.FeatureCountsAndLists) + "=true",
@@ -1438,38 +1427,6 @@ func TestGameServerValidateFeatures(t *testing.T) {
 			},
 		},
 		{
-			description: "PlayerTracking is disabled, Players field specified",
-			feature:     fmt.Sprintf("%s=false", runtime.FeaturePlayerTracking),
-			gs: GameServer{
-				Spec: GameServerSpec{
-					Container: "testing",
-					Players:   &PlayersSpec{InitialCapacity: 10},
-					Template: corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "testing", Image: "testing/image"}}},
-					},
-				},
-			},
-			want: field.ErrorList{
-				field.Forbidden(
-					field.NewPath("spec", "players"),
-					"Value cannot be set unless feature flag PlayerTracking is enabled",
-				),
-			},
-		},
-		{
-			description: "PlayerTracking is enabled, Players field specified",
-			feature:     fmt.Sprintf("%s=true", runtime.FeaturePlayerTracking),
-			gs: GameServer{
-				Spec: GameServerSpec{
-					Container: "testing",
-					Players:   &PlayersSpec{InitialCapacity: 10},
-					Template: corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "testing", Image: "testing/image"}}},
-					},
-				},
-			},
-		},
-		{
 			description: "CountsAndLists is disabled, Counters field specified",
 			feature:     fmt.Sprintf("%s=false", runtime.FeatureCountsAndLists),
 			gs: GameServer{
@@ -1630,7 +1587,7 @@ func TestGameServerPodContainerNotFoundErrReturned(t *testing.T) {
 
 	_, err := fixture.Pod(fakeAPIHooks{})
 	if assert.Error(t, err, "Pod should return an error") {
-		assert.Equal(t, "failed to find container named Container1 in pod spec", err.Error())
+		assert.ErrorContains(t, err, "failed to find container named Container1 in pod spec")
 	}
 }
 
@@ -2060,7 +2017,7 @@ func TestGameServerApplyToPodContainer(t *testing.T) {
 			})
 
 			if tc.expected.err != "" && assert.Error(t, result) {
-				assert.Equal(t, tc.expected.err, result.Error())
+				assert.ErrorContains(t, result, tc.expected.err)
 			}
 			assert.Equal(t, tc.expected.tty, pod.Spec.Containers[0].TTY)
 			assert.False(t, pod.Spec.Containers[1].TTY)
@@ -2315,11 +2272,12 @@ func TestGameServerUpdateListCapacity(t *testing.T) {
 	t.Parallel()
 
 	testCases := map[string]struct {
-		gs       GameServer
-		name     string
-		capacity int64
-		want     ListStatus
-		wantErr  bool
+		gs          GameServer
+		name        string
+		capacity    int64
+		maxCapacity int64
+		want        ListStatus
+		wantErr     bool
 	}{
 		"list not in game server no-op with error": {
 			gs: GameServer{Status: GameServerStatus{
@@ -2330,9 +2288,10 @@ func TestGameServerUpdateListCapacity(t *testing.T) {
 					},
 				},
 			}},
-			name:     "thing",
-			capacity: 1000,
-			wantErr:  true,
+			name:        "thing",
+			capacity:    1000,
+			maxCapacity: 1000,
+			wantErr:     true,
 		},
 		"update list capacity": {
 			gs: GameServer{Status: GameServerStatus{
@@ -2343,8 +2302,9 @@ func TestGameServerUpdateListCapacity(t *testing.T) {
 					},
 				},
 			}},
-			name:     "things",
-			capacity: 1000,
+			name:        "things",
+			capacity:    1000,
+			maxCapacity: 1000,
 			want: ListStatus{
 				Values:   []string{},
 				Capacity: 1000,
@@ -2360,8 +2320,9 @@ func TestGameServerUpdateListCapacity(t *testing.T) {
 					},
 				},
 			}},
-			name:     "slings",
-			capacity: 10000,
+			name:        "slings",
+			capacity:    10000,
+			maxCapacity: 1000,
 			want: ListStatus{
 				Values:   []string{},
 				Capacity: 100,
@@ -2377,11 +2338,48 @@ func TestGameServerUpdateListCapacity(t *testing.T) {
 					},
 				},
 			}},
-			name:     "flings",
-			capacity: -100,
+			name:        "flings",
+			capacity:    -100,
+			maxCapacity: 1000,
 			want: ListStatus{
 				Values:   []string{},
 				Capacity: 999,
+			},
+			wantErr: true,
+		},
+		"capacity within a configured max below the old hardcoded 1000": {
+			gs: GameServer{Status: GameServerStatus{
+				Lists: map[string]ListStatus{
+					"things": {
+						Values:   []string{},
+						Capacity: 5,
+					},
+				},
+			}},
+			name:        "things",
+			capacity:    25,
+			maxCapacity: 25,
+			want: ListStatus{
+				Values:   []string{},
+				Capacity: 25,
+			},
+			wantErr: false,
+		},
+		"capacity above a configured max below the old hardcoded 1000 no-op with error": {
+			gs: GameServer{Status: GameServerStatus{
+				Lists: map[string]ListStatus{
+					"things": {
+						Values:   []string{},
+						Capacity: 5,
+					},
+				},
+			}},
+			name:        "things",
+			capacity:    26,
+			maxCapacity: 25,
+			want: ListStatus{
+				Values:   []string{},
+				Capacity: 5,
 			},
 			wantErr: true,
 		},
@@ -2389,7 +2387,7 @@ func TestGameServerUpdateListCapacity(t *testing.T) {
 
 	for test, testCase := range testCases {
 		t.Run(test, func(t *testing.T) {
-			err := testCase.gs.UpdateListCapacity(testCase.name, testCase.capacity)
+			err := testCase.gs.UpdateListCapacity(testCase.name, testCase.capacity, testCase.maxCapacity)
 			if err != nil {
 				assert.True(t, testCase.wantErr)
 			} else {

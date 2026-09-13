@@ -120,16 +120,14 @@ func main() {
 				client := pb.NewAllocationServiceClient(conn)
 				var wgc sync.WaitGroup
 				for durCtx.Err() == nil {
-					wgc.Add(1)
-					go func() {
-						defer wgc.Done()
+					wgc.Go(func() {
 						if err := allocate(client); err != noerror {
 							tmpVar := failureDtls[clientID][err]
 							atomic.AddUint64(&tmpVar, 1)
 							atomic.AddUint64(&failureCnts[clientID], 1)
 							failureDtls[clientID][err] = tmpVar
 						}
-					}()
+					})
 					atomic.AddUint64(&allocCnts[clientID], 1)
 					time.Sleep(time.Duration(sc.intervalMillisecond) * time.Millisecond)
 				}

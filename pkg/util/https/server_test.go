@@ -45,8 +45,7 @@ func TestServerRun(t *testing.T) {
 	ts := &testServer{server: httptest.NewUnstartedServer(s.Mux)}
 	s.tls = ts
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	err := s.Run(ctx, 0)
 	assert.NoError(t, err)

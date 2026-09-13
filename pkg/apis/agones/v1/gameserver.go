@@ -25,7 +25,6 @@ import (
 	"agones.dev/agones/pkg/apis"
 	"agones.dev/agones/pkg/apis/agones"
 	"agones.dev/agones/pkg/util/runtime"
-	"github.com/pkg/errors"
 	"gomodules.xyz/jsonpatch/v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -37,11 +36,6 @@ import (
 
 // GameServerState is the state for the GameServer
 type GameServerState string
-
-const (
-	// ListMaxCapacity is the maximum capacity for List in the gamerserver spec and status CRDs.
-	ListMaxCapacity = int64(1000)
-)
 
 const (
 	// GameServerStatePortAllocation is for when a dynamically allocating GameServer
@@ -241,7 +235,8 @@ type GameServerSpec struct {
 	// Keys must be declared at GameServer creation time.
 	// +optional
 	Counters map[string]CounterStatus `json:"counters,omitempty"`
-	// (Beta, CountsAndLists feature flag) Lists provides the configuration for tracking of lists of up to 1000 values against a GameServer.
+	// (Beta, CountsAndLists feature flag) Lists provides the configuration for tracking of lists of values against a GameServer,
+	// up to the maximum configured by the `gameservers.lists.maxItems` Helm value.
 	// Keys must be declared at GameServer creation time.
 	// +optional
 	Lists map[string]ListStatus `json:"lists,omitempty"`
@@ -761,7 +756,7 @@ func (gs *GameServer) ApplyToPodContainer(pod *corev1.Pod, containerName string,
 			return nil
 		}
 	}
-	return errors.Errorf("failed to find container named %s in pod spec", containerName)
+	return gameserverErrors.Errorf("failed to find container named %s in pod spec", containerName)
 }
 
 // Pod creates a new Pod from the PodTemplateSpec
@@ -976,17 +971,17 @@ func (gs *GameServer) Patch(delta *GameServer) ([]byte, error) {
 
 	oldJSON, err := json.Marshal(gs)
 	if err != nil {
-		return result, errors.Wrapf(err, "error marshalling to json current GameServer %s", gs.ObjectMeta.Name)
+		return result, gameserverErrors.Wrapf(err, "error marshalling to json current GameServer %s", gs.ObjectMeta.Name)
 	}
 
 	newJSON, err := json.Marshal(delta)
 	if err != nil {
-		return result, errors.Wrapf(err, "error marshalling to json delta GameServer %s", delta.ObjectMeta.Name)
+		return result, gameserverErrors.Wrapf(err, "error marshalling to json delta GameServer %s", delta.ObjectMeta.Name)
 	}
 
 	patch, err := jsonpatch.CreatePatch(oldJSON, newJSON)
 	if err != nil {
-		return result, errors.Wrapf(err, "error creating patch for GameServer %s", gs.ObjectMeta.Name)
+		return result, gameserverErrors.Wrapf(err, "error creating patch for GameServer %s", gs.ObjectMeta.Name)
 	}
 
 	// Per https://jsonpatch.com/ "Tests that the specified value is set in the document. If the test
@@ -996,16 +991,16 @@ func (gs *GameServer) Patch(delta *GameServer) ([]byte, error) {
 	patches = append(patches, patch...)
 
 	result, err = json.Marshal(patches)
-	return result, errors.Wrapf(err, "error creating json for patch for GameServer %s", gs.ObjectMeta.Name)
+	return result, gameserverErrors.Wrapf(err, "error creating json for patch for GameServer %s", gs.ObjectMeta.Name)
 }
 
 // UpdateCount increments or decrements a CounterStatus on a Game Server by the given amount.
 func (gs *GameServer) UpdateCount(name string, action string, amount int64) error {
 	if action != GameServerPriorityIncrement && action != GameServerPriorityDecrement {
-		return errors.Errorf("unable to UpdateCount with Name %s, Action %s, Amount %d. Allocation action must be one of %s or %s", name, action, amount, GameServerPriorityIncrement, GameServerPriorityDecrement)
+		return gameserverErrors.Errorf("unable to UpdateCount with Name %s, Action %s, Amount %d. Allocation action must be one of %s or %s", name, action, amount, GameServerPriorityIncrement, GameServerPriorityDecrement)
 	}
 	if amount < 0 {
-		return errors.Errorf("unable to UpdateCount with Name %s, Action %s, Amount %d. Amount must be greater than 0", name, action, amount)
+		return gameserverErrors.Errorf("unable to UpdateCount with Name %s, Action %s, Amount %d. Amount must be greater than 0", name, action, amount)
 	}
 	if counter, ok := gs.Status.Counters[name]; ok {
 		cnt := counter.Count
@@ -1026,13 +1021,13 @@ func (gs *GameServer) UpdateCount(name string, action string, amount int64) erro
 		gs.Status.Counters[name] = counter
 		return nil
 	}
-	return errors.Errorf("unable to UpdateCount with Name %s, Action %s, Amount %d. Counter not found in GameServer %s", name, action, amount, gs.ObjectMeta.GetName())
+	return gameserverErrors.Errorf("unable to UpdateCount with Name %s, Action %s, Amount %d. Counter not found in GameServer %s", name, action, amount, gs.ObjectMeta.GetName())
 }
 
 // UpdateCounterCapacity updates the CounterStatus Capacity to the given capacity.
 func (gs *GameServer) UpdateCounterCapacity(name string, capacity int64) error {
 	if capacity < 0 {
-		return errors.Errorf("unable to UpdateCounterCapacity: Name %s, Capacity %d. Capacity must be greater than or equal to 0", name, capacity)
+		return gameserverErrors.Errorf("unable to UpdateCounterCapacity: Name %s, Capacity %d. Capacity must be greater than or equal to 0", name, capacity)
 	}
 	if counter, ok := gs.Status.Counters[name]; ok {
 		counter.Capacity = capacity
@@ -1043,14 +1038,15 @@ func (gs *GameServer) UpdateCounterCapacity(name string, capacity int64) error {
 		gs.Status.Counters[name] = counter
 		return nil
 	}
-	return errors.Errorf("unable to UpdateCounterCapacity: Name %s, Capacity %d. Counter not found in GameServer %s", name, capacity, gs.ObjectMeta.GetName())
+	return gameserverErrors.Errorf("unable to UpdateCounterCapacity: Name %s, Capacity %d. Counter not found in GameServer %s", name, capacity, gs.ObjectMeta.GetName())
 }
 
-// UpdateListCapacity updates the ListStatus Capacity to the given capacity.
-func (gs *GameServer) UpdateListCapacity(name string, capacity int64) error {
+// UpdateListCapacity updates the ListStatus Capacity to the given capacity. The capacity must be
+// within [0, maxCapacity], where maxCapacity comes from the `gameservers.lists.maxItems` Helm value.
+func (gs *GameServer) UpdateListCapacity(name string, capacity, maxCapacity int64) error {
 
-	if capacity < 0 || capacity > ListMaxCapacity {
-		return errors.Errorf("unable to UpdateListCapacity: Name %s, Capacity %d. Capacity must be between 0 and 1000, inclusive", name, capacity)
+	if capacity < 0 || capacity > maxCapacity {
+		return gameserverErrors.Errorf("unable to UpdateListCapacity: Name %s, Capacity %d. Capacity must be between 0 and %d, inclusive", name, capacity, maxCapacity)
 	}
 	if list, ok := gs.Status.Lists[name]; ok {
 		list.Capacity = capacity
@@ -1058,13 +1054,13 @@ func (gs *GameServer) UpdateListCapacity(name string, capacity int64) error {
 		gs.Status.Lists[name] = list
 		return nil
 	}
-	return errors.Errorf("unable to UpdateListCapacity: Name %s, Capacity %d. List not found in GameServer %s", name, capacity, gs.ObjectMeta.GetName())
+	return gameserverErrors.Errorf("unable to UpdateListCapacity: Name %s, Capacity %d. List not found in GameServer %s", name, capacity, gs.ObjectMeta.GetName())
 }
 
 // AppendListValues adds unique values to the ListStatus Values list.
 func (gs *GameServer) AppendListValues(name string, values []string) error {
 	if values == nil {
-		return errors.Errorf("unable to AppendListValues: Name %s, Values %s. Values must not be nil", name, values)
+		return gameserverErrors.Errorf("unable to AppendListValues: Name %s, Values %s. Values must not be nil", name, values)
 	}
 	if list, ok := gs.Status.Lists[name]; ok {
 		mergedList := MergeRemoveDuplicates(list.Values, values)
@@ -1074,14 +1070,14 @@ func (gs *GameServer) AppendListValues(name string, values []string) error {
 		gs.Status.Lists[name] = list
 		return nil
 	}
-	return errors.Errorf("unable to AppendListValues: Name %s, Values %s. List not found in GameServer %s", name, values, gs.ObjectMeta.GetName())
+	return gameserverErrors.Errorf("unable to AppendListValues: Name %s, Values %s. List not found in GameServer %s", name, values, gs.ObjectMeta.GetName())
 }
 
 // DeleteListValues removes values from the ListStatus Values list. Values in the DeleteListValues
 // list that are not in the ListStatus Values list are ignored.
 func (gs *GameServer) DeleteListValues(name string, values []string) error {
 	if values == nil {
-		return errors.Errorf("unable to DeleteListValues: Name %s, Values %s. Values must not be nil", name, values)
+		return gameserverErrors.Errorf("unable to DeleteListValues: Name %s, Values %s. Values must not be nil", name, values)
 	}
 	if list, ok := gs.Status.Lists[name]; ok {
 		deleteValuesMap := make(map[string]bool)
@@ -1093,7 +1089,7 @@ func (gs *GameServer) DeleteListValues(name string, values []string) error {
 		gs.Status.Lists[name] = list
 		return nil
 	}
-	return errors.Errorf("unable to DeleteListValues: Name %s, Values %s. List not found in GameServer %s", name, values, gs.ObjectMeta.GetName())
+	return gameserverErrors.Errorf("unable to DeleteListValues: Name %s, Values %s. List not found in GameServer %s", name, values, gs.ObjectMeta.GetName())
 }
 
 // deleteValues returns a new list with all the values in valuesList that are not keys in deleteValuesMap.

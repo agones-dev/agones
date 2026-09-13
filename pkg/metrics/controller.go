@@ -29,9 +29,9 @@ import (
 	listerv1 "agones.dev/agones/pkg/client/listers/agones/v1"
 	autoscalinglisterv1 "agones.dev/agones/pkg/client/listers/autoscaling/v1"
 	fleetsv1 "agones.dev/agones/pkg/fleets"
+	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/runtime"
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
@@ -74,6 +74,7 @@ func init() {
 //nolint:govet // ignore fieldalignment, singleton
 type Controller struct {
 	logger                    *logrus.Entry
+	errs                      *errors.Errors
 	gameServerLister          listerv1.GameServerLister
 	nodeLister                v1.NodeLister
 	gameServerSynced          cache.InformerSynced
@@ -132,17 +133,18 @@ func NewController(
 	}
 
 	c.logger = runtime.NewLoggerWithType(c)
+	c.errs = errors.FromStruct(c)
 
 	_, _ = fInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: c.recordFleetChanges,
-		UpdateFunc: func(_, next interface{}) {
+		UpdateFunc: func(_, next any) {
 			c.recordFleetChanges(next)
 		},
 		DeleteFunc: c.recordFleetDeletion,
 	})
 
 	_, _ = fasInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(added interface{}) {
+		AddFunc: func(added any) {
 			c.recordFleetAutoScalerChanges(nil, added)
 		},
 		UpdateFunc: c.recordFleetAutoScalerChanges,
@@ -156,7 +158,7 @@ func NewController(
 	return c
 }
 
-func (c *Controller) recordFleetAutoScalerChanges(old, next interface{}) {
+func (c *Controller) recordFleetAutoScalerChanges(old, next any) {
 
 	fas, ok := next.(*autoscalingv1.FleetAutoscaler)
 	if !ok {
@@ -221,7 +223,7 @@ func (c *Controller) recordFleetAutoScalerChanges(old, next interface{}) {
 	}
 }
 
-func (c *Controller) recordFleetAutoScalerDeletion(obj interface{}) {
+func (c *Controller) recordFleetAutoScalerDeletion(obj any) {
 	_, ok := obj.(*autoscalingv1.FleetAutoscaler)
 	if !ok {
 		return
@@ -232,7 +234,7 @@ func (c *Controller) recordFleetAutoScalerDeletion(obj interface{}) {
 	}
 }
 
-func (c *Controller) recordFleetChanges(obj interface{}) {
+func (c *Controller) recordFleetChanges(obj any) {
 	f, ok := obj.(*agonesv1.Fleet)
 	if !ok {
 		return
@@ -306,7 +308,7 @@ func (c *Controller) filterGameServerSetByActive(fleet *agonesv1.Fleet, list []*
 	return active, rest
 }
 
-func (c *Controller) recordFleetDeletion(obj interface{}) {
+func (c *Controller) recordFleetDeletion(obj any) {
 	_, ok := obj.(*agonesv1.Fleet)
 	if !ok {
 		return
@@ -326,12 +328,12 @@ func (c *Controller) resyncFleets() error {
 	defer c.lock.Unlock()
 	fleets, err := c.fleetLister.List(labels.Everything())
 	if err != nil {
-		return errors.Wrap(err, "could not resync Fleets")
+		return c.errs.Wrap(err, "could not resync Fleets")
 	}
 
 	fasList, err := c.fasLister.List(labels.Everything())
 	if err != nil {
-		return errors.Wrap(err, "could not resync Fleets")
+		return c.errs.Wrap(err, "could not resync Fleets")
 	}
 
 	resetViews(fleetViews)
@@ -353,7 +355,7 @@ func (c *Controller) resyncFleetAutoScaler() error {
 
 	fasList, err := c.fasLister.List(labels.Everything())
 	if err != nil {
-		return errors.Wrap(err, "could not resync FleetAutoScalers")
+		return c.errs.Wrap(err, "could not resync FleetAutoScalers")
 	}
 
 	resetViews(fleetAutoscalerViews)
@@ -422,7 +424,7 @@ func (c *Controller) recordLists(fleetName, fleetNamespace string, lists map[str
 // per second.
 // Addition to the cache are not handled, otherwise resync would make metrics inaccurate by doubling
 // current gameservers states.
-func (c *Controller) recordGameServerStatusChanges(old, next interface{}) {
+func (c *Controller) recordGameServerStatusChanges(old, next any) {
 	newGs, ok := next.(*agonesv1.GameServer)
 	if !ok {
 		return
@@ -523,7 +525,7 @@ func (c *Controller) calcDuration(oldGs, newGs *agonesv1.GameServer) (duration f
 func (c *Controller) Run(ctx context.Context, _ int) error {
 	c.logger.Debug("Wait for cache sync")
 	if !cache.WaitForCacheSync(ctx.Done(), c.gameServerSynced, c.fleetSynced, c.fasSynced) {
-		return errors.New("failed to wait for caches to sync")
+		return c.errs.New("failed to wait for caches to sync")
 	}
 	wait.Until(c.collect, MetricResyncPeriod, ctx.Done())
 	return nil

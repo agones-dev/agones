@@ -214,7 +214,7 @@ func TestAPIServerAddAPIResourceDiscoveryParallel(t *testing.T) {
 
 	t.Run("Parallel Tests", func(t *testing.T) {
 		// Run 10 concurrent requests to exercise multithreading
-		for i := 0; i < 10; i++ {
+		for range 10 {
 			t.Run("Accept */*", func(t *testing.T) {
 				t.Parallel()
 				client := ts.Client()

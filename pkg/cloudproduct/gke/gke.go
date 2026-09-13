@@ -25,9 +25,9 @@ import (
 	"agones.dev/agones/pkg/client/informers/externalversions"
 	"agones.dev/agones/pkg/cloudproduct/eviction"
 	"agones.dev/agones/pkg/portallocator"
+	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/runtime"
 	"cloud.google.com/go/compute/metadata"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -51,6 +51,7 @@ var (
 	}
 	noWorkloadDefaulter = fmt.Sprintf("found no MutatingWebhookConfigurations matching %v", autopilotMutatingWebhooks)
 
+	errs   = errors.FromPackage()
 	logger = runtime.NewLoggerWithSource("gke")
 )
 
@@ -113,7 +114,7 @@ func (*gkeAutopilot) SyncPodPortsToGameServer(gs *agonesv1.GameServer, pod *core
 	}
 	var hpa hostPortAssignment
 	if err := json.Unmarshal([]byte(annotation), &hpa); err != nil {
-		return errors.Wrapf(err, "could not unmarshal annotation %s (value %q)", hostPortAssignmentAnnotation, annotation)
+		return errs.Wrapf(err, "could not unmarshal annotation %s (value %q)", hostPortAssignmentAnnotation, annotation)
 	}
 	for i, p := range gs.Spec.Ports {
 		if newPort, ok := hpa.PortsAssigned[p.HostPort]; ok {
@@ -218,7 +219,7 @@ func setEvictionNoExtended(ev *agonesv1.Eviction, pod *corev1.Pod) error {
 		delete(pod.ObjectMeta.Annotations, agonesv1.PodSafeToEvictAnnotation)
 	}
 	if ev == nil {
-		return errors.New("No eviction value set. Should be the default value")
+		return errs.New("No eviction value set. Should be the default value")
 	}
 	if _, exists := pod.ObjectMeta.Labels[agonesv1.SafeToEvictLabel]; !exists {
 		switch ev.Safe {
@@ -231,7 +232,7 @@ func setEvictionNoExtended(ev *agonesv1.Eviction, pod *corev1.Pod) error {
 		case agonesv1.EvictionSafeNever:
 			pod.ObjectMeta.Labels[agonesv1.SafeToEvictLabel] = agonesv1.False
 		default:
-			return errors.Errorf("eviction.safe == %s, which webhook should have rejected on Autopilot", ev.Safe)
+			return errs.Errorf("eviction.safe == %s, which webhook should have rejected on Autopilot", ev.Safe)
 		}
 	}
 	return nil

@@ -92,7 +92,7 @@ func NewMissingPodController(health healthcheck.Handler,
 	c.recorder = eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "missing-pod-controller"})
 
 	_, _ = gameServers.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		UpdateFunc: func(_, newObj interface{}) {
+		UpdateFunc: func(_, newObj any) {
 			gs := newObj.(*agonesv1.GameServer)
 
 			if _, isDev := gs.GetDevAddress(); !isDev && !isBeforePodCreated(gs) && !gs.IsBeingDeleted() &&

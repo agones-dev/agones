@@ -44,6 +44,9 @@
             "cleanupJobTTL": {
               "type": "integer",
               "minimum": 0
+            },
+            "includeKubernetesPatchKeys": {
+              "type": "boolean"
             }
           },
           "if": {
@@ -1570,7 +1573,8 @@
           "type": "object",
           "properties": {
             "maxItems": {
-              "type": "integer"
+              "type": "integer",
+              "minimum": 1
             }
           },
           "required": [

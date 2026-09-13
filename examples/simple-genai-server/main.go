@@ -150,9 +150,7 @@ func main() {
 		var wg sync.WaitGroup
 
 		for slot := 0; slot < *concurrentPlayers; slot++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				for {
 					// Create a random from_id and name
 					//nolint:gosec // G404: simulated player ids, not a security boundary.
@@ -169,7 +167,7 @@ func main() {
 					chatHistory := []Message{{Author: simConn.name, Content: *prompt}}
 					autonomousChat(*prompt, genAiConn, simConn, *numChats, *stopPhrase, chatHistory)
 				}
-			}()
+			})
 		}
 		wg.Wait()
 	}

@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"strconv"
 	"testing"
@@ -528,7 +529,7 @@ func TestControllerCreationMutationHandler(t *testing.T) {
 
 	var testCases = []struct {
 		description string
-		fixture     interface{}
+		fixture     any
 		expected    expected
 	}{
 		{
@@ -538,7 +539,7 @@ func TestControllerCreationMutationHandler(t *testing.T) {
 			expected: expected{
 				responseAllowed: true,
 				patches: []jsonpatch.JsonPatchOperation{
-					{Operation: "add", Path: "/metadata/finalizers", Value: []interface{}{"agones.dev/controller"}},
+					{Operation: "add", Path: "/metadata/finalizers", Value: []any{"agones.dev/controller"}},
 					{Operation: "add", Path: "/spec/ports/0/protocol", Value: "UDP"}},
 			},
 		},
@@ -1610,7 +1611,7 @@ func TestControllerCreateGameServerPod(t *testing.T) {
 			assert.Equal(t, sidecarContainer.Resources.Requests.Cpu(), &c.sidecarCPURequest)
 			assert.Equal(t, sidecarContainer.Resources.Limits.Memory(), &c.sidecarMemoryLimit)
 			assert.Equal(t, sidecarContainer.Resources.Requests.Memory(), &c.sidecarMemoryRequest)
-			assert.Len(t, sidecarContainer.Env, 5, "5 env vars")
+			assert.Len(t, sidecarContainer.Env, 6, "6 env vars")
 			assert.Equal(t, "GAMESERVER_NAME", sidecarContainer.Env[0].Name)
 			assert.Equal(t, fixture.ObjectMeta.Name, sidecarContainer.Env[0].Value)
 			assert.Equal(t, "POD_NAMESPACE", sidecarContainer.Env[1].Name)
@@ -1618,10 +1619,14 @@ func TestControllerCreateGameServerPod(t *testing.T) {
 			assert.Equal(t, "LOG_LEVEL", sidecarContainer.Env[3].Name)
 			assert.Equal(t, "REQUESTS_RATE_LIMIT", sidecarContainer.Env[4].Name)
 			assert.Equal(t, "500ms", sidecarContainer.Env[4].Value)
+			assert.Equal(t, "MAX_LIST_ITEMS", sidecarContainer.Env[5].Name)
+			assert.Equal(t, "1000", sidecarContainer.Env[5].Value)
 			assert.Equal(t, string(fixture.Spec.SdkServer.LogLevel), sidecarContainer.Env[3].Value)
 			assert.False(t, *sidecarContainer.SecurityContext.AllowPrivilegeEscalation)
 			assert.True(t, *sidecarContainer.SecurityContext.RunAsNonRoot)
 			assert.Equal(t, *sidecarContainer.SecurityContext.RunAsUser, int64(sidecarRunAsUser))
+			assert.Equal(t, []corev1.Capability{"ALL"}, sidecarContainer.SecurityContext.Capabilities.Drop)
+			assert.Equal(t, corev1.SeccompProfileTypeRuntimeDefault, sidecarContainer.SecurityContext.SeccompProfile.Type)
 
 			assert.Equal(t, fixture.Spec.Ports[0].HostPort, gsContainer.Ports[0].HostPort)
 			assert.Equal(t, fixture.Spec.Ports[0].ContainerPort, gsContainer.Ports[0].ContainerPort)
@@ -1970,9 +1975,7 @@ func TestControllerSyncGameServerRequestReadyState(t *testing.T) {
 			}
 			gsFixture.ApplyDefaults()
 			gsFixture.Status.NodeName = fixture.gsNodeName
-			for k, v := range fixture.gsAnnotations {
-				gsFixture.Annotations[k] = v
-			}
+			maps.Copy(gsFixture.Annotations, fixture.gsAnnotations)
 
 			pod, err := gsFixture.Pod(agtesting.FakeAPIHooks{})
 			require.NoError(t, err)
@@ -2551,7 +2554,52 @@ func testWithNonZeroDeletionTimestamp(t *testing.T, f func(*Controller, *agonesv
 	assert.Equal(t, fixture, result)
 }
 
+func TestControllerSidecarSecurityContext(t *testing.T) {
+	t.Parallel()
+
+	newGameServer := func() *agonesv1.GameServer {
+		gs := &agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "default"}, Spec: newSingleContainerSpec()}
+		gs.ApplyDefaults()
+		return gs
+	}
+
+	t.Run("default security context", func(t *testing.T) {
+		c, _ := newFakeController()
+		sidecar := c.sidecar(newGameServer())
+
+		assert.Equal(t, DefaultSidecarSecurityContext(sidecarRunAsUser), sidecar.SecurityContext)
+	})
+
+	t.Run("custom security context", func(t *testing.T) {
+		c, _ := newFakeController()
+		c.sidecarSecurityContext = &corev1.SecurityContext{
+			RunAsNonRoot: ptr.To(true),
+			RunAsUser:    ptr.To(int64(2000)),
+			RunAsGroup:   ptr.To(int64(3000)),
+		}
+		sidecar := c.sidecar(newGameServer())
+
+		assert.Equal(t, c.sidecarSecurityContext, sidecar.SecurityContext)
+		assert.Nil(t, sidecar.SecurityContext.Capabilities)
+		assert.Nil(t, sidecar.SecurityContext.SeccompProfile)
+	})
+
+	t.Run("each sidecar gets its own copy", func(t *testing.T) {
+		c, _ := newFakeController()
+		first := c.sidecar(newGameServer())
+		second := c.sidecar(newGameServer())
+
+		*first.SecurityContext.RunAsUser = 2000
+		assert.Equal(t, int64(sidecarRunAsUser), *second.SecurityContext.RunAsUser)
+		assert.Equal(t, int64(sidecarRunAsUser), *c.sidecarSecurityContext.RunAsUser)
+	})
+}
+
 // newFakeController returns a controller, backed by the fake Clientset
+// defaultTestListMaxCapacity mirrors the `gameservers.lists.maxItems` Helm default, which the
+// controller passes to the sidecar via MAX_LIST_ITEMS.
+const defaultTestListMaxCapacity = int64(1000)
+
 func newFakeController() (*Controller, agtesting.Mocks) {
 	m := agtesting.NewMocks()
 	c := NewController(
@@ -2560,7 +2608,8 @@ func newFakeController() (*Controller, agtesting.Mocks) {
 		map[string]portallocator.PortRange{agonesv1.DefaultPortRange: {MinPort: 10, MaxPort: 20}},
 		"sidecar:dev", false,
 		resource.MustParse("0.05"), resource.MustParse("0.1"),
-		resource.MustParse("50Mi"), resource.MustParse("100Mi"), sidecarRunAsUser, 500*time.Millisecond, "sdk-service-account",
+		resource.MustParse("50Mi"), resource.MustParse("100Mi"), DefaultSidecarSecurityContext(sidecarRunAsUser), 500*time.Millisecond,
+		defaultTestListMaxCapacity, "sdk-service-account",
 		m.KubeClient, m.KubeInformerFactory, m.ExtClient, m.AgonesClient, m.AgonesInformerFactory)
 	c.recorder = m.FakeRecorder
 	return c, m
