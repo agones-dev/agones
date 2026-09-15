@@ -21,14 +21,16 @@ import (
 	"net/http"
 	"time"
 
+	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/runtime"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
 // readHeaderTimeout bounds how long a client may take to send its request
 // headers, so a Slowloris client cannot hold the listener open indefinitely.
 const readHeaderTimeout = 60 * time.Second
+
+var errs = errors.FromPackage()
 
 // Server is a HTTPs server that conforms to the runner interface
 // we use in /cmd/controller.
@@ -65,7 +67,7 @@ func (s *Server) Run(ctx context.Context, _ int) error {
 		if err == http.ErrServerClosed {
 			s.Logger.WithError(err).Info("http server closed")
 		} else {
-			wrappedErr := errors.Wrap(err, "Could not listen on :"+s.Port)
+			wrappedErr := errs.Wrap(err, "Could not listen on :"+s.Port)
 			runtime.HandleError(s.Logger.WithError(wrappedErr), wrappedErr)
 		}
 	}
