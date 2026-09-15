@@ -94,7 +94,7 @@ cmake --build . --target install
 
 **CMAKE_INSTALL_PREFIX** may be skipped if it is OK to install Agones SDK to a default location (usually /usr/local or c:/Program Files/Agones).
 
-CMake option `-Wno-dev` is specified to suppress [CMP0048](https://cmake.org/cmake/help/v3.13/policy/CMP0048.html) deprecation warning for gRPC build.
+CMake option `-Wno-dev` is specified to suppress [CMP0048](https://cmake.org/cmake/help/latest/policy/CMP0048.html) deprecation warning for gRPC build.
 
 
 ## Usage
