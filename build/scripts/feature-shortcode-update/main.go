@@ -130,11 +130,17 @@ func removeBlocks(scanner *bufio.Scanner, targetVersion, ext string) (string, bo
 		}
 
 		if inPublishBlock {
-			// Only reached for .md files (see below) - drop just the
-			// closing tag, content is kept.
+			// Only reached for .md files (see below) - strip just the
+			// closing tag and keep any content that shares its line.
 			if matchFeatureClose(line) {
 				inPublishBlock = false
 				modified = true
+				rest := featureClosePercentRe.ReplaceAllString(line, "")
+				rest = featureCloseAngleRe.ReplaceAllString(rest, "")
+				if strings.TrimSpace(rest) != "" {
+					sb.WriteString(rest)
+					sb.WriteString("\n")
+				}
 				continue
 			}
 			sb.WriteString(line)
@@ -142,34 +148,50 @@ func removeBlocks(scanner *bufio.Scanner, targetVersion, ext string) (string, bo
 			continue
 		}
 
-		if v, ok := matchOpen(line, expiryOpenPercentRe, expiryOpenAngleRe); ok && versionLTE(v, targetVersion) {
-			modified = true
-			if matchFeatureClose(line) {
-				// Whole block resolves on one line: drop it entirely,
-				// stay out of any block state.
+		if v, ok := matchOpen(line, expiryOpenPercentRe, expiryOpenAngleRe); ok {
+			lte, err := versionLTE(v, targetVersion)
+			if err != nil {
+				return "", false, fmt.Errorf("invalid expiryVersion %q on line %q: %w", v, line, err)
+			}
+			if lte {
+				modified = true
+				if remainder, closedOnSameLine := stripExpiryTagsOnLine(line); closedOnSameLine {
+					// Whole block resolves on one line: strip only the shortcode
+					// span and its content, keeping any surrounding text.
+					if strings.TrimSpace(remainder) != "" {
+						sb.WriteString(remainder)
+						sb.WriteString("\n")
+					}
+					continue
+				}
+				inExpiryBlock = true
 				continue
 			}
-			inExpiryBlock = true
-			continue
 		}
 
 		if ext == mdExt {
-			if v, ok := matchOpen(line, publishOpenPercentRe, publishOpenAngleRe); ok && versionLTE(v, targetVersion) {
-				modified = true
-				unwrapped, closedOnSameLine := stripPublishTagsOnLine(line)
-				if closedOnSameLine {
+			if v, ok := matchOpen(line, publishOpenPercentRe, publishOpenAngleRe); ok {
+				lte, err := versionLTE(v, targetVersion)
+				if err != nil {
+					return "", false, fmt.Errorf("invalid publishVersion %q on line %q: %w", v, line, err)
+				}
+				if lte {
+					modified = true
+					unwrapped, closedOnSameLine := stripPublishTagsOnLine(line)
+					if closedOnSameLine {
+						if strings.TrimSpace(unwrapped) != "" {
+							sb.WriteString(unwrapped)
+							sb.WriteString("\n")
+						}
+						continue
+					}
+					inPublishBlock = true
 					if strings.TrimSpace(unwrapped) != "" {
 						sb.WriteString(unwrapped)
 						sb.WriteString("\n")
 					}
 					continue
 				}
-				inPublishBlock = true
-				if strings.TrimSpace(unwrapped) != "" {
-					sb.WriteString(unwrapped)
-					sb.WriteString("\n")
-				}
-				continue
 			}
 		}
 
@@ -200,6 +222,26 @@ func stripPublishTagsOnLine(line string) (string, bool) {
 	return out, closedOnSameLine
 }
 
+// stripExpiryTagsOnLine removes an expiryVersion open tag (already confirmed
+// matched by the caller) together with everything up to and including its
+// matching close tag, when the close tag is present on the same line.
+// Returns the remaining text (prefix + suffix) and whether a close tag was found.
+func stripExpiryTagsOnLine(line string) (string, bool) {
+	for _, openRe := range []*regexp.Regexp{expiryOpenPercentRe, expiryOpenAngleRe} {
+		loc := openRe.FindStringIndex(line)
+		if loc == nil {
+			continue
+		}
+		rest := line[loc[1]:]
+		for _, closeRe := range []*regexp.Regexp{featureClosePercentRe, featureCloseAngleRe} {
+			if closeLoc := closeRe.FindStringIndex(rest); closeLoc != nil {
+				return line[:loc[0]] + rest[closeLoc[1]:], true
+			}
+		}
+	}
+	return line, false
+}
+
 func matchOpen(line string, percentRe, angleRe *regexp.Regexp) (string, bool) {
 	if m := percentRe.FindStringSubmatch(line); m != nil {
 		return m[1], true
@@ -214,8 +256,11 @@ func matchFeatureClose(line string) bool {
 	return featureClosePercentRe.MatchString(line) || featureCloseAngleRe.MatchString(line)
 }
 
-// versionLTE reports whether v is the same as, or an earlier release than, target.
-func versionLTE(v, target string) bool {
+// versionLTE reports whether v is the same as, or an earlier release than,
+// target. It returns an error on any unparseable segment so a malformed
+// or typo'd shortcode version aborts the run instead of matching
+// everything and deleting content.
+func versionLTE(v, target string) (bool, error) {
 	vParts := strings.Split(v, ".")
 	tParts := strings.Split(target, ".")
 
@@ -228,17 +273,17 @@ func versionLTE(v, target string) bool {
 		var err error
 		if i < len(vParts) {
 			if vn, err = toInt(vParts[i]); err != nil {
-				log.Printf("warning: could not parse version segment %q in %q, treating as 0", vParts[i], v)
+				return false, fmt.Errorf("parsing version segment %q in %q: %w", vParts[i], v, err)
 			}
 		}
 		if i < len(tParts) {
 			if tn, err = toInt(tParts[i]); err != nil {
-				log.Printf("warning: could not parse version segment %q in %q, treating as 0", tParts[i], target)
+				return false, fmt.Errorf("parsing version segment %q in %q: %w", tParts[i], target, err)
 			}
 		}
 		if vn != tn {
-			return vn < tn
+			return vn < tn, nil
 		}
 	}
-	return true // equal
+	return true, nil
 }

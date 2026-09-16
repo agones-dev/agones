@@ -25,19 +25,36 @@ func TestVersionLTE(t *testing.T) {
 		v        string
 		target   string
 		expected bool
+		wantErr  bool
 	}{
-		{"numeric vs string ordering", "1.9.0", "1.10.0", true}, // the bug this PR fixes
-		{"equal versions", "1.61.0", "1.61.0", true},
-		{"differing segment counts, v shorter", "1.61", "1.61.0", true},
-		{"differing segment counts, v longer but equal prefix", "1.61.0", "1.61", true},
-		{"v greater than target", "1.62.0", "1.61.0", false},
-		{"v less than target", "1.5.0", "1.61.0", true},
-		{"unparseable segment in v treated as 0", "1.x.0", "1.1.0", true},
-		{"unparseable segment in target treated as 0", "1.1.0", "1.x.0", false},
+		{"numeric vs string ordering", "1.9.0", "1.10.0", true, false}, // the bug this PR fixes
+		{"equal versions", "1.61.0", "1.61.0", true, false},
+		{"differing segment counts, v shorter", "1.61", "1.61.0", true, false},
+		{"differing segment counts, v longer but equal prefix", "1.61.0", "1.61", true, false},
+		{"v greater than target", "1.62.0", "1.61.0", false, false},
+		{"v less than target", "1.5.0", "1.61.0", true, false},
+		// These two used to assert that an unparseable segment silently
+		// coerced to 0. That's the exact bug flagged in review: a malformed
+		// or typo'd shortcode version (e.g. "1.x.0") would then compare as
+		// <= almost anything and its block would be deleted. versionLTE now
+		// fails closed and returns an error instead.
+		{"unparseable segment in v returns error", "1.x.0", "1.1.0", false, true},
+		{"unparseable segment in target returns error", "1.1.0", "1.x.0", false, true},
+		{"v-prefixed version returns error", "v1.61.0", "1.61.0", false, true},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			if got := versionLTE(c.v, c.target); got != c.expected {
+			got, err := versionLTE(c.v, c.target)
+			if c.wantErr {
+				if err == nil {
+					t.Fatalf("versionLTE(%q, %q) expected an error, got nil (result=%v)", c.v, c.target, got)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("versionLTE(%q, %q) unexpected error: %v", c.v, c.target, err)
+			}
+			if got != c.expected {
 				t.Errorf("versionLTE(%q, %q) = %v, want %v", c.v, c.target, got, c.expected)
 			}
 		})
@@ -113,9 +130,36 @@ func TestRemoveBlocksMarkdown(t *testing.T) {
 		}
 	})
 
+	// Regression test for the "high" review comment: when the expiry
+	// block's open and close tags share a line with surrounding prose,
+	// only the shortcode span and its content should be dropped — the
+	// prefix and suffix text must survive.
+	t.Run("single-line expiry block with surrounding prose keeps prefix and suffix", func(t *testing.T) {
+		in := "before\nprefix {{% feature expiryVersion=\"1.50.0\" %}}drop{{% /feature %}} suffix\nafter\n"
+		want := "before\nprefix  suffix\nafter\n"
+		out, changed := runRemoveBlocks(t, in, mdExt)
+		if !changed || out != want {
+			t.Errorf("got changed=%v out=%q, want changed=true out=%q", changed, out, want)
+		}
+	})
+
 	t.Run("single-line publish block keeps its content", func(t *testing.T) {
 		in := "before\n{{% feature publishVersion=\"1.5.0\" %}}text{{% /feature %}}\nafter\n"
 		want := "before\ntext\nafter\n"
+		out, changed := runRemoveBlocks(t, in, mdExt)
+		if !changed || out != want {
+			t.Errorf("got changed=%v out=%q, want changed=true out=%q", changed, out, want)
+		}
+	})
+
+	// Regression test for the "high" review comment: when the publish
+	// block's *closing* tag shares a line with content (open tag on its
+	// own line, close tag on a later line with trailing/leading content),
+	// only the closing tag should be stripped — the content on that line
+	// must be kept, not dropped along with the whole line.
+	t.Run("publish block: content shares line with close tag is kept", func(t *testing.T) {
+		in := "before\n{{% feature publishVersion=\"1.50.0\" %}}\nkeep this{{% /feature %}}\nafter\n"
+		want := "before\nkeep this\nafter\n"
 		out, changed := runRemoveBlocks(t, in, mdExt)
 		if !changed || out != want {
 			t.Errorf("got changed=%v out=%q, want changed=true out=%q", changed, out, want)
@@ -136,6 +180,22 @@ func TestRemoveBlocksMarkdown(t *testing.T) {
 		out, changed := runRemoveBlocks(t, in, mdExt)
 		if changed || out != in {
 			t.Errorf("escaped shortcode should be left untouched: got changed=%v out=%q", changed, out)
+		}
+	})
+
+	t.Run("malformed expiry version aborts with error", func(t *testing.T) {
+		scanner := bufio.NewScanner(strings.NewReader(
+			"keep\n{{% feature expiryVersion=\"1.x.0\" %}}\ndrop me\n{{% /feature %}}\nkeep2\n"))
+		if _, _, err := removeBlocks(scanner, testTargetVersion, mdExt); err == nil {
+			t.Error("expected removeBlocks to return an error for a malformed expiryVersion, got nil")
+		}
+	})
+
+	t.Run("malformed publish version aborts with error", func(t *testing.T) {
+		scanner := bufio.NewScanner(strings.NewReader(
+			"keep\n{{% feature publishVersion=\"1.x.0\" %}}\nkeep this\n{{% /feature %}}\nkeep2\n"))
+		if _, _, err := removeBlocks(scanner, testTargetVersion, mdExt); err == nil {
+			t.Error("expected removeBlocks to return an error for a malformed publishVersion, got nil")
 		}
 	})
 }
