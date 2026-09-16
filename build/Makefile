@@ -306,9 +306,10 @@ push-release-chart: $(ensure-build-image)
 test: $(ensure-build-image) test-go test-sdks test-install-yaml site-test helm-lint test-build-scripts
 
 # Run go tests
+# sdks/go/... (not sdks/...) avoids go test racing the concurrent cargo build's transient sdks/rust/target/ dirs.
 test-go: $(ensure-build-image)
 	$(GO_TEST) $(agones_package)/pkg/... \
-	    $(agones_package)/sdks/... $(agones_package)/cmd/...
+	    $(agones_package)/sdks/go/... $(agones_package)/cmd/...
 
 # Run unit tests for all build scripts. Run script tests that have their own Go module separately.
 test-build-scripts: $(ensure-build-image)
