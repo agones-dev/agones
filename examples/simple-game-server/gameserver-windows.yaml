@@ -21,6 +21,7 @@ spec:
     - name: default
       portPolicy: Dynamic
       containerPort: 7654
+      protocol: UDP
   template:
     spec:
       containers:
@@ -36,3 +37,8 @@ spec:
       # Limit this pod to Windows nodes.
       nodeSelector:
         kubernetes.io/os: windows
+      tolerations:
+        - key: node.kubernetes.io/os
+          operator: Equal
+          value: windows
+          effect: NoSchedule
