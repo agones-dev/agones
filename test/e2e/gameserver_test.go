@@ -655,6 +655,66 @@ func TestGameServerPodCompletedAfterCleanExit(t *testing.T) {
 	}
 }
 
+// TestGameServerShutdownAfterCleanExitWithLongLivedContainer covers a game server container exiting
+// cleanly while another (non-sidecar) container keeps the Pod in the Running phase, so the Pod
+// never reaches Succeeded. The GameServer should still move to Shutdown and be removed.
+// See https://github.com/agones-dev/agones/issues/4728
+func TestGameServerShutdownAfterCleanExitWithLongLivedContainer(t *testing.T) {
+	if !runtime.FeatureEnabled(runtime.FeatureSidecarContainers) {
+		t.SkipNow()
+	}
+
+	t.Parallel()
+	ctx := t.Context()
+	log := e2eframework.TestLogger(t)
+
+	gs := framework.DefaultGameServer(framework.Namespace)
+	gs.Spec.Template.Spec.Containers = append(gs.Spec.Template.Spec.Containers, corev1.Container{
+		Name:            "long-lived",
+		Image:           "alpine:latest",
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Command:         []string{"sleep", "3600"},
+		Resources: corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("30m"),
+				corev1.ResourceMemory: resource.MustParse("64Mi"),
+			},
+			Limits: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("30m"),
+				corev1.ResourceMemory: resource.MustParse("64Mi"),
+			},
+		},
+	})
+
+	readyGs, err := framework.CreateGameServerAndWaitUntilReady(t, framework.Namespace, gs)
+	require.NoError(t, err, "Could not get a GameServer ready")
+	defer framework.AgonesClient.AgonesV1().GameServers(framework.Namespace).Delete(ctx, readyGs.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint: errcheck
+
+	// the game server exits on CRASH without replying, so don't wait for one. Keep sending until
+	// the GameServer is gone, in case the packet is dropped.
+	conn, err := net.Dial("udp", net.JoinHostPort(readyGs.Status.Address, strconv.Itoa(int(readyGs.Status.Ports[0].Port))))
+	require.NoError(t, err)
+	defer conn.Close() // nolint: errcheck
+
+	result := assert.EventuallyWithT(t, func(c *assert.CollectT) {
+		_, _ = conn.Write([]byte("CRASH 0"))
+
+		_, err := framework.AgonesClient.AgonesV1().GameServers(framework.Namespace).Get(ctx, readyGs.ObjectMeta.Name, metav1.GetOptions{})
+		assert.True(c, k8serrors.IsNotFound(err), "GameServer should be removed after the game server container exits cleanly")
+	}, 5*time.Minute, 3*time.Second)
+	if !result {
+		framework.LogEvents(t, log, readyGs.ObjectMeta.Namespace, readyGs)
+		pod, err := framework.KubeClient.CoreV1().Pods(readyGs.ObjectMeta.Namespace).Get(ctx, readyGs.ObjectMeta.Name, metav1.GetOptions{})
+		if err != nil {
+			log.WithError(err).Warn("error getting pod for GameServer, skipping debug output")
+			return
+		}
+		log.WithField("phase", pod.Status.Phase).WithField("containerStatuses", pod.Status.ContainerStatuses).Info("Pod status")
+		framework.LogEvents(t, log, readyGs.ObjectMeta.Namespace, pod)
+		framework.LogPodContainers(t, pod)
+	}
+}
+
 func TestDevelopmentGameServerLifecycle(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()

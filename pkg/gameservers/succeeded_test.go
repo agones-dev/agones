@@ -21,6 +21,7 @@ import (
 
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
 	agtesting "agones.dev/agones/pkg/testing"
+	agruntime "agones.dev/agones/pkg/util/runtime"
 	"github.com/heptiolabs/healthcheck"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -209,6 +210,156 @@ func TestSucceededControllerSyncGameServer(t *testing.T) {
 			v.expected.postTests(t, m)
 		})
 	}
+}
+
+// newLongLivedContainerSpec returns a spec with a second, long-lived container in `containers`,
+// which holds the Pod in Running after the game server container exits.
+func newLongLivedContainerSpec() agonesv1.GameServerSpec {
+	spec := newSingleContainerSpec()
+	spec.Container = spec.Template.Spec.Containers[0].Name
+	spec.Template.Spec.Containers = append(spec.Template.Spec.Containers,
+		corev1.Container{Name: "long-lived", Image: "long-lived/image"})
+	return spec
+}
+
+func TestSucceededControllerGameServerContainerCompleted(t *testing.T) {
+	t.Parallel()
+
+	agruntime.FeatureTestMutex.Lock()
+	defer agruntime.FeatureTestMutex.Unlock()
+	require.NoError(t, agruntime.ParseFeatures(string(agruntime.FeatureSidecarContainers)+"=true"))
+
+	fixtures := map[string]struct {
+		setup              func(pod *corev1.Pod)
+		containerCompleted bool
+		podCompleted       bool
+	}{
+		"game server container exited cleanly": {
+			setup:              func(_ *corev1.Pod) {},
+			containerCompleted: true,
+			podCompleted:       true,
+		},
+		"game server container exited with a non-zero exit code": {
+			setup: func(pod *corev1.Pod) {
+				pod.Status.ContainerStatuses[0].State.Terminated.ExitCode = 1
+			},
+		},
+		"game server container is still running": {
+			setup: func(pod *corev1.Pod) {
+				pod.Status.ContainerStatuses[0].State = corev1.ContainerState{Running: &corev1.ContainerStateRunning{}}
+			},
+		},
+		"kubernetes may still restart the game server container": {
+			setup: func(pod *corev1.Pod) {
+				pod.Spec.RestartPolicy = corev1.RestartPolicyAlways
+			},
+		},
+		"pod only restarts containers that fail": {
+			setup: func(pod *corev1.Pod) {
+				pod.Spec.RestartPolicy = corev1.RestartPolicyOnFailure
+			},
+			containerCompleted: true,
+			podCompleted:       true,
+		},
+		"pod is in the Failed phase": {
+			setup: func(pod *corev1.Pod) {
+				pod.Status.Phase = corev1.PodFailed
+			},
+		},
+		"no container status for the game server container": {
+			setup: func(pod *corev1.Pod) {
+				pod.Status.ContainerStatuses[0].Name = "not-the-game-container"
+			},
+		},
+		"game server container is the only container in the pod": {
+			setup: func(pod *corev1.Pod) {
+				pod.Spec.Containers = pod.Spec.Containers[:1]
+			},
+		},
+		"pod is in the Succeeded phase": {
+			setup: func(pod *corev1.Pod) {
+				pod.Status.ContainerStatuses[0].State = corev1.ContainerState{Running: &corev1.ContainerStateRunning{}}
+				pod.Status.Phase = corev1.PodSucceeded
+			},
+			podCompleted: true,
+		},
+	}
+
+	for k, v := range fixtures {
+		t.Run(k, func(t *testing.T) {
+			gs := agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "test"}, Spec: newLongLivedContainerSpec()}
+			gs.ApplyDefaults()
+
+			pod, err := gs.Pod(agtesting.FakeAPIHooks{})
+			require.NoError(t, err)
+			require.Equal(t, corev1.RestartPolicyNever, pod.Spec.RestartPolicy)
+
+			// the game server container exited cleanly, but the long-lived container holds the Pod in Running.
+			pod.Status = corev1.PodStatus{
+				Phase: corev1.PodRunning,
+				ContainerStatuses: []corev1.ContainerStatus{
+					{Name: gs.Spec.Container, State: corev1.ContainerState{
+						Terminated: &corev1.ContainerStateTerminated{ExitCode: 0, Reason: "Completed"}}},
+					{Name: "long-lived", State: corev1.ContainerState{
+						Running: &corev1.ContainerStateRunning{}}},
+				},
+			}
+			v.setup(pod)
+
+			assert.Equal(t, v.containerCompleted, gameServerContainerCompleted(pod))
+			assert.Equal(t, v.podCompleted, podCompleted(pod))
+		})
+	}
+}
+
+func TestSucceededControllerSyncGameServerContainerCompleted(t *testing.T) {
+	t.Parallel()
+
+	agruntime.FeatureTestMutex.Lock()
+	defer agruntime.FeatureTestMutex.Unlock()
+	require.NoError(t, agruntime.ParseFeatures(string(agruntime.FeatureSidecarContainers)+"=true"))
+
+	m := agtesting.NewMocks()
+	c := NewSucceededController(healthcheck.NewHandler(), m.KubeClient, m.AgonesClient, m.KubeInformerFactory, m.AgonesInformerFactory)
+	c.recorder = m.FakeRecorder
+
+	gs := &agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "default"},
+		Spec: newLongLivedContainerSpec(), Status: agonesv1.GameServerStatus{State: agonesv1.GameServerStateScheduled}}
+	gs.ApplyDefaults()
+
+	pod, err := gs.Pod(agtesting.FakeAPIHooks{})
+	require.NoError(t, err)
+	pod.Status = corev1.PodStatus{
+		Phase: corev1.PodRunning,
+		ContainerStatuses: []corev1.ContainerStatus{
+			{Name: gs.Spec.Container, State: corev1.ContainerState{
+				Terminated: &corev1.ContainerStateTerminated{ExitCode: 0, Reason: "Completed"}}},
+			{Name: "long-lived", State: corev1.ContainerState{
+				Running: &corev1.ContainerStateRunning{}}},
+		},
+	}
+
+	m.AgonesClient.AddReactor("list", "gameservers", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+		return true, &agonesv1.GameServerList{Items: []agonesv1.GameServer{*gs}}, nil
+	})
+	m.KubeClient.AddReactor("list", "pods", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+		return true, &corev1.PodList{Items: []corev1.Pod{*pod}}, nil
+	})
+
+	updated := false
+	m.AgonesClient.AddReactor("update", "gameservers", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		updated = true
+		gs := action.(k8stesting.UpdateAction).GetObject().(*agonesv1.GameServer)
+		assert.Equal(t, agonesv1.GameServerStateShutdown, gs.Status.State)
+		return true, gs, nil
+	})
+
+	ctx, cancel := agtesting.StartInformers(m, c.gameServerSynced, c.podSynced)
+	defer cancel()
+
+	require.NoError(t, c.syncGameServer(ctx, "default/test"))
+	require.True(t, updated)
+	agtesting.AssertEventContains(t, m.FakeRecorder.Events, "Normal Shutdown Game server container exited cleanly")
 }
 
 func TestSucceededControllerRun(t *testing.T) {
