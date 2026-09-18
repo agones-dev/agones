@@ -30,7 +30,7 @@ RUN ARCH=$(dpkg --print-architecture) && \
     mv ./kubectl /usr/local/bin/kubectl
 
 # install Helm package manager
-ENV HELM_VER 3.18.4
+ENV HELM_VER 4.1.3
 RUN ARCH=$(dpkg --print-architecture) && \
     curl -L https://get.helm.sh/helm-v${HELM_VER}-linux-${ARCH}.tar.gz > /tmp/helm.tar.gz \
     && tar -zxvf /tmp/helm.tar.gz -C /tmp \
