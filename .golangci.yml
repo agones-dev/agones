@@ -32,6 +32,7 @@ linters:
     - bidichk
     - bodyclose
     - copyloopvar
+    - depguard
     - dupl
     - durationcheck
     - errname
@@ -56,6 +57,13 @@ linters:
     - unparam
     - wastedassign
   settings:
+    depguard:
+      rules:
+        main:
+          deny:
+            # Disallow direct usage of github.com/pkg/errors in favor of the internal errors package
+            - pkg: github.com/pkg/errors
+              desc: use agones.dev/agones/pkg/util/errors instead
     goconst:
       # Table-driven tests repeat literals by nature; hoisting them into
       # constants hurts readability more than it helps.
@@ -153,6 +161,11 @@ linters:
       # would only buy a context.Background() argument on every call.
       - path: (.+)_test\.go|^test/
         linters: [noctx]
+
+      # Depguard is skipped for test files to allow the use of banned
+      # dependencies like github.com/pkg/errors
+      - path: (.+)_test\.go|^test/
+        linters: [depguard]
 
       # Tests legitimately do the things gosec is looking for: weak RNG for
       # fixtures (G404), reading files named by a variable (G304), permissive

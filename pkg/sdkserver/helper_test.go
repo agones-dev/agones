@@ -29,6 +29,7 @@ import (
 )
 
 func testHTTPHealth(t *testing.T, url string, expectedResponse string, expectedStatus int) {
+	t.Helper()
 	// do a poll, because this code could run before the health check becomes live
 	err := wait.PollUntilContextTimeout(context.Background(), time.Second, 20*time.Second, true, func(_ context.Context) (done bool, err error) {
 		resp, err := http.Get(url)

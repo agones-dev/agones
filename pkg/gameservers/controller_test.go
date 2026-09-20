@@ -257,6 +257,7 @@ func TestControllerSyncGameServerWithInitSidecar(t *testing.T) {
 }
 
 func runReconcileDeleteGameServer(t *testing.T, fixture *agonesv1.GameServer) {
+	t.Helper()
 	c, mocks := newFakeController()
 	agonesWatch := watch.NewFake()
 	podAction := false
@@ -2518,6 +2519,7 @@ func TestControllerAddSDKServerEnvVars(t *testing.T) {
 // testNoChange runs a test with a state that doesn't exist, to ensure a handler
 // doesn't do process anything beyond the state it is meant to handle.
 func testNoChange(t *testing.T, state agonesv1.GameServerState, f func(*Controller, *agonesv1.GameServer) (*agonesv1.GameServer, error)) {
+	t.Helper()
 	c, mocks := newFakeController()
 	fixture := &agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "default"},
 		Spec: newSingleContainerSpec(), Status: agonesv1.GameServerStatus{State: state}}
@@ -2537,6 +2539,7 @@ func testNoChange(t *testing.T, state agonesv1.GameServerState, f func(*Controll
 // testWithNonZeroDeletionTimestamp runs a test with a given state, but
 // the DeletionTimestamp set to Now()
 func testWithNonZeroDeletionTimestamp(t *testing.T, f func(*Controller, *agonesv1.GameServer) (*agonesv1.GameServer, error)) {
+	t.Helper()
 	c, mocks := newFakeController()
 	now := metav1.Now()
 	fixture := &agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "default", DeletionTimestamp: &now},

@@ -97,6 +97,7 @@ func TestGameServerCreationRightAfterDeletingOneExtensionsPod(t *testing.T) {
 // deleteAgonesExtensionsPod deletes one of the extensions pod for the Agones extensions,
 // faking a extensions pod crash.
 func deleteAgonesExtensionsPod(ctx context.Context, t *testing.T, waitForExtensions bool) {
+	t.Helper()
 	list, err := getAgonesExtensionsPods(ctx)
 	require.NoError(t, err, "Could not get list of Extension pods")
 

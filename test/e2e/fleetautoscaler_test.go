@@ -2186,6 +2186,7 @@ func TestWasmAutoScaler(t *testing.T) {
 
 // defaultAutoscalerSchedule returns a default scheduled autoscaler for testing.
 func defaultAutoscalerSchedule(t *testing.T, f *agonesv1.Fleet) *autoscalingv1.FleetAutoscaler {
+	t.Helper()
 	return &autoscalingv1.FleetAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      f.ObjectMeta.Name + "-scheduled-autoscaler",
@@ -2227,6 +2228,7 @@ func defaultAutoscalerSchedule(t *testing.T, f *agonesv1.Fleet) *autoscalingv1.F
 
 // defaultAutoscalerChain returns a default chain autoscaler for testing.
 func defaultAutoscalerChain(t *testing.T, f *agonesv1.Fleet) *autoscalingv1.FleetAutoscaler {
+	t.Helper()
 	return &autoscalingv1.FleetAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      f.ObjectMeta.Name + "-chain-autoscaler",
@@ -2331,6 +2333,7 @@ func nextCronMinuteBetween(currentTime time.Time) string {
 
 // Parse a duration string and return a duration struct
 func mustParseDuration(t *testing.T, duration string) time.Duration {
+	t.Helper()
 	d, err := time.ParseDuration(duration)
 	assert.NoError(t, err)
 	return d
@@ -2338,6 +2341,7 @@ func mustParseDuration(t *testing.T, duration string) time.Duration {
 
 // Parse a time string and return a metav1.Time
 func currentTimePlusDuration(t *testing.T, duration string) metav1.Time {
+	t.Helper()
 	d := mustParseDuration(t, duration)
 	currentTimePlusDuration := time.Now().Add(d)
 	return metav1.NewTime(currentTimePlusDuration)
@@ -2347,6 +2351,7 @@ func currentTimePlusDuration(t *testing.T, duration string) metav1.Time {
 // Needs kubectl to be on the file path.
 // May want to replace this with a more robust solution using the Kubernetes client-go library at some point, but since all e2e tests use kubectl, this is a quick solution.
 func copyFileToContainer(t *testing.T, namespace, podName, containerName, srcPath, destPath string) error {
+	t.Helper()
 	cmd := exec.Command("kubectl", "cp", srcPath, fmt.Sprintf("%s/%s:%s", namespace, podName, destPath), "-c", containerName)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
