@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -302,7 +303,7 @@ func TestFleetScaleUpEditAndScaleDown(t *testing.T) {
 	fixtures := []bool{true, false}
 
 	for _, usePatch := range fixtures {
-		t.Run("Use fleet Patch "+fmt.Sprint(usePatch), func(t *testing.T) {
+		t.Run("Use fleet Patch "+strconv.FormatBool(usePatch), func(t *testing.T) {
 			t.Parallel()
 			ctx := context.Background()
 
@@ -631,7 +632,7 @@ func TestScaleFleetUpAndDownWithGameServerAllocation(t *testing.T) {
 	fixtures := []bool{false, true}
 
 	for _, usePatch := range fixtures {
-		t.Run("Use fleet Patch "+fmt.Sprint(usePatch), func(t *testing.T) {
+		t.Run("Use fleet Patch "+strconv.FormatBool(usePatch), func(t *testing.T) {
 			t.Parallel()
 
 			client := framework.AgonesClient.AgonesV1()

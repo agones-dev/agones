@@ -115,7 +115,7 @@ func TestWebHookAddHandler(t *testing.T) {
 			err := json.NewEncoder(buf).Encode(fixture)
 			assert.NoError(t, err)
 
-			r, err := http.NewRequest("GET", url, buf)
+			r, err := http.NewRequest(http.MethodGet, url, buf)
 			assert.NoError(t, err)
 
 			resp, err := client.Do(r)
@@ -211,7 +211,7 @@ func TestWebHookFleetValidationHandler(t *testing.T) {
 			err := json.NewEncoder(buf).Encode(fixture)
 			assert.NoError(t, err)
 
-			r, err := http.NewRequest("GET", url, buf)
+			r, err := http.NewRequest(http.MethodGet, url, buf)
 			assert.NoError(t, err)
 
 			resp, err := client.Do(r)

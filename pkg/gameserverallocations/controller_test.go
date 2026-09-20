@@ -88,7 +88,7 @@ func TestControllerAllocator(t *testing.T) {
 			gs := ua.GetObject().(*agonesv1.GameServer)
 
 			if _, ok := updated[gs.ObjectMeta.Name]; ok {
-				return true, nil, k8serrors.NewConflict(agonesv1.Resource("gameservers"), gs.ObjectMeta.Name, fmt.Errorf("already updated"))
+				return true, nil, k8serrors.NewConflict(agonesv1.Resource("gameservers"), gs.ObjectMeta.Name, errors.New("already updated"))
 			}
 
 			updated[gs.ObjectMeta.Name] = true

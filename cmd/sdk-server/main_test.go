@@ -57,7 +57,7 @@ func TestHealthCheckWrapper(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			testResponse := httptest.NewRecorder()
-			testWrapper.ServeHTTP(testResponse, httptest.NewRequest("POST", "http://testServer/health", tc.body))
+			testWrapper.ServeHTTP(testResponse, httptest.NewRequest(http.MethodPost, "http://testServer/health", tc.body))
 			assert.Equal(t, tc.expected, testResponse.Code)
 		})
 	}
