@@ -311,6 +311,7 @@ func (f *Framework) WaitForGameServerState(t *testing.T, gs *agonesv1.GameServer
 // Each Allocated GameServer gets deleted allocDuration after it was Allocated.
 // GameServers will continue to be Allocated until a message is passed to the done channel.
 func (f *Framework) CycleAllocations(ctx context.Context, t *testing.T, flt *agonesv1.Fleet, period time.Duration, allocDuration time.Duration) {
+	t.Helper()
 	err := wait.PollUntilContextCancel(ctx, period, true, func(_ context.Context) (bool, error) {
 		gsa := GetAllocation(flt)
 		gsa, err := f.AgonesClient.AllocationV1().GameServerAllocations(flt.Namespace).Create(context.Background(), gsa, metav1.CreateOptions{})
@@ -336,6 +337,7 @@ func (f *Framework) CycleAllocations(ctx context.Context, t *testing.T, flt *ago
 
 // ScaleFleet will scale a Fleet with retries to a specified replica size.
 func (f *Framework) ScaleFleet(t *testing.T, log *logrus.Entry, flt *agonesv1.Fleet, replicas int32) {
+	t.Helper()
 	fleets := f.AgonesClient.AgonesV1().Fleets(f.Namespace)
 	ctx := context.Background()
 
@@ -360,12 +362,14 @@ func (f *Framework) ScaleFleet(t *testing.T, log *logrus.Entry, flt *agonesv1.Fl
 
 // AssertFleetCondition waits for the Fleet to be in a specific condition or fails the test if the condition can't be met in 5 minutes.
 func (f *Framework) AssertFleetCondition(t *testing.T, flt *agonesv1.Fleet, condition func(*logrus.Entry, *agonesv1.Fleet) bool) {
+	t.Helper()
 	err := f.WaitForFleetCondition(t, flt, condition)
 	require.NoError(t, err, "error waiting for fleet condition on fleet: %v", flt.Name)
 }
 
 // WaitForFleetCondition waits for the Fleet to be in a specific condition or returns an error if the condition can't be met in 5 minutes.
 func (f *Framework) WaitForFleetCondition(t *testing.T, flt *agonesv1.Fleet, condition func(*logrus.Entry, *agonesv1.Fleet) bool) error {
+	t.Helper()
 	log := TestLogger(t).WithField("fleet", flt.Name)
 	log.Info("waiting for fleet condition")
 	err := wait.PollUntilContextTimeout(context.Background(), 2*time.Second, f.WaitForState, true, func(_ context.Context) (bool, error) {
@@ -402,6 +406,7 @@ func (f *Framework) WaitForFleetCondition(t *testing.T, flt *agonesv1.Fleet, con
 // WaitForFleetAutoScalerCondition waits for the FleetAutoscaler to be in a specific condition or fails the test if the condition can't be met in 2 minutes.
 // nolint: dupl
 func (f *Framework) WaitForFleetAutoScalerCondition(t *testing.T, fas *autoscaling.FleetAutoscaler, condition func(log *logrus.Entry, fas *autoscaling.FleetAutoscaler) bool) {
+	t.Helper()
 	log := TestLogger(t).WithField("fleetautoscaler", fas.Name)
 	log.Info("waiting for fleetautoscaler condition")
 	err := wait.PollUntilContextTimeout(context.Background(), 2*time.Second, 2*time.Minute, true, func(_ context.Context) (bool, error) {
@@ -529,6 +534,7 @@ func (f *Framework) CleanUp(ns string) error {
 
 // CreateAndApplyAllocation creates and applies an Allocation to a Fleet
 func (f *Framework) CreateAndApplyAllocation(t *testing.T, flt *agonesv1.Fleet) *allocationv1.GameServerAllocation {
+	t.Helper()
 	gsa := GetAllocation(flt)
 	gsa, err := f.AgonesClient.AllocationV1().GameServerAllocations(flt.ObjectMeta.Namespace).Create(context.Background(), gsa, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -540,6 +546,7 @@ func (f *Framework) CreateAndApplyAllocation(t *testing.T, flt *agonesv1.Fleet) 
 // finds the first udp port from the spec to send the message to,
 // returns error if no Ports were allocated
 func (f *Framework) SendGameServerUDP(t *testing.T, gs *agonesv1.GameServer, msg string) (string, error) {
+	t.Helper()
 	if len(gs.Status.Ports) == 0 {
 		return "", f.errs.New("Empty Ports array")
 	}
@@ -556,6 +563,7 @@ func (f *Framework) SendGameServerUDP(t *testing.T, gs *agonesv1.GameServer, msg
 // SendGameServerUDPToPort sends a message to a gameserver at the named port and returns its reply
 // returns error if no Ports were allocated or a port of the specified name doesn't exist
 func (f *Framework) SendGameServerUDPToPort(t *testing.T, gs *agonesv1.GameServer, portName string, msg string) (string, error) {
+	t.Helper()
 	log := TestLogger(t)
 	if len(gs.Status.Ports) == 0 {
 		return "", f.errs.New("Empty Ports array")
@@ -580,6 +588,7 @@ func (f *Framework) SendGameServerUDPToPort(t *testing.T, gs *agonesv1.GameServe
 // SendUDP sends a message to an address, and returns its reply if
 // it returns one in 10 seconds. Will retry 5 times, in case UDP packets drop.
 func (f *Framework) SendUDP(t *testing.T, address, msg string) (string, error) {
+	t.Helper()
 	log := TestLogger(t).WithField("address", address)
 	b := make([]byte, 1024)
 	var n int
@@ -915,6 +924,7 @@ func (f *Framework) DefaultGameServer(namespace string) *agonesv1.GameServer {
 // LogEvents logs all the events for a given Kubernetes objects. Useful for debugging why something
 // went wrong.
 func (f *Framework) LogEvents(t *testing.T, log *logrus.Entry, namespace string, objOrRef k8sruntime.Object) {
+	t.Helper()
 	log.WithField("kind", objOrRef.GetObjectKind().GroupVersionKind().Kind).Info("Dumping Events:")
 	events, err := f.KubeClient.CoreV1().Events(namespace).SearchWithContext(context.Background(), scheme.Scheme, objOrRef)
 	require.NoError(t, err, "error searching for events")
@@ -927,6 +937,7 @@ func (f *Framework) LogEvents(t *testing.T, log *logrus.Entry, namespace string,
 // LogPodContainers takes a Pod as an argument and attempts to output the current and previous logs from each container
 // in that Pod It uses the framework's KubeClient to retrieve the logs and outputs them using the provided logger.
 func (f *Framework) LogPodContainers(t *testing.T, pod *corev1.Pod) {
+	t.Helper()
 	log := TestLogger(t)
 	log.WithField("pod", pod.Name).WithField("namespace", pod.Namespace).Info("Logs for Pod:")
 
@@ -978,6 +989,7 @@ func (f *Framework) LogPodContainers(t *testing.T, pod *corev1.Pod) {
 
 // SkipOnCloudProduct skips the test if the e2e was invoked with --cloud-product=<product>.
 func (f *Framework) SkipOnCloudProduct(t *testing.T, product, reason string) {
+	t.Helper()
 	if f.CloudProduct == product {
 		t.Skipf("skipping test on cloud product %s: %s", product, reason)
 	}

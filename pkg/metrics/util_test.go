@@ -82,6 +82,7 @@ func (c *fakeController) close() {
 }
 
 func (c *fakeController) run(t *testing.T) {
+	t.Helper()
 	go func() {
 		err := c.Controller.Run(c.ctx, 1)
 		assert.NoError(t, err)

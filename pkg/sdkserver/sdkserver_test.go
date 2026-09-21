@@ -56,6 +56,7 @@ const defaultTestListMaxCapacity = int64(1000)
 // patchGameServer is a helper function for the AddReactor "patch" that creates and applies a patch
 // to a gameserver. Returns a patched copy and does not modify the original game server.
 func patchGameServer(t *testing.T, action k8stesting.Action, gs *agonesv1.GameServer) *agonesv1.GameServer {
+	t.Helper()
 	pa := action.(k8stesting.PatchAction)
 	patchJSON := pa.GetPatch()
 	patch, err := jsonpatch.DecodePatch(patchJSON)
@@ -2094,6 +2095,7 @@ func waitConnectedStreamCount(sc *SDKServer, count int) error { //nolint:unparam
 }
 
 func asyncWatchGameServer(t *testing.T, sc *SDKServer, stream sdk.SDK_WatchGameServerServer) {
+	t.Helper()
 	// Note that WatchGameServer() uses getGameServer() and would block
 	// if gsWaitForSync is not Done().
 	go func() {

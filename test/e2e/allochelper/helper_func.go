@@ -77,6 +77,7 @@ const (
 
 // CopyDefaultAllocatorClientSecret copys the allocator client secret
 func CopyDefaultAllocatorClientSecret(ctx context.Context, t *testing.T, toNamespace string, framework *e2e.Framework) {
+	t.Helper()
 	kubeCore := framework.KubeClient.CoreV1()
 	clientSecret, err := kubeCore.Secrets(allocatorClientSecretNamespace).Get(ctx, allocatorClientSecretName, metav1.GetOptions{})
 	if err != nil {
@@ -85,7 +86,7 @@ func CopyDefaultAllocatorClientSecret(ctx context.Context, t *testing.T, toNames
 	clientSecret.ObjectMeta.Namespace = toNamespace
 	clientSecret.ResourceVersion = ""
 	_, err = kubeCore.Secrets(toNamespace).Create(ctx, clientSecret, metav1.CreateOptions{})
-	if err != nil {
+	if err != nil && !k8serrors.IsAlreadyExists(err) {
 		t.Fatalf("Could not copy default allocator client %s/%s secret to namespace %s: %v", allocatorClientSecretNamespace, allocatorClientSecretName, toNamespace, err)
 	}
 }
@@ -104,6 +105,7 @@ func CreateAllocationPolicy(ctx context.Context, t *testing.T, framework *e2e.Fr
 
 // GetAllocatorEndpoint gets the allocator LB endpoint
 func GetAllocatorEndpoint(ctx context.Context, t *testing.T, framework *e2e.Framework) (string, int32) {
+	t.Helper()
 	kubeCore := framework.KubeClient.CoreV1()
 	svc, err := kubeCore.Services(agonesSystemNamespace).Get(ctx, allocatorServiceName, metav1.GetOptions{})
 	if !assert.NoError(t, err) {
@@ -299,6 +301,7 @@ func DeleteAgonesPod(ctx context.Context, podName string, namespace string, fram
 // a client that has at least once successfully allocated from a fleet. The fleet used to test
 // the client is leaked.
 func GetAllocatorClient(ctx context.Context, t *testing.T, framework *e2e.Framework) (pb.AllocationServiceClient, error) {
+	t.Helper()
 	logger := e2e.TestLogger(t)
 	ip, port := GetAllocatorEndpoint(ctx, t, framework)
 	requestURL := fmt.Sprintf(allocatorReqURLFmt, ip, port)

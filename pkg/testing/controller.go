@@ -91,6 +91,7 @@ func NewEstablishedCRD() *apiextv1.CustomResourceDefinition {
 // AssertEventContains asserts that a k8s event stream contains a
 // value, and assert.FailNow() if it does not
 func AssertEventContains(t *gotesting.T, events <-chan string, contains string) {
+	t.Helper()
 	select {
 	case e := <-events:
 		assert.Contains(t, e, contains)
@@ -102,6 +103,7 @@ func AssertEventContains(t *gotesting.T, events <-chan string, contains string) 
 // AssertNoEvent asserts that the event stream does not
 // have a value in it (at least in the next second)
 func AssertNoEvent(t *gotesting.T, events <-chan string) {
+	t.Helper()
 	select {
 	case e := <-events:
 		assert.Fail(t, "should not have an event", e)

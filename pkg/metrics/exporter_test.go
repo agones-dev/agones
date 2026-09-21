@@ -200,6 +200,7 @@ func newMockWithReactorNodesAndGameServers() agtesting.Mocks {
 }
 
 func setupGameServer(t *testing.T, ctrl *fakeController) {
+	t.Helper()
 	gs := gameServerWithFleetAndState("test-fleet", agonesv1.GameServerStateCreating)
 	ctrl.gsWatch.Add(gs)
 
@@ -254,6 +255,7 @@ func setupFleetWithCountersAndLists(_ *testing.T, ctrl *fakeController) {
 }
 
 func setupGameServerPlayerConnect(t *testing.T, ctrl *fakeController) {
+	t.Helper()
 	gs := gameServerWithFleetAndState("test-fleet", agonesv1.GameServerStateReady)
 	gs.Status.Players = &agonesv1.PlayerStatus{
 		Count: 0,
@@ -275,6 +277,7 @@ func setupGameServerPlayerConnect(t *testing.T, ctrl *fakeController) {
 }
 
 func setupGameServerAllocation(t *testing.T, ctrl *fakeController) {
+	t.Helper()
 	gs := gameServerWithFleetAndState("test-fleet", agonesv1.GameServerStateCreating)
 	ctrl.gsWatch.Add(gs)
 	gs = gs.DeepCopy()

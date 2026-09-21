@@ -97,6 +97,7 @@ func TestPingUDP(t *testing.T) {
 }
 
 func externalIP(t *testing.T, kubeCore typedv1.NodesGetter, svc *corev1.Service) (string, error) {
+	t.Helper()
 	externalIP := ""
 	ctx := context.Background()
 

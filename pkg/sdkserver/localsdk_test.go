@@ -1075,6 +1075,7 @@ func gsToTmpFile(gs *agonesv1.GameServer) (string, error) {
 
 // assertWatchUpdate checks the values of an update message when a GameServer value has been changed
 func assertWatchUpdate(t *testing.T, stream *gameServerMockStream, expected any, actual func(gs *sdk.GameServer) any) {
+	t.Helper()
 	select {
 	case msg := <-stream.msgs:
 		assert.Equal(t, expected, actual(msg))
@@ -1085,6 +1086,7 @@ func assertWatchUpdate(t *testing.T, stream *gameServerMockStream, expected any,
 
 // assertNoWatchUpdate checks that no update message has been sent for changes to the GameServer
 func assertNoWatchUpdate(t *testing.T, stream *gameServerMockStream) {
+	t.Helper()
 	select {
 	case <-stream.msgs:
 		assert.Fail(t, "should not get a message")
@@ -1094,6 +1096,7 @@ func assertNoWatchUpdate(t *testing.T, stream *gameServerMockStream) {
 
 // assertInitialWatchUpdate checks that the initial GameServer state is sent immediately after WatchGameServer
 func assertInitialWatchUpdate(t *testing.T, stream *gameServerMockStream) {
+	t.Helper()
 	select {
 	case <-stream.msgs:
 	case <-time.After(time.Second):

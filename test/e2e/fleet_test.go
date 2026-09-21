@@ -985,6 +985,7 @@ func TestFleetNameValidation(t *testing.T) {
 }
 
 func assertSuccessOrUpdateConflict(t *testing.T, err error) {
+	t.Helper()
 	if !k8serrors.IsConflict(err) {
 		// update conflicts are sometimes ok, we simply lost the race.
 		require.NoError(t, err)
@@ -1824,6 +1825,7 @@ func TestFleetAllocationOverflow(t *testing.T) {
 }
 
 func assertCausesContainsString(t *testing.T, causes []metav1.StatusCause, expected string) {
+	t.Helper()
 	strs := make([]string, 0, len(causes))
 	for _, v := range causes {
 		strs = append(strs, v.Message)
@@ -1850,6 +1852,7 @@ func countFleetScheduling(gsList []agonesv1.GameServer, scheduling apis.Scheduli
 
 // Patches fleet with scheduling and scale values
 func schedulingFleetPatch(ctx context.Context, t *testing.T, f *agonesv1.Fleet, scheduling apis.SchedulingStrategy, scale int32) *agonesv1.Fleet {
+	t.Helper()
 
 	patch := fmt.Sprintf(`[{ "op": "replace", "path": "/spec/scheduling", "value": "%s" },
 	                       { "op": "replace", "path": "/spec/replicas", "value": %d }]`,
@@ -1871,6 +1874,7 @@ func schedulingFleetPatch(ctx context.Context, t *testing.T, f *agonesv1.Fleet, 
 }
 
 func scaleAndWait(ctx context.Context, t *testing.T, flt *agonesv1.Fleet, fleetSize int32) (duration time.Duration, err error) {
+	t.Helper()
 	t0 := time.Now()
 	scaleFleetSubresource(ctx, t, flt, fleetSize)
 	err = framework.WaitForFleetCondition(t, flt, e2e.FleetReadyCount(fleetSize))
@@ -1881,6 +1885,7 @@ func scaleAndWait(ctx context.Context, t *testing.T, flt *agonesv1.Fleet, fleetS
 // scaleFleetPatch creates a patch to apply to a Fleet.
 // Easier for testing, as it removes object generational issues.
 func scaleFleetPatch(ctx context.Context, t *testing.T, f *agonesv1.Fleet, scale int32) *agonesv1.Fleet {
+	t.Helper()
 	patch := fmt.Sprintf(`[{ "op": "replace", "path": "/spec/replicas", "value": %d }]`, scale)
 	logrus.WithField("fleet", f.ObjectMeta.Name).WithField("scale", scale).WithField("patch", patch).Info("Scaling fleet")
 
@@ -1892,6 +1897,7 @@ func scaleFleetPatch(ctx context.Context, t *testing.T, f *agonesv1.Fleet, scale
 // scaleFleetSubresource uses scale subresource to change Replicas size of the Fleet.
 // Returns the same f as in parameter, just to keep signature in sync with scaleFleetPatch
 func scaleFleetSubresource(ctx context.Context, t *testing.T, f *agonesv1.Fleet, scale int32) *agonesv1.Fleet {
+	t.Helper()
 	logrus.WithField("fleet", f.ObjectMeta.Name).WithField("scale", scale).Info("Scaling fleet")
 
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {

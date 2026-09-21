@@ -788,6 +788,7 @@ func TestControllerSyncFleetAutoscaler(t *testing.T) {
 // this is a sign that the informer has been started and the fleet autoscaler has been processed
 // by the informer.
 func fleetAutoscalerThreadEventually(t *testing.T, c *Controller, fas *autoscalingv1.FleetAutoscaler) {
+	t.Helper()
 	require.Eventually(t, func() bool {
 		c.fasThreadMutex.Lock()
 		defer c.fasThreadMutex.Unlock()

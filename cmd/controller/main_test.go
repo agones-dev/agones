@@ -147,6 +147,7 @@ func TestControllerConfigValidationMaxListItems(t *testing.T) {
 }
 
 func errorsContainString(t *testing.T, errs []error, expected string) {
+	t.Helper()
 	found := false
 	for _, v := range errs {
 		if strings.Contains(v.Error(), expected) {
