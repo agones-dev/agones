@@ -29,7 +29,6 @@ If you are collecting [Metrics]({{< relref "metrics" >}}) using our standard Pro
 
 See [Creating a Cluster]({{< relref "Creating Cluster" >}}) for initial set up on your cloud provider.
 
-{{% feature publishVersion="1.61.0" %}}
 ## Pod Security Standards
 
 The Agones sdk sidecar container declares a security context that is compatible with the `restricted`
@@ -48,7 +47,6 @@ On [GKE Autopilot]({{< ref "/docs/Installation/Creating Cluster/gke.md" >}}), Ag
 The sidecar security context can be changed through the `agones.image.sdk.securityContext`
 [Helm value]({{< ref "/docs/Installation/Install Agones/helm.md#configuration" >}}), for example to use a different seccomp
 profile or group.
-{{% /feature %}}
 
 ## Redundant Clusters
 

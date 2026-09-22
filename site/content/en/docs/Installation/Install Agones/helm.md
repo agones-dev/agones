@@ -8,83 +8,10 @@ description: >
 
 ## Prerequisites
 
-{{% feature expiryVersion="1.61.0" %}}
-- [Helm](https://helm.sh/) package manager 3.2.3+
-{{% /feature %}}
-{{% feature publishVersion="1.61.0" %}}
 - [Helm](https://helm.sh/) package manager 4.1.3+
-{{% /feature %}}
 - [Supported Kubernetes Cluster]({{< relref "../_index.md#usage-requirements" >}})
 
-{{% feature expiryVersion="1.61.0" %}}
-## Helm 3
 
-### Installing the Chart
-
-To install the chart with the release name `my-release` using our stable helm repository:
-
-```bash
-helm repo add agones https://agones.dev/chart/stable
-helm repo update
-helm install my-release --namespace agones-system --create-namespace agones/agones
-```
-
-_We recommend installing Agones in its own namespaces, such as `agones-system` as shown above.
-If you want to use a different namespace, you can use the helm `--namespace` parameter to specify._
-
-When running in production, Agones should be scheduled on a dedicated pool of nodes, distinct from
-where Game Servers are scheduled for better isolation and resiliency. By default Agones prefers to
-be scheduled on nodes labeled with `agones.dev/agones-system=true` and tolerates node taint
-`agones.dev/agones-system=true:NoExecute`. If no dedicated nodes are available, Agones will
-run on regular nodes, but that's not recommended for production use. For instructions on setting up
-a dedicated node pool for Agones, see the [Agones installation instructions]({{< relref "../_index.md" >}})
-for your preferred environment.
-
-The command deploys Agones on the Kubernetes cluster with the default configuration. The
-[configuration](#configuration) section lists the parameters that can be configured during installation.
-
-The Agones chart uses a [Helm Schema](https://helm.sh/docs/topics/charts/#schema-files) to validate
-fields set by the user. In the event this validation schema marks a valid edge case as invalid,
-please [file a bug](https://github.com/agones-dev/agones/issues), and you can still attempt a
-Helm install or Helm upgrade with the Helm flag `--skip-schema-validation`.
-
-{{% alert title="Tip" color="info" %}}
-List all releases using `helm list --all-namespaces`
-{{% /alert %}}
-
-### Namespaces
-
-By default Agones is configured to work with game servers deployed in the `default` namespace. If
-you are planning to use another namespace you can configure Agones via the parameter `gameservers.namespaces`.
-
-For example to use `default` **and** `xbox` namespaces:
-
-```bash
-kubectl create namespace xbox
-helm install my-release agones/agones --set "gameservers.namespaces={default,xbox}" --namespace agones-system
-```
-
-{{% alert title="Note" color="info" %}}
-You need to create your namespaces before installing Agones.
-{{% /alert %}}
-
-If you want to add a new namespace afterward upgrade your release:
-
-```bash
-kubectl create namespace ps4
-helm upgrade my-release agones/agones --reuse-values --set "gameservers.namespaces={default,xbox,ps4}" --namespace agones-system
-```
-
-### Uninstalling the Chart
-
-To uninstall/delete the `my-release` deployment:
-
-```bash
-helm uninstall my-release --namespace=agones-system
-```
-{{% /feature %}}
-
-{{% feature publishVersion="1.61.0" %}}
 ## Helm 4
 
 ### Installing the Chart
@@ -158,7 +85,6 @@ To uninstall/delete the `my-release` deployment:
 ```bash
 helm uninstall my-release --namespace=agones-system
 ```
-{{% /feature %}}
 
 ## RBAC
 
@@ -188,21 +114,12 @@ The following tables lists the configurable parameters of the Agones chart and t
 
 ### Custom Resource Definitions
 
-{{% feature expiryVersion="1.61.0" %}}
-| Parameter                     | Description                                                                                                                                                                                                                         | Default |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| `agones.crds.install`         | Install the CRDs with this chart. Useful to disable if you want to subchart (since crd-install hook is broken), so you can copy the CRDs into your own chart.                                                                       | `true`  |
-| `agones.crds.cleanupOnDelete` | Run the pre-delete hook to delete all GameServers and their backing Pods when deleting the helm chart, so that all CRDs can be removed on chart deletion                                                                            | `true`  |
-| `agones.crds.cleanupJobTTL`   | The number of seconds for Kubernetes to delete the associated Job and Pods of the pre-delete hook after it completes, regardless if the Job is successful or not. Set to `0` to disable cleaning up the Job or the associated Pods. | `60`    |
-{{% /feature %}}
-{{% feature publishVersion="1.61.0" %}}
 | Parameter                                | Description                                                                                                                                                                                                                         | Default |
 | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
 | `agones.crds.install`                    | Install the CRDs with this chart. Useful to disable if you want to subchart (since crd-install hook is broken), so you can copy the CRDs into your own chart.                                                                       | `true`  |
 | `agones.crds.cleanupOnDelete`            | Run the pre-delete hook to delete all GameServers and their backing Pods when deleting the helm chart, so that all CRDs can be removed on chart deletion                                                                            | `true`  |
 | `agones.crds.cleanupJobTTL`              | The number of seconds for Kubernetes to delete the associated Job and Pods of the pre-delete hook after it completes, regardless if the Job is successful or not. Set to `0` to disable cleaning up the Job or the associated Pods. | `60`    |
 | `agones.crds.includeKubernetesPatchKeys` | Include the `x-kubernetes-patch-strategy` and `x-kubernetes-patch-merge-key` fields in the embedded `PodTemplateSpec` and `ObjectMeta` CRD schemas. These are not valid CustomResourceDefinition fields, so enabling this produces `unknown field` warnings on install, and fails on Kubernetes distributions that decode strictly, such as K3s. Tools such as [Kustomize][kustomize-openapi] can make use of them. | `false` |
-{{% /feature %}}
 
 ### Metrics
 
@@ -232,28 +149,6 @@ The following tables lists the configurable parameters of the Agones chart and t
 
 ### Container Images
 
-{{% feature expiryVersion="1.61.0" %}}
-| Parameter                            | Description                                                                                                                             | Default                                   |
-| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| `agones.image.registry`              | Global image registry for all the Agones system images                                                                                  | `us-docker.pkg.dev/agones-images/release` |
-| `agones.image.tag`                   | Global image tag for all images                                                                                                         | `{{< release-version >}}`                 |
-| `agones.image.controller.name`       | Image name for the controller                                                                                                           | `agones-controller`                       |
-| `agones.image.controller.pullPolicy` | Image pull policy for the controller                                                                                                    | `IfNotPresent`                            |
-| `agones.image.controller.pullSecret` | Image pull secret for the controller, allocator, sdk and ping image. Should be created both in `agones-system` and `default` namespaces | \`\`                                      |
-| `agones.image.sdk.name`              | Image name for the sdk                                                                                                                  | `agones-sdk`                              |
-| `agones.image.sdk.tag`               | Image tag for the sdk                                                                                                                   | value of `agones.image.tag`               |
-| `agones.image.sdk.cpuRequest`        | The [cpu request][cpu-constraints] for sdk server container                                                                             | `30m`                                     |
-| `agones.image.sdk.cpuLimit`          | The [cpu limit][cpu-constraints] for the sdk server container                                                                           | `0` (none)                                |
-| `agones.image.sdk.memoryRequest`     | The [memory request][memory-constraints] for sdk server container                                                                       | `0` (none)                                |
-| `agones.image.sdk.memoryLimit`       | The [memory limit][memory-constraints] for the sdk server container                                                                     | `0` (none)                                |
-| `agones.image.sdk.alwaysPull`        | Tells if the sdk image should always be pulled                                                                                          | `false`                                   |
-| `agones.image.ping.name`             | Image name for the ping service                                                                                                         | `agones-ping`                             |
-| `agones.image.ping.tag`              | Image tag for the ping service                                                                                                          | value of `agones.image.tag`               |
-| `agones.image.ping.pullPolicy`       | Image pull policy for the ping service                                                                                                  | `IfNotPresent`                            |
-| `agones.image.extensions.name`       | Image name for extensions                                                                                                               | `agones-extensions`                       |
-| `agones.image.extensions.pullPolicy` | Image pull policy for extensions                                                                                                        | `IfNotPresent`                            |
-{{% /feature %}}
-{{% feature publishVersion="1.61.0" %}}
 | Parameter                            | Description                                                                                                                             | Default                                   |
 | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
 | `agones.image.registry`              | Global image registry for all the Agones system images                                                                                  | `us-docker.pkg.dev/agones-images/release` |
@@ -274,7 +169,6 @@ The following tables lists the configurable parameters of the Agones chart and t
 | `agones.image.ping.pullPolicy`       | Image pull policy for the ping service                                                                                                  | `IfNotPresent`                            |
 | `agones.image.extensions.name`       | Image name for extensions                                                                                                               | `agones-extensions`                       |
 | `agones.image.extensions.pullPolicy` | Image pull policy for extensions                                                                                                        | `IfNotPresent`                            |
-{{% /feature %}}
 
 ### Agones Controller
 
