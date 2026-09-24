@@ -40,6 +40,7 @@ func findGameServerForAllocation(gsa *allocationv1.GameServerAllocation, list []
 	var loop func(list []*agonesv1.GameServer, f func(i int, gs *agonesv1.GameServer))
 
 	// packed is forward looping, distributed is random looping
+	// nolint:dupl // Linter errors on lines are duplicate of findGameServerForBatchAllocation in batch_allocator.go
 	switch gsa.Spec.Scheduling {
 	case apis.Packed:
 		loop = func(list []*agonesv1.GameServer, f func(i int, gs *agonesv1.GameServer)) {
@@ -80,6 +81,10 @@ func findGameServerForAllocation(gsa *allocationv1.GameServerAllocation, list []
 	}
 
 	loop(list, func(i int, gs *agonesv1.GameServer) {
+		if gs == nil {
+			return
+		}
+
 		// only search the same namespace
 		if gs.ObjectMeta.Namespace != gsa.ObjectMeta.Namespace {
 			return
