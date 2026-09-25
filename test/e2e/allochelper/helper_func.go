@@ -40,6 +40,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -143,6 +144,11 @@ func CreateRemoteClusterDialOptions(ctx context.Context, namespace, clientSecret
 				MaxDelay:   30 * time.Second,
 			},
 			MinConnectTimeout: time.Second,
+		}),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{
+			Time:                10 * time.Second, // send a ping if idle for this long
+			Timeout:             5 * time.Second,  // wait this long for a ping ack before considering the connection dead
+			PermitWithoutStream: true,
 		}),
 	}, nil
 }

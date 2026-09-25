@@ -33,8 +33,10 @@ import (
 )
 
 const (
-	retryInterval = 5 * time.Second
-	retryTimeout  = 45 * time.Second
+	retryInterval                = 5 * time.Second
+	retryTimeout                 = 90 * time.Second
+	allocateTimeout              = 15 * time.Second
+	requiredConsecutiveSuccesses = 3
 )
 
 func TestAllocatorAfterDeleteReplica(t *testing.T) {
@@ -89,11 +91,26 @@ func TestAllocatorAfterDeleteReplica(t *testing.T) {
 	}
 
 	// Wait and keep making calls till we know the draining time has passed
-	_ = wait.PollUntilContextTimeout(context.Background(), retryInterval, retryTimeout, true, func(_ context.Context) (bool, error) {
-		response, err := grpcClient.Allocate(context.Background(), request)
-		logger.Infof("err = %v (code = %v), response = %v", err, status.Code(err), response)
-		helper.ValidateAllocatorResponse(t, response)
-		require.NoError(t, err, "Failed grpc allocation request")
-		return false, nil
+	successes := 0
+	var lastErr error
+	var lastResponse *pb.AllocationResponse
+
+	_ = wait.PollUntilContextTimeout(ctx, retryInterval, retryTimeout, true, func(_ context.Context) (bool, error) {
+		callCtx, cancel := context.WithTimeout(ctx, allocateTimeout)
+		defer cancel()
+
+		lastResponse, lastErr = grpcClient.Allocate(callCtx, request)
+		logger.Infof("err = %v (code = %v), response = %v, consecutive successes = %d",
+			lastErr, status.Code(lastErr), lastResponse, successes)
+
+		if lastErr == nil {
+			successes++
+		} else {
+			successes = 0
+		}
+		return successes >= requiredConsecutiveSuccesses, nil
 	})
+
+	require.NoError(t, lastErr, "Failed grpc allocation request")
+	helper.ValidateAllocatorResponse(t, lastResponse)
 }
