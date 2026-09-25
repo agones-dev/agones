@@ -479,9 +479,6 @@ func (b *BufferPolicy) ValidateBufferPolicy(fldPath *field.Path) field.ErrorList
 // nolint:dupl  // Linter errors on lines are duplicate of ValidateListPolicy
 func (c *CounterPolicy) ValidateCounterPolicy(fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return append(allErrs, field.Forbidden(fldPath, "feature CountsAndLists must be enabled"))
-	}
 
 	if c == nil {
 		return append(allErrs, field.Required(fldPath, "counter policy config params are missing"))
@@ -520,9 +517,7 @@ func (c *CounterPolicy) ValidateCounterPolicy(fldPath *field.Path) field.ErrorLi
 // nolint:dupl  // Linter errors on lines are duplicate of ValidateCounterPolicy
 func (l *ListPolicy) ValidateListPolicy(fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return append(allErrs, field.Forbidden(fldPath, "feature CountsAndLists must be enabled"))
-	}
+
 	if l == nil {
 		return append(allErrs, field.Required(fldPath, "list policy config params are missing"))
 	}
