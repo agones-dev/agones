@@ -25,12 +25,14 @@
 
 REPOSITORY ?=
 PROD_REPO ?= us-docker.pkg.dev/agones-images/examples
+MINIKUBE ?= minikube
+MINIKUBE_PROFILE ?= agones
 
 # Directory that this Makefile is in.
 mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
 project_path := $(dir $(mkfile_path))
 root_path = $(realpath $(project_path)/../..)
-version := 0.11
+version := 0.12
 ifeq ($(REPOSITORY),)
 	server_tag := nodejs-simple-server:$(version)
 else
@@ -50,6 +52,13 @@ build:
 
 run:
 	docker run --network=host $(PROD_REPO)/$(server_tag) $(args)
+
+# Pushes the image (built via `make build`) into the "agones" minikube instance,
+# and re-tags it with the production tag (i.e. $(PROD_REPO)/$(server_tag)), so
+# that it can be used by the example gameserver.yaml without modification.
+minikube-push:
+	$(MINIKUBE) image load $(server_tag) -p $(MINIKUBE_PROFILE)
+	$(MINIKUBE) image tag $(server_tag) $(PROD_REPO)/$(server_tag) -p $(MINIKUBE_PROFILE)
 
 # check if hosted on Google Artifact Registry
 gar-check:
