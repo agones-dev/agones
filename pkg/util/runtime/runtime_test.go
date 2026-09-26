@@ -19,7 +19,6 @@ package runtime
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -41,7 +40,7 @@ func TestHandleError(t *testing.T) {
 	HandleError(nil, nil)
 	assert.NoError(t, result, "No Errors for now")
 
-	err := fmt.Errorf("test")
+	err := errors.New("test")
 	// test nil logger
 	logger := NewLoggerWithSource("test")
 	HandleError(logger.WithError(err), err)

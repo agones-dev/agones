@@ -339,7 +339,7 @@ func TestAutoscalerStressCreate(t *testing.T) {
 func patchFleetAutoscaler(ctx context.Context, fas *autoscalingv1.FleetAutoscaler, bufferSize intstr.IntOrString, minReplicas int32, maxReplicas int32) (*autoscalingv1.FleetAutoscaler, error) {
 	var bufferSizeFmt string
 	if bufferSize.Type == intstr.Int {
-		bufferSizeFmt = fmt.Sprintf("%d", bufferSize.IntValue())
+		bufferSizeFmt = strconv.Itoa(bufferSize.IntValue())
 	} else {
 		bufferSizeFmt = fmt.Sprintf("%q", bufferSize.String())
 	}
@@ -642,7 +642,7 @@ func TestAutoscalerWebhookWithMetadata(t *testing.T) {
 	fixedReplicas := int32(11)
 	flt.Spec.Replicas = initialReplicasCount
 	flt.ObjectMeta.Annotations = map[string]string{
-		"fixedReplicas": fmt.Sprintf("%d", fixedReplicas),
+		"fixedReplicas": strconv.Itoa(int(fixedReplicas)),
 	}
 	flt, err = alpha1.Fleets(framework.Namespace).Create(ctx, flt, metav1.CreateOptions{})
 	require.NoError(t, err)

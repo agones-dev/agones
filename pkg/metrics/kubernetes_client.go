@@ -184,14 +184,14 @@ func init() {
 		TagKeys:     []tag.Key{keyQueueName},
 	}))
 
-	clientGoRequest := &clientGoMetricAdapter{}
+	clientGoRequest := clientGoMetricAdapter{}
 	clientGoRequest.Register()
 }
 
 // Definition of client-go metrics adapter for HTTP requests, caches and workerqueues observations
 type clientGoMetricAdapter struct{}
 
-func (c *clientGoMetricAdapter) Register() {
+func (c clientGoMetricAdapter) Register() {
 	metrics.Register(metrics.RegisterOpts{
 		RequestLatency: c,
 		RequestResult:  c,

@@ -37,6 +37,7 @@ linters:
     - durationcheck
     - errname
     - errorlint
+    - exptostd
     - fatcontext
     - gocheckcompilerdirectives
     - goconst
@@ -50,11 +51,15 @@ linters:
     - nilerr
     - nilnesserr
     - noctx
+    - perfsprint
     - reassign
+    - recvcheck
     - revive
     - testifylint
     - unconvert
     - unparam
+    - usestdlibvars
+    - usetesting
     - wastedassign
   settings:
     depguard:
@@ -147,6 +152,13 @@ linters:
       - path: (.+)_test\.go|^test/|^cmd/.*|^pkg/apis/.*
         # fieldalignment is in the `govet` linter, so exclude based on text instead of all of govet
         text: '^fieldalignment: .*'
+
+      # recvcheck compares a type's hand-written methods against its generated
+      # ones. In pkg/apis the deepcopy generator picks the receiver style, so
+      # the only side we control is the hand-written method -- and flipping
+      # that changes the method set of a published API type.
+      - path: ^pkg/apis/
+        linters: [recvcheck]
 
       # `wait.PollUntilContextTimeout` and friends take `(false, nil)` to mean
       # "not ready, try again" -- returning the error instead aborts the poll.
