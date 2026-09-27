@@ -26,12 +26,6 @@ There are some text commands you can send the server to affect its behavior:
 | "LABEL"                | Sets the specified label on the game server resource                                     |
 | "CRASH"                | Causes the game server to exit / crash immediately                                       |
 | "ANNOTATION"           | Sets the specified annotation on the game server resource                                |
-| "PLAYER_CAPACITY"      | With one argument, gets the player capacity; with two arguments sets the player capacity |
-| "PLAYER_CONNECT"       | Connects the specified player to the game server                                         |
-| "PLAYER_DISCONNECT"    | Disconnects the specified player from the game server                                    |
-| "PLAYER_CONNECTED"     | Returns true/false depending on whether the specified player is connected                |
-| "GET_PLAYERS"          | Returns a list of the connected players                                                  |
-| "PLAYER_COUNT"         | Returns a count of the connected players                                                 |
 | "GET_COUNTER_COUNT"    | Returns a count of a given Counter                                                       |
 | "INCREMENT_COUNTER"    | Increases the count of the given Counter by the given nonnegative integer amount         |
 | "DECREMENT_COUNTER"    | Decreases the count of the given Counter by the given nonnegative integer amount         |
@@ -43,8 +37,8 @@ There are some text commands you can send the server to affect its behavior:
 | "LIST_CONTAINS"        | Returns true if the given value is in the given List, false otherwise                    |
 | "GET_LIST_LENGTH"      | Returns the length (number of values) of the given List as a string                      |
 | "GET_LIST_VALUES"      | Return the values in the given List as a comma delineated string                         |
-| "APPEND_LIST_VALUE"    | Returns if the given value was successfully added to the List (true) or not (false)       |
-| "DELETE_LIST_VALUE"    | Rreturns if the given value was successfully deleted from the List (true) or not (false)  |
+| "APPEND_LIST_VALUE"    | Returns if the given value was successfully added to the List (true) or not (false)      |
+| "DELETE_LIST_VALUE"    | Rreturns if the given value was successfully deleted from the List (true) or not (false) |
 
 ## Configuration
 
