@@ -23,7 +23,6 @@ import (
 	"agones.dev/agones/pkg"
 	"agones.dev/agones/pkg/apis"
 	"agones.dev/agones/pkg/apis/agones"
-	"agones.dev/agones/pkg/util/runtime"
 )
 
 const (
@@ -144,7 +143,7 @@ func (f *Fleet) GameServerSet() *GameServerSet {
 		gsSet.Spec.AllocationOverflow = f.Spec.AllocationOverflow.DeepCopy()
 	}
 
-	if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) && f.Spec.Priorities != nil {
+	if f.Spec.Priorities != nil {
 		// DeepCopy done manually here as f.Spec.Priorities does not have a DeepCopy() method.
 		gsSet.Spec.Priorities = make([]Priority, len(f.Spec.Priorities))
 		copy(gsSet.Spec.Priorities, f.Spec.Priorities)
@@ -223,10 +222,6 @@ func (f *Fleet) Validate(apiHooks APIHooks) field.ErrorList {
 
 	if f.Spec.AllocationOverflow != nil {
 		allErrs = append(allErrs, f.Spec.AllocationOverflow.Validate(field.NewPath("spec", "allocationOverflow"))...)
-	}
-
-	if f.Spec.Priorities != nil && !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "priorities"), "FeatureCountsAndLists is not enabled"))
 	}
 
 	return allErrs
