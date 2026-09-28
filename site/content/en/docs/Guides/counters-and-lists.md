@@ -82,7 +82,7 @@ and `GameServer.Status.Counters[rooms].Capacity` would have the current Counter 
 counters.
 
 Subsequently `GameServer.Status.Lists[players].Values` stores the array of values for the list
-and `GameServer.Status.Lists[players].Capacity` is the current capacity for the player tracking List.
+and `GameServer.Status.Lists[players].Capacity` is the current capacity for the `players` List.
 
 Check the API reference for [`GameServerStatus`][gameserverstatus] for all the details on the data structure.
 
