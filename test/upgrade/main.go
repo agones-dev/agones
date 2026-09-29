@@ -325,7 +325,7 @@ func installAgonesRelease(version, registry, featureGates, imagePullPolicy, side
 	log.Printf("Agones Version %s, FeatureGates %s", version, featureGates)
 
 	helmString := fmt.Sprintf(
-		"upgrade --install --atomic --wait --timeout=10m --namespace=agones-system --create-namespace --version %s "+
+		"upgrade --install --rollback-on-failure --wait --timeout=10m --namespace=agones-system --create-namespace --server-side=false --version %s "+
 			"--set agones.image.tag=%s "+
 			"--set agones.image.registry=%s "+
 			"--set agones.image.allocator.pullPolicy=%s "+
@@ -410,7 +410,7 @@ func runConfigWalker(ctx context.Context, g *errgroup.Group, validConfigs []*con
 // checkHelmStatus returns the status of the Helm release at a specified agonesVersion if it exists.
 func checkHelmStatus(agonesVersion string) (string, error) {
 	helmStatus := helmStatuses{}
-	checkStatus := []string{"list", "-a", "-nagones-system", "-ojson"}
+	checkStatus := []string{"list", "-nagones-system", "-ojson"}
 	out, err := runExecCommand(HelmCmd, checkStatus...)
 	if err != nil {
 		return "", fmt.Errorf("Could not run command %s %s, err: %s", KubectlCmd, checkStatus, err)

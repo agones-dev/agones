@@ -24,7 +24,7 @@
 #
 
 # base version target. This is usually the next release.
-base_version = 1.61.0
+base_version = 1.62.0
 
 #
 # All of the following can be overwritten with environment variables
@@ -66,7 +66,7 @@ KIND_PROFILE ?= agones
 KIND_CONTAINER_NAME=$(KIND_PROFILE)-control-plane
 
 # Game Server image to use while doing end-to-end tests
-GS_TEST_IMAGE ?= us-docker.pkg.dev/agones-images/examples/simple-game-server:0.43
+GS_TEST_IMAGE ?= us-docker.pkg.dev/agones-images/examples/simple-game-server:0.44
 
 # Enable all beta feature gates. Keep in sync with `true` (beta) entries in pkg/util/runtime/features.go:featureDefaults
 BETA_FEATURE_GATES ?= "CountsAndLists=true&GKEAutopilotExtendedDurationPods=true&ScheduledAutoscaler=true&SidecarContainers=true&FleetAutoscaleRequestMetaData=true"
@@ -453,7 +453,8 @@ install: $(ensure-build-image) install-custom-pull-secret
 			helm uninstall agones --namespace=agones-system --wait --timeout=20m; \
 		fi || true'
 	$(DOCKER_RUN) \
-		helm upgrade --install --atomic --wait --timeout 10m --namespace=agones-system \
+		helm upgrade --install --rollback-on-failure --wait --timeout 10m --namespace=agones-system \
+		--server-side=false \
 		--create-namespace \
 		--set agones.image.tag=$(VERSION),agones.image.registry=$(REGISTRY) \
 		--set agones.image.controller.pullPolicy=$(IMAGE_PULL_POLICY),agones.image.controller.pullSecret=$(IMAGE_PULL_SECRET) \

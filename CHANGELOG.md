@@ -1,5 +1,75 @@
 # Changelog
 
+# [v1.61.0](https://github.com/agones-dev/agones/tree/v1.61.0) (2026-09-22)
+
+[Full Changelog](https://github.com/agones-dev/agones/compare/v1.60.0...v1.61.0)
+
+**Breaking changes**
+- fix: gate x-kubernetes-patch-* CRD fields behind a Helm conditional by @markmandel in https://github.com/agones-dev/agones/pull/4698
+- feat: upgrade helm from 3 to 4 by @lacroixthomas in https://github.com/agones-dev/agones/pull/4746
+
+**Implemented enhancements**
+- feat(#4668): restricted-compatible security context for the sdk sidecar by @GrowlyX in https://github.com/agones-dev/agones/pull/4718
+
+**Fixed bugs**
+- fix: mark GameServer Unhealthy when the game container terminates and the Pod stays Running by @GrowlyX in https://github.com/agones-dev/agones/pull/4663
+- fix memory leak when delete game server by @txuna in https://github.com/agones-dev/agones/pull/4697
+- Clamp active GameServerSet replicas at zero during fleet rolling updates by @Jacobbrewer1 in https://github.com/agones-dev/agones/pull/4706
+- fix: use crates.io registry token for Rust SDK publishing by @indurireddy-TF in https://github.com/agones-dev/agones/pull/4693
+- fix: plumb gameservers.lists.maxItems through to the SDK server by @markmandel in https://github.com/agones-dev/agones/pull/4729
+- fix: move GameServer to Shutdown when the game container exits cleanly and the Pod stays Running by @GrowlyX in https://github.com/agones-dev/agones/pull/4737
+
+**Security fixes**
+- build: enable gosec, correctness linters, and testifylint by @markmandel in https://github.com/agones-dev/agones/pull/4696
+
+**Other**
+- contrib: enforce automated test coverage for all submissions by @markmandel in https://github.com/agones-dev/agones/pull/4675
+- Preparation for Release v1.61.0 by @Sivasankaran25 in https://github.com/agones-dev/agones/pull/4687
+- chore: upgrade website to Docsy 0.16.0 and restore the version lock by @markmandel in https://github.com/agones-dev/agones/pull/4669
+- build: upgrade golangci-lint to v2.12.2 and migrate config by @markmandel in https://github.com/agones-dev/agones/pull/4676
+- build: bump actions/stale from 10.4.0 to 11.0.0 by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4666
+- build: update dependencies in autoscaler-webhook example by @markmandel in https://github.com/agones-dev/agones/pull/4688
+- build: ignore versioned 1-*.agones.dev URLs in htmltest by @markmandel in https://github.com/agones-dev/agones/pull/4695
+- feat: use new errors pkg in pkg/gameservers/ by @lacroixthomas in https://github.com/agones-dev/agones/pull/4691
+- test: Ignore https://development.agones.dev/ link by @markmandel in https://github.com/agones-dev/agones/pull/4700
+- test: replace `assert` with `require` in e2e TestFleetStrategyValidation by @markmandel in https://github.com/agones-dev/agones/pull/4704
+- build: bump browserslist from 4.28.1 to 4.28.8 in /sdks/nodejs in the npm_and_yarn group across 1 directory by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4708
+- feat: use new errors pkg in pkg/gameserverallocations/* by @lacroixthomas in https://github.com/agones-dev/agones/pull/4701
+- Retry TCP dial in SendTCP only on GKE Autopilot by @markmandel in https://github.com/agones-dev/agones/pull/4709
+- build: bump the go_modules group across 4 directories with 1 update by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4707
+- build: bump the go_modules group across 7 directories with 1 update by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4717
+- feat: use new errors pkg in pkg/cloudproduct/* by @lacroixthomas in https://github.com/agones-dev/agones/pull/4712
+- feat: use new errors pkg in pkg/fleets/* by @lacroixthomas in https://github.com/agones-dev/agones/pull/4710
+- feat: use new errors pkg in pkg/portallocator/* by @lacroixthomas in https://github.com/agones-dev/agones/pull/4714
+- feat: use new errors pkg in pkg/gameserverset/* by @lacroixthomas in https://github.com/agones-dev/agones/pull/4703
+- feat: use new errors pkg in pkg/metrics/* by @lacroixthomas in https://github.com/agones-dev/agones/pull/4713
+- feat: stop using github.com/pkg/errors in build/* by @lacroixthomas in https://github.com/agones-dev/agones/pull/4724
+- feat: use new errors pkg in pkg/apis/* by @lacroixthomas in https://github.com/agones-dev/agones/pull/4720
+- feat: use new errors pkg in ./cmd/* by @lacroixthomas in https://github.com/agones-dev/agones/pull/4721
+- feat: use new errors pkg in sdks/* by @lacroixthomas in https://github.com/agones-dev/agones/pull/4722
+- PlayerTracking Removal: Delete Unit Tests by @markmandel in https://github.com/agones-dev/agones/pull/4719
+- build: bump the go_modules group across 11 directories with 1 update by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4732
+- feat: stop using github.com/pkg/errors in examples/* by @lacroixthomas in https://github.com/agones-dev/agones/pull/4723
+- Snapser: Logo addition by @ajinkya-apte in https://github.com/agones-dev/agones/pull/4736
+- feat: use new errors pkg in pkg/fleetautoscalers/* by @lacroixthomas in https://github.com/agones-dev/agones/pull/4711
+- build: enable modernize, minus the omitzero and newexpr analyzers by @markmandel in https://github.com/agones-dev/agones/pull/4735
+- feat: use new errors pkg in pkg/sdkserver/* by @lacroixthomas in https://github.com/agones-dev/agones/pull/4715
+- build: bump the npm_and_yarn group across 1 directory with 3 updates by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4734
+- feat: use new errors pkg in ./tests/* by @lacroixthomas in https://github.com/agones-dev/agones/pull/4725
+- fix: scope test-go to sdks/go to avoid rust SDK build race by @markmandel in https://github.com/agones-dev/agones/pull/4739
+- feat: use new errors pkg in pkg/util/* by @lacroixthomas in https://github.com/agones-dev/agones/pull/4716
+- Update cmake link to always latest by @markmandel in https://github.com/agones-dev/agones/pull/4744
+- test: remove PlayerTracking e2e tests by @markmandel in https://github.com/agones-dev/agones/pull/4741
+- test: call t.Helper() in shared test helpers by @markmandel in https://github.com/agones-dev/agones/pull/4738
+- fix: tolerate an existing allocator client secret when copying by @GrowlyX in https://github.com/agones-dev/agones/pull/4740
+- chore: add new rule for errors in linter and agent by @lacroixthomas in https://github.com/agones-dev/agones/pull/4745
+- build: bump go.opentelemetry.io/otel/sdk from 1.44.0 to 1.45.0 in /build/agones-bot in the go_modules group across 1 directory by @dependabot[bot] in https://github.com/agones-dev/agones/pull/4747
+
+**New Contributors**
+- @GrowlyX made their first contribution in https://github.com/agones-dev/agones/pull/4663
+- @Jacobbrewer1 made their first contribution in https://github.com/agones-dev/agones/pull/4706
+- @ajinkya-apte made their first contribution in https://github.com/agones-dev/agones/pull/4736
+
 # [v1.60.0](https://github.com/agones-dev/agones/tree/v1.60.0) (2026-08-11)
 
 [Full Changelog](https://github.com/agones-dev/agones/compare/v1.59.0...v1.60.0)

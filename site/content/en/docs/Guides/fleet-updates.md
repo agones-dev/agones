@@ -173,7 +173,7 @@ spec:
         spec:
           containers:
             - name: simple-game-server
-              image: us-docker.pkg.dev/agones-images/examples/simple-game-server:0.27
+              image: {{< example-image >}}
 ```
 
 See the [Fleet reference]({{% relref "../Reference/fleet.md" %}}) for more details.
