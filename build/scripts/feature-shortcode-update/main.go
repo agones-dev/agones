@@ -79,9 +79,8 @@ func main() {
 
 		modifiedContent, changed, err := removeBlocks(scanner, *version, ext)
 		if err != nil {
-			// Fix for review comment #1: propagate the scan failure and
-			// bail out *before* os.Create below, instead of silently
-			// writing back a truncated result.
+			// Bail out before writing so a scan failure can't overwrite the file
+			// with a truncated result.
 			return fmt.Errorf("scanning %s: %w", path, err)
 		}
 
@@ -120,12 +119,17 @@ func removeBlocks(scanner *bufio.Scanner, targetVersion, ext string) (string, bo
 		line := scanner.Text()
 
 		if inExpiryBlock {
-			// Drop every line inside a resolved expiryVersion block,
-			// including its own closing tag.
-			if matchFeatureClose(line) {
-				inExpiryBlock = false
-			}
+			// Drop every line inside a resolved expiryVersion block, up to
+			// and including its closing tag, keeping any text that follows
+			// the tag on its line.
 			modified = true
+			if rest, ok := afterFeatureClose(line); ok {
+				inExpiryBlock = false
+				if strings.TrimSpace(rest) != "" {
+					sb.WriteString(rest)
+					sb.WriteString("\n")
+				}
+			}
 			continue
 		}
 
@@ -155,16 +159,16 @@ func removeBlocks(scanner *bufio.Scanner, targetVersion, ext string) (string, bo
 			}
 			if lte {
 				modified = true
-				if remainder, closedOnSameLine := stripExpiryTagsOnLine(line); closedOnSameLine {
-					// Whole block resolves on one line: strip only the shortcode
-					// span and its content, keeping any surrounding text.
-					if strings.TrimSpace(remainder) != "" {
-						sb.WriteString(remainder)
-						sb.WriteString("\n")
-					}
-					continue
+				// Strip only the shortcode span and its content, keeping any
+				// surrounding text on this line.
+				remainder, closedOnSameLine := stripExpiryTagsOnLine(line)
+				if strings.TrimSpace(remainder) != "" {
+					sb.WriteString(remainder)
+					sb.WriteString("\n")
 				}
-				inExpiryBlock = true
+				if !closedOnSameLine {
+					inExpiryBlock = true
+				}
 				continue
 			}
 		}
@@ -223,23 +227,33 @@ func stripPublishTagsOnLine(line string) (string, bool) {
 }
 
 // stripExpiryTagsOnLine removes an expiryVersion open tag (already confirmed
-// matched by the caller) together with everything up to and including its
-// matching close tag, when the close tag is present on the same line.
-// Returns the remaining text (prefix + suffix) and whether a close tag was found.
+// matched by the caller) and everything after it on the line, up to and
+// including its matching close tag when that is on the same line.
+// Returns the remaining text (prefix, plus suffix if closed) and whether a
+// close tag was found.
 func stripExpiryTagsOnLine(line string) (string, bool) {
 	for _, openRe := range []*regexp.Regexp{expiryOpenPercentRe, expiryOpenAngleRe} {
 		loc := openRe.FindStringIndex(line)
 		if loc == nil {
 			continue
 		}
-		rest := line[loc[1]:]
-		for _, closeRe := range []*regexp.Regexp{featureClosePercentRe, featureCloseAngleRe} {
-			if closeLoc := closeRe.FindStringIndex(rest); closeLoc != nil {
-				return line[:loc[0]] + rest[closeLoc[1]:], true
-			}
+		if rest, ok := afterFeatureClose(line[loc[1]:]); ok {
+			return line[:loc[0]] + rest, true
 		}
+		return line[:loc[0]], false
 	}
 	return line, false
+}
+
+// afterFeatureClose returns the text following the first feature close tag
+// on the line, and whether a close tag was found.
+func afterFeatureClose(line string) (string, bool) {
+	for _, closeRe := range []*regexp.Regexp{featureClosePercentRe, featureCloseAngleRe} {
+		if loc := closeRe.FindStringIndex(line); loc != nil {
+			return line[loc[1]:], true
+		}
+	}
+	return "", false
 }
 
 func matchOpen(line string, percentRe, angleRe *regexp.Regexp) (string, bool) {
