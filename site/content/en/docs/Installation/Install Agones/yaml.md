@@ -47,7 +47,7 @@ helm template agones-manual --namespace agones-system  . \
   --set agones.allocator.generateTLS=false \
   --set agones.allocator.generateClientTLS=false \
   --set agones.crds.cleanupOnDelete=false \
-  --set agones.featureGates="PlayerTracking=true" \
+  --set agones.featureGates="Example=true" \
   > install-custom.yaml
 ```
 
