@@ -255,7 +255,7 @@ func TestRestAllocatorWithDeprecatedRequired(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	req, err := http.NewRequest("POST", "https://"+requestURL+"/gameserverallocation", bytes.NewBuffer(jsonRes))
+	req, err := http.NewRequest(http.MethodPost, "https://"+requestURL+"/gameserverallocation", bytes.NewBuffer(jsonRes))
 	if !assert.NoError(t, err) {
 		logrus.WithError(err).Info("failed to create rest request")
 		return
@@ -438,7 +438,7 @@ func TestRestAllocatorWithCountersAndLists(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return false, nil
 		}
-		req, err := http.NewRequest("POST", "https://"+requestURL+"/gameserverallocation", bytes.NewBuffer(jsonRes))
+		req, err := http.NewRequest(http.MethodPost, "https://"+requestURL+"/gameserverallocation", bytes.NewBuffer(jsonRes))
 		if !assert.NoError(t, err) {
 			return false, nil
 		}
@@ -503,7 +503,7 @@ func TestRestAllocatorWithSelectors(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	req, err := http.NewRequest("POST", "https://"+requestURL+"/gameserverallocation", bytes.NewBuffer(jsonRes))
+	req, err := http.NewRequest(http.MethodPost, "https://"+requestURL+"/gameserverallocation", bytes.NewBuffer(jsonRes))
 	if !assert.NoError(t, err) {
 		logrus.WithError(err).Info("failed to create rest request")
 		return

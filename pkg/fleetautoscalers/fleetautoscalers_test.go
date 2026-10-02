@@ -658,7 +658,7 @@ func TestApplyWebhookPolicyWithMetadata(t *testing.T) {
 
 	fixedReplicas := int32(11)
 	fleet.ObjectMeta.Annotations = map[string]string{
-		"fixedReplicas": fmt.Sprintf("%d", fixedReplicas),
+		"fixedReplicas": strconv.Itoa(int(fixedReplicas)),
 	}
 
 	webhookPolicy := &autoscalingv1.URLConfiguration{

@@ -63,17 +63,9 @@ func TestIncrementPatchVersion(t *testing.T) {
 }
 
 func TestUpdateFile(t *testing.T) {
-	// Create a temporary directory for our test files
-	tmpDir, err := os.MkdirTemp("", "test-update-file")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer func() {
-		// Log error to make linter happy. CI / CD env will clean up, so no need to handle err.
-		if err := os.RemoveAll(tmpDir); err != nil {
-			t.Log(err)
-		}
-	}()
+	// Create a temporary directory for our test files. t.TempDir removes it
+	// when the test finishes.
+	tmpDir := t.TempDir()
 
 	// Test cases
 	testCases := []struct {

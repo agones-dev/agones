@@ -550,7 +550,7 @@ func (c *Controller) syncGameServerDeletionTimestamp(ctx context.Context, gs *ag
 			if err != nil {
 				return gs, c.errs.Wrapf(err, "error deleting pod for GameServer. Name: %s, Namespace: %s", gs.ObjectMeta.Name, pod.ObjectMeta.Namespace)
 			}
-			c.recorder.Event(gs, corev1.EventTypeNormal, string(gs.Status.State), fmt.Sprintf("Deleting Pod %s", pod.ObjectMeta.Name))
+			c.recorder.Event(gs, corev1.EventTypeNormal, string(gs.Status.State), "Deleting Pod "+pod.ObjectMeta.Name)
 		}
 
 		// but no removing finalizers until it's truly gone
