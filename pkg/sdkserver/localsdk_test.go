@@ -20,6 +20,7 @@ import (
 	stderrors "errors"
 	"fmt"
 	"os"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -1047,7 +1048,7 @@ func TestSDKConformanceFunctionality(t *testing.T) {
 	wg := sync.WaitGroup{}
 	for i := range 20 {
 		wg.Add(1)
-		str := fmt.Sprintf("%d", i)
+		str := strconv.Itoa(i)
 		expected = append(expected, str)
 
 		go func() {

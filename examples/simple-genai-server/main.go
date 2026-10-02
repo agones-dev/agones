@@ -285,7 +285,7 @@ func handleGenAIRequest(prompt string, clientConn *connection, chatHistory []Mes
 	}
 	body := string(responseBody)
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		err = fmt.Errorf("status: %s, body: %s", resp.Status, body)
 	}
 	return string(responseBody) + "\n", err

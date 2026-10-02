@@ -294,10 +294,3 @@ Client SDK is implemented.
 | Lists           | UpdateList          |        | 1.41.0 | 1.37.0 |
 | Lists           | AddListValue        |        | 1.41.0 | 1.37.0 |
 | Lists           | RemoveListValue     |        | 1.41.0 | 1.37.0 |
-| Player Tracking | GetPlayerCapacity   |        |        | Legacy |
-| Player Tracking | SetPlayerCapacity   |        |        | Legacy |
-| Player Tracking | PlayerConnect       |        |        | Legacy |
-| Player Tracking | GetConnectedPlayers |        |        | Legacy |
-| Player Tracking | IsPlayerConnected   |        |        | Legacy |
-| Player Tracking | GetPlayerCount      |        |        | Legacy |
-| Player Tracking | PlayerDisconnect    |        |        | Legacy |
