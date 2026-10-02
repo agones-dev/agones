@@ -16,7 +16,7 @@
 
 import grpc
 
-from agones._generated.alpha import alpha_pb2, alpha_pb2_grpc
+from agones._generated.alpha import alpha_pb2_grpc
 
 class Alpha:
 
