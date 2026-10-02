@@ -17,7 +17,6 @@ package sdkserver
 import (
 	"context"
 	stderrors "errors"
-	"fmt"
 	"io"
 	"math/rand"
 	"os"
@@ -194,7 +193,7 @@ func (l *LocalSDKServer) GenerateUID() {
 	//nolint:gosec // G404: a stand-in UID for local testing, never a security boundary.
 	seededRand := rand.New(
 		rand.NewSource(time.Now().UnixNano()))
-	UID := fmt.Sprintf("%d", seededRand.Int())
+	UID := strconv.Itoa(seededRand.Int())
 	l.gs.ObjectMeta.Uid = UID
 }
 
