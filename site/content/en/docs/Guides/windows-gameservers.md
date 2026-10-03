@@ -7,10 +7,19 @@ description: >
   Run `GameServers` on Kubernetes nodes with the Windows operating system.
 ---
 
+{{% feature publishVersion="1.60.0" %}}
 {{% alert title="Warning" color="warning" %}}
 Running `GameServers` on Windows nodes is currently Alpha, and any feedback
 would be appreciated.
 {{% /alert %}}
+{{% /feature %}}
+
+{{% feature expiryVersion="1.60.0" %}}
+{{% alert title="Warning" color="warning" %}}
+Running `GameServers` on Windows nodes is currently Alpha, and any feedback
+would be appreciated.
+{{% /alert %}}
+{{% /feature %}}
 
 ## Prerequisites
 
