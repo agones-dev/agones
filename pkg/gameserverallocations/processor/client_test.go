@@ -63,7 +63,7 @@ func TestProcessorClient_Allocate(t *testing.T) {
 			batchSize: 1,
 			setupResponse: func(stream *mockStream, reqIDs []string) {
 				msg := <-stream.sendChan
-				batchID := msg.GetBatchRequest().BatchId
+				batchID := msg.GetBatchRequest().GetBatchId()
 				stream.recvChan <- &allocationpb.ProcessorMessage{
 					Payload: &allocationpb.ProcessorMessage_BatchResponse{
 						BatchResponse: &allocationpb.BatchResponse{
@@ -87,7 +87,7 @@ func TestProcessorClient_Allocate(t *testing.T) {
 			batchSize: 3,
 			setupResponse: func(stream *mockStream, reqIDs []string) {
 				msg := <-stream.sendChan
-				batchID := msg.GetBatchRequest().BatchId
+				batchID := msg.GetBatchRequest().GetBatchId()
 				responses := make([]*allocationpb.ResponseWrapper, 3)
 				for i := range 3 {
 					responses[i] = &allocationpb.ResponseWrapper{
@@ -119,7 +119,7 @@ func TestProcessorClient_Allocate(t *testing.T) {
 			batchSize: 1,
 			setupResponse: func(stream *mockStream, reqIDs []string) {
 				msg := <-stream.sendChan
-				batchID := msg.GetBatchRequest().BatchId
+				batchID := msg.GetBatchRequest().GetBatchId()
 				stream.recvChan <- &allocationpb.ProcessorMessage{
 					Payload: &allocationpb.ProcessorMessage_BatchResponse{
 						BatchResponse: &allocationpb.BatchResponse{
@@ -197,13 +197,13 @@ func TestProcessorClient_Allocate(t *testing.T) {
 			assert.Eventually(t, func() bool {
 				p.batchMutex.RLock()
 				defer p.batchMutex.RUnlock()
-				return len(p.hotBatch.Requests) == tc.batchSize
+				return len(p.hotBatch.GetRequests()) == tc.batchSize
 			}, 500*time.Millisecond, 50*time.Millisecond)
 
 			// Extract request IDs after the batch is ready
 			p.batchMutex.RLock()
 			for i := 0; i < tc.batchSize; i++ {
-				reqIDs[i] = p.hotBatch.Requests[i].RequestId
+				reqIDs[i] = p.hotBatch.GetRequests()[i].GetRequestId()
 			}
 			p.batchMutex.RUnlock()
 

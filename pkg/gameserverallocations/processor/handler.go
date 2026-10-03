@@ -201,7 +201,7 @@ func (h *Handler) processAllocationsConcurrently(ctx context.Context, requestWra
 
 	for i, reqWrapper := range requestWrappers {
 		wg.Go(func() {
-			results[i] = h.processAllocation(ctx, reqWrapper.Request)
+			results[i] = h.processAllocation(ctx, reqWrapper.GetRequest())
 		})
 	}
 
@@ -266,7 +266,7 @@ func (h *Handler) submitBatch(ctx context.Context, batchID string, requestWrappe
 
 	for i, result := range results {
 		wrapper := &allocationpb.ResponseWrapper{
-			RequestId: requestWrappers[i].RequestId,
+			RequestId: requestWrappers[i].GetRequestId(),
 		}
 
 		if result.error != nil {

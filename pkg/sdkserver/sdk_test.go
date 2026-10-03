@@ -59,24 +59,24 @@ func TestConvert(t *testing.T) {
 	}
 
 	eq := func(t *testing.T, fixture *agonesv1.GameServer, sdkGs *sdk.GameServer) {
-		assert.Equal(t, fixture.ObjectMeta.Name, sdkGs.ObjectMeta.Name)
-		assert.Equal(t, fixture.ObjectMeta.Namespace, sdkGs.ObjectMeta.Namespace)
-		assert.Equal(t, fixture.ObjectMeta.CreationTimestamp.Unix(), sdkGs.ObjectMeta.CreationTimestamp)
-		assert.Equal(t, string(fixture.ObjectMeta.UID), sdkGs.ObjectMeta.Uid)
-		assert.Equal(t, fixture.ObjectMeta.Labels, sdkGs.ObjectMeta.Labels)
-		assert.Equal(t, fixture.ObjectMeta.Annotations, sdkGs.ObjectMeta.Annotations)
-		assert.Equal(t, fixture.Spec.Health.Disabled, sdkGs.Spec.Health.Disabled)
-		assert.Equal(t, fixture.Spec.Health.InitialDelaySeconds, sdkGs.Spec.Health.InitialDelaySeconds)
-		assert.Equal(t, fixture.Spec.Health.FailureThreshold, sdkGs.Spec.Health.FailureThreshold)
-		assert.Equal(t, fixture.Spec.Health.PeriodSeconds, sdkGs.Spec.Health.PeriodSeconds)
-		assert.Equal(t, fixture.Status.Address, sdkGs.Status.Address)
-		assert.Equal(t, []*sdk.GameServer_Status_Address{{Type: "SomeAddressType", Address: "127.0.0.1"}}, sdkGs.Status.Addresses)
-		assert.Equal(t, string(fixture.Status.State), sdkGs.Status.State)
-		assert.Len(t, sdkGs.Status.Ports, len(fixture.Status.Ports))
+		assert.Equal(t, fixture.ObjectMeta.Name, sdkGs.GetObjectMeta().GetName())
+		assert.Equal(t, fixture.ObjectMeta.Namespace, sdkGs.GetObjectMeta().GetNamespace())
+		assert.Equal(t, fixture.ObjectMeta.CreationTimestamp.Unix(), sdkGs.GetObjectMeta().GetCreationTimestamp())
+		assert.Equal(t, string(fixture.ObjectMeta.UID), sdkGs.GetObjectMeta().GetUid())
+		assert.Equal(t, fixture.ObjectMeta.Labels, sdkGs.GetObjectMeta().GetLabels())
+		assert.Equal(t, fixture.ObjectMeta.Annotations, sdkGs.GetObjectMeta().GetAnnotations())
+		assert.Equal(t, fixture.Spec.Health.Disabled, sdkGs.GetSpec().GetHealth().GetDisabled())
+		assert.Equal(t, fixture.Spec.Health.InitialDelaySeconds, sdkGs.GetSpec().GetHealth().GetInitialDelaySeconds())
+		assert.Equal(t, fixture.Spec.Health.FailureThreshold, sdkGs.GetSpec().GetHealth().GetFailureThreshold())
+		assert.Equal(t, fixture.Spec.Health.PeriodSeconds, sdkGs.GetSpec().GetHealth().GetPeriodSeconds())
+		assert.Equal(t, fixture.Status.Address, sdkGs.GetStatus().GetAddress())
+		assert.Equal(t, []*sdk.GameServer_Status_Address{{Type: "SomeAddressType", Address: "127.0.0.1"}}, sdkGs.GetStatus().GetAddresses())
+		assert.Equal(t, string(fixture.Status.State), sdkGs.GetStatus().GetState())
+		assert.Len(t, sdkGs.GetStatus().GetPorts(), len(fixture.Status.Ports))
 		for i, fp := range fixture.Status.Ports {
-			p := sdkGs.Status.Ports[i]
-			assert.Equal(t, fp.Name, p.Name)
-			assert.Equal(t, fp.Port, p.Port)
+			p := sdkGs.GetStatus().GetPorts()[i]
+			assert.Equal(t, fp.Name, p.GetName())
+			assert.Equal(t, fp.Port, p.GetPort())
 		}
 	}
 
@@ -89,9 +89,9 @@ func TestConvert(t *testing.T) {
 
 		sdkGs := convert(gs)
 		eq(t, fixture, sdkGs)
-		assert.Zero(t, sdkGs.ObjectMeta.DeletionTimestamp)
-		assert.Nil(t, sdkGs.Status.Counters)
-		assert.Nil(t, sdkGs.Status.Lists)
+		assert.Zero(t, sdkGs.GetObjectMeta().GetDeletionTimestamp())
+		assert.Nil(t, sdkGs.GetStatus().GetCounters())
+		assert.Nil(t, sdkGs.GetStatus().GetLists())
 	})
 
 	t.Run(string(runtime.FeatureCountsAndLists)+" enabled", func(t *testing.T) {
@@ -115,12 +115,12 @@ func TestConvert(t *testing.T) {
 
 		sdkGs := convert(gs)
 		eq(t, fixture, sdkGs)
-		assert.Zero(t, sdkGs.ObjectMeta.DeletionTimestamp)
-		assert.Equal(t, gs.Status.Counters["Games"].Count, sdkGs.Status.Counters["Games"].Count)
-		assert.Equal(t, gs.Status.Counters["Games"].Capacity, sdkGs.Status.Counters["Games"].Capacity)
+		assert.Zero(t, sdkGs.GetObjectMeta().GetDeletionTimestamp())
+		assert.Equal(t, gs.Status.Counters["Games"].Count, sdkGs.GetStatus().GetCounters()["Games"].GetCount())
+		assert.Equal(t, gs.Status.Counters["Games"].Capacity, sdkGs.GetStatus().GetCounters()["Games"].GetCapacity())
 		// Using assert.Equal for List Values here to check for items and item order equal in the List.
-		assert.Equal(t, gs.Status.Lists["Lobbies"].Values, sdkGs.Status.Lists["Lobbies"].Values)
-		assert.Equal(t, gs.Status.Lists["Lobbies"].Capacity, sdkGs.Status.Lists["Lobbies"].Capacity)
+		assert.Equal(t, gs.Status.Lists["Lobbies"].Values, sdkGs.GetStatus().GetLists()["Lobbies"].GetValues())
+		assert.Equal(t, gs.Status.Lists["Lobbies"].Capacity, sdkGs.GetStatus().GetLists()["Lobbies"].GetCapacity())
 	})
 
 	t.Run("DeletionTimestamp", func(t *testing.T) {
@@ -130,6 +130,6 @@ func TestConvert(t *testing.T) {
 		gs.DeletionTimestamp = &now
 		sdkGs := convert(gs)
 		eq(t, gs, sdkGs)
-		assert.Equal(t, gs.ObjectMeta.DeletionTimestamp.Unix(), sdkGs.ObjectMeta.DeletionTimestamp)
+		assert.Equal(t, gs.ObjectMeta.DeletionTimestamp.Unix(), sdkGs.GetObjectMeta().GetDeletionTimestamp())
 	})
 }

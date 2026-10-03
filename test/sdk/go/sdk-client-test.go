@@ -72,7 +72,7 @@ func main() {
 	err = sdk.WatchGameServer(func(gs *pkgSdk.GameServer) {
 		log.Println("Received GameServer update")
 		log.Println(gs)
-		uid := gs.ObjectMeta.Uid
+		uid := gs.GetObjectMeta().GetUid()
 		if once {
 			c <- uid
 			once = false
@@ -102,7 +102,7 @@ func main() {
 	}
 	log.Println(gs)
 
-	err = sdk.SetLabel("creationTimestamp", strconv.FormatInt(gs.ObjectMeta.CreationTimestamp, 10))
+	err = sdk.SetLabel("creationTimestamp", strconv.FormatInt(gs.GetObjectMeta().GetCreationTimestamp(), 10))
 	if err != nil {
 		log.Fatalf("Could not set label: %s", err)
 	}

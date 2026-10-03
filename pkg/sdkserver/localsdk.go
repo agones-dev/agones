@@ -161,7 +161,7 @@ func NewLocalSDKServer(filePath string, testSdkName string, listMaxCapacity int6
 			l.logger.WithError(err).WithField("filePath", filePath).Error("error adding watcher")
 		}
 	}
-	if runtime.FeatureEnabled(runtime.FeaturePlayerTracking) && l.gs.Status.Players == nil {
+	if runtime.FeatureEnabled(runtime.FeaturePlayerTracking) && l.gs.GetStatus().GetPlayers() == nil {
 		l.gs.Status.Players = &sdk.GameServer_Status_PlayerStatus{}
 	}
 
@@ -233,19 +233,19 @@ func (l *LocalSDKServer) recordRequestWithValue(request string, value string, ob
 		fieldVal := ""
 		switch objMetaField {
 		case "CreationTimestamp":
-			fieldVal = strconv.FormatInt(l.gs.ObjectMeta.CreationTimestamp, 10)
+			fieldVal = strconv.FormatInt(l.gs.GetObjectMeta().GetCreationTimestamp(), 10)
 		case "UID":
-			fieldVal = l.gs.ObjectMeta.Uid
+			fieldVal = l.gs.GetObjectMeta().GetUid()
 		case "PlayerCapacity":
 			if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
 				return
 			}
-			fieldVal = strconv.FormatInt(l.gs.Status.Players.Capacity, 10)
+			fieldVal = strconv.FormatInt(l.gs.GetStatus().GetPlayers().GetCapacity(), 10)
 		case "PlayerIDs":
 			if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
 				return
 			}
-			fieldVal = strings.Join(l.gs.Status.Players.Ids, ",")
+			fieldVal = strings.Join(l.gs.GetStatus().GetPlayers().GetIds(), ",")
 		default:
 			l.logger.Error("unexpected Field to compare")
 		}
@@ -326,16 +326,16 @@ func (l *LocalSDKServer) SetLabel(_ context.Context, kv *sdk.KeyValue) (*sdk.Emp
 	l.gsMutex.Lock()
 	defer l.gsMutex.Unlock()
 
-	if l.gs.ObjectMeta == nil {
+	if l.gs.GetObjectMeta() == nil {
 		l.gs.ObjectMeta = &sdk.GameServer_ObjectMeta{}
 	}
 	if l.gs.ObjectMeta.Labels == nil {
 		l.gs.ObjectMeta.Labels = map[string]string{}
 	}
 
-	l.gs.ObjectMeta.Labels[metadataPrefix+kv.Key] = kv.Value
+	l.gs.ObjectMeta.Labels[metadataPrefix+kv.GetKey()] = kv.GetValue()
 	l.update <- struct{}{}
-	l.recordRequestWithValue("setlabel", kv.Value, "CreationTimestamp")
+	l.recordRequestWithValue("setlabel", kv.GetValue(), "CreationTimestamp")
 	return &sdk.Empty{}, nil
 }
 
@@ -345,16 +345,16 @@ func (l *LocalSDKServer) SetAnnotation(_ context.Context, kv *sdk.KeyValue) (*sd
 	l.gsMutex.Lock()
 	defer l.gsMutex.Unlock()
 
-	if l.gs.ObjectMeta == nil {
+	if l.gs.GetObjectMeta() == nil {
 		l.gs.ObjectMeta = &sdk.GameServer_ObjectMeta{}
 	}
 	if l.gs.ObjectMeta.Annotations == nil {
 		l.gs.ObjectMeta.Annotations = map[string]string{}
 	}
 
-	l.gs.ObjectMeta.Annotations[metadataPrefix+kv.Key] = kv.Value
+	l.gs.ObjectMeta.Annotations[metadataPrefix+kv.GetKey()] = kv.GetValue()
 	l.update <- struct{}{}
-	l.recordRequestWithValue("setannotation", kv.Value, "UID")
+	l.recordRequestWithValue("setannotation", kv.GetValue(), "UID")
 	return &sdk.Empty{}, nil
 }
 
@@ -402,8 +402,8 @@ func (l *LocalSDKServer) Reserve(ctx context.Context, d *sdk.Duration) (*sdk.Emp
 	l.recordRequest("reserve")
 	l.gsMutex.Lock()
 	defer l.gsMutex.Unlock()
-	if d.Seconds > 0 {
-		duration := time.Duration(d.Seconds) * time.Second
+	if d.GetSeconds() > 0 {
+		duration := time.Duration(d.GetSeconds()) * time.Second
 		l.gsReserveDuration = &duration
 		l.resetReserveAfter(ctx, *l.gsReserveDuration)
 	}
@@ -440,25 +440,25 @@ func (l *LocalSDKServer) PlayerConnect(_ context.Context, id *alpha.PlayerID) (*
 	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
 		return &alpha.Bool{Bool: false}, l.errs.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
 	}
-	l.logger.WithField("playerID", id.PlayerID).Info("Player Connected")
+	l.logger.WithField("playerID", id.GetPlayerID()).Info("Player Connected")
 	l.gsMutex.Lock()
 	defer l.gsMutex.Unlock()
 
-	if l.gs.Status.Players == nil {
+	if l.gs.GetStatus().GetPlayers() == nil {
 		l.gs.Status.Players = &sdk.GameServer_Status_PlayerStatus{}
 	}
 
 	// the player is already connected, return false.
-	if slices.Contains(l.gs.Status.Players.Ids, id.PlayerID) {
+	if slices.Contains(l.gs.GetStatus().GetPlayers().GetIds(), id.GetPlayerID()) {
 		return &alpha.Bool{Bool: false}, nil
 	}
 
-	if l.gs.Status.Players.Count >= l.gs.Status.Players.Capacity {
+	if l.gs.GetStatus().GetPlayers().GetCount() >= l.gs.GetStatus().GetPlayers().GetCapacity() {
 		return &alpha.Bool{Bool: false}, l.errs.New("Players are already at capacity")
 	}
 
-	l.gs.Status.Players.Ids = append(l.gs.Status.Players.Ids, id.PlayerID)
-	l.gs.Status.Players.Count = int64(len(l.gs.Status.Players.Ids))
+	l.gs.Status.Players.Ids = append(l.gs.Status.Players.Ids, id.GetPlayerID())
+	l.gs.Status.Players.Count = int64(len(l.gs.GetStatus().GetPlayers().GetIds()))
 
 	l.update <- struct{}{}
 	l.recordRequestWithValue("playerconnect", "1234", "PlayerIDs")
@@ -472,17 +472,17 @@ func (l *LocalSDKServer) PlayerDisconnect(_ context.Context, id *alpha.PlayerID)
 	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
 		return &alpha.Bool{Bool: false}, l.errs.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
 	}
-	l.logger.WithField("playerID", id.PlayerID).Info("Player Disconnected")
+	l.logger.WithField("playerID", id.GetPlayerID()).Info("Player Disconnected")
 	l.gsMutex.Lock()
 	defer l.gsMutex.Unlock()
 
-	if l.gs.Status.Players == nil {
+	if l.gs.GetStatus().GetPlayers() == nil {
 		l.gs.Status.Players = &sdk.GameServer_Status_PlayerStatus{}
 	}
 
 	found := -1
-	for i, playerID := range l.gs.Status.Players.Ids {
-		if playerID == id.PlayerID {
+	for i, playerID := range l.gs.GetStatus().GetPlayers().GetIds() {
+		if playerID == id.GetPlayerID() {
 			found = i
 			break
 		}
@@ -491,8 +491,8 @@ func (l *LocalSDKServer) PlayerDisconnect(_ context.Context, id *alpha.PlayerID)
 		return &alpha.Bool{Bool: false}, nil
 	}
 
-	l.gs.Status.Players.Ids = append(l.gs.Status.Players.Ids[:found], l.gs.Status.Players.Ids[found+1:]...)
-	l.gs.Status.Players.Count = int64(len(l.gs.Status.Players.Ids))
+	l.gs.Status.Players.Ids = append(l.gs.Status.Players.Ids[:found], l.gs.GetStatus().GetPlayers().GetIds()[found+1:]...)
+	l.gs.Status.Players.Count = int64(len(l.gs.GetStatus().GetPlayers().GetIds()))
 
 	l.update <- struct{}{}
 	l.recordRequestWithValue("playerdisconnect", "", "PlayerIDs")
@@ -508,17 +508,17 @@ func (l *LocalSDKServer) IsPlayerConnected(_ context.Context, id *alpha.PlayerID
 	}
 
 	result := &alpha.Bool{Bool: false}
-	l.logger.WithField("playerID", id.PlayerID).Info("Is a Player Connected?")
+	l.logger.WithField("playerID", id.GetPlayerID()).Info("Is a Player Connected?")
 	l.gsMutex.Lock()
 	defer l.gsMutex.Unlock()
 
-	l.recordRequestWithValue("isplayerconnected", id.PlayerID, "PlayerIDs")
+	l.recordRequestWithValue("isplayerconnected", id.GetPlayerID(), "PlayerIDs")
 
-	if l.gs.Status.Players == nil {
+	if l.gs.GetStatus().GetPlayers() == nil {
 		return result, nil
 	}
 
-	if slices.Contains(l.gs.Status.Players.Ids, id.PlayerID) {
+	if slices.Contains(l.gs.GetStatus().GetPlayers().GetIds(), id.GetPlayerID()) {
 		result.Bool = true
 	}
 
@@ -540,10 +540,10 @@ func (l *LocalSDKServer) GetConnectedPlayers(_ context.Context, _ *alpha.Empty) 
 	defer l.gsMutex.Unlock()
 	l.recordRequest("getconnectedplayers")
 
-	if l.gs.Status.Players == nil {
+	if l.gs.GetStatus().GetPlayers() == nil {
 		return result, nil
 	}
-	result.List = l.gs.Status.Players.Ids
+	result.List = l.gs.GetStatus().GetPlayers().GetIds()
 	return result, nil
 }
 
@@ -560,8 +560,8 @@ func (l *LocalSDKServer) GetPlayerCount(_ context.Context, _ *alpha.Empty) (*alp
 	defer l.gsMutex.RUnlock()
 
 	result := &alpha.Count{}
-	if l.gs.Status.Players != nil {
-		result.Count = l.gs.Status.Players.Count
+	if l.gs.GetStatus().GetPlayers() != nil {
+		result.Count = l.gs.GetStatus().GetPlayers().GetCount()
 	}
 
 	return result, nil
@@ -575,18 +575,18 @@ func (l *LocalSDKServer) SetPlayerCapacity(_ context.Context, count *alpha.Count
 		return nil, l.errs.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
 	}
 
-	l.logger.WithField("capacity", count.Count).Info("Setting Player Capacity")
+	l.logger.WithField("capacity", count.GetCount()).Info("Setting Player Capacity")
 	l.gsMutex.Lock()
 	defer l.gsMutex.Unlock()
 
-	if l.gs.Status.Players == nil {
+	if l.gs.GetStatus().GetPlayers() == nil {
 		l.gs.Status.Players = &sdk.GameServer_Status_PlayerStatus{}
 	}
 
-	l.gs.Status.Players.Capacity = count.Count
+	l.gs.Status.Players.Capacity = count.GetCount()
 
 	l.update <- struct{}{}
-	l.recordRequestWithValue("setplayercapacity", strconv.FormatInt(count.Count, 10), "PlayerCapacity")
+	l.recordRequestWithValue("setplayercapacity", strconv.FormatInt(count.GetCount(), 10), "PlayerCapacity")
 	return &alpha.Empty{}, nil
 }
 
@@ -606,8 +606,8 @@ func (l *LocalSDKServer) GetPlayerCapacity(_ context.Context, _ *alpha.Empty) (*
 	// so if we're nil, then let's always return a value, and
 	// remove lots of special cases upstream.
 	result := &alpha.Count{}
-	if l.gs.Status.Players != nil {
-		result.Count = l.gs.Status.Players.Capacity
+	if l.gs.GetStatus().GetPlayers() != nil {
+		result.Count = l.gs.GetStatus().GetPlayers().GetCapacity()
 	}
 
 	return result, nil
@@ -625,15 +625,15 @@ func (l *LocalSDKServer) GetCounter(_ context.Context, in *beta.GetCounterReques
 		return nil, l.errs.Errorf("invalid argument. GetCounterRequest cannot be nil")
 	}
 
-	l.logger.WithField("name", in.Name).Info("Getting Counter")
+	l.logger.WithField("name", in.GetName()).Info("Getting Counter")
 	l.recordRequest("getcounter")
 	l.gsMutex.RLock()
 	defer l.gsMutex.RUnlock()
 
-	if counter, ok := l.gs.Status.Counters[in.Name]; ok {
-		return &beta.Counter{Name: in.Name, Count: counter.Count, Capacity: counter.Capacity}, nil
+	if counter, ok := l.gs.GetStatus().GetCounters()[in.GetName()]; ok {
+		return &beta.Counter{Name: in.GetName(), Count: counter.GetCount(), Capacity: counter.GetCapacity()}, nil
 	}
-	return nil, l.errs.Errorf("not found. %s Counter not found", in.Name)
+	return nil, l.errs.Errorf("not found. %s Counter not found", in.GetName())
 }
 
 // UpdateCounter updates the given Counter. Unlike the SDKServer, this LocalSDKServer UpdateCounter
@@ -647,53 +647,53 @@ func (l *LocalSDKServer) UpdateCounter(_ context.Context, in *beta.UpdateCounter
 		return nil, l.errs.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
 	}
 
-	if in.CounterUpdateRequest == nil {
+	if in.GetCounterUpdateRequest() == nil {
 		return nil, l.errs.Errorf("invalid argument. CounterUpdateRequest cannot be nil")
 	}
 
-	name := in.CounterUpdateRequest.Name
+	name := in.GetCounterUpdateRequest().GetName()
 
 	l.logger.WithField("name", name).Info("Updating Counter")
 	l.gsMutex.Lock()
 	defer l.gsMutex.Unlock()
 
-	counter, ok := l.gs.Status.Counters[name]
+	counter, ok := l.gs.GetStatus().GetCounters()[name]
 	if !ok {
 		return nil, l.errs.Errorf("not found. %s Counter not found", name)
 	}
 
-	tmpCounter := beta.Counter{Name: name, Count: counter.Count, Capacity: counter.Capacity}
+	tmpCounter := beta.Counter{Name: name, Count: counter.GetCount(), Capacity: counter.GetCapacity()}
 	// Set Capacity
-	if in.CounterUpdateRequest.Capacity != nil {
+	if in.GetCounterUpdateRequest().GetCapacity() != nil {
 		l.recordRequest("setcapacitycounter")
-		tmpCounter.Capacity = in.CounterUpdateRequest.Capacity.GetValue()
-		if tmpCounter.Capacity < 0 {
+		tmpCounter.Capacity = in.GetCounterUpdateRequest().GetCapacity().GetValue()
+		if tmpCounter.GetCapacity() < 0 {
 			return nil, l.errs.Errorf("out of range. Capacity must be greater than or equal to 0. Found Capacity: %d",
-				tmpCounter.Capacity)
+				tmpCounter.GetCapacity())
 		}
 	}
 	// Set Count
-	if in.CounterUpdateRequest.Count != nil {
+	if in.GetCounterUpdateRequest().GetCount() != nil {
 		l.recordRequest("setcountcounter")
-		tmpCounter.Count = in.CounterUpdateRequest.Count.GetValue()
-		if tmpCounter.Count < 0 || tmpCounter.Count > tmpCounter.Capacity {
+		tmpCounter.Count = in.GetCounterUpdateRequest().GetCount().GetValue()
+		if tmpCounter.GetCount() < 0 || tmpCounter.GetCount() > tmpCounter.GetCapacity() {
 			return nil, l.errs.Errorf("out of range. Count must be within range [0,Capacity]. Found Count: %d, Capacity: %d",
-				tmpCounter.Count, tmpCounter.Capacity)
+				tmpCounter.GetCount(), tmpCounter.GetCapacity())
 		}
 	}
 	// Increment or Decrement Count
-	if in.CounterUpdateRequest.CountDiff != 0 {
+	if in.GetCounterUpdateRequest().GetCountDiff() != 0 {
 		l.recordRequest("updatecounter")
-		tmpCounter.Count += in.CounterUpdateRequest.CountDiff
-		if tmpCounter.Count < 0 || tmpCounter.Count > tmpCounter.Capacity {
+		tmpCounter.Count += in.GetCounterUpdateRequest().GetCountDiff()
+		if tmpCounter.GetCount() < 0 || tmpCounter.GetCount() > tmpCounter.GetCapacity() {
 			return nil, l.errs.Errorf("out of range. Count must be within range [0,Capacity]. Found Count: %d, Capacity: %d",
-				tmpCounter.Count, tmpCounter.Capacity)
+				tmpCounter.GetCount(), tmpCounter.GetCapacity())
 		}
 	}
 
 	// Write newly updated List to gameserverstatus.
-	counter.Capacity = tmpCounter.Capacity
-	counter.Count = tmpCounter.Count
+	counter.Capacity = tmpCounter.GetCapacity()
+	counter.Count = tmpCounter.GetCount()
 	l.gs.Status.Counters[name] = counter
 	return &tmpCounter, nil
 }
@@ -706,15 +706,15 @@ func (l *LocalSDKServer) GetList(_ context.Context, in *beta.GetListRequest) (*b
 		return nil, l.errs.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
 	}
 
-	l.logger.WithField("name", in.Name).Info("Getting List")
+	l.logger.WithField("name", in.GetName()).Info("Getting List")
 	l.recordRequest("getlist")
 	l.gsMutex.RLock()
 	defer l.gsMutex.RUnlock()
 
-	if list, ok := l.gs.Status.Lists[in.Name]; ok {
-		return &beta.List{Name: in.Name, Capacity: list.Capacity, Values: list.Values}, nil
+	if list, ok := l.gs.GetStatus().GetLists()[in.GetName()]; ok {
+		return &beta.List{Name: in.GetName(), Capacity: list.GetCapacity(), Values: list.GetValues()}, nil
 	}
-	return nil, l.errs.Errorf("not found. %s List not found", in.Name)
+	return nil, l.errs.Errorf("not found. %s List not found", in.GetName())
 }
 
 // UpdateList returns the updated List. Returns not found if the List does not exist (name cannot be updated).
@@ -730,43 +730,43 @@ func (l *LocalSDKServer) UpdateList(_ context.Context, in *beta.UpdateListReques
 		return nil, l.errs.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
 	}
 
-	if in.List == nil || in.UpdateMask == nil {
-		return nil, l.errs.Errorf("invalid argument. List: %v and UpdateMask %v cannot be nil", in.List, in.UpdateMask)
+	if in.GetList() == nil || in.GetUpdateMask() == nil {
+		return nil, l.errs.Errorf("invalid argument. List: %v and UpdateMask %v cannot be nil", in.GetList(), in.GetUpdateMask())
 	}
 
-	l.logger.WithField("name", in.List.Name).Info("Updating List")
+	l.logger.WithField("name", in.GetList().GetName()).Info("Updating List")
 	l.recordRequest("updatelist")
 	l.gsMutex.Lock()
 	defer l.gsMutex.Unlock()
 
 	// TODO: https://google.aip.dev/134, "Update masks must support a special value *, meaning full replacement."
 	// Check if the UpdateMask paths are valid, return invalid argument if not.
-	if !in.UpdateMask.IsValid(in.List.ProtoReflect().Interface()) {
-		return nil, l.errs.Errorf("invalid argument. Field Mask Path(s): %v are invalid for List. Use valid field name(s): %v", in.UpdateMask.GetPaths(), in.List.ProtoReflect().Descriptor().Fields())
+	if !in.GetUpdateMask().IsValid(in.GetList().ProtoReflect().Interface()) {
+		return nil, l.errs.Errorf("invalid argument. Field Mask Path(s): %v are invalid for List. Use valid field name(s): %v", in.GetUpdateMask().GetPaths(), in.GetList().ProtoReflect().Descriptor().Fields())
 	}
 
-	if in.List.Capacity < 0 || in.List.Capacity > l.listMaxCapacity {
-		return nil, l.errs.Errorf("out of range. Capacity must be within range [0,%d]. Found Capacity: %d", l.listMaxCapacity, in.List.Capacity)
+	if in.GetList().GetCapacity() < 0 || in.GetList().GetCapacity() > l.listMaxCapacity {
+		return nil, l.errs.Errorf("out of range. Capacity must be within range [0,%d]. Found Capacity: %d", l.listMaxCapacity, in.GetList().GetCapacity())
 	}
 
-	name := in.List.Name
-	if list, ok := l.gs.Status.Lists[name]; ok {
+	name := in.GetList().GetName()
+	if list, ok := l.gs.GetStatus().GetLists()[name]; ok {
 		// Create *beta.List from *sdk.GameServer_Status_ListStatus for merging.
-		tmpList := &beta.List{Name: name, Capacity: list.Capacity, Values: list.Values}
+		tmpList := &beta.List{Name: name, Capacity: list.GetCapacity(), Values: list.GetValues()}
 		// Removes any fields from the request object that are not included in the FieldMask Paths.
-		fmutils.Filter(in.List, in.UpdateMask.Paths)
+		fmutils.Filter(in.GetList(), in.GetUpdateMask().GetPaths())
 		// Removes any fields from the existing gameserver object that are included in the FieldMask Paths.
-		fmutils.Prune(tmpList, in.UpdateMask.Paths)
+		fmutils.Prune(tmpList, in.GetUpdateMask().GetPaths())
 		// Due due filtering and pruning all gameserver object field(s) contained in the FieldMask are overwritten by the request object field(s).
-		proto.Merge(tmpList, in.List)
+		proto.Merge(tmpList, in.GetList())
 		// Silently truncate list values if Capacity < len(Values)
-		if tmpList.Capacity < int64(len(tmpList.Values)) {
-			tmpList.Values = append([]string{}, tmpList.Values[:tmpList.Capacity]...)
+		if tmpList.GetCapacity() < int64(len(tmpList.GetValues())) {
+			tmpList.Values = append([]string{}, tmpList.GetValues()[:tmpList.GetCapacity()]...)
 		}
 		// Write newly updated List to gameserverstatus.
-		l.gs.Status.Lists[name].Capacity = tmpList.Capacity
-		l.gs.Status.Lists[name].Values = tmpList.Values
-		return &beta.List{Name: name, Capacity: l.gs.Status.Lists[name].Capacity, Values: l.gs.Status.Lists[name].Values}, nil
+		l.gs.Status.Lists[name].Capacity = tmpList.GetCapacity()
+		l.gs.Status.Lists[name].Values = tmpList.GetValues()
+		return &beta.List{Name: name, Capacity: l.gs.GetStatus().GetLists()[name].GetCapacity(), Values: l.gs.GetStatus().GetLists()[name].GetValues()}, nil
 	}
 	return nil, l.errs.Errorf("not found. %s List not found", name)
 }
@@ -782,25 +782,25 @@ func (l *LocalSDKServer) AddListValue(_ context.Context, in *beta.AddListValueRe
 		return nil, l.errs.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
 	}
 
-	l.logger.WithField("name", in.Name).Info("Adding Value to List")
+	l.logger.WithField("name", in.GetName()).Info("Adding Value to List")
 	l.recordRequest("addlistvalue")
 	l.gsMutex.Lock()
 	defer l.gsMutex.Unlock()
 
-	if list, ok := l.gs.Status.Lists[in.Name]; ok {
+	if list, ok := l.gs.GetStatus().GetLists()[in.GetName()]; ok {
 		// Verify room to add another value
-		if list.Capacity <= int64(len(list.Values)) {
-			return nil, l.errs.Errorf("out of range. No available capacity. Current Capacity: %d, List Size: %d", list.Capacity, len(list.Values))
+		if list.GetCapacity() <= int64(len(list.GetValues())) {
+			return nil, l.errs.Errorf("out of range. No available capacity. Current Capacity: %d, List Size: %d", list.GetCapacity(), len(list.GetValues()))
 		}
 		// Verify value does not already exist in the list
-		if slices.Contains(l.gs.Status.Lists[in.Name].Values, in.Value) {
-			return nil, l.errs.Errorf("already exists. Value: %s already in List: %s", in.Value, in.Name)
+		if slices.Contains(l.gs.GetStatus().GetLists()[in.GetName()].GetValues(), in.GetValue()) {
+			return nil, l.errs.Errorf("already exists. Value: %s already in List: %s", in.GetValue(), in.GetName())
 		}
 		// Add new value to gameserverstatus.
-		l.gs.Status.Lists[in.Name].Values = append(l.gs.Status.Lists[in.Name].Values, in.Value)
-		return &beta.List{Name: in.Name, Capacity: l.gs.Status.Lists[in.Name].Capacity, Values: l.gs.Status.Lists[in.Name].Values}, nil
+		l.gs.Status.Lists[in.GetName()].Values = append(l.gs.Status.Lists[in.GetName()].Values, in.GetValue())
+		return &beta.List{Name: in.GetName(), Capacity: l.gs.GetStatus().GetLists()[in.GetName()].GetCapacity(), Values: l.gs.GetStatus().GetLists()[in.GetName()].GetValues()}, nil
 	}
-	return nil, l.errs.Errorf("not found. %s List not found", in.Name)
+	return nil, l.errs.Errorf("not found. %s List not found", in.GetName())
 }
 
 // RemoveListValue removes a value from a List and returns updated List.
@@ -813,23 +813,23 @@ func (l *LocalSDKServer) RemoveListValue(_ context.Context, in *beta.RemoveListV
 		return nil, l.errs.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
 	}
 
-	l.logger.WithField("name", in.Name).Info("Removing Value from List")
+	l.logger.WithField("name", in.GetName()).Info("Removing Value from List")
 	l.recordRequest("removelistvalue")
 	l.gsMutex.Lock()
 	defer l.gsMutex.Unlock()
 
-	if list, ok := l.gs.Status.Lists[in.Name]; ok {
+	if list, ok := l.gs.GetStatus().GetLists()[in.GetName()]; ok {
 		// Verify value exists in the list
-		for i, val := range l.gs.Status.Lists[in.Name].Values {
-			if in.Value == val {
+		for i, val := range l.gs.GetStatus().GetLists()[in.GetName()].GetValues() {
+			if in.GetValue() == val {
 				// Remove value (maintains list ordering and modifies underlying gameserverstatus List.Values array).
-				list.Values = append(list.Values[:i], list.Values[i+1:]...)
-				return &beta.List{Name: in.Name, Capacity: l.gs.Status.Lists[in.Name].Capacity, Values: l.gs.Status.Lists[in.Name].Values}, nil
+				list.Values = append(list.Values[:i], list.GetValues()[i+1:]...)
+				return &beta.List{Name: in.GetName(), Capacity: l.gs.GetStatus().GetLists()[in.GetName()].GetCapacity(), Values: l.gs.GetStatus().GetLists()[in.GetName()].GetValues()}, nil
 			}
 		}
-		return nil, l.errs.Errorf("not found. Value: %s not found in List: %s", in.Value, in.Name)
+		return nil, l.errs.Errorf("not found. Value: %s not found in List: %s", in.GetValue(), in.GetName())
 	}
-	return nil, l.errs.Errorf("not found. %s List not found", in.Name)
+	return nil, l.errs.Errorf("not found. %s List not found", in.GetName())
 }
 
 // Close tears down all the things
