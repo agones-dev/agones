@@ -22,7 +22,6 @@ import (
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
 	"agones.dev/agones/pkg/gameservers"
 	agtesting "agones.dev/agones/pkg/testing"
-	utilruntime "agones.dev/agones/pkg/util/runtime"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,11 +31,6 @@ import (
 
 func TestSortGameServersByPackedStrategy(t *testing.T) {
 	t.Parallel()
-
-	utilruntime.FeatureTestMutex.Lock()
-	defer utilruntime.FeatureTestMutex.Unlock()
-
-	require.NoError(t, utilruntime.ParseFeatures(string(utilruntime.FeatureCountsAndLists)+"=true"))
 
 	nc := map[string]gameservers.NodeCount{
 		"n1": {Ready: 1, Allocated: 0},
@@ -135,11 +129,6 @@ func TestSortGameServersByPackedStrategy(t *testing.T) {
 
 func TestSortGameServersByDistributedStrategy(t *testing.T) {
 	t.Parallel()
-
-	utilruntime.FeatureTestMutex.Lock()
-	defer utilruntime.FeatureTestMutex.Unlock()
-
-	require.NoError(t, utilruntime.ParseFeatures(string(utilruntime.FeatureCountsAndLists)+"=true"))
 
 	now := metav1.Now()
 

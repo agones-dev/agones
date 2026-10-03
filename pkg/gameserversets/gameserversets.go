@@ -23,7 +23,6 @@ import (
 	"agones.dev/agones/pkg/gameservers"
 	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/logfields"
-	"agones.dev/agones/pkg/util/runtime"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -52,7 +51,7 @@ func SortGameServersByStrategy(strategy apis.SchedulingStrategy, list []*agonesv
 }
 
 // sortGameServersByPackedStrategy sorts the list of gameservers by which gameservers reside on the least full nodes
-// Performs a tie-breaking sort if nodes are equally full on CountsAndLists Priorities.
+// Performs a tie-breaking sort if nodes are equally full on Counter and List Priorities.
 func sortGameServersByPackedStrategy(list []*agonesv1.GameServer, count map[string]gameservers.NodeCount, priorities []agonesv1.Priority) []*agonesv1.GameServer {
 	sort.Slice(list, func(i, j int) bool {
 		a := list[i]
@@ -90,13 +89,9 @@ func sortGameServersByPackedStrategy(list []*agonesv1.GameServer, count map[stri
 
 		if a.Status.NodeName == b.Status.NodeName {
 			// See if Count and List priorities can be used as a tie-breaker within the node
-			if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-				if res := a.CompareCountAndListPriorities(priorities, b); res != nil {
-					return *res
-				}
+			if res := a.CompareCountAndListPriorities(priorities, b); res != nil {
+				return *res
 			}
-
-			// Sort lexicographically for a stable sort within the node
 			return a.GetObjectMeta().GetName() < b.GetObjectMeta().GetName()
 		}
 		// if both Nodes have the same count, one node is emptied first (packed scheduling behavior)
@@ -107,16 +102,14 @@ func sortGameServersByPackedStrategy(list []*agonesv1.GameServer, count map[stri
 }
 
 // sortGameServersByDistributedStrategy sorts by newest gameservers first.
-// If FeatureCountsAndLists is enabled, sort by Priority first, then tie-break with newest gameservers.
+// Sorts by Counter and List Priority first, then tie-breaks with newest gameservers.
 func sortGameServersByDistributedStrategy(list []*agonesv1.GameServer, priorities []agonesv1.Priority) []*agonesv1.GameServer {
 	sort.Slice(list, func(i, j int) bool {
 		a := list[i]
 		b := list[j]
 
-		if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-			if res := a.CompareCountAndListPriorities(priorities, b); res != nil {
-				return *res
-			}
+		if res := a.CompareCountAndListPriorities(priorities, b); res != nil {
+			return *res
 		}
 
 		return a.ObjectMeta.CreationTimestamp.Before(&b.ObjectMeta.CreationTimestamp)

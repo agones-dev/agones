@@ -250,14 +250,13 @@ func (c *Controller) recordFleetChanges(obj any) {
 
 	c.recordFleetRolloutPercentage(f)
 
-	if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		if f.Status.Counters != nil {
-			c.recordCounters(f.Name, f.Namespace, f.Status.Counters)
-		}
-		if f.Status.Lists != nil {
-			c.recordLists(f.Name, f.Namespace, f.Status.Lists)
-		}
+	if f.Status.Counters != nil {
+		c.recordCounters(f.Name, f.Namespace, f.Status.Counters)
 	}
+	if f.Status.Lists != nil {
+		c.recordLists(f.Name, f.Namespace, f.Status.Lists)
+	}
+
 }
 
 func (c *Controller) recordFleetRolloutPercentage(fleet *agonesv1.Fleet) {

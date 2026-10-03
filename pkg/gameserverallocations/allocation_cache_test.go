@@ -16,7 +16,6 @@ package gameserverallocations
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -109,8 +108,7 @@ func TestAllocationCacheListSortedGameServers(t *testing.T) {
 			},
 		},
 		"counters Descending": {
-			list:     []agonesv1.GameServer{gs1, gs2, gs3, gs4, gs5, gs6},
-			features: fmt.Sprintf("%s=true", runtime.FeatureCountsAndLists),
+			list: []agonesv1.GameServer{gs1, gs2, gs3, gs4, gs5, gs6},
 			gsa: &allocationv1.GameServerAllocation{
 				Spec: allocationv1.GameServerAllocationSpec{
 					Priorities: []agonesv1.Priority{
@@ -132,8 +130,7 @@ func TestAllocationCacheListSortedGameServers(t *testing.T) {
 			},
 		},
 		"counters Ascending": {
-			list:     []agonesv1.GameServer{gs1, gs2, gs3, gs4, gs5, gs6},
-			features: fmt.Sprintf("%s=true", runtime.FeatureCountsAndLists),
+			list: []agonesv1.GameServer{gs1, gs2, gs3, gs4, gs5, gs6},
 			gsa: &allocationv1.GameServerAllocation{
 				Spec: allocationv1.GameServerAllocationSpec{
 					Priorities: []agonesv1.Priority{
@@ -191,9 +188,6 @@ func TestAllocationCacheListSortedGameServers(t *testing.T) {
 
 func TestListSortedGameServersPriorities(t *testing.T) {
 	t.Parallel()
-	runtime.FeatureTestMutex.Lock()
-	defer runtime.FeatureTestMutex.Unlock()
-	require.NoError(t, runtime.ParseFeatures(string(runtime.FeatureCountsAndLists)+"=true"))
 
 	gs1 := agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "gs1", Namespace: defaultNs, UID: "1"},
 		Status: agonesv1.GameServerStatus{NodeName: "node1", State: agonesv1.GameServerStateReady,

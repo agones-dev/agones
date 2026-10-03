@@ -15,7 +15,6 @@
 package converters
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -48,8 +47,7 @@ func TestConvertAllocationRequestToGameServerAllocation(t *testing.T) {
 		want     *allocationv1.GameServerAllocation
 	}{
 		{
-			name:     "all fields are set (CountsAndListsFilter)",
-			features: fmt.Sprintf("%s=true", runtime.FeatureCountsAndLists),
+			name: "all fields are set (CountsAndListsFilter)",
 			in: &pb.AllocationRequest{
 				Namespace: "ns",
 				MultiClusterSetting: &pb.MultiClusterSetting{
@@ -248,8 +246,7 @@ func TestConvertAllocationRequestToGameServerAllocation(t *testing.T) {
 			},
 		},
 		{
-			name:     "all fields are set",
-			features: fmt.Sprintf("%s=false", runtime.FeatureCountsAndLists),
+			name: "all fields are set",
 			in: &pb.AllocationRequest{
 				Namespace: "ns",
 				MultiClusterSetting: &pb.MultiClusterSetting{
@@ -354,8 +351,7 @@ func TestConvertAllocationRequestToGameServerAllocation(t *testing.T) {
 			},
 		},
 		{
-			name:     "empty fields to GSA",
-			features: fmt.Sprintf("%s=false", runtime.FeatureCountsAndLists),
+			name: "empty fields to GSA",
 			in: &pb.AllocationRequest{
 				Namespace:                    "",
 				MultiClusterSetting:          &pb.MultiClusterSetting{},
@@ -380,8 +376,7 @@ func TestConvertAllocationRequestToGameServerAllocation(t *testing.T) {
 			},
 		},
 		{
-			name:     "empty fields to GSA (CountsAndListsFilter)",
-			features: fmt.Sprintf("%s=true", runtime.FeatureCountsAndLists),
+			name: "empty fields to GSA (CountsAndListsFilter)",
 			in: &pb.AllocationRequest{
 				Namespace:                    "",
 				MultiClusterSetting:          &pb.MultiClusterSetting{},
@@ -406,8 +401,7 @@ func TestConvertAllocationRequestToGameServerAllocation(t *testing.T) {
 			},
 		},
 		{
-			name:     "empty fields to GSA with selectors fields",
-			features: fmt.Sprintf("%s=false", runtime.FeatureCountsAndLists),
+			name: "empty fields to GSA with selectors fields",
 			in: &pb.AllocationRequest{
 				Namespace:           "",
 				MultiClusterSetting: &pb.MultiClusterSetting{},
@@ -431,8 +425,7 @@ func TestConvertAllocationRequestToGameServerAllocation(t *testing.T) {
 			},
 		},
 		{
-			name:     "empty fields to GSA (CountsAndListsFilter) with selectors fields",
-			features: fmt.Sprintf("%s=true", runtime.FeatureCountsAndLists),
+			name: "empty fields to GSA (CountsAndListsFilter) with selectors fields",
 			in: &pb.AllocationRequest{
 				Namespace:           "",
 				MultiClusterSetting: &pb.MultiClusterSetting{},
@@ -579,8 +572,7 @@ func TestConvertAllocationRequestToGameServerAllocation(t *testing.T) {
 			},
 		},
 		{
-			name:     "partially empty Counters and Lists fields to GSA (CountsAndListsFilter)",
-			features: fmt.Sprintf("%s=true", runtime.FeatureCountsAndLists),
+			name: "partially empty Counters and Lists fields to GSA (CountsAndListsFilter)",
 			in: &pb.AllocationRequest{
 				Namespace:                    "",
 				MultiClusterSetting:          &pb.MultiClusterSetting{},
@@ -756,8 +748,7 @@ func TestConvertGSAToAllocationRequest(t *testing.T) {
 				},
 			},
 		}, {
-			name:     "partial GSA with CountsAndLists",
-			features: fmt.Sprintf("%s=true", runtime.FeatureCountsAndLists),
+			name: "partial GSA with CountsAndLists",
 			in: &allocationv1.GameServerAllocation{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "",
@@ -1164,8 +1155,7 @@ func TestConvertGSAToAllocationResponse(t *testing.T) {
 			},
 		},
 		{
-			name:     "all fields are set (CountsAndLists)",
-			features: fmt.Sprintf("%s=true", runtime.FeatureCountsAndLists),
+			name: "all fields are set (CountsAndLists)",
 			in: &allocationv1.GameServerAllocation{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "GameServerAllocation",
@@ -1255,8 +1245,7 @@ func TestConvertGSAToAllocationResponse(t *testing.T) {
 			},
 		},
 		{
-			name:     "Counters fields are set (CountsAndLists)",
-			features: fmt.Sprintf("%s=true", runtime.FeatureCountsAndLists),
+			name: "Counters fields are set (CountsAndLists)",
 			in: &allocationv1.GameServerAllocation{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "GameServerAllocation",
@@ -1334,8 +1323,7 @@ func TestConvertGSAToAllocationResponse(t *testing.T) {
 			},
 		},
 		{
-			name:     "Lists fields are set (CountsAndLists)",
-			features: fmt.Sprintf("%s=true", runtime.FeatureCountsAndLists),
+			name: "Lists fields are set (CountsAndLists)",
 			in: &allocationv1.GameServerAllocation{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "GameServerAllocation",
@@ -1527,8 +1515,7 @@ func TestConvertAllocationResponseToGSA(t *testing.T) {
 			},
 		},
 		{
-			name:     "Counters and Lists convert",
-			features: fmt.Sprintf("%s=true", runtime.FeatureCountsAndLists),
+			name: "Counters and Lists convert",
 			in: &pb.AllocationResponse{
 				Ports:  []*pb.AllocationResponse_GameServerStatusPort{},
 				Source: "33.188.237.156:443",
@@ -1569,8 +1556,7 @@ func TestConvertAllocationResponseToGSA(t *testing.T) {
 			},
 		},
 		{
-			name:     "Counters convert",
-			features: fmt.Sprintf("%s=true", runtime.FeatureCountsAndLists),
+			name: "Counters convert",
 			in: &pb.AllocationResponse{
 				Ports:  []*pb.AllocationResponse_GameServerStatusPort{},
 				Source: "33.188.237.156:443",
@@ -1599,8 +1585,7 @@ func TestConvertAllocationResponseToGSA(t *testing.T) {
 			},
 		},
 		{
-			name:     "List convert",
-			features: fmt.Sprintf("%s=true", runtime.FeatureCountsAndLists),
+			name: "List convert",
 			in: &pb.AllocationResponse{
 				Ports:  []*pb.AllocationResponse_GameServerStatusPort{},
 				Source: "33.188.237.156:443",
