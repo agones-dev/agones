@@ -16,6 +16,7 @@ package sdk
 
 import (
 	"context"
+	stderrors "errors"
 	"fmt"
 	"slices"
 	"testing"
@@ -331,7 +332,7 @@ func (b *betaMock) UpdateCounter(ctx context.Context, in *beta.UpdateCounterRequ
 // a list with any pending batched changes applied.
 func (b *betaMock) GetList(_ context.Context, in *beta.GetListRequest, _ ...grpc.CallOption) (*beta.List, error) {
 	if in == nil {
-		return nil, fmt.Errorf("GetListRequest cannot be nil")
+		return nil, stderrors.New("GetListRequest cannot be nil")
 	}
 	if list, ok := b.lists[in.Name]; ok {
 		return list, nil
@@ -343,7 +344,7 @@ func (b *betaMock) GetList(_ context.Context, in *beta.GetListRequest, _ ...grpc
 // directly.
 func (b *betaMock) UpdateList(_ context.Context, in *beta.UpdateListRequest, _ ...grpc.CallOption) (*beta.List, error) {
 	if in == nil {
-		return nil, fmt.Errorf("UpdateListRequest cannot be nil")
+		return nil, stderrors.New("UpdateListRequest cannot be nil")
 	}
 	list, ok := b.lists[in.List.Name]
 	if !ok {
@@ -364,7 +365,7 @@ func (b *betaMock) UpdateList(_ context.Context, in *beta.UpdateListRequest, _ .
 // directly.
 func (b *betaMock) AddListValue(_ context.Context, in *beta.AddListValueRequest, _ ...grpc.CallOption) (*beta.List, error) {
 	if in == nil {
-		return nil, fmt.Errorf("AddListValueRequest cannot be nil")
+		return nil, stderrors.New("AddListValueRequest cannot be nil")
 	}
 	list, ok := b.lists[in.Name]
 	if !ok {
@@ -385,7 +386,7 @@ func (b *betaMock) AddListValue(_ context.Context, in *beta.AddListValueRequest,
 // directly.
 func (b *betaMock) RemoveListValue(_ context.Context, in *beta.RemoveListValueRequest, _ ...grpc.CallOption) (*beta.List, error) {
 	if in == nil {
-		return nil, fmt.Errorf("RemoveListValueRequest cannot be nil")
+		return nil, stderrors.New("RemoveListValueRequest cannot be nil")
 	}
 	list, ok := b.lists[in.Name]
 	if !ok {

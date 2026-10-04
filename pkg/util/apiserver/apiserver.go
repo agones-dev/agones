@@ -140,7 +140,7 @@ func (as *APIServer) AddAPIResource(groupVersion string, resource metav1.APIReso
 		// discovery handler
 		list := &metav1.APIResourceList{GroupVersion: groupVersion, APIResources: []metav1.APIResource{}}
 		as.resourceList[groupVersion] = list
-		pattern := fmt.Sprintf("/apis/%s", groupVersion)
+		pattern := "/apis/" + groupVersion
 		as.addSerializedHandler(pattern, list)
 		as.logger.WithField("groupversion", groupVersion).WithField("pattern", pattern).Debug("Adding Discovery Handler")
 

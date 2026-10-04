@@ -20,7 +20,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -142,9 +141,9 @@ func TestMetrics_Endpoint_ExposesAllMetrics(t *testing.T) {
 
 func TestSetupMetrics_StackdriverOnly_NoPanic(t *testing.T) {
 	// Set required env vars
-	require.NoError(t, os.Setenv("POD_NAMESPACE", "default"))
-	require.NoError(t, os.Setenv("POD_NAME", "test-pod"))
-	require.NoError(t, os.Setenv("CONTAINER_NAME", "test-container"))
+	t.Setenv("POD_NAMESPACE", "default")
+	t.Setenv("POD_NAME", "test-pod")
+	t.Setenv("CONTAINER_NAME", "test-container")
 
 	// Fake metadata server
 	handler := http.NewServeMux()
@@ -161,7 +160,7 @@ func TestSetupMetrics_StackdriverOnly_NoPanic(t *testing.T) {
 
 	// Set env var to point to the fake metadata server
 	host := strings.TrimPrefix(fakeMetadataServer.URL, "http://")
-	require.NoError(t, os.Setenv("GCE_METADATA_HOST", host))
+	t.Setenv("GCE_METADATA_HOST", host)
 
 	// Config for Stackdriver metrics
 	conf := Config{

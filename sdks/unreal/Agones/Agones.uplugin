@@ -19,6 +19,6 @@
     }
   ],
   "SupportURL": "https://github.com/agones-dev/agones",
-  "Version": 2,
-  "VersionName": "2.0.0"
+  "Version": 3,
+  "VersionName": "2.1.0"
 }
