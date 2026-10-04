@@ -80,7 +80,7 @@ const (
 const readHeaderTimeout = 60 * time.Second
 
 var (
-	_ sdk.SDKServer   = &SDKServer{}
+	_ sdkServer       = &SDKServer{}
 	_ alpha.SDKServer = &SDKServer{}
 	_ beta.SDKServer  = &SDKServer{}
 )

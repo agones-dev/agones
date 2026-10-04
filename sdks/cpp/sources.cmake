@@ -14,6 +14,10 @@ set(GENERATED_SOURCE_FILES
 set(GENERATED_GOOGLE_SOURCE_FILES
     src/google/annotations.pb.cc
     src/google/http.pb.cc
+    src/google/client.pb.cc
+    src/google/field_behavior.pb.cc
+    src/google/launch_stage.pb.cc
+    src/google/resource.pb.cc
 )
 
 set(GENERATED_GRPC_SOURCE_FILES
@@ -29,6 +33,10 @@ set(GENERATED_HEADER_FILES
 set(GENERATED_GOOGLE_HEADER_FILES
     include/google/api/annotations.pb.h
     include/google/api/http.pb.h
+    include/google/api/client.pb.h
+    include/google/api/field_behavior.pb.h
+    include/google/api/launch_stage.pb.h
+    include/google/api/resource.pb.h
 )
 
 set(GENERATED_GRPC_HEADER_FILES

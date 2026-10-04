@@ -44,8 +44,10 @@ rm -rf /go/src/agones.dev/agones/test/sdk/restapi/beta/swagger/docs
 rm -rf /go/src/agones.dev/agones/test/sdk/restapi/beta/swagger/api
 
 
+# Swagger Codegen emits trailing spaces; normalize only the stable outputs changed here.
 for file in `ls /go/src/agones.dev/agones/test/sdk/restapi/swagger`
 do
+  sed -i 's/[[:blank:]]*$//' "/go/src/agones.dev/agones/test/sdk/restapi/swagger/${file}"
   header /go/src/agones.dev/agones/test/sdk/restapi/swagger/${file}
 done
 

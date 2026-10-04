@@ -33,7 +33,34 @@
 'use strict';
 var sdk_pb = require('./sdk_pb.js');
 var google_api_annotations_pb = require('./google/api/annotations_pb.js');
+var google_api_client_pb = require('./google/api/client_pb.js');
+var google_api_field_behavior_pb = require('./google/api/field_behavior_pb.js');
+var google_api_resource_pb = require('./google/api/resource_pb.js');
+var google_protobuf_field_mask_pb = require('google-protobuf/google/protobuf/field_mask_pb.js');
+var google_protobuf_wrappers_pb = require('google-protobuf/google/protobuf/wrappers_pb.js');
 var protoc$gen$openapiv2_options_annotations_pb = require('./protoc-gen-openapiv2/options/annotations_pb.js');
+
+function serialize_agones_dev_sdk_AddListValueRequest(arg) {
+  if (!(arg instanceof sdk_pb.AddListValueRequest)) {
+    throw new Error('Expected argument of type agones.dev.sdk.AddListValueRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_agones_dev_sdk_AddListValueRequest(buffer_arg) {
+  return sdk_pb.AddListValueRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_agones_dev_sdk_Counter(arg) {
+  if (!(arg instanceof sdk_pb.Counter)) {
+    throw new Error('Expected argument of type agones.dev.sdk.Counter');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_agones_dev_sdk_Counter(buffer_arg) {
+  return sdk_pb.Counter.deserializeBinary(new Uint8Array(buffer_arg));
+}
 
 function serialize_agones_dev_sdk_Duration(arg) {
   if (!(arg instanceof sdk_pb.Duration)) {
@@ -68,6 +95,28 @@ function deserialize_agones_dev_sdk_GameServer(buffer_arg) {
   return sdk_pb.GameServer.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
+function serialize_agones_dev_sdk_GetCounterRequest(arg) {
+  if (!(arg instanceof sdk_pb.GetCounterRequest)) {
+    throw new Error('Expected argument of type agones.dev.sdk.GetCounterRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_agones_dev_sdk_GetCounterRequest(buffer_arg) {
+  return sdk_pb.GetCounterRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_agones_dev_sdk_GetListRequest(arg) {
+  if (!(arg instanceof sdk_pb.GetListRequest)) {
+    throw new Error('Expected argument of type agones.dev.sdk.GetListRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_agones_dev_sdk_GetListRequest(buffer_arg) {
+  return sdk_pb.GetListRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
 function serialize_agones_dev_sdk_KeyValue(arg) {
   if (!(arg instanceof sdk_pb.KeyValue)) {
     throw new Error('Expected argument of type agones.dev.sdk.KeyValue');
@@ -77,6 +126,50 @@ function serialize_agones_dev_sdk_KeyValue(arg) {
 
 function deserialize_agones_dev_sdk_KeyValue(buffer_arg) {
   return sdk_pb.KeyValue.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_agones_dev_sdk_List(arg) {
+  if (!(arg instanceof sdk_pb.List)) {
+    throw new Error('Expected argument of type agones.dev.sdk.List');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_agones_dev_sdk_List(buffer_arg) {
+  return sdk_pb.List.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_agones_dev_sdk_RemoveListValueRequest(arg) {
+  if (!(arg instanceof sdk_pb.RemoveListValueRequest)) {
+    throw new Error('Expected argument of type agones.dev.sdk.RemoveListValueRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_agones_dev_sdk_RemoveListValueRequest(buffer_arg) {
+  return sdk_pb.RemoveListValueRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_agones_dev_sdk_UpdateCounterRequest(arg) {
+  if (!(arg instanceof sdk_pb.UpdateCounterRequest)) {
+    throw new Error('Expected argument of type agones.dev.sdk.UpdateCounterRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_agones_dev_sdk_UpdateCounterRequest(buffer_arg) {
+  return sdk_pb.UpdateCounterRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_agones_dev_sdk_UpdateListRequest(arg) {
+  if (!(arg instanceof sdk_pb.UpdateListRequest)) {
+    throw new Error('Expected argument of type agones.dev.sdk.UpdateListRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_agones_dev_sdk_UpdateListRequest(buffer_arg) {
+  return sdk_pb.UpdateListRequest.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
 
@@ -189,6 +282,87 @@ reserve: {
     requestDeserialize: deserialize_agones_dev_sdk_Duration,
     responseSerialize: serialize_agones_dev_sdk_Empty,
     responseDeserialize: deserialize_agones_dev_sdk_Empty,
+  },
+  // Gets a Counter. Returns NOT_FOUND if the Counter does not exist.
+getCounter: {
+    path: '/agones.dev.sdk.SDK/GetCounter',
+    requestStream: false,
+    responseStream: false,
+    requestType: sdk_pb.GetCounterRequest,
+    responseType: sdk_pb.Counter,
+    requestSerialize: serialize_agones_dev_sdk_GetCounterRequest,
+    requestDeserialize: deserialize_agones_dev_sdk_GetCounterRequest,
+    responseSerialize: serialize_agones_dev_sdk_Counter,
+    responseDeserialize: deserialize_agones_dev_sdk_Counter,
+  },
+  // UpdateCounter returns the updated Counter. Returns NOT_FOUND if the Counter does not exist (name cannot be updated).
+// Returns OUT_OF_RANGE if the Count is out of range [0,Capacity].
+updateCounter: {
+    path: '/agones.dev.sdk.SDK/UpdateCounter',
+    requestStream: false,
+    responseStream: false,
+    requestType: sdk_pb.UpdateCounterRequest,
+    responseType: sdk_pb.Counter,
+    requestSerialize: serialize_agones_dev_sdk_UpdateCounterRequest,
+    requestDeserialize: deserialize_agones_dev_sdk_UpdateCounterRequest,
+    responseSerialize: serialize_agones_dev_sdk_Counter,
+    responseDeserialize: deserialize_agones_dev_sdk_Counter,
+  },
+  // Gets a List. Returns NOT_FOUND if the List does not exist.
+getList: {
+    path: '/agones.dev.sdk.SDK/GetList',
+    requestStream: false,
+    responseStream: false,
+    requestType: sdk_pb.GetListRequest,
+    responseType: sdk_pb.List,
+    requestSerialize: serialize_agones_dev_sdk_GetListRequest,
+    requestDeserialize: deserialize_agones_dev_sdk_GetListRequest,
+    responseSerialize: serialize_agones_dev_sdk_List,
+    responseDeserialize: deserialize_agones_dev_sdk_List,
+  },
+  // UpdateList returns the updated List. Returns NOT_FOUND if the List does not exist (name cannot be updated).
+// **THIS WILL OVERWRITE ALL EXISTING LIST.VALUES WITH ANY REQUEST LIST.VALUES**
+// Use AddListValue() or RemoveListValue() for modifying the List.Values field.
+// Returns INVALID_ARGUMENT if the field mask path(s) are not field(s) of the List.
+// If a field mask path(s) is specified, but the value is not set in the request List object,
+// then the default value for the variable will be set (i.e. 0 for "capacity", empty list for "values").
+updateList: {
+    path: '/agones.dev.sdk.SDK/UpdateList',
+    requestStream: false,
+    responseStream: false,
+    requestType: sdk_pb.UpdateListRequest,
+    responseType: sdk_pb.List,
+    requestSerialize: serialize_agones_dev_sdk_UpdateListRequest,
+    requestDeserialize: deserialize_agones_dev_sdk_UpdateListRequest,
+    responseSerialize: serialize_agones_dev_sdk_List,
+    responseDeserialize: deserialize_agones_dev_sdk_List,
+  },
+  // Adds a value to a List and returns updated List. Returns NOT_FOUND if the List does not exist.
+// Returns ALREADY_EXISTS if the value is already in the List.
+// Returns OUT_OF_RANGE if the List is already at Capacity.
+addListValue: {
+    path: '/agones.dev.sdk.SDK/AddListValue',
+    requestStream: false,
+    responseStream: false,
+    requestType: sdk_pb.AddListValueRequest,
+    responseType: sdk_pb.List,
+    requestSerialize: serialize_agones_dev_sdk_AddListValueRequest,
+    requestDeserialize: deserialize_agones_dev_sdk_AddListValueRequest,
+    responseSerialize: serialize_agones_dev_sdk_List,
+    responseDeserialize: deserialize_agones_dev_sdk_List,
+  },
+  // Removes a value from a List and returns updated List. Returns NOT_FOUND if the List does not exist.
+// Returns NOT_FOUND if the value is not in the List.
+removeListValue: {
+    path: '/agones.dev.sdk.SDK/RemoveListValue',
+    requestStream: false,
+    responseStream: false,
+    requestType: sdk_pb.RemoveListValueRequest,
+    responseType: sdk_pb.List,
+    requestSerialize: serialize_agones_dev_sdk_RemoveListValueRequest,
+    requestDeserialize: deserialize_agones_dev_sdk_RemoveListValueRequest,
+    responseSerialize: serialize_agones_dev_sdk_List,
+    responseDeserialize: deserialize_agones_dev_sdk_List,
   },
 };
 

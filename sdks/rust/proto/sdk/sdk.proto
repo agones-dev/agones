@@ -18,6 +18,11 @@ package agones.dev.sdk;
 option go_package = "./sdk";
 
 import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/wrappers.proto";
 import "protoc-gen-openapiv2/options/annotations.proto";
 
 option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
@@ -98,6 +103,65 @@ service SDK {
             body: "*"
         };
     }
+
+    // Gets a Counter. Returns NOT_FOUND if the Counter does not exist.
+    rpc GetCounter(GetCounterRequest) returns (Counter) {
+      option (google.api.http) = {
+        get: "/counters/{name}"
+      };
+      option (google.api.method_signature) = "name";
+    }
+
+    // UpdateCounter returns the updated Counter. Returns NOT_FOUND if the Counter does not exist (name cannot be updated).
+    // Returns OUT_OF_RANGE if the Count is out of range [0,Capacity].
+    rpc UpdateCounter(UpdateCounterRequest) returns (Counter) {
+      option (google.api.http) = {
+        patch: "/counters/{counterUpdateRequest.name}"
+        body: "counterUpdateRequest"
+      };
+      option (google.api.method_signature) = "counterUpdateRequest";
+    }
+
+    // Gets a List. Returns NOT_FOUND if the List does not exist.
+    rpc GetList(GetListRequest) returns (List) {
+      option (google.api.http) = {
+        get: "/lists/{name}"
+      };
+      option (google.api.method_signature) = "name";
+    }
+
+    // UpdateList returns the updated List. Returns NOT_FOUND if the List does not exist (name cannot be updated).
+    // **THIS WILL OVERWRITE ALL EXISTING LIST.VALUES WITH ANY REQUEST LIST.VALUES**
+    // Use AddListValue() or RemoveListValue() for modifying the List.Values field.
+    // Returns INVALID_ARGUMENT if the field mask path(s) are not field(s) of the List.
+    // If a field mask path(s) is specified, but the value is not set in the request List object,
+    // then the default value for the variable will be set (i.e. 0 for "capacity", empty list for "values").
+    rpc UpdateList(UpdateListRequest) returns (List) {
+      option (google.api.http) = {
+        patch: "/lists/{list.name}"
+        body: "list"
+      };
+      option (google.api.method_signature) = "list,update_mask";
+    }
+
+    // Adds a value to a List and returns updated List. Returns NOT_FOUND if the List does not exist.
+    // Returns ALREADY_EXISTS if the value is already in the List.
+    // Returns OUT_OF_RANGE if the List is already at Capacity.
+    rpc AddListValue(AddListValueRequest) returns (List) {
+      option (google.api.http) = {
+        post: "/lists/{name}:addValue"
+        body: "*"
+      };
+    }
+
+    // Removes a value from a List and returns updated List. Returns NOT_FOUND if the List does not exist.
+    // Returns NOT_FOUND if the value is not in the List.
+    rpc RemoveListValue(RemoveListValueRequest) returns (List) {
+      option (google.api.http) = {
+        post: "/lists/{name}:removeValue"
+        body: "*"
+      };
+    }
 }
 
 // I am Empty
@@ -167,15 +231,11 @@ message GameServer {
             repeated string ids = 3;
         }
 
-        // [Stage:Beta]
-        // [FeatureFlag:CountsAndLists]
         message CounterStatus {
           int64 count = 1;
           int64 capacity = 2;
         }
 
-        // [Stage:Beta]
-        // [FeatureFlag:CountsAndLists]
         message ListStatus {
           int64 capacity = 1;
           repeated string values = 2;
@@ -190,12 +250,116 @@ message GameServer {
         // [FeatureFlag:PlayerTracking]
         PlayerStatus players = 4;
 
-        // [Stage:Beta]
-        // [FeatureFlag:CountsAndLists]
         map<string, CounterStatus> counters = 5;
 
-        // [Stage:Beta]
-        // [FeatureFlag:CountsAndLists]
         map<string, ListStatus> lists = 6;
     }
+}
+
+// A representation of a Counter.
+message Counter {
+  option (google.api.resource) = {
+      type: "agones.dev/Counter"
+      pattern: "counters/{counter}"
+  };
+  // The name of the Counter
+  string name = 1;
+  // The current count of the Counter
+  int64 count = 2;
+  // The maximum capacity of the Counter
+  int64 capacity = 3;
+}
+
+// A representation of a Counter Update Request.
+message CounterUpdateRequest {
+  option (google.api.resource) = {
+      type: "agones.dev/CounterUpdateRequest"
+      pattern: "counterUpdateRequests/{counterUpdateRequest}"
+  };
+  // The name of the Counter to update
+  string name = 1;
+  // The value to set the Counter Count
+  google.protobuf.Int64Value count = 2;
+  // The value to set the Counter Capacity
+  google.protobuf.Int64Value capacity = 3;
+  // countDiff tracks if a Counter Update Request is CountIncrement (positive), CountDecrement
+  // (negative), 0 if a CountSet or CapacitySet request
+  int64 countDiff = 4;
+}
+
+message GetCounterRequest {
+  // The name of the Counter to get
+  string name = 1 [
+                  (google.api.field_behavior) = REQUIRED,
+                  (google.api.resource_reference) = {
+    type: "agones.dev/Counter"
+  }];
+}
+
+message UpdateCounterRequest {
+  // The requested update to make to the Counter
+  CounterUpdateRequest counterUpdateRequest = 1 [
+                  (google.api.field_behavior) = REQUIRED,
+                  (google.api.resource_reference) = {
+    type: "agones.dev/CounterUpdateRequest"
+  }];
+}
+
+// A representation of a List.
+message List {
+  option (google.api.resource) = {
+      type: "agones.dev/List"
+      pattern: "lists/{list}"
+  };
+  // The name of the List
+  string name = 1;
+  // The maximum capacity of the List
+  int64 capacity = 2;
+  // The array of items in the List ["v1", "v2", …]
+  repeated string values = 3;
+}
+
+message GetListRequest {
+  // The name of the List to get
+  string name = 1 [
+                  (google.api.field_behavior) = REQUIRED,
+                  (google.api.resource_reference) = {
+    type: "agones.dev/List"
+  }];
+}
+
+message UpdateListRequest {
+  // The List to update
+  List list = 1 [
+                  (google.api.field_behavior) = REQUIRED,
+                  (google.api.resource_reference) = {
+    type: "agones.dev/List"
+  }];
+
+  // Required. Mask (list) of fields to update.
+  // Fields are specified relative to the List
+  // (e.g. `capacity`, `values`; *not* `List.capacity` or `List.values`).
+  google.protobuf.FieldMask update_mask = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message AddListValueRequest {
+  // The name of the List to add a value to.
+  string name = 1 [
+                  (google.api.field_behavior) = REQUIRED,
+                  (google.api.resource_reference) = {
+    type: "agones.dev/List"
+  }];
+
+  string value = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message RemoveListValueRequest {
+  // The name of the List to remove a value from.
+  string name = 1 [
+                  (google.api.field_behavior) = REQUIRED,
+                  (google.api.resource_reference) = {
+    type: "agones.dev/List"
+  }];
+
+  string value = 2 [(google.api.field_behavior) = REQUIRED];
 }
