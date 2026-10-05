@@ -540,7 +540,7 @@ func TestGameServerRestrictedPodSecurity(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
-	namespace := fmt.Sprintf("restricted-%s", rand.String(5))
+	namespace := "restricted-" + rand.String(5)
 	require.NoError(t, framework.CreateNamespace(namespace))
 	defer func() {
 		if derr := framework.DeleteNamespace(namespace); derr != nil {
@@ -1463,7 +1463,7 @@ spec:
           preferredDuringSchedulingIgnoredDuringExecution: ERROR
       containers:
         - name: simple-game-server
-          image: us-docker.pkg.dev/agones-images/examples/simple-game-server:0.43
+          image: us-docker.pkg.dev/agones-images/examples/simple-game-server:0.44
 `
 	err := os.WriteFile("/tmp/invalid.yaml", []byte(gsYaml), 0o644)
 	require.NoError(t, err)
