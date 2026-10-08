@@ -143,7 +143,7 @@ class AgonesSDK:
 
     @property
     def alpha(self) -> Alpha:
-        """Access the Alpha SDK (player tracking)."""
+        """Access the Alpha SDK."""
         if self._alpha is None:
             raise RuntimeError("SDK not connected. Call connect() first.")
         return self._alpha

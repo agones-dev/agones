@@ -54,17 +54,11 @@ func TestSuperTuxKartGameServerReady(t *testing.T) {
 					Containers: []corev1.Container{
 						{
 							Name:  "supertuxkart",
-							Image: "us-docker.pkg.dev/agones-images/examples/supertuxkart-example:0.24",
+							Image: "us-docker.pkg.dev/agones-images/examples/supertuxkart-example:0.25",
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("1Gi"),
 									corev1.ResourceCPU:    resource.MustParse("500m"),
-								},
-							},
-							Env: []corev1.EnvVar{
-								{
-									Name:  "ENABLE_PLAYER_TRACKING",
-									Value: "false",
 								},
 							},
 						},
@@ -195,7 +189,7 @@ func TestNodeJSGameServerReady(t *testing.T) {
 					Containers: []corev1.Container{
 						{
 							Name:  "nodejs-simple",
-							Image: "us-docker.pkg.dev/agones-images/examples/nodejs-simple-server:0.10",
+							Image: "us-docker.pkg.dev/agones-images/examples/nodejs-simple-server:0.12",
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("100Mi"),

@@ -33,6 +33,5 @@ COPY entrypoint.sh server_config.xml ./
 
 RUN chown -R supertuxkart:supertuxkart /home/supertuxkart && chmod +x wrapper
 
-ENV ENABLE_PLAYER_TRACKING=false
 USER 1000
 ENTRYPOINT ["./entrypoint.sh"]

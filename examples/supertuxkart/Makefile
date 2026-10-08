@@ -25,10 +25,12 @@
 
 REPOSITORY ?=
 PROD_REPO ?= us-docker.pkg.dev/agones-images/examples
+MINIKUBE ?= minikube
+MINIKUBE_PROFILE ?= agones
 
 mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
 project_path := $(dir $(mkfile_path))
-version := 0.24
+version := 0.25
 ifeq ($(REPOSITORY),)
 	image_tag := supertuxkart-example:$(version)
 else
@@ -49,6 +51,14 @@ build:
 # Push the docker image
 push: build
 	docker push $(image_tag)
+
+# Pushes the image (built via `make build`) into the "agones" minikube instance,
+# and re-tags it with the production tag (i.e. $(PROD_REPO)/$(image_tag)), so
+# that it can be used by the example gameserver.yaml and fleet.yaml without
+# modification.
+minikube-push:
+	$(MINIKUBE) image load $(image_tag) -p $(MINIKUBE_PROFILE)
+	$(MINIKUBE) image tag $(image_tag) $(PROD_REPO)/$(image_tag) -p $(MINIKUBE_PROFILE)
 
 # Run tests
 test:
