@@ -322,10 +322,11 @@ func TestHealthControllerSyncGameServer(t *testing.T) {
 		updated bool
 	}
 	fixtures := map[string]struct {
-		state     agonesv1.GameServerState
-		podStatus *corev1.PodStatus
-		feature   string
-		expected  expected
+		state           agonesv1.GameServerState
+		podStatus       *corev1.PodStatus
+		feature         string
+		extraContainers []corev1.Container
+		expected        expected
 	}{
 		"started": {
 			state: agonesv1.GameServerStateStarting,
@@ -358,10 +359,21 @@ func TestHealthControllerSyncGameServer(t *testing.T) {
 			},
 		},
 		"container failed before ready": {
-			state: agonesv1.GameServerStateStarting,
+			state:   agonesv1.GameServerStateStarting,
+			feature: string(agruntime.FeatureSidecarContainers) + "=false",
 			podStatus: &corev1.PodStatus{ContainerStatuses: []corev1.ContainerStatus{
 				{Name: "container", State: corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{}}}}},
 			expected: expected{updated: false},
+		},
+		"sidecar mode, game container failed before ready while Pod is running": {
+			state:           agonesv1.GameServerStateScheduled,
+			feature:         string(agruntime.FeatureSidecarContainers) + "=true",
+			extraContainers: []corev1.Container{{Name: "other-container", Image: "container/image"}},
+			podStatus: &corev1.PodStatus{Phase: corev1.PodRunning, ContainerStatuses: []corev1.ContainerStatus{
+				{Name: "container", State: corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{ExitCode: 23}}},
+				{Name: "other-container", State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{}}},
+			}},
+			expected: expected{updated: true},
 		},
 		"container failed after ready": {
 			state:   agonesv1.GameServerStateAllocated,
@@ -410,6 +422,8 @@ func TestHealthControllerSyncGameServer(t *testing.T) {
 
 			gs := agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "test"}, Spec: newSingleContainerSpec(),
 				Status: agonesv1.GameServerStatus{State: test.state}}
+			gs.Spec.Template.Spec.Containers = append(gs.Spec.Template.Spec.Containers, test.extraContainers...)
+			gs.Spec.Container = gs.Spec.Template.Spec.Containers[0].Name
 			gs.ApplyDefaults()
 
 			got := false
