@@ -37,22 +37,12 @@ const logLocation = "/.config/supertuxkart/config-0.10/server_config.log"
 func main() {
 	log.SetPrefix("[wrapper] ")
 	input := flag.String("i", "", "the command and arguments to execute the server binary")
-
-	// Since player tracking is not on by default, it is behind this flag.
-	// If it is off, still log messages about players, but don't actually call the player tracking functions.
-	enablePlayerTracking := flag.Bool("player-tracking", false, "If true, player tracking will be enabled.")
 	flag.Parse()
 
 	log.Println("Connecting to Agones with the SDK")
 	s, err := sdk.NewSDK()
 	if err != nil {
 		log.Fatalf("could not connect to SDK: %v", err)
-	}
-
-	if *enablePlayerTracking {
-		if err = s.Alpha().SetPlayerCapacity(8); err != nil {
-			log.Fatalf("could not set play count: %v", err)
-		}
 	}
 
 	log.Println("Starting health checking")
@@ -110,37 +100,11 @@ func main() {
 		// Don't use the logger here. This would add multiple prefixes to the logs. We just want
 		// to show the supertuxkart logs as they are, and layer the wrapper logs in with them.
 		fmt.Println(line.Text)
-		action, player := handleLogLine(line.Text)
+		action := handleLogLine(line.Text)
 		switch action {
 		case "READY":
 			if err := s.Ready(); err != nil {
 				log.Fatal("failed to mark server ready")
-			}
-		case "PLAYERJOIN":
-			if player == nil {
-				log.Print("could not determine player")
-				break
-			}
-			if *enablePlayerTracking {
-				result, err := s.Alpha().PlayerConnect(*player)
-				if err != nil {
-					log.Print(err)
-				} else {
-					log.Print(result)
-				}
-			}
-		case "PLAYERLEAVE":
-			if player == nil {
-				log.Print("could not determine player")
-				break
-			}
-			if *enablePlayerTracking {
-				result, err := s.Alpha().PlayerDisconnect(*player)
-				if err != nil {
-					log.Print(err)
-				} else {
-					log.Print(result)
-				}
 			}
 		case "SHUTDOWN":
 			if err := s.Shutdown(); err != nil {
@@ -164,8 +128,7 @@ func doHealth(sdk *sdk.SDK) {
 }
 
 // handleLogLine compares the log line to a series of regexes to determine if any action should be taken.
-// TODO: This could probably be handled better with a custom type rather than just (string, *string)
-func handleLogLine(line string) (string, *string) {
+func handleLogLine(line string) string {
 	// The various regexes that match server lines
 	playerJoin := regexp.MustCompile(`ServerLobby: New player (.+) with online id [0-9][0-9]?`)
 	playerLeave := regexp.MustCompile(`ServerLobby: (.+) disconnected$`)
@@ -175,27 +138,24 @@ func handleLogLine(line string) (string, *string) {
 	// Start the server
 	if serverStart.MatchString(line) {
 		log.Print("server ready")
-		return "READY", nil
+		return "READY"
 	}
 
-	// Player tracking
 	if playerJoin.MatchString(line) {
 		matches := playerJoin.FindSubmatch([]byte(line))
-		player := string(matches[1])
-		log.Printf("Player %s joined\n", player)
-		return "PLAYERJOIN", &player
+		log.Printf("Player %s joined\n", string(matches[1]))
+		return "PLAYERJOIN"
 	}
 	if playerLeave.MatchString(line) {
 		matches := playerLeave.FindSubmatch([]byte(line))
-		player := string(matches[1])
-		log.Printf("Player %s disconnected", player)
-		return "PLAYERLEAVE", &player
+		log.Printf("Player %s disconnected", string(matches[1]))
+		return "PLAYERLEAVE"
 	}
 
 	// All the players left, send a shutdown
 	if noMorePlayers.MatchString(line) {
 		log.Print("server has no more players. shutting down")
-		return "SHUTDOWN", nil
+		return "SHUTDOWN"
 	}
-	return "", nil
+	return ""
 }
