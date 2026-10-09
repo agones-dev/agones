@@ -1768,19 +1768,22 @@ func TestListAutoscalerWithSDKMethods(t *testing.T) {
 	defaultFlt := defaultFleet(framework.Namespace)
 	defaultFlt.Spec.Template.Spec.Lists = map[string]agonesv1.ListStatus{
 		"sessions": {
-			Values:   []string{"session1", "session2"}, // AggregateCount 6
-			Capacity: 4,                                // AggregateCapacity 12
+			Values:   []string{"session1", "session2"},
+			Capacity: 4,
 		},
 	}
 
 	fleetautoscalers := framework.AgonesClient.AutoscalingV1().FleetAutoscalers(framework.Namespace)
 
+	// The SDK changes are applied before the FleetAutoscaler is created, and are chosen so that the
+	// result does not depend on which GameServers the autoscaler removes first on scale down.
 	testCases := map[string]struct {
-		fas           autoscalingv1.ListPolicy
-		order         string // Priority order Ascending or Descending for fleet ready replica deletion
-		msg           string // See agones/examples/simple-game-server/README for list of commands
-		startReplicas int32  // After applying autoscaler policy but before sending update message
-		wantReplicas  int32  // After applying autoscaler policy and sending update message
+		fas            autoscalingv1.ListPolicy
+		msgs           []string // Sent to each of the first numGameServers Ready GameServers. See agones/examples/simple-game-server/README for list of commands
+		numGameServers int
+		startReplicas  int32 // Before sending the SDK messages and creating the autoscaler
+		wantListCount  int64 // Aggregate List Count after sending the SDK messages
+		wantReplicas   int32 // After applying the autoscaler policy
 	}{
 		"Scale Up to Buffer": {
 			fas: autoscalingv1.ListPolicy{
@@ -1789,10 +1792,12 @@ func TestListAutoscalerWithSDKMethods(t *testing.T) {
 				MinCapacity: 12,
 				MaxCapacity: 400,
 			},
-			order:         agonesv1.GameServerPriorityDescending,
-			msg:           "APPEND_LIST_VALUE sessions session0",
-			startReplicas: 5,
-			wantReplicas:  6,
+			// Available capacity drops from 10 to 8, and one more replica adds exactly 2.
+			msgs:           []string{"APPEND_LIST_VALUE sessions session3", "APPEND_LIST_VALUE sessions session4"},
+			numGameServers: 1,
+			startReplicas:  5,
+			wantListCount:  12,
+			wantReplicas:   6,
 		},
 		"Scale Down to Buffer": {
 			fas: autoscalingv1.ListPolicy{
@@ -1801,25 +1806,48 @@ func TestListAutoscalerWithSDKMethods(t *testing.T) {
 				MinCapacity: 3,
 				MaxCapacity: 400,
 			},
-			msg:           "DELETE_LIST_VALUE sessions session1",
-			order:         agonesv1.GameServerPriorityAscending,
-			startReplicas: 2,
-			wantReplicas:  1,
+			// Available capacity rises from 4 to 6, and removing either replica leaves exactly 3.
+			msgs:           []string{"DELETE_LIST_VALUE sessions session1"},
+			numGameServers: 2,
+			startReplicas:  2,
+			wantListCount:  2,
+			wantReplicas:   1,
 		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			defaultFlt.Spec.Priorities = []agonesv1.Priority{
-				{
-					Type:  agonesv1.GameServerPriorityList,
-					Key:   "sessions",
-					Order: testCase.order,
-				},
-			}
-			flt, err := client.Fleets(framework.Namespace).Create(ctx, defaultFlt.DeepCopy(), metav1.CreateOptions{})
+			fltSpec := defaultFlt.DeepCopy()
+			fltSpec.Spec.Replicas = testCase.startReplicas
+			flt, err := client.Fleets(framework.Namespace).Create(ctx, fltSpec, metav1.CreateOptions{})
 			require.NoError(t, err)
 			defer client.Fleets(framework.Namespace).Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
-			framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
+			framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(testCase.startReplicas))
+
+			gameservers, err := framework.ListGameServersFromFleet(flt)
+			require.NoError(t, err)
+
+			var readyGameServers []agonesv1.GameServer
+			for _, gs := range gameservers {
+				if gs.Status.State == agonesv1.GameServerStateReady && !gs.IsBeingDeleted() {
+					readyGameServers = append(readyGameServers, gs)
+				}
+			}
+			require.GreaterOrEqual(t, len(readyGameServers), testCase.numGameServers, "not enough Ready GameServers to send SDK messages to")
+
+			for i := range testCase.numGameServers {
+				gs := &readyGameServers[i]
+				for _, msg := range testCase.msgs {
+					logrus.WithField("command", msg).WithField("gs", gs.ObjectMeta.Name).Info(name)
+					reply, err := framework.SendGameServerUDP(t, gs, msg)
+					require.NoError(t, err)
+					require.Equal(t, "SUCCESS\n", reply)
+				}
+			}
+
+			framework.AssertFleetCondition(t, flt, func(log *logrus.Entry, fleet *agonesv1.Fleet) bool {
+				log.WithField("fleetStatus", fmt.Sprintf("%+v", fleet.Status)).WithField("expected", testCase.wantListCount).Info("Checking Fleet List Count")
+				return fleet.Status.Lists["sessions"].Count == testCase.wantListCount
+			})
 
 			listFas := &autoscalingv1.FleetAutoscaler{
 				ObjectMeta: metav1.ObjectMeta{Name: flt.ObjectMeta.Name + "-list-autoscaler", Namespace: framework.Namespace},
@@ -1839,19 +1867,8 @@ func TestListAutoscalerWithSDKMethods(t *testing.T) {
 			}
 
 			fas, err := fleetautoscalers.Create(ctx, listFas, metav1.CreateOptions{})
-			assert.NoError(t, err)
-			defer fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
-
-			// Wait until autoscaler has first re-sized before getting the list of gameservers
-			framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(testCase.startReplicas))
-
-			gameservers, err := framework.ListGameServersFromFleet(flt)
-			assert.NoError(t, err)
-
-			gs := &gameservers[1]
-			logrus.WithField("command", testCase.msg).WithField("gs", gs.ObjectMeta.Name).Info(name)
-			_, err = framework.SendGameServerUDP(t, gs, testCase.msg)
 			require.NoError(t, err)
+			defer fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
 
 			framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(testCase.wantReplicas))
 		})
