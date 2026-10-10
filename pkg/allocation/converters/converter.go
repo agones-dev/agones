@@ -26,7 +26,6 @@ import (
 	"agones.dev/agones/pkg/apis"
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
 	allocationv1 "agones.dev/agones/pkg/apis/allocation/v1"
-	"agones.dev/agones/pkg/util/runtime"
 )
 
 // ConvertAllocationRequestToGSA converts AllocationRequest to GameServerAllocation V1 (GSA)
@@ -75,16 +74,14 @@ func ConvertAllocationRequestToGSA(in *pb.AllocationRequest) *allocationv1.GameS
 		gsa.Spec.Required = *selector
 	}
 
-	if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		if in.Priorities != nil {
-			gsa.Spec.Priorities = convertAllocationPrioritiesToGSAPriorities(in.GetPriorities())
-		}
-		if in.Counters != nil {
-			gsa.Spec.Counters = convertAllocationCountersToGSACounterActions(in.GetCounters())
-		}
-		if in.Lists != nil {
-			gsa.Spec.Lists = convertAllocationListsToGSAListActions(in.GetLists())
-		}
+	if in.Priorities != nil {
+		gsa.Spec.Priorities = convertAllocationPrioritiesToGSAPriorities(in.GetPriorities())
+	}
+	if in.Counters != nil {
+		gsa.Spec.Counters = convertAllocationCountersToGSACounterActions(in.GetCounters())
+	}
+	if in.Lists != nil {
+		gsa.Spec.Lists = convertAllocationListsToGSAListActions(in.GetLists())
 	}
 
 	return gsa
@@ -130,16 +127,14 @@ func ConvertGSAToAllocationRequest(in *allocationv1.GameServerAllocation) *pb.Al
 		out.MultiClusterSetting.PolicySelector = convertInternalLabelSelectorToLabelSelector(&in.Spec.MultiClusterSetting.PolicySelector)
 	}
 
-	if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		if in.Spec.Priorities != nil {
-			out.Priorities = convertGSAPrioritiesToAllocationPriorities(in.Spec.Priorities)
-		}
-		if in.Spec.Counters != nil {
-			out.Counters = convertGSACounterActionsToAllocationCounters(in.Spec.Counters)
-		}
-		if in.Spec.Lists != nil {
-			out.Lists = convertGSAListActionsToAllocationLists(in.Spec.Lists)
-		}
+	if in.Spec.Priorities != nil {
+		out.Priorities = convertGSAPrioritiesToAllocationPriorities(in.Spec.Priorities)
+	}
+	if in.Spec.Counters != nil {
+		out.Counters = convertGSACounterActionsToAllocationCounters(in.Spec.Counters)
+	}
+	if in.Spec.Lists != nil {
+		out.Lists = convertGSAListActionsToAllocationLists(in.Spec.Lists)
 	}
 
 	return out
@@ -238,26 +233,24 @@ func convertGameServerSelectorToInternalGameServerSelector(in *pb.GameServerSele
 		result.GameServerState = &ready
 	}
 
-	if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		if in.Counters != nil {
-			result.Counters = map[string]allocationv1.CounterSelector{}
-			for k, v := range in.GetCounters() {
-				result.Counters[k] = allocationv1.CounterSelector{
-					MinCount:     v.GetMinCount(),
-					MaxCount:     v.GetMaxCount(),
-					MinAvailable: v.GetMinAvailable(),
-					MaxAvailable: v.GetMaxAvailable(),
-				}
+	if in.Counters != nil {
+		result.Counters = map[string]allocationv1.CounterSelector{}
+		for k, v := range in.GetCounters() {
+			result.Counters[k] = allocationv1.CounterSelector{
+				MinCount:     v.GetMinCount(),
+				MaxCount:     v.GetMaxCount(),
+				MinAvailable: v.GetMinAvailable(),
+				MaxAvailable: v.GetMaxAvailable(),
 			}
 		}
-		if in.Lists != nil {
-			result.Lists = map[string]allocationv1.ListSelector{}
-			for k, v := range in.GetLists() {
-				result.Lists[k] = allocationv1.ListSelector{
-					ContainsValue: v.GetContainsValue(),
-					MinAvailable:  v.GetMinAvailable(),
-					MaxAvailable:  v.GetMaxAvailable(),
-				}
+	}
+	if in.Lists != nil {
+		result.Lists = map[string]allocationv1.ListSelector{}
+		for k, v := range in.GetLists() {
+			result.Lists[k] = allocationv1.ListSelector{
+				ContainsValue: v.GetContainsValue(),
+				MinAvailable:  v.GetMinAvailable(),
+				MaxAvailable:  v.GetMaxAvailable(),
 			}
 		}
 	}
@@ -283,26 +276,24 @@ func convertInternalGameServerSelectorToGameServer(in *allocationv1.GameServerSe
 		}
 	}
 
-	if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		if in.Counters != nil {
-			result.Counters = map[string]*pb.CounterSelector{}
-			for k, v := range in.Counters {
-				result.Counters[k] = &pb.CounterSelector{
-					MinCount:     v.MinCount,
-					MaxCount:     v.MaxCount,
-					MinAvailable: v.MinAvailable,
-					MaxAvailable: v.MaxAvailable,
-				}
+	if in.Counters != nil {
+		result.Counters = map[string]*pb.CounterSelector{}
+		for k, v := range in.Counters {
+			result.Counters[k] = &pb.CounterSelector{
+				MinCount:     v.MinCount,
+				MaxCount:     v.MaxCount,
+				MinAvailable: v.MinAvailable,
+				MaxAvailable: v.MaxAvailable,
 			}
 		}
-		if in.Lists != nil {
-			result.Lists = map[string]*pb.ListSelector{}
-			for k, v := range in.Lists {
-				result.Lists[k] = &pb.ListSelector{
-					ContainsValue: v.ContainsValue,
-					MinAvailable:  v.MinAvailable,
-					MaxAvailable:  v.MaxAvailable,
-				}
+	}
+	if in.Lists != nil {
+		result.Lists = map[string]*pb.ListSelector{}
+		for k, v := range in.Lists {
+			result.Lists[k] = &pb.ListSelector{
+				ContainsValue: v.ContainsValue,
+				MinAvailable:  v.MinAvailable,
+				MaxAvailable:  v.MaxAvailable,
 			}
 		}
 	}
@@ -355,13 +346,12 @@ func ConvertGSAToAllocationResponse(in *allocationv1.GameServerAllocation, grpcU
 		Source:         in.Status.Source,
 		Metadata:       convertGSAMetadataToAllocationMetadata(in.Status.Metadata),
 	}
-	if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		if in.Status.Counters != nil {
-			res.Counters = convertGSACountersToAllocationCounters(in.Status.Counters)
-		}
-		if in.Status.Lists != nil {
-			res.Lists = convertGSAListsToAllocationLists(in.Status.Lists)
-		}
+
+	if in.Status.Counters != nil {
+		res.Counters = convertGSACountersToAllocationCounters(in.Status.Counters)
+	}
+	if in.Status.Lists != nil {
+		res.Lists = convertGSAListsToAllocationLists(in.Status.Lists)
 	}
 
 	return res, nil
@@ -409,14 +399,14 @@ func ConvertAllocationResponseToGSA(in *pb.AllocationResponse, rs string) *alloc
 			Metadata:       convertAllocationMetadataToGSAMetadata(in.GetMetadata()),
 		},
 	}
-	if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		if in.Counters != nil {
-			out.Status.Counters = convertAllocationCountersToGSACounters(in.GetCounters())
-		}
-		if in.Lists != nil {
-			out.Status.Lists = convertAllocationListsToGSALists(in.GetLists())
-		}
+
+	if in.Counters != nil {
+		out.Status.Counters = convertAllocationCountersToGSACounters(in.GetCounters())
 	}
+	if in.Lists != nil {
+		out.Status.Lists = convertAllocationListsToGSALists(in.GetLists())
+	}
+
 	out.SetGroupVersionKind(allocationv1.SchemeGroupVersion.WithKind("GameServerAllocation"))
 
 	return out

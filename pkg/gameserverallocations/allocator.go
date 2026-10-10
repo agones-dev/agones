@@ -301,10 +301,10 @@ func (c *Allocator) allocateFromLocalCluster(ctx context.Context, gsa *allocatio
 			Labels:      gs.ObjectMeta.Labels,
 			Annotations: gs.ObjectMeta.Annotations,
 		}
-		if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-			gsa.Status.Counters = gs.Status.Counters
-			gsa.Status.Lists = gs.Status.Lists
-		}
+
+		gsa.Status.Counters = gs.Status.Counters
+		gsa.Status.Lists = gs.Status.Lists
+
 	}
 
 	c.loggerForGameServerAllocation(gsa).Debug("Game server allocation")
@@ -543,33 +543,31 @@ func (c *Allocator) ListenAndAllocate(ctx context.Context, updateWorkerCount int
 				requestCount = 0
 			}
 
-			if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-				// SortKey returns the sorting values (list of Priorities) as a determinstic key.
-				// In case gsa.Spec.Priorities is nil this will still return a sortKey.
-				// In case of error this will return 0 for the sortKey.
-				newSortKey, err := req.gsa.SortKey()
-				if err != nil {
-					c.baseLogger.WithError(err).Warn("error getting sortKey for GameServerAllocationSpec", err)
-				}
-				// Set sortKey if this is the first request, or the previous request errored on creating a sortKey.
-				if sortKey == uint64(0) {
-					sortKey = newSortKey
-				}
+			// SortKey returns the sorting values (list of Priorities) as a deterministic key.
+			// In case gsa.Spec.Priorities is nil this will still return a sortKey.
+			// In case of error this will return 0 for the sortKey.
+			newSortKey, err := req.gsa.SortKey()
+			if err != nil {
+				c.baseLogger.WithError(err).Warn("error getting sortKey for GameServerAllocationSpec", err)
+			}
+			// Set sortKey if this is the first request, or the previous request errored on creating a sortKey.
+			if sortKey == uint64(0) {
+				sortKey = newSortKey
+			}
 
-				if newSortKey != sortKey {
-					sortKey = newSortKey
-					list = nil
-					requestCount = 0
-				}
+			if newSortKey != sortKey {
+				sortKey = newSortKey
+				list = nil
+				requestCount = 0
 			}
 
 			requestCount++
 
 			if list == nil {
-				if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) || req.gsa.Spec.Scheduling == apis.Packed {
+				if req.gsa.Spec.Scheduling == apis.Packed {
 					list = c.allocationCache.ListSortedGameServers(req.gsa)
 				} else {
-					// If FeatureCountsAndLists and Scheduling == Distributed, sort game servers by Priorities
+					// If Scheduling == Distributed, sort game servers by Priorities
 					list = c.allocationCache.ListSortedGameServersPriorities(req.gsa)
 				}
 			}
@@ -677,16 +675,15 @@ func (c *Allocator) applyAllocationToGameServer(ctx context.Context, mp allocati
 	// perform any Counter or List actions
 	var counterErrors error
 	var listErrors error
-	if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		if gsa.Spec.Counters != nil {
-			for counter, ca := range gsa.Spec.Counters {
-				counterErrors = goErrors.Join(counterErrors, ca.CounterActions(counter, gs))
-			}
+
+	if gsa.Spec.Counters != nil {
+		for counter, ca := range gsa.Spec.Counters {
+			counterErrors = goErrors.Join(counterErrors, ca.CounterActions(counter, gs))
 		}
-		if gsa.Spec.Lists != nil {
-			for list, la := range gsa.Spec.Lists {
-				listErrors = goErrors.Join(listErrors, la.ListActions(list, gs, c.listMaxCapacity))
-			}
+	}
+	if gsa.Spec.Lists != nil {
+		for list, la := range gsa.Spec.Lists {
+			listErrors = goErrors.Join(listErrors, la.ListActions(list, gs, c.listMaxCapacity))
 		}
 	}
 

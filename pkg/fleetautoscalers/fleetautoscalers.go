@@ -443,10 +443,6 @@ func applyCounterOrListPolicy(c *autoscalingv1.CounterPolicy, l *autoscalingv1.L
 	f *agonesv1.Fleet, gameServerNamespacedLister listeragonesv1.GameServerNamespaceLister,
 	nodeCounts map[string]gameservers.NodeCount) (int32, bool, error) {
 
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return 0, false, errs.Errorf("cannot apply CounterPolicy unless feature flag %s is enabled", runtime.FeatureCountsAndLists)
-	}
-
 	var isCounter bool          // True if a CounterPolicy False if a ListPolicy
 	var key string              // The specified Counter or List
 	var count int64             // The Count or number of Values in the template Game Server

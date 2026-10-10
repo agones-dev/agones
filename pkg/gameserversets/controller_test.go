@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -283,7 +282,6 @@ func TestComputeStatus(t *testing.T) {
 		utilruntime.FeatureTestMutex.Lock()
 		defer utilruntime.FeatureTestMutex.Unlock()
 
-		require.NoError(t, utilruntime.ParseFeatures(fmt.Sprintf("%s=false", utilruntime.FeatureCountsAndLists)))
 		gsSet := defaultFixture()
 		cases := []struct {
 			list       []*agonesv1.GameServer
@@ -311,6 +309,9 @@ func TestComputeStatus(t *testing.T) {
 		}
 
 		for _, tc := range cases {
+			// Counters and Lists are always aggregated, so status always has (possibly empty) maps.
+			tc.wantStatus.Counters = map[string]agonesv1.AggregatedCounterStatus{}
+			tc.wantStatus.Lists = map[string]agonesv1.AggregatedListStatus{}
 			assert.Equal(t, tc.wantStatus, computeStatus(gsSet, tc.list))
 		}
 	})
@@ -318,8 +319,6 @@ func TestComputeStatus(t *testing.T) {
 	t.Run("counters", func(t *testing.T) {
 		utilruntime.FeatureTestMutex.Lock()
 		defer utilruntime.FeatureTestMutex.Unlock()
-
-		require.NoError(t, utilruntime.ParseFeatures(fmt.Sprintf("%s=true", utilruntime.FeatureCountsAndLists)))
 
 		gsSet := defaultFixture()
 		var list []*agonesv1.GameServer
@@ -383,8 +382,6 @@ func TestComputeStatus(t *testing.T) {
 		utilruntime.FeatureTestMutex.Lock()
 		defer utilruntime.FeatureTestMutex.Unlock()
 
-		require.NoError(t, utilruntime.ParseFeatures(fmt.Sprintf("%s=true", utilruntime.FeatureCountsAndLists)))
-
 		gsSet := defaultFixture()
 		gsSet.Spec.Template.Spec.Counters = map[string]agonesv1.CounterStatus{
 			"firstCounter":  {Capacity: 10, Count: 1},
@@ -420,8 +417,6 @@ func TestComputeStatus(t *testing.T) {
 	t.Run("lists", func(t *testing.T) {
 		utilruntime.FeatureTestMutex.Lock()
 		defer utilruntime.FeatureTestMutex.Unlock()
-
-		require.NoError(t, utilruntime.ParseFeatures(fmt.Sprintf("%s=true", utilruntime.FeatureCountsAndLists)))
 
 		gsSet := defaultFixture()
 		var list []*agonesv1.GameServer
@@ -472,11 +467,6 @@ func TestComputeStatus(t *testing.T) {
 	})
 
 	t.Run("lists with no gameservers", func(t *testing.T) {
-		utilruntime.FeatureTestMutex.Lock()
-		defer utilruntime.FeatureTestMutex.Unlock()
-
-		require.NoError(t, utilruntime.ParseFeatures(fmt.Sprintf("%s=true", utilruntime.FeatureCountsAndLists)))
-
 		gsSet := defaultFixture()
 		gsSet.Spec.Template.Spec.Lists = map[string]agonesv1.ListStatus{
 			"firstList":  {Capacity: 10, Values: []string{"a", "b"}},
@@ -510,91 +500,8 @@ func TestComputeStatus(t *testing.T) {
 	})
 }
 
-// Test that the aggregated Counters and Lists are removed from the Game Server Set status if the
-// FeatureCountsAndLists flag is set to false.
-func TestGameServerSetDropCountsAndListsStatus(t *testing.T) {
-	t.Parallel()
-	utilruntime.FeatureTestMutex.Lock()
-	defer utilruntime.FeatureTestMutex.Unlock()
-
-	gss := defaultFixture()
-	c, m := newFakeController()
-
-	list := createGameServers(gss, 2)
-	list[0].Status.Counters = map[string]agonesv1.CounterStatus{
-		"firstCounter": {Count: 5, Capacity: 10},
-	}
-	list[1].Status.Lists = map[string]agonesv1.ListStatus{
-		"firstList": {Capacity: 100, Values: []string{"4", "5", "6"}},
-	}
-	gsList := []*agonesv1.GameServer{&list[0], &list[1]}
-
-	expectedCounterStatus := map[string]agonesv1.AggregatedCounterStatus{
-		"firstCounter": {
-			AllocatedCount:    0,
-			AllocatedCapacity: 0,
-			Capacity:          10,
-			Count:             5,
-		},
-	}
-	expectedListStatus := map[string]agonesv1.AggregatedListStatus{
-		"firstList": {
-			AllocatedCount:    0,
-			AllocatedCapacity: 0,
-			Capacity:          100,
-			Count:             3,
-		},
-	}
-
-	flag := ""
-	updated := false
-
-	m.AgonesClient.AddReactor("update", "gameserversets",
-		func(action k8stesting.Action) (bool, runtime.Object, error) {
-			updated = true
-			ua := action.(k8stesting.UpdateAction)
-			gsSet := ua.GetObject().(*agonesv1.GameServerSet)
-
-			switch flag {
-			case string(utilruntime.FeatureCountsAndLists) + "=true":
-				assert.Equal(t, expectedCounterStatus, gsSet.Status.Counters)
-				assert.Equal(t, expectedListStatus, gsSet.Status.Lists)
-			case string(utilruntime.FeatureCountsAndLists) + "=false":
-				assert.Nil(t, gsSet.Status.Counters)
-				assert.Nil(t, gsSet.Status.Lists)
-			default:
-				return false, nil, errors.New("Flag string(utilruntime.FeatureCountsAndLists) should be set")
-			}
-
-			return true, gsSet, nil
-		})
-
-	// Expect starting fleet to have Aggregated Counter and List Statuses
-	flag = string(utilruntime.FeatureCountsAndLists) + "=true"
-	require.NoError(t, utilruntime.ParseFeatures(flag))
-	err := c.syncGameServerSetStatus(context.Background(), gss, gsList)
-	assert.NoError(t, err)
-	assert.True(t, updated)
-
-	updated = false
-	flag = string(utilruntime.FeatureCountsAndLists) + "=false"
-	require.NoError(t, utilruntime.ParseFeatures(flag))
-	err = c.syncGameServerSetStatus(context.Background(), gss, gsList)
-	assert.NoError(t, err)
-	assert.True(t, updated)
-
-	updated = false
-	flag = string(utilruntime.FeatureCountsAndLists) + "=true"
-	require.NoError(t, utilruntime.ParseFeatures(flag))
-	err = c.syncGameServerSetStatus(context.Background(), gss, gsList)
-	assert.NoError(t, err)
-	assert.True(t, updated)
-}
-
 func TestControllerWatchGameServers(t *testing.T) {
 	t.Parallel()
-	utilruntime.FeatureTestMutex.Lock()
-	defer utilruntime.FeatureTestMutex.Unlock()
 
 	gsSet := defaultFixture()
 

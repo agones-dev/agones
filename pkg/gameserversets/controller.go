@@ -642,10 +642,10 @@ func computeStatus(gsSet *agonesv1.GameServerSet, list []*agonesv1.GameServer) a
 	var status agonesv1.GameServerSetStatus
 
 	// Initialize list status with empty lists from spec
-	if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		status.Lists = createInitialListStatus(gsSet)
-		status.Counters = createInitialCounterStatus(gsSet)
-	}
+
+	status.Lists = createInitialListStatus(gsSet)
+	status.Counters = createInitialCounterStatus(gsSet)
+
 	for _, gs := range list {
 		if gs.IsBeingDeleted() {
 			// don't count GS that are being deleted
@@ -663,18 +663,9 @@ func computeStatus(gsSet *agonesv1.GameServerSet, list []*agonesv1.GameServer) a
 			status.ReservedReplicas++
 		}
 
-		// Drop Counters and Lists status if the feature flag has been set to false
-		if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-			if len(status.Counters) != 0 || len(status.Lists) != 0 {
-				status.Counters = map[string]agonesv1.AggregatedCounterStatus{}
-				status.Lists = map[string]agonesv1.AggregatedListStatus{}
-			}
-		}
-		// Aggregates all Counters and Lists only for GameServer all states (except IsBeingDeleted)
-		if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-			status.Counters = aggregateCounters(status.Counters, gs.Status.Counters, gs.Status.State)
-			status.Lists = aggregateLists(status.Lists, gs.Status.Lists, gs.Status.State)
-		}
+		status.Counters = aggregateCounters(status.Counters, gs.Status.Counters, gs.Status.State)
+		status.Lists = aggregateLists(status.Lists, gs.Status.Lists, gs.Status.State)
+
 	}
 
 	if runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
