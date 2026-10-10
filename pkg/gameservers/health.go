@@ -292,7 +292,7 @@ func (hc *HealthController) syncGameServer(ctx context.Context, key string) erro
 // It does this by checking a combination of the current GameServer state and annotation data that stores
 // which container instance was live if the GameServer has been marked as Ready.
 // The logic is as follows:
-//   - If the GameServer is not yet Ready, allow to restart (return true)
+//   - If the GameServer is not yet Ready, allow to restart unless SidecarContainers is enabled
 //   - If the GameServer is in a state past Ready, move to Unhealthy
 func (hc *HealthController) skipUnhealthyGameContainer(gs *agonesv1.GameServer, pod *corev1.Pod) (bool, error) {
 	if !metav1.IsControlledBy(pod, gs) {
@@ -300,15 +300,9 @@ func (hc *HealthController) skipUnhealthyGameContainer(gs *agonesv1.GameServer, 
 		return false, nil
 	}
 
-	// if Sidecar is enabled, there is no skip once the GameServer is past Ready - it's just
-	// whatever K8s/Agones wants to do. Before Ready we still skip on a game container
-	// failure, matching the non-sidecar path below: a container that dies during startup is
-	// left to normal Kubernetes handling rather than immediately failing the GameServer.
+	// With SidecarContainers, failedContainer only reports failures that cannot restart.
 	// on move to stable, this function can be deleted.
 	if runtime.FeatureEnabled(runtime.FeatureSidecarContainers) {
-		if gs.IsBeforeReady() {
-			return hc.failedContainer(pod), nil
-		}
 		return false, nil
 	}
 
