@@ -688,9 +688,9 @@ func TestSDKServerGetGameServer(t *testing.T) {
 
 	result, err := sc.GetGameServer(context.Background(), &sdk.Empty{})
 	require.NoError(t, err)
-	assert.Equal(t, fixture.ObjectMeta.Name, result.ObjectMeta.Name)
-	assert.Equal(t, fixture.ObjectMeta.Namespace, result.ObjectMeta.Namespace)
-	assert.Equal(t, string(fixture.Status.State), result.Status.State)
+	assert.Equal(t, fixture.ObjectMeta.Name, result.GetObjectMeta().GetName())
+	assert.Equal(t, fixture.ObjectMeta.Namespace, result.GetObjectMeta().GetNamespace())
+	assert.Equal(t, string(fixture.Status.State), result.GetStatus().GetState())
 }
 
 func TestSDKServerWatchGameServer(t *testing.T) {
@@ -743,13 +743,13 @@ func TestSDKServerWatchGameServer(t *testing.T) {
 	for running {
 		select {
 		case gs := <-stream.msgs:
-			assert.Equal(t, fixture.ObjectMeta.Name, gs.ObjectMeta.Name)
+			assert.Equal(t, fixture.ObjectMeta.Name, gs.GetObjectMeta().GetName())
 			totalSendCalls++
 			switch totalSendCalls {
 			case 1:
-				assert.Equal(t, string(agonesv1.GameServerStateReady), gs.Status.State)
+				assert.Equal(t, string(agonesv1.GameServerStateReady), gs.GetStatus().GetState())
 			case 2:
-				assert.Equal(t, string(agonesv1.GameServerStateAllocated), gs.Status.State)
+				assert.Equal(t, string(agonesv1.GameServerStateAllocated), gs.GetStatus().GetState())
 			}
 			// we shouldn't get more than 2, but let's put an upper bound on this
 			// just in case we suddenly get way more than we expect.
@@ -813,7 +813,7 @@ func TestSDKServerSendGameServerUpdate(t *testing.T) {
 		assert.Fail(t, "Event stream should not have timed out")
 	}
 
-	assert.Equal(t, fixture.ObjectMeta.Name, sdkGS.ObjectMeta.Name)
+	assert.Equal(t, fixture.ObjectMeta.Name, sdkGS.GetObjectMeta().GetName())
 }
 
 func TestSDKServer_SendGameServerUpdateRemovesDisconnectedStream(t *testing.T) {
@@ -923,7 +923,7 @@ func TestSDKServerUpdateEventHandler(t *testing.T) {
 	}
 
 	assert.NotNil(t, sdkGS)
-	assert.Equal(t, fixture.ObjectMeta.Name, sdkGS.ObjectMeta.Name)
+	assert.Equal(t, fixture.ObjectMeta.Name, sdkGS.GetObjectMeta().GetName())
 }
 
 func TestSDKServerReserveTimeoutOnRun(t *testing.T) {
@@ -1325,7 +1325,7 @@ func TestSDKServerUpdateCounter(t *testing.T) {
 			// check initial value comes through
 			require.Eventually(t, func() bool {
 				counter, err := sc.GetCounter(context.Background(), &beta.GetCounterRequest{Name: testCase.counterName})
-				return counter.Count == 10 && counter.Capacity == 100 && err == nil
+				return counter.GetCount() == 10 && counter.GetCapacity() == 100 && err == nil
 			}, 10*time.Second, time.Second)
 
 			// Update the Counter
@@ -1335,16 +1335,16 @@ func TestSDKServerUpdateCounter(t *testing.T) {
 					assert.Error(t, err)
 				} else {
 					assert.NoError(t, err)
-					assert.Equal(t, testCase.want.Count, resp.Count)
-					assert.Equal(t, testCase.want.Capacity, resp.Capacity)
+					assert.Equal(t, testCase.want.Count, resp.GetCount())
+					assert.Equal(t, testCase.want.Capacity, resp.GetCapacity())
 
 				}
 			}
 
 			got, err := sc.GetCounter(context.Background(), &beta.GetCounterRequest{Name: testCase.counterName})
 			assert.NoError(t, err)
-			assert.Equal(t, testCase.want.Count, got.Count)
-			assert.Equal(t, testCase.want.Capacity, got.Capacity)
+			assert.Equal(t, testCase.want.Count, got.GetCount())
+			assert.Equal(t, testCase.want.Capacity, got.GetCapacity())
 
 			// on an update, confirm that the update hits the K8s api
 			if testCase.updated {
@@ -1473,7 +1473,7 @@ func TestSDKServerAddListValue(t *testing.T) {
 			// check initial value comes through
 			require.Eventually(t, func() bool {
 				list, err := sc.GetList(context.Background(), &beta.GetListRequest{Name: testCase.listName})
-				return cmp.Equal(list.Values, []string{"one", "two", "three", "four"}) && list.Capacity == 10 && err == nil
+				return cmp.Equal(list.GetValues(), []string{"one", "two", "three", "four"}) && list.GetCapacity() == 10 && err == nil
 			}, 10*time.Second, time.Second)
 
 			// Update the List
@@ -1488,8 +1488,8 @@ func TestSDKServerAddListValue(t *testing.T) {
 
 			got, err := sc.GetList(context.Background(), &beta.GetListRequest{Name: testCase.listName})
 			assert.NoError(t, err)
-			assert.Equal(t, testCase.want.Values, got.Values)
-			assert.Equal(t, testCase.want.Capacity, got.Capacity)
+			assert.Equal(t, testCase.want.Values, got.GetValues())
+			assert.Equal(t, testCase.want.Capacity, got.GetCapacity())
 
 			// start workerqueue processing at this point, so there is no chance of processing the above updates
 			// earlier.
@@ -1622,7 +1622,7 @@ func TestSDKServerRemoveListValue(t *testing.T) {
 			// check initial value comes through
 			require.Eventually(t, func() bool {
 				list, err := sc.GetList(context.Background(), &beta.GetListRequest{Name: testCase.listName})
-				return cmp.Equal(list.Values, []string{"one", "two", "three", "four"}) && list.Capacity == 100 && err == nil
+				return cmp.Equal(list.GetValues(), []string{"one", "two", "three", "four"}) && list.GetCapacity() == 100 && err == nil
 			}, 10*time.Second, time.Second)
 
 			// Update the List
@@ -1637,8 +1637,8 @@ func TestSDKServerRemoveListValue(t *testing.T) {
 
 			got, err := sc.GetList(context.Background(), &beta.GetListRequest{Name: testCase.listName})
 			assert.NoError(t, err)
-			assert.Equal(t, testCase.want.Values, got.Values)
-			assert.Equal(t, testCase.want.Capacity, got.Capacity)
+			assert.Equal(t, testCase.want.Values, got.GetValues())
+			assert.Equal(t, testCase.want.Capacity, got.GetCapacity())
 
 			// start workerqueue processing at this point, so there is no chance of processing the above updates
 			// earlier.
@@ -1835,7 +1835,7 @@ func TestSDKServerUpdateList(t *testing.T) {
 				if testCase.listName == "nonexistent" {
 					return list == nil && err != nil
 				}
-				return list != nil && cmp.Equal(list.Values, []string{"one", "two", "three", "four"}) && list.Capacity == 100 && err == nil
+				return list != nil && cmp.Equal(list.GetValues(), []string{"one", "two", "three", "four"}) && list.GetCapacity() == 100 && err == nil
 			}, 10*time.Second, time.Second)
 
 			// Update the List
@@ -1850,8 +1850,8 @@ func TestSDKServerUpdateList(t *testing.T) {
 
 			got, err := sc.GetList(context.Background(), &beta.GetListRequest{Name: testCase.listName})
 			assert.NoError(t, err)
-			assert.Equal(t, testCase.want.Values, got.Values)
-			assert.Equal(t, testCase.want.Capacity, got.Capacity)
+			assert.Equal(t, testCase.want.Values, got.GetValues())
+			assert.Equal(t, testCase.want.Capacity, got.GetCapacity())
 
 			// on an update, confirm that the update hits the K8s api
 			if testCase.updated {

@@ -46,7 +46,7 @@ func (b *Beta) GetCounterCount(key string) (int64, error) {
 	if err != nil {
 		return -1, b.errs.Wrapf(err, "could not get Counter %s count", key)
 	}
-	return counter.Count, nil
+	return counter.GetCount(), nil
 }
 
 // IncrementCounter increases a counter by the given nonnegative integer amount.
@@ -112,7 +112,7 @@ func (b *Beta) GetCounterCapacity(key string) (int64, error) {
 	if err != nil {
 		return -1, b.errs.Wrapf(err, "could not get Counter %s capacity", key)
 	}
-	return counter.Capacity, nil
+	return counter.GetCapacity(), nil
 }
 
 // SetCounterCapacity sets the capacity for the given Counter. A capacity of 0 is no capacity.
@@ -135,7 +135,7 @@ func (b *Beta) GetListCapacity(key string) (int64, error) {
 	if err != nil {
 		return -1, b.errs.Wrapf(err, "could not get List %s", key)
 	}
-	return list.Capacity, nil
+	return list.GetCapacity(), nil
 }
 
 // SetListCapacity sets the capacity for a given list. Capacity must be between 0 and 1000.
@@ -162,7 +162,7 @@ func (b *Beta) ListContains(key, value string) (bool, error) {
 	if err != nil {
 		return false, b.errs.Wrapf(err, "could not get List %s", key)
 	}
-	if slices.Contains(list.Values, value) {
+	if slices.Contains(list.GetValues(), value) {
 		return true, nil
 	}
 	return false, nil
@@ -175,7 +175,7 @@ func (b *Beta) GetListLength(key string) (int, error) {
 	if err != nil {
 		return -1, b.errs.Wrapf(err, "could not get List %s", key)
 	}
-	return len(list.Values), nil
+	return len(list.GetValues()), nil
 }
 
 // GetListValues returns the Values for a List, given the List's key (name).
@@ -185,7 +185,7 @@ func (b *Beta) GetListValues(key string) ([]string, error) {
 	if err != nil {
 		return nil, b.errs.Wrapf(err, "could not get List %s", key)
 	}
-	return list.Values, nil
+	return list.GetValues(), nil
 }
 
 // AppendListValue appends a string to a List's values list, given the List's key (name)

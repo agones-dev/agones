@@ -52,6 +52,7 @@ linters:
     - nilnesserr
     - noctx
     - perfsprint
+    - protogetter
     - reassign
     - recvcheck
     - revive

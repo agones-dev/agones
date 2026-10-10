@@ -100,7 +100,7 @@ func TestAllocatorWithDeprecatedRequired(t *testing.T) {
 		request.PreferredGameServerSelectors[0].GameServerState = pb.GameServerSelector_ALLOCATED
 		allocatedResponse, err := grpcClient.Allocate(ctx, request)
 		require.NoError(c, err)
-		require.Equal(c, response.GameServerName, allocatedResponse.GetGameServerName())
+		require.Equal(c, response.GetGameServerName(), allocatedResponse.GetGameServerName())
 		helper.ValidateAllocatorResponse(t, allocatedResponse)
 	}, 5*time.Minute, 2*time.Second)
 }
@@ -149,7 +149,7 @@ func TestAllocatorWithSelectors(t *testing.T) {
 		request.GameServerSelectors[0].GameServerState = pb.GameServerSelector_ALLOCATED
 		allocatedResponse, err := grpcClient.Allocate(ctx, request)
 		assert.NoError(c, err)
-		assert.Equal(c, response.GameServerName, allocatedResponse.GetGameServerName())
+		assert.Equal(c, response.GetGameServerName(), allocatedResponse.GetGameServerName())
 		helper.ValidateAllocatorResponse(t, allocatedResponse)
 		assert.Equal(c, flt.ObjectMeta.Name, allocatedResponse.GetMetadata().GetLabels()[agonesv1.FleetNameLabel])
 
@@ -200,8 +200,8 @@ func TestAllocatorWithMatchExpressions(t *testing.T) {
 		response, err := grpcClient.Allocate(ctx, request)
 		require.NoError(c, err, "failing Allocate request")
 		helper.ValidateAllocatorResponse(t, response)
-		require.Equal(t, "staging", response.Metadata.Labels["tier"])
-		require.Equal(t, "allocatedbytest", response.Metadata.Labels["gslabel"])
+		require.Equal(t, "staging", response.GetMetadata().GetLabels()["tier"])
+		require.Equal(t, "allocatedbytest", response.GetMetadata().GetLabels()["gslabel"])
 
 		// Attempt allocation with NotIn on the same label value — should find no match.
 		noMatchRequest := &pb.AllocationRequest{
@@ -357,12 +357,12 @@ func TestAllocatorWithCountersAndLists(t *testing.T) {
 		response, err := grpcClient.Allocate(ctx, request)
 		require.NoError(c, err)
 		assert.Contains(c, response.GetCounters(), "players")
-		assert.Equal(c, int64(10), response.GetCounters()["players"].Capacity.GetValue())
-		assert.Equal(c, int64(1), response.GetCounters()["players"].Count.GetValue())
+		assert.Equal(c, int64(10), response.GetCounters()["players"].GetCapacity().GetValue())
+		assert.Equal(c, int64(1), response.GetCounters()["players"].GetCount().GetValue())
 		assert.Contains(c, response.GetLists(), "rooms")
-		assert.Equal(c, int64(10), response.GetLists()["rooms"].Capacity.GetValue())
-		assert.Equal(c, request.Lists["rooms"].AddValues, response.GetLists()["rooms"].Values)
-		assert.NotEqual(c, request.Lists["rooms"].DeleteValues, response.GetLists()["rooms"].Values)
+		assert.Equal(c, int64(10), response.GetLists()["rooms"].GetCapacity().GetValue())
+		assert.Equal(c, request.GetLists()["rooms"].GetAddValues(), response.GetLists()["rooms"].GetValues())
+		assert.NotEqual(c, request.GetLists()["rooms"].GetDeleteValues(), response.GetLists()["rooms"].GetValues())
 	}, 5*time.Minute, 2*time.Second)
 }
 
@@ -460,13 +460,13 @@ func TestRestAllocatorWithCountersAndLists(t *testing.T) {
 			return false, nil
 		}
 		assert.Contains(t, response.GetCounters(), "players")
-		assert.Equal(t, int64(10), response.GetCounters()["players"].Capacity.GetValue())
-		assert.Equal(t, int64(1), response.GetCounters()["players"].Count.GetValue())
+		assert.Equal(t, int64(10), response.GetCounters()["players"].GetCapacity().GetValue())
+		assert.Equal(t, int64(1), response.GetCounters()["players"].GetCount().GetValue())
 		assert.Contains(t, response.GetLists(), "rooms")
-		assert.Equal(t, int64(10), response.GetLists()["rooms"].Capacity.GetValue())
-		assert.Contains(t, response.GetLists()["rooms"].Values, request.Lists["rooms"].AddValues[0])
-		assert.NotContains(t, response.GetLists()["rooms"].Values, request.Lists["rooms"].DeleteValues[0])
-		assert.NotContains(t, response.GetLists()["rooms"].Values, request.Lists["rooms"].DeleteValues[1])
+		assert.Equal(t, int64(10), response.GetLists()["rooms"].GetCapacity().GetValue())
+		assert.Contains(t, response.GetLists()["rooms"].GetValues(), request.GetLists()["rooms"].GetAddValues()[0])
+		assert.NotContains(t, response.GetLists()["rooms"].GetValues(), request.GetLists()["rooms"].GetDeleteValues()[0])
+		assert.NotContains(t, response.GetLists()["rooms"].GetValues(), request.GetLists()["rooms"].GetDeleteValues()[1])
 		return true, nil
 	})
 	require.NoError(t, err)
@@ -533,7 +533,7 @@ func TestRestAllocatorWithSelectors(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	gs, err := framework.AgonesClient.AgonesV1().GameServers(framework.Namespace).Get(ctx, response.GameServerName, metav1.GetOptions{})
+	gs, err := framework.AgonesClient.AgonesV1().GameServers(framework.Namespace).Get(ctx, response.GetGameServerName(), metav1.GetOptions{})
 	require.NoError(t, err)
 	assert.Equal(t, agonesv1.GameServerStateAllocated, gs.Status.State)
 	assert.Equal(t, "allocatedbytest", gs.ObjectMeta.Labels["gslabel"])

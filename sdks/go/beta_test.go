@@ -75,11 +75,11 @@ func TestBetaGetAndUpdateCounter(t *testing.T) {
 	t.Run("Set Counter and Set Capacity", func(t *testing.T) {
 		count, err := b.GetCounterCount("sessions")
 		assert.NoError(t, err)
-		assert.Equal(t, sessions.Count, count)
+		assert.Equal(t, sessions.GetCount(), count)
 
 		capacity, err := b.GetCounterCapacity("sessions")
 		assert.NoError(t, err)
-		assert.Equal(t, sessions.Capacity, capacity)
+		assert.Equal(t, sessions.GetCapacity(), capacity)
 
 		wantCapacity := int64(25)
 		err = b.SetCounterCapacity("sessions", wantCapacity)
@@ -116,21 +116,21 @@ func TestBetaGetAndUpdateCounter(t *testing.T) {
 	t.Run("Decrement Counter Fails then Success", func(t *testing.T) {
 		count, err := b.GetCounterCount("games")
 		assert.NoError(t, err)
-		assert.Equal(t, games.Count, count)
+		assert.Equal(t, games.GetCount(), count)
 
 		err = b.DecrementCounter("games", 21)
 		assert.Error(t, err)
 
 		count, err = b.GetCounterCount("games")
 		assert.NoError(t, err)
-		assert.Equal(t, games.Count, count)
+		assert.Equal(t, games.GetCount(), count)
 
 		err = b.DecrementCounter("games", -12)
 		assert.Error(t, err)
 
 		count, err = b.GetCounterCount("games")
 		assert.NoError(t, err)
-		assert.Equal(t, games.Count, count)
+		assert.Equal(t, games.GetCount(), count)
 
 		err = b.DecrementCounter("games", 12)
 		assert.NoError(t, err)
@@ -144,21 +144,21 @@ func TestBetaGetAndUpdateCounter(t *testing.T) {
 	t.Run("Increment Counter Fails then Success", func(t *testing.T) {
 		count, err := b.GetCounterCount("gamers")
 		assert.NoError(t, err)
-		assert.Equal(t, gamers.Count, count)
+		assert.Equal(t, gamers.GetCount(), count)
 
 		err = b.IncrementCounter("gamers", 250)
 		assert.Error(t, err)
 
 		count, err = b.GetCounterCount("gamers")
 		assert.NoError(t, err)
-		assert.Equal(t, gamers.Count, count)
+		assert.Equal(t, gamers.GetCount(), count)
 
 		err = b.IncrementCounter("gamers", -237)
 		assert.Error(t, err)
 
 		count, err = b.GetCounterCount("gamers")
 		assert.NoError(t, err)
-		assert.Equal(t, gamers.Count, count)
+		assert.Equal(t, gamers.GetCount(), count)
 
 		err = b.IncrementCounter("gamers", 237)
 		assert.NoError(t, err)
@@ -217,7 +217,7 @@ func TestBetaGetAndUpdateList(t *testing.T) {
 	t.Run("Get and Set List Capacity", func(t *testing.T) {
 		capacity, err := b.GetListCapacity("foo")
 		assert.NoError(t, err)
-		assert.Equal(t, foo.Capacity, capacity)
+		assert.Equal(t, foo.GetCapacity(), capacity)
 
 		wantCapacity := int64(5)
 		err = b.SetListCapacity("foo", wantCapacity)
@@ -231,18 +231,18 @@ func TestBetaGetAndUpdateList(t *testing.T) {
 	t.Run("Get List Length, Get List Values, ListContains, and Append List Value", func(t *testing.T) {
 		length, err := b.GetListLength("bar")
 		assert.NoError(t, err)
-		assert.Equal(t, len(bar.Values), length)
+		assert.Equal(t, len(bar.GetValues()), length)
 
 		values, err := b.GetListValues("bar")
 		assert.NoError(t, err)
-		assert.Equal(t, bar.Values, values)
+		assert.Equal(t, bar.GetValues(), values)
 
 		err = b.AppendListValue("bar", "ghi")
 		assert.NoError(t, err)
 
 		length, err = b.GetListLength("bar")
 		assert.NoError(t, err)
-		assert.Equal(t, len(bar.Values)+1, length)
+		assert.Equal(t, len(bar.GetValues())+1, length)
 
 		wantValues := []string{"abc", "def", "ghi"}
 		values, err = b.GetListValues("bar")
@@ -257,18 +257,18 @@ func TestBetaGetAndUpdateList(t *testing.T) {
 	t.Run("Get List Length, Get List Values, ListContains, and Delete List Value", func(t *testing.T) {
 		length, err := b.GetListLength("baz")
 		assert.NoError(t, err)
-		assert.Equal(t, len(baz.Values), length)
+		assert.Equal(t, len(baz.GetValues()), length)
 
 		values, err := b.GetListValues("baz")
 		assert.NoError(t, err)
-		assert.Equal(t, baz.Values, values)
+		assert.Equal(t, baz.GetValues(), values)
 
 		err = b.DeleteListValue("baz", "456")
 		assert.NoError(t, err)
 
 		length, err = b.GetListLength("baz")
 		assert.NoError(t, err)
-		assert.Equal(t, len(baz.Values)-1, length)
+		assert.Equal(t, len(baz.GetValues())-1, length)
 
 		wantValues := []string{"123", "789"}
 		values, err = b.GetListValues("baz")
@@ -288,44 +288,44 @@ type betaMock struct {
 }
 
 func (b *betaMock) GetCounter(_ context.Context, in *beta.GetCounterRequest, _ ...grpc.CallOption) (*beta.Counter, error) {
-	if counter, ok := b.counters[in.Name]; ok {
+	if counter, ok := b.counters[in.GetName()]; ok {
 		return counter, nil
 	}
-	return nil, fmt.Errorf("counter not found: %s", in.Name)
+	return nil, fmt.Errorf("counter not found: %s", in.GetName())
 }
 
 func (b *betaMock) UpdateCounter(ctx context.Context, in *beta.UpdateCounterRequest, _ ...grpc.CallOption) (*beta.Counter, error) {
-	counter, err := b.GetCounter(ctx, &beta.GetCounterRequest{Name: in.CounterUpdateRequest.Name})
+	counter, err := b.GetCounter(ctx, &beta.GetCounterRequest{Name: in.GetCounterUpdateRequest().GetName()})
 	if err != nil {
 		return nil, err
 	}
 
 	switch {
-	case in.CounterUpdateRequest.CountDiff != 0:
-		count := counter.Count + in.CounterUpdateRequest.CountDiff
-		if count < 0 || count > counter.Capacity {
-			return nil, fmt.Errorf("out of range. Count must be within range [0,Capacity]. Found Count: %d, Capacity: %d", count, counter.Capacity)
+	case in.GetCounterUpdateRequest().GetCountDiff() != 0:
+		count := counter.GetCount() + in.GetCounterUpdateRequest().GetCountDiff()
+		if count < 0 || count > counter.GetCapacity() {
+			return nil, fmt.Errorf("out of range. Count must be within range [0,Capacity]. Found Count: %d, Capacity: %d", count, counter.GetCapacity())
 		}
 		counter.Count = count
-	case in.CounterUpdateRequest.Count != nil:
-		countSet := in.CounterUpdateRequest.Count.GetValue()
-		if countSet < 0 || countSet > counter.Capacity {
-			return nil, fmt.Errorf("out of range. Count must be within range [0,Capacity]. Found Count: %d, Capacity: %d", countSet, counter.Capacity)
+	case in.GetCounterUpdateRequest().GetCount() != nil:
+		countSet := in.GetCounterUpdateRequest().GetCount().GetValue()
+		if countSet < 0 || countSet > counter.GetCapacity() {
+			return nil, fmt.Errorf("out of range. Count must be within range [0,Capacity]. Found Count: %d, Capacity: %d", countSet, counter.GetCapacity())
 		}
 		counter.Count = countSet
-	case in.CounterUpdateRequest.Capacity != nil:
-		capacity := in.CounterUpdateRequest.Capacity.GetValue()
+	case in.GetCounterUpdateRequest().GetCapacity() != nil:
+		capacity := in.GetCounterUpdateRequest().GetCapacity().GetValue()
 		if capacity < 0 {
 			return nil, fmt.Errorf("out of range. Capacity must be greater than or equal to 0. Found Capacity: %d", capacity)
 		}
 		counter.Capacity = capacity
 	default:
 		return nil, fmt.Errorf("invalid argument. Malformed CounterUpdateRequest: %v",
-			in.CounterUpdateRequest)
+			in.GetCounterUpdateRequest())
 	}
 
-	b.counters[in.CounterUpdateRequest.Name] = counter
-	return b.counters[in.CounterUpdateRequest.Name], nil
+	b.counters[in.GetCounterUpdateRequest().GetName()] = counter
+	return b.counters[in.GetCounterUpdateRequest().GetName()], nil
 }
 
 // GetList returns the list of betaMock. Note: unlike the SDK Server, this does not return
@@ -334,10 +334,10 @@ func (b *betaMock) GetList(_ context.Context, in *beta.GetListRequest, _ ...grpc
 	if in == nil {
 		return nil, stderrors.New("GetListRequest cannot be nil")
 	}
-	if list, ok := b.lists[in.Name]; ok {
+	if list, ok := b.lists[in.GetName()]; ok {
 		return list, nil
 	}
-	return nil, fmt.Errorf("list not found: %s", in.Name)
+	return nil, fmt.Errorf("list not found: %s", in.GetName())
 }
 
 // Note: unlike the SDK Server, UpdateList does not batch changes and instead updates the list
@@ -346,18 +346,18 @@ func (b *betaMock) UpdateList(_ context.Context, in *beta.UpdateListRequest, _ .
 	if in == nil {
 		return nil, stderrors.New("UpdateListRequest cannot be nil")
 	}
-	list, ok := b.lists[in.List.Name]
+	list, ok := b.lists[in.GetList().GetName()]
 	if !ok {
-		return nil, fmt.Errorf("list not found: %s", in.List.Name)
+		return nil, fmt.Errorf("list not found: %s", in.GetList().GetName())
 	}
-	if in.List.Capacity < 0 || in.List.Capacity > 1000 {
-		return nil, fmt.Errorf("out of range. Capacity must be within range [0,1000]. Found Capacity: %d", in.List.Capacity)
+	if in.GetList().GetCapacity() < 0 || in.GetList().GetCapacity() > 1000 {
+		return nil, fmt.Errorf("out of range. Capacity must be within range [0,1000]. Found Capacity: %d", in.GetList().GetCapacity())
 	}
-	list.Capacity = in.List.Capacity
-	if len(list.Values) > int(list.Capacity) {
-		list.Values = append([]string{}, list.Values[:list.Capacity]...)
+	list.Capacity = in.GetList().GetCapacity()
+	if len(list.GetValues()) > int(list.GetCapacity()) {
+		list.Values = append([]string{}, list.GetValues()[:list.GetCapacity()]...)
 	}
-	b.lists[in.List.Name] = list
+	b.lists[in.GetList().GetName()] = list
 	return &beta.List{}, nil
 }
 
@@ -367,18 +367,18 @@ func (b *betaMock) AddListValue(_ context.Context, in *beta.AddListValueRequest,
 	if in == nil {
 		return nil, stderrors.New("AddListValueRequest cannot be nil")
 	}
-	list, ok := b.lists[in.Name]
+	list, ok := b.lists[in.GetName()]
 	if !ok {
-		return nil, fmt.Errorf("list not found: %s", in.Name)
+		return nil, fmt.Errorf("list not found: %s", in.GetName())
 	}
-	if int(list.Capacity) <= len(list.Values) {
-		return nil, fmt.Errorf("out of range. No available capacity. Current Capacity: %d, List Size: %d", list.Capacity, len(list.Values))
+	if int(list.GetCapacity()) <= len(list.GetValues()) {
+		return nil, fmt.Errorf("out of range. No available capacity. Current Capacity: %d, List Size: %d", list.GetCapacity(), len(list.GetValues()))
 	}
-	if slices.Contains(list.Values, in.Value) {
-		return nil, fmt.Errorf("already exists. Value: %s already in List: %s", in.Value, in.Name)
+	if slices.Contains(list.GetValues(), in.GetValue()) {
+		return nil, fmt.Errorf("already exists. Value: %s already in List: %s", in.GetValue(), in.GetName())
 	}
-	list.Values = append(list.Values, in.Value)
-	b.lists[in.Name] = list
+	list.Values = append(list.Values, in.GetValue())
+	b.lists[in.GetName()] = list
 	return &beta.List{}, nil
 }
 
@@ -388,17 +388,17 @@ func (b *betaMock) RemoveListValue(_ context.Context, in *beta.RemoveListValueRe
 	if in == nil {
 		return nil, stderrors.New("RemoveListValueRequest cannot be nil")
 	}
-	list, ok := b.lists[in.Name]
+	list, ok := b.lists[in.GetName()]
 	if !ok {
-		return nil, fmt.Errorf("list not found: %s", in.Name)
+		return nil, fmt.Errorf("list not found: %s", in.GetName())
 	}
-	for i, val := range list.Values {
-		if in.Value != val {
+	for i, val := range list.GetValues() {
+		if in.GetValue() != val {
 			continue
 		}
-		list.Values = append(list.Values[:i], list.Values[i+1:]...)
-		b.lists[in.Name] = list
+		list.Values = append(list.Values[:i], list.GetValues()[i+1:]...)
+		b.lists[in.GetName()] = list
 		return &beta.List{}, nil
 	}
-	return nil, fmt.Errorf("not found. Value: %s not found in List: %s", in.Value, in.Name)
+	return nil, fmt.Errorf("not found. Value: %s not found in List: %s", in.GetValue(), in.GetName())
 }

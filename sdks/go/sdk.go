@@ -156,7 +156,7 @@ func (s *SDK) WatchGameServer(f GameServerCallback) error {
 		return s.errs.Wrap(err, "could not watch gameserver")
 	}
 	log := func(gs *sdk.GameServer, msg string, err error) {
-		if gs == nil || gs.ObjectMeta.DeletionTimestamp == 0 {
+		if gs == nil || gs.GetObjectMeta().GetDeletionTimestamp() == 0 {
 			return
 		}
 		Logger(msg, err)

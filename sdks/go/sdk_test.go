@@ -48,7 +48,7 @@ func TestSDK(t *testing.T) {
 
 	err = s.Reserve(12 * time.Second)
 	assert.NoError(t, err)
-	assert.EqualValues(t, 12, sm.reserved.Seconds)
+	assert.EqualValues(t, 12, sm.reserved.GetSeconds())
 
 	err = s.Health()
 	assert.NoError(t, err)
@@ -82,7 +82,7 @@ func TestSDKWatchGameServer(t *testing.T) {
 	updated := make(chan struct{}, 5)
 
 	err := s.WatchGameServer(func(gs *sdk.GameServer) {
-		assert.Equal(t, fixture.ObjectMeta.Name, gs.ObjectMeta.Name)
+		assert.Equal(t, fixture.GetObjectMeta().GetName(), gs.GetObjectMeta().GetName())
 		updated <- struct{}{}
 	})
 	assert.NoError(t, err)
@@ -144,12 +144,12 @@ type sdkMock struct {
 }
 
 func (m *sdkMock) SetLabel(_ context.Context, in *sdk.KeyValue, _ ...grpc.CallOption) (*sdk.Empty, error) {
-	m.labels["agones.dev/sdk-"+in.Key] = in.Value
+	m.labels["agones.dev/sdk-"+in.GetKey()] = in.GetValue()
 	return &sdk.Empty{}, nil
 }
 
 func (m *sdkMock) SetAnnotation(_ context.Context, in *sdk.KeyValue, _ ...grpc.CallOption) (*sdk.Empty, error) {
-	m.annotations["agones.dev/sdk-"+in.Key] = in.Value
+	m.annotations["agones.dev/sdk-"+in.GetKey()] = in.GetValue()
 	return &sdk.Empty{}, nil
 }
 

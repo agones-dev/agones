@@ -280,13 +280,13 @@ func ValidateAllocatorResponse(t *testing.T, resp *pb.AllocationResponse) {
 	if !assert.NotNil(t, resp) {
 		return
 	}
-	assert.NotEmpty(t, resp.Ports)
-	assert.NotEmpty(t, resp.GameServerName)
-	assert.NotEmpty(t, resp.Address)
-	assert.NotEmpty(t, resp.Addresses)
-	assert.NotEmpty(t, resp.NodeName)
-	assert.NotEmpty(t, resp.Metadata.Labels)
-	assert.NotEmpty(t, resp.Metadata.Annotations)
+	assert.NotEmpty(t, resp.GetPorts())
+	assert.NotEmpty(t, resp.GetGameServerName())
+	assert.NotEmpty(t, resp.GetAddress())
+	assert.NotEmpty(t, resp.GetAddresses())
+	assert.NotEmpty(t, resp.GetNodeName())
+	assert.NotEmpty(t, resp.GetMetadata().GetLabels())
+	assert.NotEmpty(t, resp.GetMetadata().GetAnnotations())
 }
 
 // DeleteAgonesPod deletes an Agones pod with the specified namespace and podname
@@ -348,8 +348,8 @@ func GetAllocatorClient(ctx context.Context, t *testing.T, framework *e2e.Framew
 			return false, nil
 		}
 		ValidateAllocatorResponse(t, response)
-		err = DeleteAgonesPod(ctx, response.GameServerName, framework.Namespace, framework)
-		assert.NoError(t, err, "Failed to delete game server pod %s", response.GameServerName)
+		err = DeleteAgonesPod(ctx, response.GetGameServerName(), framework.Namespace, framework)
+		assert.NoError(t, err, "Failed to delete game server pod %s", response.GetGameServerName())
 		return true, nil
 	})
 	if err != nil {

@@ -1635,7 +1635,7 @@ func TestConvertAllocationResponseToGSA(t *testing.T) {
 			runtime.FeatureTestMutex.Lock()
 			defer runtime.FeatureTestMutex.Unlock()
 			require.NoError(t, runtime.ParseFeatures(tc.features))
-			out := ConvertAllocationResponseToGSA(tc.in, tc.in.Source)
+			out := ConvertAllocationResponseToGSA(tc.in, tc.in.GetSource())
 			if !assert.Equal(t, tc.want, out) {
 				t.Errorf("mismatch with want after conversion: \"%s\"", tc.name)
 			}
