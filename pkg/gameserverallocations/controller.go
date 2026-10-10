@@ -154,7 +154,7 @@ func (c *Extensions) Run(ctx context.Context, _ int) error {
 
 func (c *Extensions) processAllocationRequest(ctx context.Context, w http.ResponseWriter, r *http.Request, namespace string) (err error) {
 	if r.Body != nil {
-		defer r.Body.Close() // nolint: errcheck
+		defer r.Body.Close() //nolint:errcheck
 	}
 
 	log := https.LogRequest(c.baseLogger, r)

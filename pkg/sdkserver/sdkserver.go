@@ -296,7 +296,7 @@ func (s *SDKServer) Run(ctx context.Context) error {
 			}
 		}
 	}()
-	defer s.server.Close() // nolint: errcheck
+	defer s.server.Close() //nolint:errcheck
 
 	s.workerqueue.Run(ctx, 1)
 	return nil

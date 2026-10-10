@@ -74,7 +74,7 @@ func NewSDK() (*SDK, error) {
 	// Block for at least 30 seconds.
 	ctx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
 	defer cancel()
-	// nolint: staticcheck
+	//nolint:staticcheck
 	conn, err := grpc.DialContext(ctx, addr, grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return s, s.errs.Wrapf(err, "could not connect to %s", addr)

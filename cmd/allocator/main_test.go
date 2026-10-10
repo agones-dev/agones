@@ -200,7 +200,7 @@ func TestGettingCaCert(t *testing.T) {
 
 	file, err := os.CreateTemp(".", "*.crt")
 	if assert.NoError(t, err) {
-		defer os.Remove(file.Name()) // nolint: errcheck
+		defer os.Remove(file.Name()) //nolint:errcheck
 		_, err = file.WriteString(clientCert)
 		if assert.NoError(t, err) {
 			certPool, err := getCACertPool("./")
@@ -208,7 +208,7 @@ func TestGettingCaCert(t *testing.T) {
 				// linting complaints certPool.Subjects() has been deprecated since Go 1.18.
 				// But since this cert doesn't come from SystemCertPool, it doesn't seem behavior
 				// should be impacted. So marking the lint as ignored.
-				assert.Len(t, certPool.Subjects(), 1) // nolint
+				assert.Len(t, certPool.Subjects(), 1) //nolint:staticcheck
 			}
 		}
 	}

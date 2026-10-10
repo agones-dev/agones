@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// nolint:goconst
 package fleets
 
 import (
@@ -514,7 +513,6 @@ func TestControllerUpdateFleetStatus(t *testing.T) {
 		gsSet1.Status.AllocatedReplicas = 1
 
 		gsSet2 := fleet.GameServerSet()
-		// nolint:goconst
 		gsSet2.ObjectMeta.Name = "gsSet2"
 		gsSet2.Status.Replicas = 5
 		gsSet2.Status.ReadyReplicas = 5
@@ -570,7 +568,7 @@ func TestControllerUpdateFleetStatus(t *testing.T) {
 
 }
 
-// nolint:dupl // Linter errors on lines are duplicate of TestControllerUpdateFleetListStatus
+//nolint:dupl // Linter errors on lines are duplicate of TestControllerUpdateFleetListStatus
 func TestControllerUpdateFleetCounterStatus(t *testing.T) {
 	t.Parallel()
 
@@ -660,7 +658,7 @@ func TestControllerUpdateFleetCounterStatus(t *testing.T) {
 	assert.True(t, updated)
 }
 
-// nolint:dupl // Linter errors on lines are duplicate of TestControllerUpdateFleetCounterStatus
+//nolint:dupl // Linter errors on lines are duplicate of TestControllerUpdateFleetCounterStatus
 func TestControllerUpdateFleetListStatus(t *testing.T) {
 	t.Parallel()
 

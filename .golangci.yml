@@ -51,6 +51,7 @@ linters:
     - nilerr
     - nilnesserr
     - noctx
+    - nolintlint
     - perfsprint
     - protogetter
     - reassign
@@ -102,6 +103,12 @@ linters:
         # newexpr rewrites ptr.To(false) as Go 1.26's new(false). k8s.io/utils/ptr
         # is the convention across the Kubernetes ecosystem and reads better here.
         - newexpr
+    nolintlint:
+      # Flags bare `//nolint` that names no linter.
+      require-specific: true
+      # Deliberately off: turning it on would demand a written justification on
+      # every existing directive in one change.
+      require-explanation: false
     testifylint:
       disable:
         # require-error wants every assert.NoError that guards later statements

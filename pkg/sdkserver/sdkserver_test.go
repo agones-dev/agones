@@ -93,7 +93,7 @@ func TestSidecarRun(t *testing.T) {
 	}{
 		"ready": {
 			f: func(sc *SDKServer, ctx context.Context) {
-				sc.Ready(ctx, &sdk.Empty{}) // nolint: errcheck
+				sc.Ready(ctx, &sdk.Empty{}) //nolint:errcheck
 			},
 			expected: expected{
 				state:      agonesv1.GameServerStateRequestReady,
@@ -102,7 +102,7 @@ func TestSidecarRun(t *testing.T) {
 		},
 		"shutdown": {
 			f: func(sc *SDKServer, ctx context.Context) {
-				sc.Shutdown(ctx, &sdk.Empty{}) // nolint: errcheck
+				sc.Shutdown(ctx, &sdk.Empty{}) //nolint:errcheck
 			},
 			expected: expected{
 				state:      agonesv1.GameServerStateShutdown,
@@ -1429,7 +1429,7 @@ func TestSDKServerAddListValue(t *testing.T) {
 		},
 	}
 
-	// nolint:dupl  // Linter errors on lines are duplicate of TestSDKServerUpdateList, TestSDKServerRemoveListValue
+	//nolint:dupl  // Linter errors on lines are duplicate of TestSDKServerUpdateList, TestSDKServerRemoveListValue
 	for test, testCase := range fixtures {
 		t.Run(test, func(t *testing.T) {
 			m := agtesting.NewMocks()
@@ -1578,7 +1578,7 @@ func TestSDKServerRemoveListValue(t *testing.T) {
 		},
 	}
 
-	// nolint:dupl  // Linter errors on lines are duplicate of TestSDKServerUpdateList, TestSDKServerAddListValue
+	//nolint:dupl  // Linter errors on lines are duplicate of TestSDKServerUpdateList, TestSDKServerAddListValue
 	for test, testCase := range fixtures {
 		t.Run(test, func(t *testing.T) {
 			m := agtesting.NewMocks()
@@ -1782,7 +1782,6 @@ func TestSDKServerUpdateList(t *testing.T) {
 			expectedUpdatesQueueLen: 0,
 		},
 	}
-	// nolint:dupl  // Linter errors on lines are duplicate of TestSDKServerAddListValue, TestSDKServerRemoveListValue
 	for test, testCase := range fixtures {
 		t.Run(test, func(t *testing.T) {
 			m := agtesting.NewMocks()
@@ -2086,7 +2085,7 @@ func waitForMessage(sc *SDKServer) error {
 	})
 }
 
-func waitConnectedStreamCount(sc *SDKServer, count int) error { //nolint:unparam // Keep flexibility.
+func waitConnectedStreamCount(sc *SDKServer, count int) error {
 	return wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 10*time.Second, true, func(_ context.Context) (bool, error) {
 		sc.streamMutex.RLock()
 		defer sc.streamMutex.RUnlock()

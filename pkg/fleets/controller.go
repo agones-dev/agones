@@ -181,7 +181,6 @@ func NewExtensions(apiHooks agonesv1.APIHooks, wh *webhooks.WebHook) *Extensions
 // creationMutationHandler is the handler for the mutating webhook that sets the
 // the default values on the Fleet
 // Should only be called on fleet create operations.
-// nolint:dupl
 func (ext *Extensions) creationMutationHandler(review admissionv1.AdmissionReview) (admissionv1.AdmissionReview, error) {
 	ext.baseLogger.WithField("review", review).Debug("creationMutationHandler")
 

@@ -449,7 +449,7 @@ func TestGameServerApplyDefaults(t *testing.T) {
 	}
 }
 
-// nolint:dupl
+//nolint:dupl
 func TestGameServerValidate(t *testing.T) {
 	t.Parallel()
 

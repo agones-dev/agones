@@ -216,7 +216,7 @@ func TestFleetAutoscalerWebhookValidateUpdate(t *testing.T) {
 
 }
 
-// nolint:dupl  // Linter errors on lines are duplicate of TestFleetAutoscalerListValidateUpdate
+//nolint:dupl  // Linter errors on lines are duplicate of TestFleetAutoscalerListValidateUpdate
 func TestFleetAutoscalerCounterValidateUpdate(t *testing.T) {
 	t.Parallel()
 
@@ -333,7 +333,7 @@ func TestFleetAutoscalerCounterValidateUpdate(t *testing.T) {
 	}
 }
 
-// nolint:dupl  // Linter errors on lines are duplicate of TestFleetAutoscalerCounterValidateUpdate
+//nolint:dupl  // Linter errors on lines are duplicate of TestFleetAutoscalerCounterValidateUpdate
 func TestFleetAutoscalerListValidateUpdate(t *testing.T) {
 	t.Parallel()
 

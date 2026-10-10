@@ -53,11 +53,11 @@ func TestServerRun(t *testing.T) {
 	client := ts.server.Client()
 	resp, err := client.Get(ts.server.URL + "/test")
 	assert.NoError(t, err)
-	defer resp.Body.Close() // nolint: errcheck
+	defer resp.Body.Close() //nolint:errcheck
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 
 	resp, err = client.Get(ts.server.URL + "/")
 	assert.NoError(t, err)
-	defer resp.Body.Close() // nolint: errcheck
+	defer resp.Body.Close() //nolint:errcheck
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }

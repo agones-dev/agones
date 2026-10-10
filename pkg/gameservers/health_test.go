@@ -522,7 +522,7 @@ func TestHealthControllerRunNoSideCar(t *testing.T) {
 	gsWatch.Add(gs.DeepCopy())
 	podWatch.Add(pod.DeepCopy())
 
-	go hc.Run(stop, 1) // nolint: errcheck
+	go hc.Run(stop, 1) //nolint:errcheck
 	err = wait.PollUntilContextTimeout(context.Background(), time.Second, 10*time.Second, true, func(_ context.Context) (bool, error) {
 		return hc.workerqueue.RunCount() == 1, nil
 	})
@@ -613,7 +613,7 @@ func TestHealthControllerRunWithSideCar(t *testing.T) {
 	gsWatch.Add(gs.DeepCopy())
 	podWatch.Add(pod.DeepCopy())
 
-	go hc.Run(stop, 1) // nolint: errcheck
+	go hc.Run(stop, 1) //nolint:errcheck
 	err = wait.PollUntilContextTimeout(context.Background(), time.Second, 10*time.Second, true, func(_ context.Context) (bool, error) {
 		return hc.workerqueue.RunCount() == 1, nil
 	})

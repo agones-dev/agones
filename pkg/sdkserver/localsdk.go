@@ -873,7 +873,7 @@ func (l *LocalSDKServer) compare() {
 		if !l.EqualSets(l.expectedSequence, l.requestSequence) {
 			l.logger.WithField("expected", l.expectedSequence).WithField("received", l.requestSequence).Info("Testing Failed")
 			// we don't care if the mutex gets unlocked on exit, so ignore the warning.
-			// nolint: gocritic
+			//nolint:gocritic
 			os.Exit(1)
 		}
 		l.logger.Info("Received requests match expected list. Test run was successful")
@@ -883,8 +883,8 @@ func (l *LocalSDKServer) compare() {
 func (l *LocalSDKServer) setGameServerFromFilePath(filePath string) error {
 	l.logger.WithField("filePath", filePath).Info("Reading GameServer configuration")
 
-	reader, err := os.Open(filePath) // nolint: gosec
-	defer reader.Close()             // nolint: staticcheck,errcheck
+	reader, err := os.Open(filePath) //nolint:gosec
+	defer reader.Close()             //nolint:staticcheck,errcheck
 
 	if err != nil {
 		return err

@@ -74,7 +74,7 @@ func (wh *WebHook) AddHandler(path string, gk schema.GroupKind, op admissionv1.O
 }
 
 // handle Handles http requests for webhooks
-func (wh *WebHook) handle(path string, w http.ResponseWriter, r *http.Request) error { // nolint: interfacer
+func (wh *WebHook) handle(path string, w http.ResponseWriter, r *http.Request) error { //nolint:interfacer
 	wh.logger.WithField("path", path).Debug("running webhook")
 
 	var review admissionv1.AdmissionReview

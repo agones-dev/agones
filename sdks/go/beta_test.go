@@ -112,7 +112,7 @@ func TestBetaGetAndUpdateCounter(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	// nolint:dupl // testing DecrementCounter and IncrementCounter are not duplicates.
+	//nolint:dupl // testing DecrementCounter and IncrementCounter are not duplicates.
 	t.Run("Decrement Counter Fails then Success", func(t *testing.T) {
 		count, err := b.GetCounterCount("games")
 		assert.NoError(t, err)
@@ -140,7 +140,7 @@ func TestBetaGetAndUpdateCounter(t *testing.T) {
 		assert.Equal(t, int64(0), count)
 	})
 
-	// nolint:dupl // testing DecrementCounter and IncrementCounter are not duplicates.
+	//nolint:dupl // testing DecrementCounter and IncrementCounter are not duplicates.
 	t.Run("Increment Counter Fails then Success", func(t *testing.T) {
 		count, err := b.GetCounterCount("gamers")
 		assert.NoError(t, err)

@@ -40,7 +40,7 @@ func ConvertAllocationRequestToGSA(in *pb.AllocationRequest) *allocationv1.GameS
 			Namespace: in.GetNamespace(),
 		},
 		Spec: allocationv1.GameServerAllocationSpec{
-			// nolint:staticcheck
+			//nolint:staticcheck
 			Preferred:  convertGameServerSelectorsToInternalGameServerSelectors(in.GetPreferredGameServerSelectors()),
 			Selectors:  convertGameServerSelectorsToInternalGameServerSelectors(in.GetGameServerSelectors()),
 			Scheduling: convertAllocationSchedulingToGSASchedulingStrategy(in.GetScheduling()),
@@ -69,9 +69,9 @@ func ConvertAllocationRequestToGSA(in *pb.AllocationRequest) *allocationv1.GameS
 		}
 	}
 
-	// nolint:staticcheck
+	//nolint:staticcheck
 	if selector := convertGameServerSelectorToInternalGameServerSelector(in.GetRequiredGameServerSelector()); selector != nil {
-		// nolint:staticcheck
+		//nolint:staticcheck
 		gsa.Spec.Required = *selector
 	}
 
@@ -118,10 +118,10 @@ func ConvertGSAToAllocationRequest(in *allocationv1.GameServerAllocation) *pb.Al
 
 	l := len(out.GetGameServerSelectors())
 	if l > 0 {
-		// nolint:staticcheck
+		//nolint:staticcheck
 		// Sets all but the last GameServerSelector as PreferredGameServerSelectors
 		out.PreferredGameServerSelectors = out.GetGameServerSelectors()[:l-1]
-		// nolint:staticcheck
+		//nolint:staticcheck
 		// Sets the last GameServerSelector as RequiredGameServerSelector
 		out.RequiredGameServerSelector = out.GetGameServerSelectors()[l-1]
 	}

@@ -117,7 +117,6 @@ func TestLocalSDKWithGameServer(t *testing.T) {
 	assert.Equal(t, fixture.ObjectMeta.Name, gs.GetObjectMeta().GetName())
 }
 
-// nolint:dupl
 func TestLocalSDKWithLogLevel(t *testing.T) {
 	ctx := context.Background()
 	e := &sdk.Empty{}
@@ -141,7 +140,7 @@ func TestLocalSDKWithLogLevel(t *testing.T) {
 	assert.Equal(t, string(fixture.Spec.SdkServer.LogLevel), l.logger.Logger.Level.String())
 }
 
-// nolint:dupl
+//nolint:dupl
 func TestLocalSDKServerSetLabel(t *testing.T) {
 	t.Parallel()
 
@@ -207,7 +206,7 @@ func TestLocalSDKServerSetLabel(t *testing.T) {
 	}
 }
 
-// nolint:dupl
+//nolint:dupl
 func TestLocalSDKServerSetAnnotation(t *testing.T) {
 	t.Parallel()
 

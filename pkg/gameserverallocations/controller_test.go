@@ -125,7 +125,7 @@ func TestControllerAllocator(t *testing.T) {
 			if len(gsa.Spec.Selectors) != 0 {
 				require.Equal(t, gsa.Spec.Selectors[0].LabelSelector, ret.Spec.Selectors[0].LabelSelector)
 			} else {
-				// nolint:staticcheck
+				//nolint:staticcheck
 				require.Equal(t, gsa.Spec.Required.LabelSelector, ret.Spec.Selectors[0].LabelSelector)
 			}
 
@@ -193,7 +193,7 @@ func TestAllocationApiResource(t *testing.T) {
 	if !assert.NoError(t, err) {
 		assert.FailNow(t, err.Error())
 	}
-	defer resp.Body.Close() // nolint: errcheck
+	defer resp.Body.Close() //nolint:errcheck
 
 	list := &metav1.APIResourceList{}
 	err = json.NewDecoder(resp.Body).Decode(list)

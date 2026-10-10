@@ -404,7 +404,6 @@ func (f *Framework) WaitForFleetCondition(t *testing.T, flt *agonesv1.Fleet, con
 }
 
 // WaitForFleetAutoScalerCondition waits for the FleetAutoscaler to be in a specific condition or fails the test if the condition can't be met in 2 minutes.
-// nolint: dupl
 func (f *Framework) WaitForFleetAutoScalerCondition(t *testing.T, fas *autoscaling.FleetAutoscaler, condition func(log *logrus.Entry, fas *autoscaling.FleetAutoscaler) bool) {
 	t.Helper()
 	log := TestLogger(t).WithField("fleetautoscaler", fas.Name)
@@ -957,7 +956,7 @@ func (f *Framework) LogPodContainers(t *testing.T, pod *corev1.Pod) {
 			log.WithError(err).Warn("Error opening log stream for container")
 			return
 		}
-		defer podLogs.Close() // nolint:errcheck,staticcheck
+		defer podLogs.Close() //nolint:errcheck
 
 		logBytes, err := io.ReadAll(podLogs)
 		if err != nil {

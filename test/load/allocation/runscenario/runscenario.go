@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License
 
-//nolint:typecheck
+// Package main runs allocation load-test scenarios against the Agones allocator
+// service, as described by a scenarios file.
 package main
 
 import (

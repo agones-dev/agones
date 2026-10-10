@@ -154,10 +154,10 @@ func NewAllocator(policyInformer multiclusterinformerv1.GameServerAllocationPoli
 			if err != nil {
 				return nil, err
 			}
-			defer conn.Close() // nolint: errcheck
+			defer conn.Close() //nolint:errcheck
 
 			allocationCtx, cancel := context.WithTimeout(ctx, remoteAllocationTimeout)
-			defer cancel() // nolint: errcheck
+			defer cancel()
 			grpcClient := pb.NewAllocationServiceClient(conn)
 			return grpcClient.Allocate(allocationCtx, request)
 		},
@@ -378,7 +378,7 @@ func (c *Allocator) allocateFromRemoteCluster(gsa *allocationv1.GameServerAlloca
 	request.Namespace = connectionInfo.Namespace
 
 	ctx, cancel := context.WithTimeout(context.Background(), c.totalRemoteAllocationTimeout)
-	defer cancel() // nolint: errcheck
+	defer cancel()
 	// Retry on remote call failures.
 	var endpoint string
 	err = Retry(remoteAllocationRetry, func() error {

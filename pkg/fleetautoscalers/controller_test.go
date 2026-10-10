@@ -277,7 +277,7 @@ func TestWebhookControllerCreationValidationHandler(t *testing.T) {
 	})
 }
 
-// nolint:dupl
+//nolint:dupl
 func TestControllerSyncFleetAutoscaler(t *testing.T) {
 
 	t.Run("no scaling up because fleet is marked for deletion, buffer policy", func(t *testing.T) {

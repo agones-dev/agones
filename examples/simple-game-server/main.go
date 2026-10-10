@@ -200,7 +200,7 @@ func udpListener(port *string, s *sdk.SDK, cancel context.CancelFunc, ready *syn
 		log.Fatalf("Could not start UDP server: %v", err)
 	}
 	ready.Done()
-	defer conn.Close() // nolint: errcheck
+	defer conn.Close() //nolint:errcheck
 	udpReadWriteLoop(conn, cancel, s)
 }
 
@@ -240,7 +240,7 @@ func tcpListener(port *string, s *sdk.SDK, cancel context.CancelFunc, ready *syn
 		log.Fatalf("Could not start TCP server: %v", err)
 	}
 	ready.Done()
-	defer ln.Close() // nolint: errcheck
+	defer ln.Close() //nolint:errcheck
 
 	for {
 		conn, err := ln.Accept()

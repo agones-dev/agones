@@ -42,7 +42,7 @@ func TestGameServerUnhealthyAfterDeletingPodWhileControllerDown(t *testing.T) {
 
 	gsClient := framework.AgonesClient.AgonesV1().GameServers(defaultNs)
 	podClient := framework.KubeClient.CoreV1().Pods(defaultNs)
-	defer gsClient.Delete(ctx, readyGs.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint: errcheck
+	defer gsClient.Delete(ctx, readyGs.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 	pod, err := podClient.Get(ctx, readyGs.ObjectMeta.Name, metav1.GetOptions{})
 	assert.NoError(t, err)

@@ -82,7 +82,6 @@ func TestFindGameServerForAllocationPacked(t *testing.T) {
 			},
 		},
 		"one label with player state (StateAllocationFilter)": {
-			// nolint: dupl
 			list: []agonesv1.GameServer{
 				{ObjectMeta: metav1.ObjectMeta{Name: "gs6", Namespace: defaultNs, Labels: oneLabel, DeletionTimestamp: &n}, Status: agonesv1.GameServerStatus{NodeName: "node1", State: agonesv1.GameServerStateReady}},
 				{ObjectMeta: metav1.ObjectMeta{Name: "gs1", Namespace: defaultNs, Labels: oneLabel}, Status: agonesv1.GameServerStatus{NodeName: "node1", State: agonesv1.GameServerStateReady}},

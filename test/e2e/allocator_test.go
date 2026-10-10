@@ -66,7 +66,7 @@ func TestAllocatorWithDeprecatedRequired(t *testing.T) {
 
 	flt, err = helper.CreateFleet(ctx, framework.Namespace, framework)
 	require.NoError(t, err)
-	defer framework.AgonesClient.AgonesV1().Fleets(framework.Namespace).Delete(ctx, flt.Name, metav1.DeleteOptions{}) // nolint: errcheck
+	defer framework.AgonesClient.AgonesV1().Fleets(framework.Namespace).Delete(ctx, flt.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
 	request := &pb.AllocationRequest{
@@ -88,7 +88,7 @@ func TestAllocatorWithDeprecatedRequired(t *testing.T) {
 
 		conn, err := grpc.NewClient(requestURL, dialOpts...)
 		require.NoError(c, err, "failing grpc.NewClient")
-		defer conn.Close() // nolint: errcheck
+		defer conn.Close() //nolint:errcheck
 
 		grpcClient := pb.NewAllocationServiceClient(conn)
 		response, err = grpcClient.Allocate(ctx, request)
@@ -96,7 +96,7 @@ func TestAllocatorWithDeprecatedRequired(t *testing.T) {
 		helper.ValidateAllocatorResponse(t, response)
 
 		// let's do a re-allocation
-		// nolint:staticcheck
+		//nolint:staticcheck
 		request.PreferredGameServerSelectors[0].GameServerState = pb.GameServerSelector_ALLOCATED
 		allocatedResponse, err := grpcClient.Allocate(ctx, request)
 		require.NoError(c, err)
@@ -117,7 +117,7 @@ func TestAllocatorWithSelectors(t *testing.T) {
 
 	flt, err = helper.CreateFleet(ctx, framework.Namespace, framework)
 	assert.NoError(t, err)
-	defer framework.AgonesClient.AgonesV1().Fleets(framework.Namespace).Delete(ctx, flt.Name, metav1.DeleteOptions{}) // nolint: errcheck
+	defer framework.AgonesClient.AgonesV1().Fleets(framework.Namespace).Delete(ctx, flt.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
 	request := &pb.AllocationRequest{
@@ -138,7 +138,7 @@ func TestAllocatorWithSelectors(t *testing.T) {
 
 		conn, err := grpc.NewClient(requestURL, dialOpts...)
 		require.NoError(c, err, "failing grpc.NewClient")
-		defer conn.Close() // nolint: errcheck
+		defer conn.Close() //nolint:errcheck
 
 		grpcClient := pb.NewAllocationServiceClient(conn)
 		response, err = grpcClient.Allocate(ctx, request)
@@ -170,7 +170,7 @@ func TestAllocatorWithMatchExpressions(t *testing.T) {
 		f.Spec.Template.ObjectMeta.Labels["tier"] = "staging"
 	})
 	require.NoError(t, err)
-	defer framework.AgonesClient.AgonesV1().Fleets(framework.Namespace).Delete(ctx, flt.Name, metav1.DeleteOptions{}) // nolint: errcheck
+	defer framework.AgonesClient.AgonesV1().Fleets(framework.Namespace).Delete(ctx, flt.Name, metav1.DeleteOptions{}) //nolint:errcheck
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
 
 	// Allocate using matchExpressions (In operator) — should succeed.
@@ -194,7 +194,7 @@ func TestAllocatorWithMatchExpressions(t *testing.T) {
 
 		conn, err := grpc.NewClient(requestURL, dialOpts...)
 		require.NoError(c, err, "failing grpc.NewClient")
-		defer conn.Close() // nolint: errcheck
+		defer conn.Close() //nolint:errcheck
 
 		grpcClient := pb.NewAllocationServiceClient(conn)
 		response, err := grpcClient.Allocate(ctx, request)
@@ -233,7 +233,7 @@ func TestRestAllocatorWithDeprecatedRequired(t *testing.T) {
 		return
 	}
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
-	defer framework.AgonesClient.AgonesV1().Fleets(framework.Namespace).Delete(ctx, flt.Name, metav1.DeleteOptions{}) // nolint: errcheck
+	defer framework.AgonesClient.AgonesV1().Fleets(framework.Namespace).Delete(ctx, flt.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 	request := &pb.AllocationRequest{
 		Namespace:                    framework.Namespace,
@@ -273,7 +273,7 @@ func TestRestAllocatorWithDeprecatedRequired(t *testing.T) {
 			logrus.WithError(err).Info("failed to read Allocate response body")
 			return false, nil
 		}
-		defer resp.Body.Close() // nolint: errcheck
+		defer resp.Body.Close() //nolint:errcheck
 		var response pb.AllocationResponse
 		err = json.Unmarshal(body, &response)
 		if err != nil {
@@ -313,7 +313,7 @@ func TestAllocatorWithCountersAndLists(t *testing.T) {
 		}
 	})
 	assert.NoError(t, err)
-	defer framework.AgonesClient.AgonesV1().Fleets(framework.Namespace).Delete(ctx, flt.Name, metav1.DeleteOptions{}) // nolint: errcheck
+	defer framework.AgonesClient.AgonesV1().Fleets(framework.Namespace).Delete(ctx, flt.Name, metav1.DeleteOptions{}) //nolint:errcheck
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
 
 	request := &pb.AllocationRequest{
@@ -351,7 +351,7 @@ func TestAllocatorWithCountersAndLists(t *testing.T) {
 		require.NoError(c, err)
 		conn, err := grpc.NewClient(requestURL, dialOpts...)
 		require.NoError(c, err, "failing grpc.NewClient")
-		defer conn.Close() // nolint: errcheck
+		defer conn.Close() //nolint:errcheck
 
 		grpcClient := pb.NewAllocationServiceClient(conn)
 		response, err := grpcClient.Allocate(ctx, request)
@@ -393,7 +393,7 @@ func TestRestAllocatorWithCountersAndLists(t *testing.T) {
 		}
 	})
 	assert.NoError(t, err)
-	defer framework.AgonesClient.AgonesV1().Fleets(framework.Namespace).Delete(ctx, flt.Name, metav1.DeleteOptions{}) // nolint: errcheck
+	defer framework.AgonesClient.AgonesV1().Fleets(framework.Namespace).Delete(ctx, flt.Name, metav1.DeleteOptions{}) //nolint:errcheck
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
 
 	request := &pb.AllocationRequest{
@@ -450,7 +450,7 @@ func TestRestAllocatorWithCountersAndLists(t *testing.T) {
 		if err != nil {
 			return false, nil
 		}
-		defer resp.Body.Close() // nolint: errcheck
+		defer resp.Body.Close() //nolint:errcheck
 		if resp.StatusCode != http.StatusOK {
 			return false, nil
 		}
@@ -481,7 +481,7 @@ func TestRestAllocatorWithSelectors(t *testing.T) {
 
 	flt, err := helper.CreateFleet(ctx, framework.Namespace, framework)
 	require.NoError(t, err)
-	defer framework.AgonesClient.AgonesV1().Fleets(framework.Namespace).Delete(ctx, flt.Name, metav1.DeleteOptions{}) // nolint: errcheck
+	defer framework.AgonesClient.AgonesV1().Fleets(framework.Namespace).Delete(ctx, flt.Name, metav1.DeleteOptions{}) //nolint:errcheck
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
 
 	request := &pb.AllocationRequest{
@@ -522,7 +522,7 @@ func TestRestAllocatorWithSelectors(t *testing.T) {
 			logrus.WithError(err).Info("failed to read Allocate response body")
 			return false, nil
 		}
-		defer resp.Body.Close() // nolint: errcheck
+		defer resp.Body.Close() //nolint:errcheck
 		err = json.Unmarshal(body, &response)
 		if err != nil {
 			logrus.WithError(err).Info("failed to unmarshal Allocate response")
@@ -590,7 +590,7 @@ func TestAllocatorCrossNamespace(t *testing.T) {
 		return
 	}
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
-	defer framework.AgonesClient.AgonesV1().Fleets(namespaceB).Delete(ctx, flt.Name, metav1.DeleteOptions{}) // nolint: errcheck
+	defer framework.AgonesClient.AgonesV1().Fleets(namespaceB).Delete(ctx, flt.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 	request := &pb.AllocationRequest{
 		Namespace: namespaceA,
@@ -609,7 +609,7 @@ func TestAllocatorCrossNamespace(t *testing.T) {
 
 		conn, err := grpc.NewClient(requestURL, dialOpts...)
 		require.NoError(c, err, "failing grpc.NewClient")
-		defer conn.Close() // nolint: errcheck
+		defer conn.Close() //nolint:errcheck
 
 		grpcClient := pb.NewAllocationServiceClient(conn)
 		response, err := grpcClient.Allocate(ctx, request)
