@@ -38,7 +38,7 @@ cd /go/src/agones.dev/agones/sdks/cpp
 find -name '*.pb.*' -delete
 cd /go/src/agones.dev/agones
 protoc -I ${googleapis} -I ${gatewaygrpc} -I ${sdk} --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` --grpc_out=${protoc_intermediate} sdk.proto
-protoc -I ${googleapis} -I ${gatewaygrpc} -I ${sdk} --cpp_out=dllexport_decl=AGONES_EXPORT:${protoc_intermediate} sdk.proto ${googleapis}/google/api/annotations.proto ${googleapis}/google/api/http.proto ${gatewaygrpc}/protoc-gen-openapiv2/options/annotations.proto ${gatewaygrpc}/protoc-gen-openapiv2/options/openapiv2.proto
+protoc -I ${googleapis} -I ${gatewaygrpc} -I ${sdk} --cpp_out=dllexport_decl=AGONES_EXPORT:${protoc_intermediate} sdk.proto ${googleapis}/google/api/annotations.proto ${googleapis}/google/api/http.proto ${googleapis}/google/api/client.proto ${googleapis}/google/api/field_behavior.proto ${googleapis}/google/api/launch_stage.proto ${googleapis}/google/api/resource.proto ${gatewaygrpc}/protoc-gen-openapiv2/options/annotations.proto ${gatewaygrpc}/protoc-gen-openapiv2/options/openapiv2.proto
 
 cd ${protoc_intermediate}
 header sdk.grpc.pb.cc ${protoc_destination}/src/agones
@@ -51,6 +51,10 @@ header annotations.pb.cc ${protoc_destination}/src/google
 header http.pb.cc ${protoc_destination}/src/google
 header annotations.pb.h ${protoc_destination}/include/google/api
 header http.pb.h ${protoc_destination}/include/google/api
+for dependency in client field_behavior launch_stage resource; do
+    header ${dependency}.pb.cc ${protoc_destination}/src/google
+    header ${dependency}.pb.h ${protoc_destination}/include/google/api
+done
 
 cd ${protoc_intermediate}/protoc-gen-openapiv2/options
 header annotations.pb.cc ${protoc_destination}/src/protoc-gen-openapiv2

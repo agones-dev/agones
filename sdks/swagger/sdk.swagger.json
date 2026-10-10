@@ -47,6 +47,85 @@
         ]
       }
     },
+    "/counters/{counterUpdateRequest.name}": {
+      "patch": {
+        "summary": "UpdateCounter returns the updated Counter. Returns NOT_FOUND if the Counter does not exist (name cannot be updated).\nReturns OUT_OF_RANGE if the Count is out of range [0,Capacity].",
+        "operationId": "UpdateCounter",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/sdkCounter"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "counterUpdateRequest.name",
+            "description": "The name of the Counter to update",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "counterUpdateRequest",
+            "description": "The requested update to make to the Counter",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "string",
+                  "format": "int64",
+                  "title": "The value to set the Counter Count"
+                },
+                "capacity": {
+                  "type": "string",
+                  "format": "int64",
+                  "title": "The value to set the Counter Capacity"
+                },
+                "countDiff": {
+                  "type": "string",
+                  "format": "int64",
+                  "title": "countDiff tracks if a Counter Update Request is CountIncrement (positive), CountDecrement\n(negative), 0 if a CountSet or CapacitySet request"
+                }
+              },
+              "title": "The requested update to make to the Counter"
+            }
+          }
+        ],
+        "tags": [
+          "SDK"
+        ]
+      }
+    },
+    "/counters/{name}": {
+      "get": {
+        "summary": "Gets a Counter. Returns NOT_FOUND if the Counter does not exist.",
+        "operationId": "GetCounter",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/sdkCounter"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "description": "The name of the Counter to get",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SDK"
+        ]
+      }
+    },
     "/gameserver": {
       "get": {
         "summary": "Retrieve the current GameServer data",
@@ -84,6 +163,150 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/sdkEmpty"
+            }
+          }
+        ],
+        "tags": [
+          "SDK"
+        ]
+      }
+    },
+    "/lists/{list.name}": {
+      "patch": {
+        "summary": "UpdateList returns the updated List. Returns NOT_FOUND if the List does not exist (name cannot be updated).\n**THIS WILL OVERWRITE ALL EXISTING LIST.VALUES WITH ANY REQUEST LIST.VALUES**\nUse AddListValue() or RemoveListValue() for modifying the List.Values field.\nReturns INVALID_ARGUMENT if the field mask path(s) are not field(s) of the List.\nIf a field mask path(s) is specified, but the value is not set in the request List object,\nthen the default value for the variable will be set (i.e. 0 for \"capacity\", empty list for \"values\").",
+        "operationId": "UpdateList",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/sdkList"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "list.name",
+            "description": "The name of the List",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "list",
+            "description": "The List to update",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "capacity": {
+                  "type": "string",
+                  "format": "int64",
+                  "title": "The maximum capacity of the List"
+                },
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "The array of items in the List [\"v1\", \"v2\", …]"
+                }
+              },
+              "title": "The List to update"
+            }
+          }
+        ],
+        "tags": [
+          "SDK"
+        ]
+      }
+    },
+    "/lists/{name}": {
+      "get": {
+        "summary": "Gets a List. Returns NOT_FOUND if the List does not exist.",
+        "operationId": "GetList",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/sdkList"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "description": "The name of the List to get",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SDK"
+        ]
+      }
+    },
+    "/lists/{name}:addValue": {
+      "post": {
+        "summary": "Adds a value to a List and returns updated List. Returns NOT_FOUND if the List does not exist.\nReturns ALREADY_EXISTS if the value is already in the List.\nReturns OUT_OF_RANGE if the List is already at Capacity.",
+        "operationId": "AddListValue",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/sdkList"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "description": "The name of the List to add a value to.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SDKAddListValueBody"
+            }
+          }
+        ],
+        "tags": [
+          "SDK"
+        ]
+      }
+    },
+    "/lists/{name}:removeValue": {
+      "post": {
+        "summary": "Removes a value from a List and returns updated List. Returns NOT_FOUND if the List does not exist.\nReturns NOT_FOUND if the value is not in the List.",
+        "operationId": "RemoveListValue",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/sdkList"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "description": "The name of the List to remove a value from.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SDKRemoveListValueBody"
             }
           }
         ],
@@ -325,6 +548,28 @@
         }
       }
     },
+    "SDKAddListValueBody": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "value"
+      ]
+    },
+    "SDKRemoveListValueBody": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "value"
+      ]
+    },
     "StatusAddress": {
       "type": "object",
       "properties": {
@@ -347,8 +592,7 @@
           "type": "string",
           "format": "int64"
         }
-      },
-      "title": "[Stage:Beta]\n[FeatureFlag:CountsAndLists]"
+      }
     },
     "StatusListStatus": {
       "type": "object",
@@ -363,8 +607,7 @@
             "type": "string"
           }
         }
-      },
-      "title": "[Stage:Beta]\n[FeatureFlag:CountsAndLists]"
+      }
     },
     "StatusPlayerStatus": {
       "type": "object",
@@ -398,15 +641,50 @@
         }
       }
     },
-    "sdkDuration": {
+    "sdkCounter": {
       "type": "object",
       "properties": {
-        "seconds": {
+        "name": {
           "type": "string",
-          "format": "int64"
+          "title": "The name of the Counter"
+        },
+        "count": {
+          "type": "string",
+          "format": "int64",
+          "title": "The current count of the Counter"
+        },
+        "capacity": {
+          "type": "string",
+          "format": "int64",
+          "title": "The maximum capacity of the Counter"
         }
       },
-      "title": "time duration, in seconds"
+      "description": "A representation of a Counter."
+    },
+    "sdkCounterUpdateRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "title": "The name of the Counter to update"
+        },
+        "count": {
+          "type": "string",
+          "format": "int64",
+          "title": "The value to set the Counter Count"
+        },
+        "capacity": {
+          "type": "string",
+          "format": "int64",
+          "title": "The value to set the Counter Capacity"
+        },
+        "countDiff": {
+          "type": "string",
+          "format": "int64",
+          "title": "countDiff tracks if a Counter Update Request is CountIncrement (positive), CountDecrement\n(negative), 0 if a CountSet or CapacitySet request"
+        }
+      },
+      "description": "A representation of a Counter Update Request."
     },
     "sdkEmpty": {
       "type": "object",
@@ -458,15 +736,13 @@
           "type": "object",
           "additionalProperties": {
             "$ref": "#/definitions/StatusCounterStatus"
-          },
-          "title": "[Stage:Beta]\n[FeatureFlag:CountsAndLists]"
+          }
         },
         "lists": {
           "type": "object",
           "additionalProperties": {
             "$ref": "#/definitions/StatusListStatus"
-          },
-          "title": "[Stage:Beta]\n[FeatureFlag:CountsAndLists]"
+          }
         }
       }
     },
@@ -481,6 +757,38 @@
         }
       },
       "title": "Key, Value entry"
+    },
+    "sdkList": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "title": "The name of the List"
+        },
+        "capacity": {
+          "type": "string",
+          "format": "int64",
+          "title": "The maximum capacity of the List"
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "The array of items in the List [\"v1\", \"v2\", …]"
+        }
+      },
+      "description": "A representation of a List."
+    },
+    "sdkDuration": {
+      "type": "object",
+      "properties": {
+        "seconds": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "title": "time duration, in seconds"
     },
     "googlerpcStatus": {
       "type": "object",

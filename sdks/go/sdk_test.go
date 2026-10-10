@@ -133,6 +133,8 @@ var _ sdk.SDK_HealthClient = &healthMock{}
 var _ sdk.SDK_WatchGameServerClient = &watchMock{}
 
 type sdkMock struct {
+	// Counter/List RPCs are exercised by the SDK server tests; the Go wrappers are added separately.
+	sdk.SDKClient
 	ready       bool
 	shutdown    bool
 	allocated   bool

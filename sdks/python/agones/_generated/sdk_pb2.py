@@ -38,9 +38,11 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
+from google.protobuf import field_mask_pb2 as google_dot_protobuf_dot_field__mask__pb2
+from google.protobuf import wrappers_pb2 as google_dot_protobuf_dot_wrappers__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\tsdk.proto\x12\x0e\x61gones.dev.sdk\"\x07\n\x05\x45mpty\"&\n\x08KeyValue\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t\"\x1b\n\x08\x44uration\x12\x0f\n\x07seconds\x18\x01 \x01(\x03\"\xfc\x0b\n\nGameServer\x12:\n\x0bobject_meta\x18\x01 \x01(\x0b\x32%.agones.dev.sdk.GameServer.ObjectMeta\x12-\n\x04spec\x18\x02 \x01(\x0b\x32\x1f.agones.dev.sdk.GameServer.Spec\x12\x31\n\x06status\x18\x03 \x01(\x0b\x32!.agones.dev.sdk.GameServer.Status\x1a\x93\x03\n\nObjectMeta\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x11\n\tnamespace\x18\x02 \x01(\t\x12\x0b\n\x03uid\x18\x03 \x01(\t\x12\x18\n\x10resource_version\x18\x04 \x01(\t\x12\x12\n\ngeneration\x18\x05 \x01(\x03\x12\x1a\n\x12\x63reation_timestamp\x18\x06 \x01(\x03\x12\x1a\n\x12\x64\x65letion_timestamp\x18\x07 \x01(\x03\x12K\n\x0b\x61nnotations\x18\x08 \x03(\x0b\x32\x36.agones.dev.sdk.GameServer.ObjectMeta.AnnotationsEntry\x12\x41\n\x06labels\x18\t \x03(\x0b\x32\x31.agones.dev.sdk.GameServer.ObjectMeta.LabelsEntry\x1a\x32\n\x10\x41nnotationsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\x1a-\n\x0bLabelsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\x1a\xac\x01\n\x04Spec\x12\x36\n\x06health\x18\x01 \x01(\x0b\x32&.agones.dev.sdk.GameServer.Spec.Health\x1al\n\x06Health\x12\x10\n\x08\x64isabled\x18\x01 \x01(\x08\x12\x16\n\x0eperiod_seconds\x18\x02 \x01(\x05\x12\x19\n\x11\x66\x61ilure_threshold\x18\x03 \x01(\x05\x12\x1d\n\x15initial_delay_seconds\x18\x04 \x01(\x05\x1a\x8a\x06\n\x06Status\x12\r\n\x05state\x18\x01 \x01(\t\x12\x0f\n\x07\x61\x64\x64ress\x18\x02 \x01(\t\x12<\n\taddresses\x18\x07 \x03(\x0b\x32).agones.dev.sdk.GameServer.Status.Address\x12\x35\n\x05ports\x18\x03 \x03(\x0b\x32&.agones.dev.sdk.GameServer.Status.Port\x12?\n\x07players\x18\x04 \x01(\x0b\x32..agones.dev.sdk.GameServer.Status.PlayerStatus\x12\x41\n\x08\x63ounters\x18\x05 \x03(\x0b\x32/.agones.dev.sdk.GameServer.Status.CountersEntry\x12;\n\x05lists\x18\x06 \x03(\x0b\x32,.agones.dev.sdk.GameServer.Status.ListsEntry\x1a(\n\x07\x41\x64\x64ress\x12\x0c\n\x04type\x18\x01 \x01(\t\x12\x0f\n\x07\x61\x64\x64ress\x18\x02 \x01(\t\x1a\"\n\x04Port\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04port\x18\x02 \x01(\x05\x1a<\n\x0cPlayerStatus\x12\r\n\x05\x63ount\x18\x01 \x01(\x03\x12\x10\n\x08\x63\x61pacity\x18\x02 \x01(\x03\x12\x0b\n\x03ids\x18\x03 \x03(\t\x1a\x30\n\rCounterStatus\x12\r\n\x05\x63ount\x18\x01 \x01(\x03\x12\x10\n\x08\x63\x61pacity\x18\x02 \x01(\x03\x1a.\n\nListStatus\x12\x10\n\x08\x63\x61pacity\x18\x01 \x01(\x03\x12\x0e\n\x06values\x18\x02 \x03(\t\x1a`\n\rCountersEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12>\n\x05value\x18\x02 \x01(\x0b\x32/.agones.dev.sdk.GameServer.Status.CounterStatus:\x02\x38\x01\x1aZ\n\nListsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12;\n\x05value\x18\x02 \x01(\x0b\x32,.agones.dev.sdk.GameServer.Status.ListStatus:\x02\x38\x01\x32\xc3\x04\n\x03SDK\x12\x37\n\x05Ready\x12\x15.agones.dev.sdk.Empty\x1a\x15.agones.dev.sdk.Empty\"\x00\x12:\n\x08\x41llocate\x12\x15.agones.dev.sdk.Empty\x1a\x15.agones.dev.sdk.Empty\"\x00\x12:\n\x08Shutdown\x12\x15.agones.dev.sdk.Empty\x1a\x15.agones.dev.sdk.Empty\"\x00\x12:\n\x06Health\x12\x15.agones.dev.sdk.Empty\x1a\x15.agones.dev.sdk.Empty\"\x00(\x01\x12\x44\n\rGetGameServer\x12\x15.agones.dev.sdk.Empty\x1a\x1a.agones.dev.sdk.GameServer\"\x00\x12H\n\x0fWatchGameServer\x12\x15.agones.dev.sdk.Empty\x1a\x1a.agones.dev.sdk.GameServer\"\x00\x30\x01\x12=\n\x08SetLabel\x12\x18.agones.dev.sdk.KeyValue\x1a\x15.agones.dev.sdk.Empty\"\x00\x12\x42\n\rSetAnnotation\x12\x18.agones.dev.sdk.KeyValue\x1a\x15.agones.dev.sdk.Empty\"\x00\x12<\n\x07Reserve\x12\x18.agones.dev.sdk.Duration\x1a\x15.agones.dev.sdk.Empty\"\x00\x42\x07Z\x05./sdkb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\tsdk.proto\x12\x0e\x61gones.dev.sdk\x1a google/protobuf/field_mask.proto\x1a\x1egoogle/protobuf/wrappers.proto\"\x07\n\x05\x45mpty\"&\n\x08KeyValue\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t\"\x1b\n\x08\x44uration\x12\x0f\n\x07seconds\x18\x01 \x01(\x03\"\xfc\x0b\n\nGameServer\x12:\n\x0bobject_meta\x18\x01 \x01(\x0b\x32%.agones.dev.sdk.GameServer.ObjectMeta\x12-\n\x04spec\x18\x02 \x01(\x0b\x32\x1f.agones.dev.sdk.GameServer.Spec\x12\x31\n\x06status\x18\x03 \x01(\x0b\x32!.agones.dev.sdk.GameServer.Status\x1a\x93\x03\n\nObjectMeta\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x11\n\tnamespace\x18\x02 \x01(\t\x12\x0b\n\x03uid\x18\x03 \x01(\t\x12\x18\n\x10resource_version\x18\x04 \x01(\t\x12\x12\n\ngeneration\x18\x05 \x01(\x03\x12\x1a\n\x12\x63reation_timestamp\x18\x06 \x01(\x03\x12\x1a\n\x12\x64\x65letion_timestamp\x18\x07 \x01(\x03\x12K\n\x0b\x61nnotations\x18\x08 \x03(\x0b\x32\x36.agones.dev.sdk.GameServer.ObjectMeta.AnnotationsEntry\x12\x41\n\x06labels\x18\t \x03(\x0b\x32\x31.agones.dev.sdk.GameServer.ObjectMeta.LabelsEntry\x1a\x32\n\x10\x41nnotationsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\x1a-\n\x0bLabelsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\x1a\xac\x01\n\x04Spec\x12\x36\n\x06health\x18\x01 \x01(\x0b\x32&.agones.dev.sdk.GameServer.Spec.Health\x1al\n\x06Health\x12\x10\n\x08\x64isabled\x18\x01 \x01(\x08\x12\x16\n\x0eperiod_seconds\x18\x02 \x01(\x05\x12\x19\n\x11\x66\x61ilure_threshold\x18\x03 \x01(\x05\x12\x1d\n\x15initial_delay_seconds\x18\x04 \x01(\x05\x1a\x8a\x06\n\x06Status\x12\r\n\x05state\x18\x01 \x01(\t\x12\x0f\n\x07\x61\x64\x64ress\x18\x02 \x01(\t\x12<\n\taddresses\x18\x07 \x03(\x0b\x32).agones.dev.sdk.GameServer.Status.Address\x12\x35\n\x05ports\x18\x03 \x03(\x0b\x32&.agones.dev.sdk.GameServer.Status.Port\x12?\n\x07players\x18\x04 \x01(\x0b\x32..agones.dev.sdk.GameServer.Status.PlayerStatus\x12\x41\n\x08\x63ounters\x18\x05 \x03(\x0b\x32/.agones.dev.sdk.GameServer.Status.CountersEntry\x12;\n\x05lists\x18\x06 \x03(\x0b\x32,.agones.dev.sdk.GameServer.Status.ListsEntry\x1a(\n\x07\x41\x64\x64ress\x12\x0c\n\x04type\x18\x01 \x01(\t\x12\x0f\n\x07\x61\x64\x64ress\x18\x02 \x01(\t\x1a\"\n\x04Port\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04port\x18\x02 \x01(\x05\x1a<\n\x0cPlayerStatus\x12\r\n\x05\x63ount\x18\x01 \x01(\x03\x12\x10\n\x08\x63\x61pacity\x18\x02 \x01(\x03\x12\x0b\n\x03ids\x18\x03 \x03(\t\x1a\x30\n\rCounterStatus\x12\r\n\x05\x63ount\x18\x01 \x01(\x03\x12\x10\n\x08\x63\x61pacity\x18\x02 \x01(\x03\x1a.\n\nListStatus\x12\x10\n\x08\x63\x61pacity\x18\x01 \x01(\x03\x12\x0e\n\x06values\x18\x02 \x03(\t\x1a`\n\rCountersEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12>\n\x05value\x18\x02 \x01(\x0b\x32/.agones.dev.sdk.GameServer.Status.CounterStatus:\x02\x38\x01\x1aZ\n\nListsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12;\n\x05value\x18\x02 \x01(\x0b\x32,.agones.dev.sdk.GameServer.Status.ListStatus:\x02\x38\x01\"8\n\x07\x43ounter\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\r\n\x05\x63ount\x18\x02 \x01(\x03\x12\x10\n\x08\x63\x61pacity\x18\x03 \x01(\x03\"\x92\x01\n\x14\x43ounterUpdateRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12*\n\x05\x63ount\x18\x02 \x01(\x0b\x32\x1b.google.protobuf.Int64Value\x12-\n\x08\x63\x61pacity\x18\x03 \x01(\x0b\x32\x1b.google.protobuf.Int64Value\x12\x11\n\tcountDiff\x18\x04 \x01(\x03\"!\n\x11GetCounterRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\"Z\n\x14UpdateCounterRequest\x12\x42\n\x14\x63ounterUpdateRequest\x18\x01 \x01(\x0b\x32$.agones.dev.sdk.CounterUpdateRequest\"6\n\x04List\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x10\n\x08\x63\x61pacity\x18\x02 \x01(\x03\x12\x0e\n\x06values\x18\x03 \x03(\t\"\x1e\n\x0eGetListRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\"h\n\x11UpdateListRequest\x12\"\n\x04list\x18\x01 \x01(\x0b\x32\x14.agones.dev.sdk.List\x12/\n\x0bupdate_mask\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.FieldMask\"2\n\x13\x41\x64\x64ListValueRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t\"5\n\x16RemoveListValueRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t2\x8d\x08\n\x03SDK\x12\x37\n\x05Ready\x12\x15.agones.dev.sdk.Empty\x1a\x15.agones.dev.sdk.Empty\"\x00\x12:\n\x08\x41llocate\x12\x15.agones.dev.sdk.Empty\x1a\x15.agones.dev.sdk.Empty\"\x00\x12:\n\x08Shutdown\x12\x15.agones.dev.sdk.Empty\x1a\x15.agones.dev.sdk.Empty\"\x00\x12:\n\x06Health\x12\x15.agones.dev.sdk.Empty\x1a\x15.agones.dev.sdk.Empty\"\x00(\x01\x12\x44\n\rGetGameServer\x12\x15.agones.dev.sdk.Empty\x1a\x1a.agones.dev.sdk.GameServer\"\x00\x12H\n\x0fWatchGameServer\x12\x15.agones.dev.sdk.Empty\x1a\x1a.agones.dev.sdk.GameServer\"\x00\x30\x01\x12=\n\x08SetLabel\x12\x18.agones.dev.sdk.KeyValue\x1a\x15.agones.dev.sdk.Empty\"\x00\x12\x42\n\rSetAnnotation\x12\x18.agones.dev.sdk.KeyValue\x1a\x15.agones.dev.sdk.Empty\"\x00\x12<\n\x07Reserve\x12\x18.agones.dev.sdk.Duration\x1a\x15.agones.dev.sdk.Empty\"\x00\x12J\n\nGetCounter\x12!.agones.dev.sdk.GetCounterRequest\x1a\x17.agones.dev.sdk.Counter\"\x00\x12P\n\rUpdateCounter\x12$.agones.dev.sdk.UpdateCounterRequest\x1a\x17.agones.dev.sdk.Counter\"\x00\x12\x41\n\x07GetList\x12\x1e.agones.dev.sdk.GetListRequest\x1a\x14.agones.dev.sdk.List\"\x00\x12G\n\nUpdateList\x12!.agones.dev.sdk.UpdateListRequest\x1a\x14.agones.dev.sdk.List\"\x00\x12K\n\x0c\x41\x64\x64ListValue\x12#.agones.dev.sdk.AddListValueRequest\x1a\x14.agones.dev.sdk.List\"\x00\x12Q\n\x0fRemoveListValue\x12&.agones.dev.sdk.RemoveListValueRequest\x1a\x14.agones.dev.sdk.List\"\x00\x42\x07Z\x05./sdkb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -56,40 +58,58 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_GAMESERVER_STATUS_COUNTERSENTRY']._serialized_options = b'8\001'
   _globals['_GAMESERVER_STATUS_LISTSENTRY']._loaded_options = None
   _globals['_GAMESERVER_STATUS_LISTSENTRY']._serialized_options = b'8\001'
-  _globals['_EMPTY']._serialized_start=29
-  _globals['_EMPTY']._serialized_end=36
-  _globals['_KEYVALUE']._serialized_start=38
-  _globals['_KEYVALUE']._serialized_end=76
-  _globals['_DURATION']._serialized_start=78
-  _globals['_DURATION']._serialized_end=105
-  _globals['_GAMESERVER']._serialized_start=108
-  _globals['_GAMESERVER']._serialized_end=1640
-  _globals['_GAMESERVER_OBJECTMETA']._serialized_start=281
-  _globals['_GAMESERVER_OBJECTMETA']._serialized_end=684
-  _globals['_GAMESERVER_OBJECTMETA_ANNOTATIONSENTRY']._serialized_start=587
-  _globals['_GAMESERVER_OBJECTMETA_ANNOTATIONSENTRY']._serialized_end=637
-  _globals['_GAMESERVER_OBJECTMETA_LABELSENTRY']._serialized_start=639
-  _globals['_GAMESERVER_OBJECTMETA_LABELSENTRY']._serialized_end=684
-  _globals['_GAMESERVER_SPEC']._serialized_start=687
-  _globals['_GAMESERVER_SPEC']._serialized_end=859
-  _globals['_GAMESERVER_SPEC_HEALTH']._serialized_start=751
-  _globals['_GAMESERVER_SPEC_HEALTH']._serialized_end=859
-  _globals['_GAMESERVER_STATUS']._serialized_start=862
-  _globals['_GAMESERVER_STATUS']._serialized_end=1640
-  _globals['_GAMESERVER_STATUS_ADDRESS']._serialized_start=1214
-  _globals['_GAMESERVER_STATUS_ADDRESS']._serialized_end=1254
-  _globals['_GAMESERVER_STATUS_PORT']._serialized_start=1256
-  _globals['_GAMESERVER_STATUS_PORT']._serialized_end=1290
-  _globals['_GAMESERVER_STATUS_PLAYERSTATUS']._serialized_start=1292
-  _globals['_GAMESERVER_STATUS_PLAYERSTATUS']._serialized_end=1352
-  _globals['_GAMESERVER_STATUS_COUNTERSTATUS']._serialized_start=1354
-  _globals['_GAMESERVER_STATUS_COUNTERSTATUS']._serialized_end=1402
-  _globals['_GAMESERVER_STATUS_LISTSTATUS']._serialized_start=1404
-  _globals['_GAMESERVER_STATUS_LISTSTATUS']._serialized_end=1450
-  _globals['_GAMESERVER_STATUS_COUNTERSENTRY']._serialized_start=1452
-  _globals['_GAMESERVER_STATUS_COUNTERSENTRY']._serialized_end=1548
-  _globals['_GAMESERVER_STATUS_LISTSENTRY']._serialized_start=1550
-  _globals['_GAMESERVER_STATUS_LISTSENTRY']._serialized_end=1640
-  _globals['_SDK']._serialized_start=1643
-  _globals['_SDK']._serialized_end=2222
+  _globals['_EMPTY']._serialized_start=95
+  _globals['_EMPTY']._serialized_end=102
+  _globals['_KEYVALUE']._serialized_start=104
+  _globals['_KEYVALUE']._serialized_end=142
+  _globals['_DURATION']._serialized_start=144
+  _globals['_DURATION']._serialized_end=171
+  _globals['_GAMESERVER']._serialized_start=174
+  _globals['_GAMESERVER']._serialized_end=1706
+  _globals['_GAMESERVER_OBJECTMETA']._serialized_start=347
+  _globals['_GAMESERVER_OBJECTMETA']._serialized_end=750
+  _globals['_GAMESERVER_OBJECTMETA_ANNOTATIONSENTRY']._serialized_start=653
+  _globals['_GAMESERVER_OBJECTMETA_ANNOTATIONSENTRY']._serialized_end=703
+  _globals['_GAMESERVER_OBJECTMETA_LABELSENTRY']._serialized_start=705
+  _globals['_GAMESERVER_OBJECTMETA_LABELSENTRY']._serialized_end=750
+  _globals['_GAMESERVER_SPEC']._serialized_start=753
+  _globals['_GAMESERVER_SPEC']._serialized_end=925
+  _globals['_GAMESERVER_SPEC_HEALTH']._serialized_start=817
+  _globals['_GAMESERVER_SPEC_HEALTH']._serialized_end=925
+  _globals['_GAMESERVER_STATUS']._serialized_start=928
+  _globals['_GAMESERVER_STATUS']._serialized_end=1706
+  _globals['_GAMESERVER_STATUS_ADDRESS']._serialized_start=1280
+  _globals['_GAMESERVER_STATUS_ADDRESS']._serialized_end=1320
+  _globals['_GAMESERVER_STATUS_PORT']._serialized_start=1322
+  _globals['_GAMESERVER_STATUS_PORT']._serialized_end=1356
+  _globals['_GAMESERVER_STATUS_PLAYERSTATUS']._serialized_start=1358
+  _globals['_GAMESERVER_STATUS_PLAYERSTATUS']._serialized_end=1418
+  _globals['_GAMESERVER_STATUS_COUNTERSTATUS']._serialized_start=1420
+  _globals['_GAMESERVER_STATUS_COUNTERSTATUS']._serialized_end=1468
+  _globals['_GAMESERVER_STATUS_LISTSTATUS']._serialized_start=1470
+  _globals['_GAMESERVER_STATUS_LISTSTATUS']._serialized_end=1516
+  _globals['_GAMESERVER_STATUS_COUNTERSENTRY']._serialized_start=1518
+  _globals['_GAMESERVER_STATUS_COUNTERSENTRY']._serialized_end=1614
+  _globals['_GAMESERVER_STATUS_LISTSENTRY']._serialized_start=1616
+  _globals['_GAMESERVER_STATUS_LISTSENTRY']._serialized_end=1706
+  _globals['_COUNTER']._serialized_start=1708
+  _globals['_COUNTER']._serialized_end=1764
+  _globals['_COUNTERUPDATEREQUEST']._serialized_start=1767
+  _globals['_COUNTERUPDATEREQUEST']._serialized_end=1913
+  _globals['_GETCOUNTERREQUEST']._serialized_start=1915
+  _globals['_GETCOUNTERREQUEST']._serialized_end=1948
+  _globals['_UPDATECOUNTERREQUEST']._serialized_start=1950
+  _globals['_UPDATECOUNTERREQUEST']._serialized_end=2040
+  _globals['_LIST']._serialized_start=2042
+  _globals['_LIST']._serialized_end=2096
+  _globals['_GETLISTREQUEST']._serialized_start=2098
+  _globals['_GETLISTREQUEST']._serialized_end=2128
+  _globals['_UPDATELISTREQUEST']._serialized_start=2130
+  _globals['_UPDATELISTREQUEST']._serialized_end=2234
+  _globals['_ADDLISTVALUEREQUEST']._serialized_start=2236
+  _globals['_ADDLISTVALUEREQUEST']._serialized_end=2286
+  _globals['_REMOVELISTVALUEREQUEST']._serialized_start=2288
+  _globals['_REMOVELISTVALUEREQUEST']._serialized_end=2341
+  _globals['_SDK']._serialized_start=2344
+  _globals['_SDK']._serialized_end=3381
 # @@protoc_insertion_point(module_scope)

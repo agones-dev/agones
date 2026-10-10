@@ -41,7 +41,7 @@ import (
 )
 
 var (
-	_ sdk.SDKServer   = &LocalSDKServer{}
+	_ sdkServer       = &LocalSDKServer{}
 	_ alpha.SDKServer = &LocalSDKServer{}
 	_ beta.SDKServer  = &LocalSDKServer{}
 )

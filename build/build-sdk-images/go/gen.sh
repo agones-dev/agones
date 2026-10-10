@@ -57,6 +57,15 @@ protoc -I ${googleapis} -I ${gatewaygrpc} -I ${sdk} sdk.proto --openapiv2_opt=lo
 protoc -I ${googleapis} -I ${gatewaygrpc} -I ${sdk}/alpha alpha.proto --openapiv2_opt=logtostderr=true,simple_operation_ids=true,disable_default_errors=true --openapiv2_out=json_names_for_fields=false,logtostderr=true:sdks/swagger
 protoc -I ${googleapis} -I ${gatewaygrpc} -I ${sdk}/beta beta.proto --openapiv2_opt=logtostderr=true,simple_operation_ids=true,disable_default_errors=true --openapiv2_out=json_names_for_fields=false,logtostderr=true:sdks/swagger
 
+# client.proto imports google.protobuf.Duration, which changes the legacy OpenAPI
+# name of sdk.Duration. Preserve the existing Reserve schema and REST client type.
+jq 'if .definitions.devSdkDuration then
+      .definitions.sdkDuration = .definitions.devSdkDuration |
+      del(.definitions.devSdkDuration) |
+      walk(if type == "object" and .["$ref"] == "#/definitions/devSdkDuration"
+           then .["$ref"] = "#/definitions/sdkDuration" else . end)
+    else . end' sdks/swagger/sdk.swagger.json | sponge sdks/swagger/sdk.swagger.json
+
 # hard coding because protoc-gen-openapiv2 doesn't work well in Stream and doesn't generate 'googlerpcStatus' and 'protobufAny' definitions
 cat sdks/swagger/sdk.swagger.json | jq '.definitions |= .+{"googlerpcStatus": {"type": "object", "properties": { "code": { "type": "integer", "format": "int32"}, "message": { "type":"string"}, "details": { "type": "array", "items": { "$ref": "#/definitions/protobufAny"}}}}}' | sponge sdks/swagger/sdk.swagger.json
 cat sdks/swagger/sdk.swagger.json | jq '.definitions |= .+{"protobufAny": { "type": "object", "properties": { "@type": { "type": "string" }}, "additionalProperties": {}},}' | sponge sdks/swagger/sdk.swagger.json
