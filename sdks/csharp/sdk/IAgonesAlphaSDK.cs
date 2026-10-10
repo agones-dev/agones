@@ -13,20 +13,10 @@
 // limitations under the License.
 
 using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Grpc.Core;
 
 namespace Agones
 {
     public interface IAgonesAlphaSDK : IDisposable
     {
-        Task<long> GetPlayerCapacityAsync();
-        Task<Status> SetPlayerCapacityAsync(long capacity);
-        Task<bool> PlayerConnectAsync(string id);
-        Task<bool> PlayerDisconnectAsync(string id);
-        Task<long> GetPlayerCountAsync();
-        Task<bool> IsPlayerConnectedAsync(string id);
-        Task<List<string>> GetConnectedPlayersAsync();
     }
 }
