@@ -20,7 +20,6 @@ import (
 	"agones.dev/agones/pkg/apis"
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
 	allocationv1 "agones.dev/agones/pkg/apis/allocation/v1"
-	"agones.dev/agones/pkg/util/runtime"
 )
 
 // findGameServerForAllocation finds an optimal gameserver, given the
@@ -50,7 +49,7 @@ func findGameServerForAllocation(gsa *allocationv1.GameServerAllocation, list []
 	case apis.Distributed:
 		// randomised looping - make a list of indices, and then randomise them
 		// as we don't want to change the order of the gameserver slice
-		if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) || len(gsa.Spec.Priorities) == 0 {
+		if len(gsa.Spec.Priorities) == 0 {
 			l := len(list)
 			indices := make([]int, l)
 			for i := range l {
@@ -66,7 +65,7 @@ func findGameServerForAllocation(gsa *allocationv1.GameServerAllocation, list []
 				}
 			}
 		} else {
-			// For FeatureCountsAndLists we do not do randomized looping -- instead choose the game
+			// When Priorities are set we do not do randomized looping -- instead choose the game
 			// server based on the list of Priorities. (The order in which the game servers were sorted
 			// in ListSortedGameServersPriorities.)
 			loop = func(list []*agonesv1.GameServer, f func(i int, gs *agonesv1.GameServer)) {
@@ -80,6 +79,10 @@ func findGameServerForAllocation(gsa *allocationv1.GameServerAllocation, list []
 	}
 
 	loop(list, func(i int, gs *agonesv1.GameServer) {
+		if gs == nil {
+			return
+		}
+
 		// only search the same namespace
 		if gs.ObjectMeta.Namespace != gsa.ObjectMeta.Namespace {
 			return
