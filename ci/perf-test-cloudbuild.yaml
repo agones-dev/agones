@@ -95,6 +95,7 @@ steps:
     id: performance-test
     waitFor:
       - tag-build-image
+      - push-images
 
 substitutions:
   _TEST_CLUSTER_NAME: standard-performance-test-cluster-1-35
