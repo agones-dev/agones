@@ -134,13 +134,31 @@ func TestRemoveClient(t *testing.T) {
 				h.addClient(id, stream)
 			}
 
-			h.removeClient(tc.removeID)
+			h.removeClient(tc.removeID, stream)
 
 			h.mu.RLock()
 			defer h.mu.RUnlock()
 			assert.Len(t, h.clients, tc.wantLen)
 		})
 	}
+
+	t.Run("removing a stale stream keeps the stream the client reconnected with", func(t *testing.T) {
+		t.Parallel()
+
+		h := &Handler{
+			clients: make(map[string]allocationpb.Processor_StreamBatchesServer),
+		}
+		stale := newMockServerStream(context.Background())
+		current := newMockServerStream(context.Background())
+		h.addClient("client-1", stale)
+		h.addClient("client-1", current)
+
+		h.removeClient("client-1", stale)
+
+		h.mu.RLock()
+		defer h.mu.RUnlock()
+		assert.Same(t, current, h.clients["client-1"])
+	})
 }
 
 func TestProcessAllocation(t *testing.T) {
