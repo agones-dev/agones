@@ -21,6 +21,7 @@ spec:
     - name: default
       portPolicy: Dynamic
       containerPort: 7654
+      protocol: UDP
   template:
     spec:
       containers:
@@ -28,11 +29,15 @@ spec:
           image: us-docker.pkg.dev/agones-images/examples/simple-game-server:0.44
           resources:
             requests:
-              memory: 64Mi
-              cpu: 20m
+              memory: 256Mi
+              cpu: 30m
             limits:
-              memory: 64Mi
-              cpu: 20m
+              memory: 256Mi
       # Limit this pod to Windows nodes.
       nodeSelector:
         kubernetes.io/os: windows
+      tolerations:
+        - key: node.kubernetes.io/os
+          operator: Equal
+          value: windows
+          effect: NoSchedule

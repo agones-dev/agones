@@ -46,7 +46,7 @@ module "gke_cluster" {
     "kubernetesVersion"             = var.kubernetesVersion
     "deletionProtection"            = false
     "maintenanceExclusionStartTime" = timestamp()
-    "maintenanceExclusionEndTime"   = timeadd(timestamp(), "2640h") # 110 days
+    "maintenanceExclusionEndTime"   = timeadd(timestamp(), "2160h") # 90 days, must end before the oldest version's end of life
   }
 
   udpFirewall = false // firewall is created at the project module level

@@ -60,8 +60,41 @@ module "gke_cluster" {
     "project"                       = var.project
     "kubernetesVersion"             = var.kubernetesVersion
     "maintenanceExclusionStartTime" = timestamp()
-    "maintenanceExclusionEndTime"   = timeadd(timestamp(), "2640h") # 110 days
+    "maintenanceExclusionEndTime"   = timeadd(timestamp(), "2160h") # 90 days, must end before the oldest version's end of life
   }
 
   udpFirewall = false // firewall is created at the project module level
+}
+
+resource "google_container_node_pool" "windows_ltsc2022" {
+  // google-beta is needed for windows_node_config.
+  provider   = google-beta
+  name       = "win-ltsc2022"
+  project    = var.project
+  cluster    = module.gke_cluster.name
+  location   = var.location
+  node_count = 2
+
+  node_config {
+    machine_type = "n2-standard-4"
+    image_type   = "WINDOWS_LTSC_CONTAINERD"
+    tags         = ["game-server"]
+
+    // Without this, GKE defaults to Windows Server 2019, where Windows pods had no network access.
+    windows_node_config {
+      osversion = "OS_VERSION_LTSC2022"
+    }
+
+    taint {
+      key    = "node.kubernetes.io/os"
+      value  = "windows"
+      effect = "NO_SCHEDULE"
+    }
+  }
+
+  management {
+    auto_repair = true
+    // Node pools in a release channel must have auto upgrade enabled.
+    auto_upgrade = var.releaseChannel == "UNSPECIFIED" ? false : true
+  }
 }

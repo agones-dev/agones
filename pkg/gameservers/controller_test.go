@@ -2596,6 +2596,34 @@ func TestControllerSidecarSecurityContext(t *testing.T) {
 		assert.Equal(t, int64(sidecarRunAsUser), *second.SecurityContext.RunAsUser)
 		assert.Equal(t, int64(sidecarRunAsUser), *c.sidecarSecurityContext.RunAsUser)
 	})
+
+	t.Run("windows node selector has no security context", func(t *testing.T) {
+		c, _ := newFakeController()
+		gs := newGameServer()
+		gs.Spec.Template.Spec.NodeSelector = map[string]string{corev1.LabelOSStable: "windows"}
+		sidecar := c.sidecar(gs)
+
+		assert.Nil(t, sidecar.SecurityContext)
+	})
+
+	t.Run("windows pod os has no security context", func(t *testing.T) {
+		c, _ := newFakeController()
+		gs := newGameServer()
+		gs.Spec.Template.Spec.OS = &corev1.PodOS{Name: corev1.Windows}
+		sidecar := c.sidecar(gs)
+
+		assert.Nil(t, sidecar.SecurityContext)
+	})
+
+	t.Run("linux pod os keeps security context", func(t *testing.T) {
+		c, _ := newFakeController()
+		gs := newGameServer()
+		gs.Spec.Template.Spec.OS = &corev1.PodOS{Name: corev1.Linux}
+		gs.Spec.Template.Spec.NodeSelector = map[string]string{corev1.LabelOSStable: "windows"}
+		sidecar := c.sidecar(gs)
+
+		assert.Equal(t, DefaultSidecarSecurityContext(sidecarRunAsUser), sidecar.SecurityContext)
+	})
 }
 
 // newFakeController returns a controller, backed by the fake Clientset

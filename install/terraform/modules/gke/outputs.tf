@@ -23,3 +23,7 @@ output "host" {
 output "token" {
   value = data.google_client_config.default.access_token
 }
+
+output "name" {
+  value = google_container_cluster.primary.name
+}

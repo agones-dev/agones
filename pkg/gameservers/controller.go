@@ -820,9 +820,21 @@ func (c *Controller) sidecar(gs *agonesv1.GameServer) corev1.Container {
 		sidecar.ImagePullPolicy = corev1.PullAlways
 	}
 
-	sidecar.SecurityContext = c.sidecarSecurityContext.DeepCopy()
+	// The sidecar security context only uses Linux fields, which Windows nodes reject.
+	if !isWindowsPodSpec(&gs.Spec.Template.Spec) {
+		sidecar.SecurityContext = c.sidecarSecurityContext.DeepCopy()
+	}
 
 	return sidecar
+}
+
+// isWindowsPodSpec returns true if the pod spec targets Windows nodes, via either
+// spec.os.name or a kubernetes.io/os node selector.
+func isWindowsPodSpec(spec *corev1.PodSpec) bool {
+	if spec.OS != nil {
+		return spec.OS.Name == corev1.Windows
+	}
+	return spec.NodeSelector[corev1.LabelOSStable] == string(corev1.Windows)
 }
 
 // DefaultSidecarSecurityContext returns the default security context for the sidecar container,
