@@ -71,9 +71,8 @@ struct FObjectMeta
 			{
 				if (Entry.Value.IsValid() && !Entry.Value->IsNull())
 				{
-					FJsonValueString Key = Entry.Key;
 					TSharedPtr<FJsonValue> Value = Entry.Value;
-					FString AnnotationKey = Key.AsString();
+					FString AnnotationKey(Entry.Key);
 					FString AnnotationValue = Value->AsString();
 					Annotations.Add(AnnotationKey, AnnotationValue);
 				}
@@ -86,9 +85,8 @@ struct FObjectMeta
 			{
 				if (Entry.Value.IsValid() && !Entry.Value->IsNull())
 				{
-					FJsonValueString Key = Entry.Key;
 					TSharedPtr<FJsonValue> Value = Entry.Value;
-					FString LabelKey = Key.AsString();
+					FString LabelKey(Entry.Key);
 					FString LabelValue = Value->AsString();
 					Labels.Add(LabelKey, LabelValue);
 				}
@@ -277,7 +275,7 @@ struct FStatus
 		{
 			for (const auto& CounterPair : CountersObject->Get()->Values)
 			{
-				const FString& CounterName = CounterPair.Key;
+				const FString CounterName(CounterPair.Key);
 				const TSharedPtr<FJsonValue>& CounterValue = CounterPair.Value;
 				if (CounterValue.IsValid() && !CounterValue->IsNull())
 				{
