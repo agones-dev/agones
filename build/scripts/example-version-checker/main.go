@@ -1,3 +1,5 @@
+// Package main checks that every example modified relative to main has a version
+// increase in its Makefile.
 package main
 
 import (
