@@ -28,14 +28,15 @@ TAG=$2
 
 root_path="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-# example directory|image name|Makefile version variable|other build inputs, relative to the repository root
+# example directory|image name|Makefile version variable|other build inputs, relative to the repository root.
+# Examples built with the repository root as their Docker context include the root .dockerignore.
 examples=(
-  "simple-game-server|simple-game-server|VERSION|sdks/go pkg go.mod go.sum vendor"
+  "simple-game-server|simple-game-server|VERSION|sdks/go pkg go.mod go.sum vendor .dockerignore"
   "supertuxkart|supertuxkart-example|version|"
   "xonotic|xonotic-example|version|"
   "rust-simple|rust-simple-server|version|sdks/rust"
-  "cpp-simple|cpp-simple-server|version|sdks/cpp"
-  "nodejs-simple|nodejs-simple-server|version|sdks/nodejs"
+  "cpp-simple|cpp-simple-server|version|sdks/cpp .dockerignore"
+  "nodejs-simple|nodejs-simple-server|version|sdks/nodejs .dockerignore"
 )
 
 push_example() {

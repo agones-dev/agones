@@ -178,10 +178,14 @@ steps:
   #
   # Build and push the example images used by the e2e tests.
   # Builds are skipped for examples whose source hasn't changed since a previous build.
+  # Waits for the code generation checks, as they regenerate sources in the workspace
+  # that the example images are built from.
   #
   - name: make-docker
     id: build-push-e2e-example-images
-    waitFor: [build-make-docker]
+    waitFor:
+      - test-gen-all-sdk-grpc
+      - test-gen-crd-code
     entrypoint: bash
     args: [./ci/push-e2e-example-images.sh, '${_REGISTRY}', '${COMMIT_SHA}']
 
