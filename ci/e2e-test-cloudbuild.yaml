@@ -36,6 +36,7 @@ steps:
       - ${_TEST_CLUSTER_LOCATION}
       - ${_REGISTRY}
       - ${_GS_TEST_IMAGE}
+      - ${_PARENT_COMMIT_SHA}
     id: e2e-feature-gates
     waitFor:
       - build-e2e
@@ -51,6 +52,7 @@ steps:
       - ${_TEST_CLUSTER_LOCATION}
       - ${_REGISTRY}
       - ${_GS_TEST_IMAGE}
+      - ${_PARENT_COMMIT_SHA}
     id: e2e-stable
     waitFor: [e2e-feature-gates]
 tags:

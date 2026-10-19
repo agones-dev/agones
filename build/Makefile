@@ -68,6 +68,11 @@ KIND_CONTAINER_NAME=$(KIND_PROFILE)-control-plane
 # Game Server image to use while doing end-to-end tests
 GS_TEST_IMAGE ?= us-docker.pkg.dev/agones-images/examples/simple-game-server:0.44
 
+# Registry and tag of the example images used in the examples end-to-end tests.
+# If EXAMPLE_IMAGE_TAG is empty, the published example images are used.
+EXAMPLE_IMAGE_REGISTRY ?= us-docker.pkg.dev/agones-images/examples
+EXAMPLE_IMAGE_TAG ?=
+
 # Enable all beta feature gates. Keep in sync with `true` (beta) entries in pkg/util/runtime/features.go:featureDefaults
 BETA_FEATURE_GATES ?= "CountsAndLists=true&GKEAutopilotExtendedDurationPods=true&ScheduledAutoscaler=true&SidecarContainers=true&FleetAutoscaleRequestMetaData=true"
 
@@ -347,6 +352,8 @@ test-e2e-integration: GAMESERVERS_NAMESPACE ?= ""
 test-e2e-integration: GO_E2E_TEST_INTEGRATION_ARGS ?=\
   --cloud-product=$(CLOUD_PRODUCT) \
   --gameserver-image=$(GS_TEST_IMAGE) \
+  --example-image-registry=$(EXAMPLE_IMAGE_REGISTRY) \
+  --example-image-tag=$(EXAMPLE_IMAGE_TAG) \
   --pullsecret=$(IMAGE_PULL_SECRET) \
   --feature-gates=$(FEATURE_GATES) \
   --namespace=$(GAMESERVERS_NAMESPACE)
