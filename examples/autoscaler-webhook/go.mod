@@ -1,6 +1,6 @@
 module autoscaler-webhook
 
-go 1.26.5
+go 1.26
 
 require agones.dev/agones v1.60.0
 

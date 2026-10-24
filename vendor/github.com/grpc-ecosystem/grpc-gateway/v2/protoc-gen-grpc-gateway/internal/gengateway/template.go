@@ -23,6 +23,7 @@ type param struct {
 	AllowPatchFeature  bool
 	OmitPackageDoc     bool
 	UseOpaqueAPI       bool
+	StrictDeepWildcard bool
 }
 
 type binding struct {
@@ -174,6 +175,7 @@ type trailerParams struct {
 	UseRequestContext  bool
 	RegisterFuncSuffix string
 	UseOpaqueAPI       bool
+	StrictDeepWildcard bool
 }
 
 func applyTemplate(p param, reg *descriptor.Registry) (string, error) {
@@ -238,6 +240,7 @@ func applyTemplate(p param, reg *descriptor.Registry) (string, error) {
 		UseRequestContext:  p.UseRequestContext,
 		RegisterFuncSuffix: p.RegisterFuncSuffix,
 		UseOpaqueAPI:       p.UseOpaqueAPI,
+		StrictDeepWildcard: p.StrictDeepWildcard,
 	}
 	// Local
 	if err := localTrailerTemplate.Execute(w, tp); err != nil {
@@ -477,10 +480,12 @@ var filter_{{ .Method.Service.GetName }}_{{ .Method.GetName }}_{{ .Index }} = {{
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", {{ $param | printf "%q"}}, err)
 	}
 {{- else -}}
+	{{- if not $UseOpaqueAPI }}
 	{{- $protoReq := $param.AssignableExprPrep "protoReq" $binding.Method.Service.File.GoPkg.Path -}}
 	{{- if ne "" $protoReq }}
 	{{ printf "%s" $protoReq }}
 	{{- end}}
+	{{- end }}
 	{{- if $UseOpaqueAPI }}
 	converted{{ $param.FieldPath.String | camelIdentifier }}, err := {{ $param.ConvertFuncExpr }}(val{{ if $param.IsRepeated }}, {{ $binding.Registry.GetRepeatedPathParamSeparator | printf "%c" | printf "%q" }}{{ end }})
 	if err != nil {
@@ -711,10 +716,12 @@ func local_request_{{ .Method.Service.GetName }}_{{ .Method.GetName }}_{{ .Index
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", {{ $param | printf "%q"}}, err)
 	}
 {{- else}}
+	{{- if not $UseOpaqueAPI }}
 	{{- $protoReq := $param.AssignableExprPrep "protoReq" $binding.Method.Service.File.GoPkg.Path -}}
 	{{- if ne "" $protoReq }}
 	{{ printf "%s" $protoReq }}
 	{{- end}}
+	{{- end }}
 	{{- if $UseOpaqueAPI }}
 	converted{{ $param.FieldPath.String | camelIdentifier }}, err := {{ $param.ConvertFuncExpr }}(val{{ if $param.IsRepeated }}, {{ $binding.Registry.GetRepeatedPathParamSeparator | printf "%c" | printf "%q" }}{{ end }})
 	if err != nil {
@@ -936,7 +943,7 @@ func (m response_{{ $svc.GetName }}_{{ $m.GetName }}_{{ $b.Index }}) XXX_Respons
 var (
 	{{- range $m := $svc.Methods }}
 	{{- range $b := $m.Bindings }}
-	pattern_{{ $svc.GetName }}_{{ $m.GetName }}_{{ $b.Index }} = runtime.MustPattern(runtime.NewPattern({{ $b.PathTmpl.Version }}, {{ $b.PathTmpl.OpCodes | printf "%#v" }}, {{ $b.PathTmpl.Pool | printf "%#v" }}, {{ $b.PathTmpl.Verb | printf "%q" }}))
+	pattern_{{ $svc.GetName }}_{{ $m.GetName }}_{{ $b.Index }} = runtime.MustPattern(runtime.NewPattern{{ if $.StrictDeepWildcard }}WithOptions{{ end }}({{ $b.PathTmpl.Version }}, {{ $b.PathTmpl.OpCodes | printf "%#v" }}, {{ $b.PathTmpl.Pool | printf "%#v" }}, {{ $b.PathTmpl.Verb | printf "%q" }}{{ if $.StrictDeepWildcard }}, runtime.WithStrictDeepWildcard(){{ end }}))
 	{{- end }}
 	{{- end }}
 )
