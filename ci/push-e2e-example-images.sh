@@ -53,6 +53,7 @@ push_example() {
     echo "${src} exists, skipping build"
   else
     echo "${src} not found, building"
+    # Only build and push linux amd64 images for the moment. We don't have the infrastructure to test arm64 or windows in CI at the moment.
     make -C "${root_path}/examples/${dir}" push REPOSITORY="${REGISTRY}" "${version_var}=src-${hash}" WITH_WINDOWS=0 WITH_ARM64=0
   fi
 
