@@ -266,12 +266,12 @@ func (c *Controller) enqueueGameServerBasedOnState(item any) {
 }
 
 // fastRateLimiter returns a fast rate limiter, without exponential back-off.
-func fastRateLimiter() workqueue.TypedRateLimiter[any] {
+func fastRateLimiter() workqueue.TypedRateLimiter[string] {
 	const numFastRetries = 5
 	const fastDelay = 20 * time.Millisecond  // first few retries up to 'numFastRetries' are fast
 	const slowDelay = 500 * time.Millisecond // subsequent retries are slow
 
-	return workqueue.NewTypedItemFastSlowRateLimiter[any](fastDelay, slowDelay, numFastRetries)
+	return workqueue.NewTypedItemFastSlowRateLimiter[string](fastDelay, slowDelay, numFastRetries)
 }
 
 // creationMutationHandler is the handler for the mutating webhook that sets the
@@ -782,7 +782,7 @@ func (c *Controller) sidecar(gs *agonesv1.GameServer) corev1.Container {
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path: "/healthz",
-					Port: intstr.FromInt(8080),
+					Port: intstr.FromInt32(8080),
 				},
 			},
 			InitialDelaySeconds: 3,
@@ -849,7 +849,7 @@ func (c *Controller) addGameServerHealthCheck(gs *agonesv1.GameServer, pod *core
 				ProbeHandler: corev1.ProbeHandler{
 					HTTPGet: &corev1.HTTPGetAction{
 						Path: "/gshealthz",
-						Port: intstr.FromInt(8080),
+						Port: intstr.FromInt32(8080),
 					},
 				},
 				// The sidecar relies on kubelet to delay by InitialDelaySeconds after the

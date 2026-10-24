@@ -83,7 +83,7 @@ func validateName(c crd, fldPath *field.Path) field.ErrorList {
 	name := c.GetName()
 	// make sure the Name of a Fleet does not oversize the Label size in GSS and GS
 	if len(name) > validation.LabelValueMaxLength {
-		allErrs = append(allErrs, field.TooLongMaxLength(fldPath.Child("name"), name, 63))
+		allErrs = append(allErrs, field.TooLong(fldPath.Child("name"), name, 63))
 	}
 	return allErrs
 }

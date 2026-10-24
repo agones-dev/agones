@@ -525,7 +525,7 @@ func (c *Controller) rollingUpdateActive(fleet *agonesv1.Fleet, active *agonesv1
 		return fleet.LowerBoundReplicas(fleet.Spec.Replicas - sumAllocated), nil
 	}
 
-	r, err := intstr.GetValueFromIntOrPercent(fleet.Spec.Strategy.RollingUpdate.MaxSurge, int(fleet.Spec.Replicas), true)
+	r, err := intstr.GetScaledValueFromIntOrPercent(fleet.Spec.Strategy.RollingUpdate.MaxSurge, int(fleet.Spec.Replicas), true)
 	if err != nil {
 		return 0, c.errs.Wrapf(err, "error parsing MaxSurge value: %s", fleet.ObjectMeta.Name)
 	}

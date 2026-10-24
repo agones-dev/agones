@@ -165,7 +165,7 @@ func TestComputeDesiredFleetSize(t *testing.T) {
 			policy: autoscalingv1.FleetAutoscalerPolicy{
 				Type: autoscalingv1.BufferPolicyType,
 				Buffer: &autoscalingv1.BufferPolicy{
-					BufferSize:  intstr.FromInt(20),
+					BufferSize:  intstr.FromInt32(20),
 					MaxReplicas: 100,
 				},
 			},
@@ -184,7 +184,7 @@ func TestComputeDesiredFleetSize(t *testing.T) {
 			policy: autoscalingv1.FleetAutoscalerPolicy{
 				Type: "",
 				Buffer: &autoscalingv1.BufferPolicy{
-					BufferSize:  intstr.FromInt(20),
+					BufferSize:  intstr.FromInt32(20),
 					MaxReplicas: 100,
 				},
 			},
@@ -261,7 +261,7 @@ func TestApplyBufferPolicy(t *testing.T) {
 			statusAllocatedReplicas: 40,
 			statusReadyReplicas:     10,
 			buffer: &autoscalingv1.BufferPolicy{
-				BufferSize:  intstr.FromInt(20),
+				BufferSize:  intstr.FromInt32(20),
 				MaxReplicas: 100,
 			},
 			expected: expected{
@@ -277,7 +277,7 @@ func TestApplyBufferPolicy(t *testing.T) {
 			statusAllocatedReplicas: 40,
 			statusReadyReplicas:     10,
 			buffer: &autoscalingv1.BufferPolicy{
-				BufferSize:  intstr.FromInt(20),
+				BufferSize:  intstr.FromInt32(20),
 				MinReplicas: 65,
 				MaxReplicas: 100,
 			},
@@ -294,7 +294,7 @@ func TestApplyBufferPolicy(t *testing.T) {
 			statusAllocatedReplicas: 40,
 			statusReadyReplicas:     10,
 			buffer: &autoscalingv1.BufferPolicy{
-				BufferSize:  intstr.FromInt(20),
+				BufferSize:  intstr.FromInt32(20),
 				MinReplicas: 0,
 				MaxReplicas: 55,
 			},
@@ -352,7 +352,7 @@ func TestApplyBufferPolicy(t *testing.T) {
 			expected: expected{
 				replicas: 0,
 				limited:  false,
-				err:      "invalid value for IntOrString: invalid value \"asd\": strconv.Atoi: parsing \"asd\": invalid syntax",
+				err:      "invalid value for IntOrString: invalid type: string is not a percentage",
 			},
 		},
 	}
@@ -423,6 +423,22 @@ func TestApplyWebhookPolicy(t *testing.T) {
 			statusReadyReplicas:     40,
 			expected: expected{
 				replicas: 50,
+				limited:  false,
+				err:      "",
+			},
+		},
+		{
+			description: "Scale down in progress, no scaling",
+			webhookPolicy: &autoscalingv1.URLConfiguration{
+				Service: nil,
+				URL:     &(server.URL),
+			},
+			specReplicas:            10,
+			statusReplicas:          20,
+			statusAllocatedReplicas: 14,
+			statusReadyReplicas:     6,
+			expected: expected{
+				replicas: 10,
 				limited:  false,
 				err:      "",
 			},
@@ -1001,7 +1017,7 @@ func TestApplyCounterPolicy(t *testing.T) {
 				Key:         "gamers",
 				MaxCapacity: 100,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(10),
+				BufferSize:  intstr.FromInt32(10),
 			},
 			want: expected{
 				replicas: 2,
@@ -1028,7 +1044,7 @@ func TestApplyCounterPolicy(t *testing.T) {
 				Key:         "rooms",
 				MaxCapacity: 100,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(10),
+				BufferSize:  intstr.FromInt32(10),
 			},
 			want: expected{
 				replicas: 0,
@@ -1055,7 +1071,7 @@ func TestApplyCounterPolicy(t *testing.T) {
 				Key:         "rooms",
 				MaxCapacity: 100,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(10),
+				BufferSize:  intstr.FromInt32(10),
 			},
 			want: expected{
 				replicas: 0,
@@ -1083,7 +1099,7 @@ func TestApplyCounterPolicy(t *testing.T) {
 				Key:         "rooms",
 				MaxCapacity: 100,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(10),
+				BufferSize:  intstr.FromInt32(10),
 			},
 			gsList: []agonesv1.GameServer{
 				{ObjectMeta: metav1.ObjectMeta{
@@ -1205,7 +1221,7 @@ func TestApplyCounterPolicy(t *testing.T) {
 				Key:         "rooms",
 				MaxCapacity: 100,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(10),
+				BufferSize:  intstr.FromInt32(10),
 			},
 			want: expected{
 				replicas: 12,
@@ -1231,7 +1247,7 @@ func TestApplyCounterPolicy(t *testing.T) {
 				Key:         "rooms",
 				MaxCapacity: 100,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(25),
+				BufferSize:  intstr.FromInt32(25),
 			},
 			want: expected{
 				replicas: 9,
@@ -1257,7 +1273,7 @@ func TestApplyCounterPolicy(t *testing.T) {
 				Key:         "rooms",
 				MaxCapacity: 100,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(10),
+				BufferSize:  intstr.FromInt32(10),
 			},
 			want: expected{
 				replicas: 10,
@@ -1283,7 +1299,7 @@ func TestApplyCounterPolicy(t *testing.T) {
 				Key:         "rooms",
 				MaxCapacity: 700,
 				MinCapacity: 70,
-				BufferSize:  intstr.FromInt(10),
+				BufferSize:  intstr.FromInt32(10),
 			},
 			want: expected{
 				replicas: 10,
@@ -1310,7 +1326,7 @@ func TestApplyCounterPolicy(t *testing.T) {
 				Key:         "rooms",
 				MaxCapacity: 700,
 				MinCapacity: 7,
-				BufferSize:  intstr.FromInt(1),
+				BufferSize:  intstr.FromInt32(1),
 			},
 			gsList: []agonesv1.GameServer{
 				{ObjectMeta: metav1.ObjectMeta{
@@ -1381,7 +1397,7 @@ func TestApplyCounterPolicy(t *testing.T) {
 				Key:         "rooms",
 				MaxCapacity: 700,
 				MinCapacity: 70,
-				BufferSize:  intstr.FromInt(10),
+				BufferSize:  intstr.FromInt32(10),
 			},
 			want: expected{
 				replicas: 10,
@@ -1407,7 +1423,7 @@ func TestApplyCounterPolicy(t *testing.T) {
 				Key:         "rooms",
 				MaxCapacity: 100,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(10),
+				BufferSize:  intstr.FromInt32(10),
 			},
 			want: expected{
 				replicas: 14,
@@ -1434,7 +1450,7 @@ func TestApplyCounterPolicy(t *testing.T) {
 				Key:         "rooms",
 				MaxCapacity: 2,
 				MinCapacity: 0,
-				BufferSize:  intstr.FromInt(1),
+				BufferSize:  intstr.FromInt32(1),
 			},
 			gsList: []agonesv1.GameServer{
 				{ObjectMeta: metav1.ObjectMeta{
@@ -1472,7 +1488,7 @@ func TestApplyCounterPolicy(t *testing.T) {
 				Key:         "rooms",
 				MaxCapacity: 5,
 				MinCapacity: 1,
-				BufferSize:  intstr.FromInt(5),
+				BufferSize:  intstr.FromInt32(5),
 			},
 			gsList: []agonesv1.GameServer{
 				{ObjectMeta: metav1.ObjectMeta{
@@ -1620,7 +1636,7 @@ func TestApplyCounterPolicy(t *testing.T) {
 				Key:         "players",
 				MaxCapacity: 100,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(5),
+				BufferSize:  intstr.FromInt32(5),
 			},
 			gsList: []agonesv1.GameServer{
 				{ObjectMeta: metav1.ObjectMeta{
@@ -1742,7 +1758,7 @@ func TestApplyListPolicy(t *testing.T) {
 				Key:         "gamers",
 				MaxCapacity: 100,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(10),
+				BufferSize:  intstr.FromInt32(10),
 			},
 			want: expected{
 				replicas: 0,
@@ -1769,7 +1785,7 @@ func TestApplyListPolicy(t *testing.T) {
 				Key:         "gamers",
 				MaxCapacity: 100,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(10),
+				BufferSize:  intstr.FromInt32(10),
 			},
 			want: expected{
 				replicas: 0,
@@ -1793,7 +1809,7 @@ func TestApplyListPolicy(t *testing.T) {
 				Key:         "gamers",
 				MaxCapacity: 100,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(10),
+				BufferSize:  intstr.FromInt32(10),
 			},
 			want: expected{
 				replicas: 2,
@@ -1820,7 +1836,7 @@ func TestApplyListPolicy(t *testing.T) {
 				Key:         "gamers",
 				MaxCapacity: 100,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(5),
+				BufferSize:  intstr.FromInt32(5),
 			},
 			want: expected{
 				replicas: 14,
@@ -1847,7 +1863,7 @@ func TestApplyListPolicy(t *testing.T) {
 				Key:         "gamers",
 				MaxCapacity: 25,
 				MinCapacity: 15,
-				BufferSize:  intstr.FromInt(15),
+				BufferSize:  intstr.FromInt32(15),
 			},
 			want: expected{
 				replicas: 5,
@@ -1875,7 +1891,7 @@ func TestApplyListPolicy(t *testing.T) {
 				Key:         "gamers",
 				MaxCapacity: 70,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(10),
+				BufferSize:  intstr.FromInt32(10),
 			},
 			gsList: []agonesv1.GameServer{
 				{ObjectMeta: metav1.ObjectMeta{
@@ -1992,7 +2008,7 @@ func TestApplyListPolicy(t *testing.T) {
 				Key:         "gamers",
 				MaxCapacity: 30,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(5),
+				BufferSize:  intstr.FromInt32(5),
 			},
 			want: expected{
 				replicas: 10,
@@ -2020,7 +2036,7 @@ func TestApplyListPolicy(t *testing.T) {
 				Key:         "gamers",
 				MaxCapacity: 100,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(1),
+				BufferSize:  intstr.FromInt32(1),
 			},
 			gsList: []agonesv1.GameServer{
 				{ObjectMeta: metav1.ObjectMeta{
@@ -2386,7 +2402,7 @@ func TestApplyListPolicyFlapping(t *testing.T) {
 		Key:         "players",
 		MaxCapacity: 300,
 		MinCapacity: 120,
-		BufferSize:  intstr.FromInt(120),
+		BufferSize:  intstr.FromInt32(120),
 	}
 
 	nc := map[string]gameservers.NodeCount{
@@ -2536,7 +2552,7 @@ func TestApplySchedulePolicy(t *testing.T) {
 	bufferPolicy := autoscalingv1.FleetAutoscalerPolicy{
 		Type: autoscalingv1.BufferPolicyType,
 		Buffer: &autoscalingv1.BufferPolicy{
-			BufferSize:  intstr.FromInt(1),
+			BufferSize:  intstr.FromInt32(1),
 			MinReplicas: 3,
 			MaxReplicas: 10,
 		},
@@ -2775,7 +2791,7 @@ func TestApplyChainPolicy(t *testing.T) {
 				Policy: autoscalingv1.FleetAutoscalerPolicy{
 					Type: autoscalingv1.BufferPolicyType,
 					Buffer: &autoscalingv1.BufferPolicy{
-						BufferSize:  intstr.FromInt(1),
+						BufferSize:  intstr.FromInt32(1),
 						MinReplicas: 10,
 						MaxReplicas: 10,
 					},
@@ -2799,7 +2815,7 @@ func TestApplyChainPolicy(t *testing.T) {
 				Policy: autoscalingv1.FleetAutoscalerPolicy{
 					Type: autoscalingv1.BufferPolicyType,
 					Buffer: &autoscalingv1.BufferPolicy{
-						BufferSize:  intstr.FromInt(1),
+						BufferSize:  intstr.FromInt32(1),
 						MinReplicas: 3,
 						MaxReplicas: 10,
 					},
@@ -2826,7 +2842,7 @@ func TestApplyChainPolicy(t *testing.T) {
 		FleetAutoscalerPolicy: autoscalingv1.FleetAutoscalerPolicy{
 			Type: autoscalingv1.BufferPolicyType,
 			Buffer: &autoscalingv1.BufferPolicy{
-				BufferSize:  intstr.FromInt(1),
+				BufferSize:  intstr.FromInt32(1),
 				MinReplicas: 6,
 				MaxReplicas: 10,
 			},

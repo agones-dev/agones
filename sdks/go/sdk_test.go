@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/metadata"
 
 	"agones.dev/agones/pkg/sdk"
@@ -252,4 +253,54 @@ func (*watchMock) SendMsg(_ any) error {
 
 func (*watchMock) RecvMsg(_ any) error {
 	panic("implement me")
+}
+
+func TestWaitForReady(t *testing.T) {
+	t.Run("reconnects when Connecting falls back to Idle", func(t *testing.T) {
+		conn := &fakeConnectivity{state: connectivity.Idle, next: []connectivity.State{connectivity.Idle, connectivity.Ready}}
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		assert.NoError(t, waitForReady(ctx, conn))
+		assert.Equal(t, 2, conn.connects)
+	})
+
+	t.Run("returns the context error if never Ready", func(t *testing.T) {
+		conn := &fakeConnectivity{state: connectivity.Idle}
+		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+		defer cancel()
+
+		assert.ErrorIs(t, waitForReady(ctx, conn), context.DeadlineExceeded)
+	})
+}
+
+// fakeConnectivity only leaves Idle when Connect is called, as a real
+// *grpc.ClientConn does. From Connecting it moves to each state in next.
+type fakeConnectivity struct {
+	state    connectivity.State
+	next     []connectivity.State
+	connects int
+}
+
+func (f *fakeConnectivity) Connect() {
+	f.connects++
+	if f.state == connectivity.Idle {
+		f.state = connectivity.Connecting
+	}
+}
+
+func (f *fakeConnectivity) GetState() connectivity.State {
+	return f.state
+}
+
+func (f *fakeConnectivity) WaitForStateChange(ctx context.Context, sourceState connectivity.State) bool {
+	if f.state != sourceState {
+		return true
+	}
+	if f.state == connectivity.Connecting && len(f.next) > 0 {
+		f.state, f.next = f.next[0], f.next[1:]
+		return true
+	}
+	<-ctx.Done()
+	return false
 }

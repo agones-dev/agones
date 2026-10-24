@@ -96,7 +96,7 @@ func TestAllocatorWithDeprecatedRequired(t *testing.T) {
 		helper.ValidateAllocatorResponse(t, response)
 
 		// let's do a re-allocation
-		//nolint:staticcheck
+		//nolint:staticcheck // SA1019: covers the deprecated PreferredGameServerSelectors field
 		request.PreferredGameServerSelectors[0].GameServerState = pb.GameServerSelector_ALLOCATED
 		allocatedResponse, err := grpcClient.Allocate(ctx, request)
 		require.NoError(c, err)

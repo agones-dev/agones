@@ -39,7 +39,7 @@ func ConvertAllocationRequestToGSA(in *pb.AllocationRequest) *allocationv1.GameS
 			Namespace: in.GetNamespace(),
 		},
 		Spec: allocationv1.GameServerAllocationSpec{
-			//nolint:staticcheck
+			//nolint:staticcheck // SA1019: still accepted from clients that predate gameServerSelectors
 			Preferred:  convertGameServerSelectorsToInternalGameServerSelectors(in.GetPreferredGameServerSelectors()),
 			Selectors:  convertGameServerSelectorsToInternalGameServerSelectors(in.GetGameServerSelectors()),
 			Scheduling: convertAllocationSchedulingToGSASchedulingStrategy(in.GetScheduling()),
@@ -68,9 +68,9 @@ func ConvertAllocationRequestToGSA(in *pb.AllocationRequest) *allocationv1.GameS
 		}
 	}
 
-	//nolint:staticcheck
+	//nolint:staticcheck // SA1019: still accepted from clients that predate gameServerSelectors
 	if selector := convertGameServerSelectorToInternalGameServerSelector(in.GetRequiredGameServerSelector()); selector != nil {
-		//nolint:staticcheck
+		//nolint:staticcheck // SA1019: still accepted from clients that predate selectors
 		gsa.Spec.Required = *selector
 	}
 
@@ -115,11 +115,11 @@ func ConvertGSAToAllocationRequest(in *allocationv1.GameServerAllocation) *pb.Al
 
 	l := len(out.GetGameServerSelectors())
 	if l > 0 {
-		//nolint:staticcheck
 		// Sets all but the last GameServerSelector as PreferredGameServerSelectors
+		//nolint:staticcheck // SA1019: double written for clusters that predate gameServerSelectors
 		out.PreferredGameServerSelectors = out.GetGameServerSelectors()[:l-1]
-		//nolint:staticcheck
 		// Sets the last GameServerSelector as RequiredGameServerSelector
+		//nolint:staticcheck // SA1019: double written for clusters that predate gameServerSelectors
 		out.RequiredGameServerSelector = out.GetGameServerSelectors()[l-1]
 	}
 

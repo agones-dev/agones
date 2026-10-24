@@ -126,6 +126,7 @@ linters:
     staticcheck:
       # This repeats the upstream default list, plus QF1008. Overriding `checks`
       # replaces the default wholesale, so the defaults must be restated.
+      # `all` includes SA1019, which reports use of deprecated identifiers.
       checks:
         - all
         - -ST1000

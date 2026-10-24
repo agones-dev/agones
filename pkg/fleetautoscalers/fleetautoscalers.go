@@ -373,7 +373,7 @@ func applyWebhookPolicy(ctx context.Context, state *fasState, w *autoscalingv1.U
 		return faResp.Response.Replicas, false, nil
 	}
 
-	return f.Status.Replicas, false, nil
+	return f.Spec.Replicas, false, nil
 }
 
 func applyBufferPolicy(_ *fasState, b *autoscalingv1.BufferPolicy, f *agonesv1.Fleet, fasLog *FasLogger) (int32, bool, error) {
@@ -389,7 +389,7 @@ func applyBufferPolicy(_ *fasState, b *autoscalingv1.BufferPolicy, f *agonesv1.F
 		// Right now there are 20%, so we must increase the fleet until we reach 30%
 		// To compute the new size, we start from the other end: if ready must be 30%
 		// it means that allocated must be 70% and adjust the fleet size to make that true.
-		bufferPercent, err := intstr.GetValueFromIntOrPercent(&b.BufferSize, 100, true)
+		bufferPercent, err := intstr.GetScaledValueFromIntOrPercent(&b.BufferSize, 100, true)
 		if err != nil {
 			return 0, false, err
 		}
@@ -514,7 +514,7 @@ func applyCounterOrListPolicy(c *autoscalingv1.CounterPolicy, l *autoscalingv1.L
 		buffer = int64(bufferSize.IntValue())
 	// Desired replicas based on BufferSize specified as a percent (i.e. 5%)
 	case intstr.String:
-		bufferPercent, err := intstr.GetValueFromIntOrPercent(&bufferSize, 100, isCounter)
+		bufferPercent, err := intstr.GetScaledValueFromIntOrPercent(&bufferSize, 100, isCounter)
 		if err != nil {
 			return 0, false, err
 		}
