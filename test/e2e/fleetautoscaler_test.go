@@ -72,7 +72,7 @@ func TestAutoscalerBasicFunctions(t *testing.T) {
 	fleets := stable.Fleets(framework.Namespace)
 	flt, err := fleets.Create(ctx, defaultFleet(framework.Namespace), metav1.CreateOptions{})
 	if assert.NoError(t, err) {
-		defer fleets.Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+		defer fleets.Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 	}
 
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
@@ -81,21 +81,21 @@ func TestAutoscalerBasicFunctions(t *testing.T) {
 	defaultFas := defaultFleetAutoscaler(flt, framework.Namespace)
 	fas, err := fleetautoscalers.Create(ctx, defaultFas, metav1.CreateOptions{})
 	require.NoError(t, err)
-	defer fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+	defer fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 	// the fleet autoscaler should scale the fleet up now up to BufferSize
 	bufferSize := int32(fas.Spec.Policy.Buffer.BufferSize.IntValue())
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(bufferSize))
 
 	// patch the autoscaler to increase MinReplicas and watch the fleet scale up
-	fas, err = patchFleetAutoscaler(ctx, fas, intstr.FromInt(int(bufferSize)), bufferSize+2, fas.Spec.Policy.Buffer.MaxReplicas)
+	fas, err = patchFleetAutoscaler(ctx, fas, intstr.FromInt32(bufferSize), bufferSize+2, fas.Spec.Policy.Buffer.MaxReplicas)
 	assert.NoError(t, err, "could not patch fleetautoscaler")
 
 	// min replicas is now higher than buffer size, will scale to that level
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(fas.Spec.Policy.Buffer.MinReplicas))
 
 	// patch the autoscaler to remove MinReplicas and watch the fleet scale down to bufferSize
-	fas, err = patchFleetAutoscaler(ctx, fas, intstr.FromInt(int(bufferSize)), 0, fas.Spec.Policy.Buffer.MaxReplicas)
+	fas, err = patchFleetAutoscaler(ctx, fas, intstr.FromInt32(bufferSize), 0, fas.Spec.Policy.Buffer.MaxReplicas)
 	assert.NoError(t, err, "could not patch fleetautoscaler")
 
 	bufferSize = int32(fas.Spec.Policy.Buffer.BufferSize.IntValue())
@@ -127,7 +127,7 @@ func TestAutoscalerBasicFunctions(t *testing.T) {
 	})
 
 	// patch autoscaler to a maxReplicas count equal to current replicas count
-	_, err = patchFleetAutoscaler(ctx, fas, intstr.FromInt(1), 1, 1)
+	_, err = patchFleetAutoscaler(ctx, fas, intstr.FromInt32(1), 1, 1)
 	require.NoError(t, err, "could not patch fleetautoscaler")
 
 	// check that we are not able to scale
@@ -154,7 +154,7 @@ func TestFleetAutoscalerDefaultSyncInterval(t *testing.T) {
 	fleets := stable.Fleets(framework.Namespace)
 	flt, err := fleets.Create(ctx, defaultFleet(framework.Namespace), metav1.CreateOptions{})
 	if assert.NoError(t, err) {
-		defer fleets.Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+		defer fleets.Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 	}
 
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
@@ -171,7 +171,7 @@ func TestFleetAutoscalerDefaultSyncInterval(t *testing.T) {
 			Policy: autoscalingv1.FleetAutoscalerPolicy{
 				Type: autoscalingv1.BufferPolicyType,
 				Buffer: &autoscalingv1.BufferPolicy{
-					BufferSize:  intstr.FromInt(3),
+					BufferSize:  intstr.FromInt32(3),
 					MaxReplicas: 10,
 				},
 			},
@@ -179,7 +179,7 @@ func TestFleetAutoscalerDefaultSyncInterval(t *testing.T) {
 	}
 	fas, err := fleetautoscalers.Create(ctx, defaultFas, metav1.CreateOptions{})
 	if assert.NoError(t, err) {
-		defer fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+		defer fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 	} else {
 		// if we could not create the autoscaler, their is no point going further
 		logrus.Error("Failed creating autoscaler, aborting TestFleetAutoscalerDefaultSyncInterval")
@@ -202,8 +202,8 @@ func TestFleetAutoScalerRollingUpdate(t *testing.T) {
 	fleets := stable.Fleets(framework.Namespace)
 	flt := defaultFleet(framework.Namespace)
 	flt.Spec.Replicas = 2
-	maxSurge := 1
-	rollingUpdateCount := intstr.FromInt(maxSurge)
+	maxSurge := int32(1)
+	rollingUpdateCount := intstr.FromInt32(maxSurge)
 
 	flt.Spec.Strategy.RollingUpdate = &appsv1.RollingUpdateDeployment{}
 	// Set both MaxSurge and MaxUnavaible to 1
@@ -212,21 +212,21 @@ func TestFleetAutoScalerRollingUpdate(t *testing.T) {
 
 	flt, err := fleets.Create(ctx, flt, metav1.CreateOptions{})
 	require.NoError(t, err)
-	defer fleets.Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+	defer fleets.Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
 
 	fleetautoscalers := framework.AgonesClient.AutoscalingV1().FleetAutoscalers(framework.Namespace)
 
 	// Create FleetAutoScaler with 7 Buffer and MinReplicas
-	targetScale := 7
+	targetScale := int32(7)
 	fas := defaultFleetAutoscaler(flt, framework.Namespace)
-	fas.Spec.Policy.Buffer.BufferSize = intstr.FromInt(targetScale)
-	fas.Spec.Policy.Buffer.MinReplicas = int32(targetScale)
+	fas.Spec.Policy.Buffer.BufferSize = intstr.FromInt32(targetScale)
+	fas.Spec.Policy.Buffer.MinReplicas = targetScale
 	fas, err = fleetautoscalers.Create(ctx, fas, metav1.CreateOptions{})
 	require.NoError(t, err)
-	defer fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
-	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(int32(targetScale)))
+	defer fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
+	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(targetScale))
 
 	// get the Status of the fleetautoscaler
 	fas, err = framework.AgonesClient.AutoscalingV1().FleetAutoscalers(fas.ObjectMeta.Namespace).Get(ctx, fas.Name, metav1.GetOptions{})
@@ -288,7 +288,7 @@ func TestAutoscalerStressCreate(t *testing.T) {
 	fleets := alpha1.Fleets(framework.Namespace)
 	flt, err := fleets.Create(ctx, defaultFleet(framework.Namespace), metav1.CreateOptions{})
 	if assert.NoError(t, err) {
-		defer fleets.Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+		defer fleets.Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 	}
 
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
@@ -302,7 +302,7 @@ func TestAutoscalerStressCreate(t *testing.T) {
 		bufferSize := r.Int31n(5)
 		minReplicas := r.Int31n(5)
 		maxReplicas := r.Int31n(8)
-		fas.Spec.Policy.Buffer.BufferSize = intstr.FromInt(int(bufferSize))
+		fas.Spec.Policy.Buffer.BufferSize = intstr.FromInt32(bufferSize)
 		fas.Spec.Policy.Buffer.MinReplicas = minReplicas
 		fas.Spec.Policy.Buffer.MaxReplicas = maxReplicas
 
@@ -319,7 +319,7 @@ func TestAutoscalerStressCreate(t *testing.T) {
 			fas, err := fleetautoscalers.Create(ctx, fas, metav1.CreateOptions{})
 			if err == nil {
 				log.WithField("fas", fas.ObjectMeta.Name).Info("Created!")
-				defer fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+				defer fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 				require.True(t, valid,
 					"FleetAutoscaler created even if the parameters are NOT valid: %d %d %d", bufferSize, fas.Spec.Policy.Buffer.MinReplicas, fas.Spec.Policy.Buffer.MaxReplicas)
 
@@ -372,7 +372,7 @@ func defaultFleetAutoscaler(f *agonesv1.Fleet, namespace string) *autoscalingv1.
 			Policy: autoscalingv1.FleetAutoscalerPolicy{
 				Type: autoscalingv1.BufferPolicyType,
 				Buffer: &autoscalingv1.BufferPolicy{
-					BufferSize:  intstr.FromInt(3),
+					BufferSize:  intstr.FromInt32(3),
 					MaxReplicas: 10,
 				},
 			},
@@ -394,13 +394,13 @@ func TestAutoscalerWebhook(t *testing.T) {
 	pod, svc := defaultAutoscalerWebhook(framework.Namespace, "false")
 	pod, err := framework.KubeClient.CoreV1().Pods(framework.Namespace).Create(ctx, pod, metav1.CreateOptions{})
 	require.NoError(t, err)
-	defer framework.KubeClient.CoreV1().Pods(framework.Namespace).Delete(ctx, pod.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+	defer framework.KubeClient.CoreV1().Pods(framework.Namespace).Delete(ctx, pod.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 	svc.ObjectMeta.Name = ""
 	svc.ObjectMeta.GenerateName = "test-service-"
 
 	svc, err = framework.KubeClient.CoreV1().Services(framework.Namespace).Create(ctx, svc, metav1.CreateOptions{})
 	require.NoError(t, err)
-	defer framework.KubeClient.CoreV1().Services(framework.Namespace).Delete(ctx, svc.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+	defer framework.KubeClient.CoreV1().Services(framework.Namespace).Delete(ctx, svc.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 	alpha1 := framework.AgonesClient.AgonesV1()
 	fleets := alpha1.Fleets(framework.Namespace)
@@ -409,7 +409,7 @@ func TestAutoscalerWebhook(t *testing.T) {
 	flt.Spec.Replicas = initialReplicasCount
 	flt, err = fleets.Create(ctx, flt, metav1.CreateOptions{})
 	require.NoError(t, err)
-	defer fleets.Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+	defer fleets.Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
 
@@ -417,7 +417,7 @@ func TestAutoscalerWebhook(t *testing.T) {
 	fas := defaultFleetAutoscaler(flt, framework.Namespace)
 	fas.Spec.Policy.Type = autoscalingv1.WebhookPolicyType
 	fas.Spec.Policy.Buffer = nil
-	path := "scale" //nolint:goconst
+	path := "scale"
 	fas.Spec.Policy.Webhook = &autoscalingv1.URLConfiguration{
 		Service: &admregv1.ServiceReference{
 			Name:      svc.ObjectMeta.Name,
@@ -427,7 +427,7 @@ func TestAutoscalerWebhook(t *testing.T) {
 	}
 	fas, err = fleetautoscalers.Create(ctx, fas, metav1.CreateOptions{})
 	require.NoError(t, err)
-	defer fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+	defer fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 	framework.CreateAndApplyAllocation(t, flt)
 	framework.AssertFleetCondition(t, flt, func(log *logrus.Entry, fleet *agonesv1.Fleet) bool {
@@ -520,7 +520,7 @@ func TestFleetAutoscalerTLSWebhook(t *testing.T) {
 	secrets := framework.KubeClient.CoreV1().Secrets(defaultNS)
 	secr, err = secrets.Create(ctx, secr.DeepCopy(), metav1.CreateOptions{})
 	if assert.NoError(t, err) {
-		defer secrets.Delete(ctx, secr.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+		defer secrets.Delete(ctx, secr.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 	}
 
 	pod, svc := defaultAutoscalerWebhook(defaultNS, "false")
@@ -539,7 +539,7 @@ func TestFleetAutoscalerTLSWebhook(t *testing.T) {
 	}}
 	pod, err = framework.KubeClient.CoreV1().Pods(defaultNS).Create(ctx, pod.DeepCopy(), metav1.CreateOptions{})
 	if assert.NoError(t, err) {
-		defer framework.KubeClient.CoreV1().Pods(defaultNS).Delete(ctx, pod.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+		defer framework.KubeClient.CoreV1().Pods(defaultNS).Delete(ctx, pod.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 	} else {
 		// if we could not create the webhook, there is no point going further
 		assert.FailNow(t, "Failed creating webhook pod, aborting TestTlsWebhook")
@@ -560,7 +560,7 @@ func TestFleetAutoscalerTLSWebhook(t *testing.T) {
 
 	svc, err = framework.KubeClient.CoreV1().Services(defaultNS).Create(ctx, svc.DeepCopy(), metav1.CreateOptions{})
 	if assert.NoError(t, err) {
-		defer framework.KubeClient.CoreV1().Services(defaultNS).Delete(ctx, svc.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+		defer framework.KubeClient.CoreV1().Services(defaultNS).Delete(ctx, svc.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 	} else {
 		// if we could not create the service, there is no point going further
 		assert.FailNow(t, "Failed creating service, aborting TestTlsWebhook")
@@ -573,7 +573,7 @@ func TestFleetAutoscalerTLSWebhook(t *testing.T) {
 	flt.Spec.Replicas = initialReplicasCount
 	flt, err = fleets.Create(ctx, flt.DeepCopy(), metav1.CreateOptions{})
 	if assert.NoError(t, err) {
-		defer fleets.Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+		defer fleets.Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 	}
 
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
@@ -594,7 +594,7 @@ func TestFleetAutoscalerTLSWebhook(t *testing.T) {
 	}
 	fas, err = fleetautoscalers.Create(ctx, fas.DeepCopy(), metav1.CreateOptions{})
 	if assert.NoError(t, err) {
-		defer fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+		defer fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 	} else {
 		// if we could not create the autoscaler, their is no point going further
 		assert.FailNow(t, "Failed creating autoscaler, aborting TestTlsWebhook")
@@ -627,13 +627,13 @@ func TestAutoscalerWebhookWithMetadata(t *testing.T) {
 	pod, svc := defaultAutoscalerWebhook(framework.Namespace, "true")
 	pod, err := framework.KubeClient.CoreV1().Pods(framework.Namespace).Create(ctx, pod, metav1.CreateOptions{})
 	require.NoError(t, err)
-	defer framework.KubeClient.CoreV1().Pods(framework.Namespace).Delete(ctx, pod.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+	defer framework.KubeClient.CoreV1().Pods(framework.Namespace).Delete(ctx, pod.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 	svc.ObjectMeta.Name = ""
 	svc.ObjectMeta.GenerateName = "test-service-"
 
 	svc, err = framework.KubeClient.CoreV1().Services(framework.Namespace).Create(ctx, svc, metav1.CreateOptions{})
 	require.NoError(t, err)
-	defer framework.KubeClient.CoreV1().Services(framework.Namespace).Delete(ctx, svc.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+	defer framework.KubeClient.CoreV1().Services(framework.Namespace).Delete(ctx, svc.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 	// Create Fleet with metadata annotation
 	alpha1 := framework.AgonesClient.AgonesV1()
@@ -646,7 +646,7 @@ func TestAutoscalerWebhookWithMetadata(t *testing.T) {
 	}
 	flt, err = alpha1.Fleets(framework.Namespace).Create(ctx, flt, metav1.CreateOptions{})
 	require.NoError(t, err)
-	defer alpha1.Fleets(framework.Namespace).Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+	defer alpha1.Fleets(framework.Namespace).Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(initialReplicasCount))
 
@@ -665,7 +665,7 @@ func TestAutoscalerWebhookWithMetadata(t *testing.T) {
 	}
 	fas, err = fleetautoscalers.Create(ctx, fas, metav1.CreateOptions{})
 	require.NoError(t, err)
-	defer fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+	defer fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 	// Trigger allocation to cause autoscaler logic to kick in
 	framework.CreateAndApplyAllocation(t, flt)
@@ -877,7 +877,7 @@ func TestCounterAutoscaler(t *testing.T) {
 
 	flt, err := client.Fleets(framework.Namespace).Create(ctx, flt.DeepCopy(), metav1.CreateOptions{})
 	require.NoError(t, err)
-	defer client.Fleets(framework.Namespace).Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+	defer client.Fleets(framework.Namespace).Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
 
 	fleetautoscalers := framework.AgonesClient.AutoscalingV1().FleetAutoscalers(framework.Namespace)
@@ -911,8 +911,8 @@ func TestCounterAutoscaler(t *testing.T) {
 			fas: counterFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.Counter = &autoscalingv1.CounterPolicy{
 					Key:         "players",
-					BufferSize:  intstr.FromInt(5), // Buffer refers to the available capacity (AggregateCapacity - AggregateCount)
-					MinCapacity: 10,                // Min and MaxCapacity refer to the total capacity aggregated across the fleet, NOT the available capacity
+					BufferSize:  intstr.FromInt32(5), // Buffer refers to the available capacity (AggregateCapacity - AggregateCount)
+					MinCapacity: 10,                  // Min and MaxCapacity refer to the total capacity aggregated across the fleet, NOT the available capacity
 					MaxCapacity: 100,
 				}
 			}),
@@ -923,7 +923,7 @@ func TestCounterAutoscaler(t *testing.T) {
 			fas: counterFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.Counter = &autoscalingv1.CounterPolicy{
 					Key:         "players",
-					BufferSize:  intstr.FromInt(25),
+					BufferSize:  intstr.FromInt32(25),
 					MinCapacity: 25,
 					MaxCapacity: 100,
 				}
@@ -935,7 +935,7 @@ func TestCounterAutoscaler(t *testing.T) {
 			fas: counterFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.Counter = &autoscalingv1.CounterPolicy{
 					Key:         "sessions",
-					BufferSize:  intstr.FromInt(5),
+					BufferSize:  intstr.FromInt32(5),
 					MinCapacity: 0,
 					MaxCapacity: 5,
 				}
@@ -947,7 +947,7 @@ func TestCounterAutoscaler(t *testing.T) {
 			fas: counterFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.Counter = &autoscalingv1.CounterPolicy{
 					Key:         "sessions",
-					BufferSize:  intstr.FromInt(1),
+					BufferSize:  intstr.FromInt32(1),
 					MinCapacity: 30,
 					MaxCapacity: 100,
 				}
@@ -959,7 +959,7 @@ func TestCounterAutoscaler(t *testing.T) {
 			fas: counterFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.Counter = &autoscalingv1.CounterPolicy{
 					Key:         "players",
-					BufferSize:  intstr.FromInt(10),
+					BufferSize:  intstr.FromInt32(10),
 					MinCapacity: 10,
 					MaxCapacity: 30,
 				}
@@ -971,7 +971,7 @@ func TestCounterAutoscaler(t *testing.T) {
 			fas: counterFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.Counter = &autoscalingv1.CounterPolicy{
 					Key:         "sessions",
-					BufferSize:  intstr.FromInt(5),
+					BufferSize:  intstr.FromInt32(5),
 					MinCapacity: 15,
 					MaxCapacity: 100,
 				}
@@ -983,7 +983,7 @@ func TestCounterAutoscaler(t *testing.T) {
 			fas: counterFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.Counter = &autoscalingv1.CounterPolicy{
 					Key:         "players",
-					BufferSize:  intstr.FromInt(25),
+					BufferSize:  intstr.FromInt32(25),
 					MinCapacity: 10,
 					MaxCapacity: 100,
 				}
@@ -1002,7 +1002,7 @@ func TestCounterAutoscaler(t *testing.T) {
 			assert.NoError(t, err)
 
 			framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(testCase.wantReplicas))
-			fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+			fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 			// Return to starting 3 replicas
 			framework.ScaleFleet(t, log, flt, 3)
@@ -1011,7 +1011,7 @@ func TestCounterAutoscaler(t *testing.T) {
 	}
 }
 
-// nolint:dupl  // Linter errors on lines are duplicate of TestListAutoscalerWithNoReplicas
+//nolint:dupl  // Linter errors on lines are duplicate of TestListAutoscalerWithNoReplicas
 func TestCounterAutoscalerWithNoReplicas(t *testing.T) {
 	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
 		t.SkipNow()
@@ -1031,7 +1031,7 @@ func TestCounterAutoscalerWithNoReplicas(t *testing.T) {
 
 	flt, err := client.Fleets(framework.Namespace).Create(ctx, flt.DeepCopy(), metav1.CreateOptions{})
 	require.NoError(t, err)
-	defer client.Fleets(framework.Namespace).Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+	defer client.Fleets(framework.Namespace).Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
 
 	fleetautoscalers := framework.AgonesClient.AutoscalingV1().FleetAutoscalers(framework.Namespace)
@@ -1064,7 +1064,7 @@ func TestCounterAutoscalerWithNoReplicas(t *testing.T) {
 			fas: counterFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.Counter = &autoscalingv1.CounterPolicy{
 					Key:         "games",
-					BufferSize:  intstr.FromInt(3),
+					BufferSize:  intstr.FromInt32(3),
 					MinCapacity: 16,
 					MaxCapacity: 100,
 				}
@@ -1084,7 +1084,7 @@ func TestCounterAutoscalerWithNoReplicas(t *testing.T) {
 			assert.NoError(t, err)
 
 			framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(testCase.wantReplicas))
-			fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+			fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 			// Return to starting 0 replicas
 			framework.ScaleFleet(t, log, flt, 0)
@@ -1139,12 +1139,11 @@ func TestCounterAutoscalerAllocated(t *testing.T) {
 			wantReadyGs:     2,
 		},
 	}
-	// nolint:dupl  // Linter errors on lines are duplicate of TestListAutoscalerAllocated
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			flt, err := client.Fleets(framework.Namespace).Create(ctx, defaultFlt.DeepCopy(), metav1.CreateOptions{})
 			require.NoError(t, err)
-			defer client.Fleets(framework.Namespace).Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+			defer client.Fleets(framework.Namespace).Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 			framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
 
 			gsa := allocationv1.GameServerAllocation{
@@ -1183,7 +1182,7 @@ func TestCounterAutoscalerAllocated(t *testing.T) {
 
 			fas, err := fleetautoscalers.Create(ctx, counterFas, metav1.CreateOptions{})
 			assert.NoError(t, err)
-			defer fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+			defer fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 			framework.AssertFleetCondition(t, flt, func(_ *logrus.Entry, fleet *agonesv1.Fleet) bool {
 				return fleet.Status.AllocatedReplicas == testCase.wantAllocatedGs && fleet.Status.ReadyReplicas == testCase.wantReadyGs
@@ -1263,7 +1262,6 @@ func TestCounterAutoscalerAllocatedMultipleNamespaces(t *testing.T) {
 		},
 	}
 
-	//nolint:dupl  // Linter errors on lines are duplicate of TestListAutoscalerAllocated
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// Create both fleet A and B
@@ -1411,7 +1409,7 @@ func TestListAutoscaler(t *testing.T) {
 
 	flt, err := client.Fleets(framework.Namespace).Create(ctx, flt.DeepCopy(), metav1.CreateOptions{})
 	require.NoError(t, err)
-	defer client.Fleets(framework.Namespace).Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+	defer client.Fleets(framework.Namespace).Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
 
 	fleetautoscalers := framework.AgonesClient.AutoscalingV1().FleetAutoscalers(framework.Namespace)
@@ -1444,7 +1442,7 @@ func TestListAutoscaler(t *testing.T) {
 			fas: listFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.List = &autoscalingv1.ListPolicy{
 					Key:         "games",
-					BufferSize:  intstr.FromInt(2),
+					BufferSize:  intstr.FromInt32(2),
 					MinCapacity: 0,
 					MaxCapacity: 3,
 				}
@@ -1456,7 +1454,7 @@ func TestListAutoscaler(t *testing.T) {
 			fas: listFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.List = &autoscalingv1.ListPolicy{
 					Key:         "games",
-					BufferSize:  intstr.FromInt(3),
+					BufferSize:  intstr.FromInt32(3),
 					MinCapacity: 0,
 					MaxCapacity: 5,
 				}
@@ -1480,7 +1478,7 @@ func TestListAutoscaler(t *testing.T) {
 			fas: listFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.List = &autoscalingv1.ListPolicy{
 					Key:         "games",
-					BufferSize:  intstr.FromInt(3),
+					BufferSize:  intstr.FromInt32(3),
 					MinCapacity: 16,
 					MaxCapacity: 100,
 				}
@@ -1492,7 +1490,7 @@ func TestListAutoscaler(t *testing.T) {
 			fas: listFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.List = &autoscalingv1.ListPolicy{
 					Key:         "games",
-					BufferSize:  intstr.FromInt(1),
+					BufferSize:  intstr.FromInt32(1),
 					MinCapacity: 10,
 					MaxCapacity: 100,
 				}
@@ -1504,7 +1502,7 @@ func TestListAutoscaler(t *testing.T) {
 			fas: listFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.List = &autoscalingv1.ListPolicy{
 					Key:         "games",
-					BufferSize:  intstr.FromInt(15),
+					BufferSize:  intstr.FromInt32(15),
 					MinCapacity: 5,
 					MaxCapacity: 25,
 				}
@@ -1516,7 +1514,7 @@ func TestListAutoscaler(t *testing.T) {
 			fas: listFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.List = &autoscalingv1.ListPolicy{
 					Key:         "games",
-					BufferSize:  intstr.FromInt(15),
+					BufferSize:  intstr.FromInt32(15),
 					MinCapacity: 15,
 					MaxCapacity: 100,
 				}
@@ -1528,7 +1526,7 @@ func TestListAutoscaler(t *testing.T) {
 			fas: listFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.List = &autoscalingv1.ListPolicy{
 					Key:         "games",
-					BufferSize:  intstr.FromInt(15),
+					BufferSize:  intstr.FromInt32(15),
 					MinCapacity: 15,
 					MaxCapacity: 25,
 				}
@@ -1548,7 +1546,7 @@ func TestListAutoscaler(t *testing.T) {
 			assert.NoError(t, err)
 
 			framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(testCase.wantReplicas))
-			fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+			fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 			// Return to starting 3 replicas
 			framework.ScaleFleet(t, log, flt, 3)
@@ -1557,7 +1555,7 @@ func TestListAutoscaler(t *testing.T) {
 	}
 }
 
-// nolint:dupl  // Linter errors on lines are duplicate of TestCounterAutoscalerWithNoReplicas
+//nolint:dupl  // Linter errors on lines are duplicate of TestCounterAutoscalerWithNoReplicas
 func TestListAutoscalerWithNoReplicas(t *testing.T) {
 	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
 		t.SkipNow()
@@ -1577,7 +1575,7 @@ func TestListAutoscalerWithNoReplicas(t *testing.T) {
 
 	flt, err := client.Fleets(framework.Namespace).Create(ctx, flt.DeepCopy(), metav1.CreateOptions{})
 	require.NoError(t, err)
-	defer client.Fleets(framework.Namespace).Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+	defer client.Fleets(framework.Namespace).Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
 
 	fleetautoscalers := framework.AgonesClient.AutoscalingV1().FleetAutoscalers(framework.Namespace)
@@ -1610,7 +1608,7 @@ func TestListAutoscalerWithNoReplicas(t *testing.T) {
 			fas: listFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.List = &autoscalingv1.ListPolicy{
 					Key:         "games",
-					BufferSize:  intstr.FromInt(3),
+					BufferSize:  intstr.FromInt32(3),
 					MinCapacity: 16,
 					MaxCapacity: 100,
 				}
@@ -1630,7 +1628,7 @@ func TestListAutoscalerWithNoReplicas(t *testing.T) {
 			assert.NoError(t, err)
 
 			framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(testCase.wantReplicas))
-			fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+			fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 			// Return to starting 0 replicas
 			framework.ScaleFleet(t, log, flt, 0)
@@ -1689,7 +1687,7 @@ func TestListAutoscalerAllocated(t *testing.T) {
 		"Scales Down to Number of Game Servers Allocated": {
 			fas: autoscalingv1.ListPolicy{
 				Key:         "gamers",
-				BufferSize:  intstr.FromInt(2),
+				BufferSize:  intstr.FromInt32(2),
 				MinCapacity: 6,
 				MaxCapacity: 60,
 			},
@@ -1697,12 +1695,11 @@ func TestListAutoscalerAllocated(t *testing.T) {
 			wantReadyGs:     0,
 		},
 	}
-	// nolint:dupl  // Linter errors on lines are duplicate of TestCounterAutoscalerAllocated
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			flt, err := client.Fleets(framework.Namespace).Create(ctx, defaultFlt.DeepCopy(), metav1.CreateOptions{})
 			require.NoError(t, err)
-			defer client.Fleets(framework.Namespace).Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+			defer client.Fleets(framework.Namespace).Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 			framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
 
 			// Adds 4 gamers to each allocated gameserver, and removes 2 existing gamers.
@@ -1747,7 +1744,7 @@ func TestListAutoscalerAllocated(t *testing.T) {
 
 			fas, err := fleetautoscalers.Create(ctx, listFas, metav1.CreateOptions{})
 			assert.NoError(t, err)
-			defer fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+			defer fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 			framework.AssertFleetCondition(t, flt, func(_ *logrus.Entry, fleet *agonesv1.Fleet) bool {
 				return fleet.Status.AllocatedReplicas == testCase.wantAllocatedGs && fleet.Status.ReadyReplicas == testCase.wantReadyGs
@@ -1768,58 +1765,86 @@ func TestListAutoscalerWithSDKMethods(t *testing.T) {
 	defaultFlt := defaultFleet(framework.Namespace)
 	defaultFlt.Spec.Template.Spec.Lists = map[string]agonesv1.ListStatus{
 		"sessions": {
-			Values:   []string{"session1", "session2"}, // AggregateCount 6
-			Capacity: 4,                                // AggregateCapacity 12
+			Values:   []string{"session1", "session2"},
+			Capacity: 4,
 		},
 	}
 
 	fleetautoscalers := framework.AgonesClient.AutoscalingV1().FleetAutoscalers(framework.Namespace)
 
+	// The SDK changes are applied before the FleetAutoscaler is created, and are chosen so that the
+	// result does not depend on which GameServers the autoscaler removes first on scale down.
 	testCases := map[string]struct {
-		fas           autoscalingv1.ListPolicy
-		order         string // Priority order Ascending or Descending for fleet ready replica deletion
-		msg           string // See agones/examples/simple-game-server/README for list of commands
-		startReplicas int32  // After applying autoscaler policy but before sending update message
-		wantReplicas  int32  // After applying autoscaler policy and sending update message
+		fas            autoscalingv1.ListPolicy
+		msgs           []string // Sent to each of the first numGameServers Ready GameServers. See agones/examples/simple-game-server/README for list of commands
+		numGameServers int
+		startReplicas  int32 // Before sending the SDK messages and creating the autoscaler
+		wantListCount  int64 // Aggregate List Count after sending the SDK messages
+		wantReplicas   int32 // After applying the autoscaler policy
 	}{
 		"Scale Up to Buffer": {
 			fas: autoscalingv1.ListPolicy{
 				Key:         "sessions",
-				BufferSize:  intstr.FromInt(10),
+				BufferSize:  intstr.FromInt32(10),
 				MinCapacity: 12,
 				MaxCapacity: 400,
 			},
-			order:         agonesv1.GameServerPriorityDescending,
-			msg:           "APPEND_LIST_VALUE sessions session0",
-			startReplicas: 5,
-			wantReplicas:  6,
+			// Available capacity drops from 10 to 8, and one more replica adds exactly 2.
+			msgs:           []string{"APPEND_LIST_VALUE sessions session3", "APPEND_LIST_VALUE sessions session4"},
+			numGameServers: 1,
+			startReplicas:  5,
+			wantListCount:  12,
+			wantReplicas:   6,
 		},
 		"Scale Down to Buffer": {
 			fas: autoscalingv1.ListPolicy{
 				Key:         "sessions",
-				BufferSize:  intstr.FromInt(3),
+				BufferSize:  intstr.FromInt32(3),
 				MinCapacity: 3,
 				MaxCapacity: 400,
 			},
-			msg:           "DELETE_LIST_VALUE sessions session1",
-			order:         agonesv1.GameServerPriorityAscending,
-			startReplicas: 2,
-			wantReplicas:  1,
+			// Available capacity rises from 4 to 6, and removing either replica leaves exactly 3.
+			msgs:           []string{"DELETE_LIST_VALUE sessions session1"},
+			numGameServers: 2,
+			startReplicas:  2,
+			wantListCount:  2,
+			wantReplicas:   1,
 		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			defaultFlt.Spec.Priorities = []agonesv1.Priority{
-				{
-					Type:  agonesv1.GameServerPriorityList,
-					Key:   "sessions",
-					Order: testCase.order,
-				},
-			}
-			flt, err := client.Fleets(framework.Namespace).Create(ctx, defaultFlt.DeepCopy(), metav1.CreateOptions{})
+			fltSpec := defaultFlt.DeepCopy()
+			fltSpec.Spec.Replicas = testCase.startReplicas
+			flt, err := client.Fleets(framework.Namespace).Create(ctx, fltSpec, metav1.CreateOptions{})
 			require.NoError(t, err)
-			defer client.Fleets(framework.Namespace).Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
-			framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
+			defer client.Fleets(framework.Namespace).Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
+			framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(testCase.startReplicas))
+
+			gameservers, err := framework.ListGameServersFromFleet(flt)
+			require.NoError(t, err)
+
+			var readyGameServers []agonesv1.GameServer
+			for _, gs := range gameservers {
+				if gs.Status.State == agonesv1.GameServerStateReady && !gs.IsBeingDeleted() {
+					readyGameServers = append(readyGameServers, gs)
+				}
+			}
+			require.GreaterOrEqual(t, len(readyGameServers), testCase.numGameServers, "not enough Ready GameServers to send SDK messages to")
+
+			for i := range testCase.numGameServers {
+				gs := &readyGameServers[i]
+				for _, msg := range testCase.msgs {
+					logrus.WithField("command", msg).WithField("gs", gs.ObjectMeta.Name).Info(name)
+					reply, err := framework.SendGameServerUDP(t, gs, msg)
+					require.NoError(t, err)
+					require.Equal(t, "SUCCESS\n", reply)
+				}
+			}
+
+			framework.AssertFleetCondition(t, flt, func(log *logrus.Entry, fleet *agonesv1.Fleet) bool {
+				log.WithField("fleetStatus", fmt.Sprintf("%+v", fleet.Status)).WithField("expected", testCase.wantListCount).Info("Checking Fleet List Count")
+				return fleet.Status.Lists["sessions"].Count == testCase.wantListCount
+			})
 
 			listFas := &autoscalingv1.FleetAutoscaler{
 				ObjectMeta: metav1.ObjectMeta{Name: flt.ObjectMeta.Name + "-list-autoscaler", Namespace: framework.Namespace},
@@ -1839,19 +1864,8 @@ func TestListAutoscalerWithSDKMethods(t *testing.T) {
 			}
 
 			fas, err := fleetautoscalers.Create(ctx, listFas, metav1.CreateOptions{})
-			assert.NoError(t, err)
-			defer fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
-
-			// Wait until autoscaler has first re-sized before getting the list of gameservers
-			framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(testCase.startReplicas))
-
-			gameservers, err := framework.ListGameServersFromFleet(flt)
-			assert.NoError(t, err)
-
-			gs := &gameservers[1]
-			logrus.WithField("command", testCase.msg).WithField("gs", gs.ObjectMeta.Name).Info(name)
-			_, err = framework.SendGameServerUDP(t, gs, testCase.msg)
 			require.NoError(t, err)
+			defer fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 			framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(testCase.wantReplicas))
 		})
@@ -1870,7 +1884,7 @@ func TestScheduleAutoscaler(t *testing.T) {
 	fleets := stable.Fleets(framework.Namespace)
 	flt, err := fleets.Create(ctx, defaultFleet(framework.Namespace), metav1.CreateOptions{})
 	require.NoError(t, err)
-	defer fleets.Delete(context.Background(), flt.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+	defer fleets.Delete(context.Background(), flt.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
 
@@ -1883,7 +1897,7 @@ func TestScheduleAutoscaler(t *testing.T) {
 	require.NoError(t, err)
 
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(5))
-	fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+	fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 	// Return to starting 3 replicas
 	framework.ScaleFleet(t, log, flt, 3)
@@ -1896,7 +1910,7 @@ func TestScheduleAutoscaler(t *testing.T) {
 	require.NoError(t, err)
 
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(5))
-	fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+	fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 }
 
 func TestChainAutoscaler(t *testing.T) {
@@ -1911,7 +1925,7 @@ func TestChainAutoscaler(t *testing.T) {
 	fleets := stable.Fleets(framework.Namespace)
 	flt, err := fleets.Create(ctx, defaultFleet(framework.Namespace), metav1.CreateOptions{})
 	if assert.NoError(t, err) {
-		defer fleets.Delete(context.Background(), flt.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+		defer fleets.Delete(context.Background(), flt.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 	}
 
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
@@ -1931,7 +1945,7 @@ func TestChainAutoscaler(t *testing.T) {
 		return fas.Status.LastAppliedPolicy == expectedChainPolicy
 	})
 
-	fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+	fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 	// Return to starting 3 replicas
 	framework.ScaleFleet(t, log, flt, 3)
@@ -1968,7 +1982,7 @@ func TestChainAutoscaler(t *testing.T) {
 		return fas.Status.LastAppliedPolicy == expectedChainPolicy
 	})
 
-	fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+	fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 }
 
 func TestWasmAutoScaler(t *testing.T) {
@@ -2118,7 +2132,7 @@ func TestWasmAutoScaler(t *testing.T) {
 			fleets := framework.AgonesClient.AgonesV1().Fleets(framework.Namespace)
 			flt, err := fleets.Create(ctx, defaultFleet(framework.Namespace), metav1.CreateOptions{})
 			require.NoError(t, err)
-			defer fleets.Delete(context.Background(), flt.ObjectMeta.Name, metav1.DeleteOptions{}) // nolint:errcheck
+			defer fleets.Delete(context.Background(), flt.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 			// Create WASM FleetAutoscaler
 			fleetAutoscalers := framework.AgonesClient.AutoscalingV1().FleetAutoscalers(framework.Namespace)
@@ -2209,7 +2223,7 @@ func defaultAutoscalerSchedule(t *testing.T, f *agonesv1.Fleet) *autoscalingv1.F
 					Policy: autoscalingv1.FleetAutoscalerPolicy{
 						Type: autoscalingv1.BufferPolicyType,
 						Buffer: &autoscalingv1.BufferPolicy{
-							BufferSize:  intstr.FromInt(5),
+							BufferSize:  intstr.FromInt32(5),
 							MinReplicas: 5,
 							MaxReplicas: 12,
 						},
@@ -2256,7 +2270,7 @@ func defaultAutoscalerChain(t *testing.T, f *agonesv1.Fleet) *autoscalingv1.Flee
 								Policy: autoscalingv1.FleetAutoscalerPolicy{
 									Type: autoscalingv1.BufferPolicyType,
 									Buffer: &autoscalingv1.BufferPolicy{
-										BufferSize:  intstr.FromInt(10),
+										BufferSize:  intstr.FromInt32(10),
 										MinReplicas: 10,
 										MaxReplicas: 20,
 									},
@@ -2281,7 +2295,7 @@ func defaultAutoscalerChain(t *testing.T, f *agonesv1.Fleet) *autoscalingv1.Flee
 								Policy: autoscalingv1.FleetAutoscalerPolicy{
 									Type: autoscalingv1.BufferPolicyType,
 									Buffer: &autoscalingv1.BufferPolicy{
-										BufferSize:  intstr.FromInt(4),
+										BufferSize:  intstr.FromInt32(4),
 										MinReplicas: 3,
 										MaxReplicas: 7,
 									},

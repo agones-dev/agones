@@ -25,6 +25,7 @@ import (
 	"github.com/heptiolabs/healthcheck"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -360,6 +361,64 @@ func TestSucceededControllerSyncGameServerContainerCompleted(t *testing.T) {
 	require.NoError(t, c.syncGameServer(ctx, "default/test"))
 	require.True(t, updated)
 	agtesting.AssertEventContains(t, m.FakeRecorder.Events, "Normal Shutdown Game server container exited cleanly")
+}
+
+func TestSucceededControllerSyncGameServerShutdownLimiter(t *testing.T) {
+	fixtures := map[string]struct {
+		state     agonesv1.GameServerState
+		expectErr bool
+	}{
+		"shutdown write waits on the limiter": {
+			state:     agonesv1.GameServerStateAllocated,
+			expectErr: true,
+		},
+		"no-op sync does not wait on the limiter": {
+			state:     agonesv1.GameServerStateShutdown,
+			expectErr: false,
+		},
+	}
+
+	for k, v := range fixtures {
+		t.Run(k, func(t *testing.T) {
+			m := agtesting.NewMocks()
+			c := NewSucceededController(healthcheck.NewHandler(), m.KubeClient, m.AgonesClient, m.KubeInformerFactory, m.AgonesInformerFactory)
+			c.recorder = m.FakeRecorder
+			// a zero burst limiter can never grant a token, so Wait fails immediately.
+			c.shutdownLimiter = rate.NewLimiter(0, 0)
+
+			gs := &agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "default"},
+				Spec: newSingleContainerSpec(), Status: agonesv1.GameServerStatus{State: v.state}}
+			gs.ApplyDefaults()
+
+			pod, err := gs.Pod(agtesting.FakeAPIHooks{})
+			require.NoError(t, err)
+			pod.Status.Phase = corev1.PodSucceeded
+
+			m.AgonesClient.AddReactor("list", "gameservers", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+				return true, &agonesv1.GameServerList{Items: []agonesv1.GameServer{*gs}}, nil
+			})
+			m.KubeClient.AddReactor("list", "pods", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+				return true, &corev1.PodList{Items: []corev1.Pod{*pod}}, nil
+			})
+
+			updated := false
+			m.AgonesClient.AddReactor("update", "gameservers", func(action k8stesting.Action) (bool, runtime.Object, error) {
+				updated = true
+				return true, action.(k8stesting.UpdateAction).GetObject(), nil
+			})
+
+			ctx, cancel := agtesting.StartInformers(m, c.gameServerSynced, c.podSynced)
+			defer cancel()
+
+			err = c.syncGameServer(ctx, "default/test")
+			if v.expectErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+			require.False(t, updated)
+		})
+	}
 }
 
 func TestSucceededControllerRun(t *testing.T) {

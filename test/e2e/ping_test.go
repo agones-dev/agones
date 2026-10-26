@@ -52,7 +52,7 @@ func TestPingHTTP(t *testing.T) {
 
 	response, err := http.Get(fmt.Sprintf("http://%s:%d", ip, p))
 	require.NoError(t, err)
-	defer response.Body.Close() // nolint: errcheck
+	defer response.Body.Close() //nolint:errcheck
 
 	assert.Equal(t, http.StatusOK, response.StatusCode)
 	body, err := io.ReadAll(response.Body)

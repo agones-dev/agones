@@ -37,7 +37,6 @@ import (
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
 	"agones.dev/agones/pkg/sdk"
 	"agones.dev/agones/pkg/sdk/beta"
-	"agones.dev/agones/pkg/util/runtime"
 )
 
 func TestLocal(t *testing.T) {
@@ -73,7 +72,7 @@ func TestLocal(t *testing.T) {
 	defaultGameServer := defaultGs()
 	// do this to adjust for any time differences.
 	// we only care about all the other values to be compared.
-	defaultGameServer.ObjectMeta.CreationTimestamp = gs.GetObjectMeta().CreationTimestamp
+	defaultGameServer.ObjectMeta.CreationTimestamp = gs.GetObjectMeta().GetCreationTimestamp()
 
 	assert.Equal(t, defaultGameServer.GetObjectMeta(), gs.GetObjectMeta())
 	assert.Equal(t, defaultGameServer.GetSpec(), gs.GetSpec())
@@ -114,10 +113,9 @@ func TestLocalSDKWithGameServer(t *testing.T) {
 	gs, err := l.GetGameServer(ctx, e)
 	assert.NoError(t, err)
 
-	assert.Equal(t, fixture.ObjectMeta.Name, gs.ObjectMeta.Name)
+	assert.Equal(t, fixture.ObjectMeta.Name, gs.GetObjectMeta().GetName())
 }
 
-// nolint:dupl
 func TestLocalSDKWithLogLevel(t *testing.T) {
 	ctx := context.Background()
 	e := &sdk.Empty{}
@@ -141,7 +139,7 @@ func TestLocalSDKWithLogLevel(t *testing.T) {
 	assert.Equal(t, string(fixture.Spec.SdkServer.LogLevel), l.logger.Logger.Level.String())
 }
 
-// nolint:dupl
+//nolint:dupl
 func TestLocalSDKServerSetLabel(t *testing.T) {
 	t.Parallel()
 
@@ -195,10 +193,10 @@ func TestLocalSDKServerSetLabel(t *testing.T) {
 
 			gs, err := l.GetGameServer(ctx, e)
 			assert.NoError(t, err)
-			assert.Equal(t, "bar", gs.ObjectMeta.Labels[metadataPrefix+"foo"])
+			assert.Equal(t, "bar", gs.GetObjectMeta().GetLabels()[metadataPrefix+"foo"])
 
 			assertWatchUpdate(t, stream, "bar", func(gs *sdk.GameServer) any {
-				return gs.ObjectMeta.Labels[metadataPrefix+"foo"]
+				return gs.GetObjectMeta().GetLabels()[metadataPrefix+"foo"]
 			})
 
 			l.Close()
@@ -207,7 +205,7 @@ func TestLocalSDKServerSetLabel(t *testing.T) {
 	}
 }
 
-// nolint:dupl
+//nolint:dupl
 func TestLocalSDKServerSetAnnotation(t *testing.T) {
 	t.Parallel()
 
@@ -262,10 +260,10 @@ func TestLocalSDKServerSetAnnotation(t *testing.T) {
 
 			gs, err := l.GetGameServer(ctx, e)
 			assert.NoError(t, err)
-			assert.Equal(t, "foo", gs.ObjectMeta.Annotations[metadataPrefix+"bar"])
+			assert.Equal(t, "foo", gs.GetObjectMeta().GetAnnotations()[metadataPrefix+"bar"])
 
 			assertWatchUpdate(t, stream, "foo", func(gs *sdk.GameServer) any {
-				return gs.ObjectMeta.Annotations[metadataPrefix+"bar"]
+				return gs.GetObjectMeta().GetAnnotations()[metadataPrefix+"bar"]
 			})
 
 			l.Close()
@@ -312,16 +310,12 @@ func TestLocalSDKServerWatchGameServer(t *testing.T) {
 	assert.NoError(t, err)
 
 	assertWatchUpdate(t, stream, "bar", func(gs *sdk.GameServer) any {
-		return gs.ObjectMeta.Annotations["foo"]
+		return gs.GetObjectMeta().GetAnnotations()["foo"]
 	})
 }
 
 func TestLocalSDKServerGetCounter(t *testing.T) {
 	t.Parallel()
-
-	runtime.FeatureTestMutex.Lock()
-	defer runtime.FeatureTestMutex.Unlock()
-	require.NoError(t, runtime.ParseFeatures(string(runtime.FeatureCountsAndLists)+"=true"))
 
 	counters := map[string]agonesv1.CounterStatus{
 		"sessions": {Count: int64(1), Capacity: int64(100)},
@@ -390,10 +384,6 @@ func TestLocalSDKServerGetCounter(t *testing.T) {
 
 func TestLocalSDKServerUpdateCounter(t *testing.T) {
 	t.Parallel()
-
-	runtime.FeatureTestMutex.Lock()
-	defer runtime.FeatureTestMutex.Unlock()
-	require.NoError(t, runtime.ParseFeatures(string(runtime.FeatureCountsAndLists)+"=true"))
 
 	counters := map[string]agonesv1.CounterStatus{
 		"sessions": {Count: 1, Capacity: 100},
@@ -543,10 +533,6 @@ func TestLocalSDKServerUpdateCounter(t *testing.T) {
 func TestLocalSDKServerGetList(t *testing.T) {
 	t.Parallel()
 
-	runtime.FeatureTestMutex.Lock()
-	defer runtime.FeatureTestMutex.Unlock()
-	require.NoError(t, runtime.ParseFeatures(string(runtime.FeatureCountsAndLists)+"=true"))
-
 	lists := map[string]agonesv1.ListStatus{
 		"games": {Capacity: int64(100), Values: []string{"game1", "game2"}},
 	}
@@ -614,10 +600,6 @@ func TestLocalSDKServerGetList(t *testing.T) {
 
 func TestLocalSDKServerUpdateList(t *testing.T) {
 	t.Parallel()
-
-	runtime.FeatureTestMutex.Lock()
-	defer runtime.FeatureTestMutex.Unlock()
-	require.NoError(t, runtime.ParseFeatures(string(runtime.FeatureCountsAndLists)+"=true"))
 
 	lists := map[string]agonesv1.ListStatus{
 		"players":  {Capacity: 1000},
@@ -815,10 +797,6 @@ func TestLocalSDKServerUpdateList(t *testing.T) {
 func TestLocalSDKServerAddListValue(t *testing.T) {
 	t.Parallel()
 
-	runtime.FeatureTestMutex.Lock()
-	defer runtime.FeatureTestMutex.Unlock()
-	require.NoError(t, runtime.ParseFeatures(string(runtime.FeatureCountsAndLists)+"=true"))
-
 	lists := map[string]agonesv1.ListStatus{
 		"lemmings": {Capacity: int64(100), Values: []string{"lemming1", "lemming2"}},
 		"hacks":    {Capacity: int64(2), Values: []string{"hack1", "hack2"}},
@@ -906,10 +884,6 @@ func TestLocalSDKServerAddListValue(t *testing.T) {
 
 func TestLocalSDKServerRemoveListValue(t *testing.T) {
 	t.Parallel()
-
-	runtime.FeatureTestMutex.Lock()
-	defer runtime.FeatureTestMutex.Unlock()
-	require.NoError(t, runtime.ParseFeatures(string(runtime.FeatureCountsAndLists)+"=true"))
 
 	lists := map[string]agonesv1.ListStatus{
 		"players": {Capacity: int64(100), Values: []string{"player1", "player2"}},
@@ -1003,7 +977,7 @@ func TestLocalSDKServerStateUpdates(t *testing.T) {
 
 	gs, err := l.GetGameServer(ctx, e)
 	assert.NoError(t, err)
-	assert.Equal(t, gs.Status.State, string(agonesv1.GameServerStateReady))
+	assert.Equal(t, gs.GetStatus().GetState(), string(agonesv1.GameServerStateReady))
 
 	seconds := &sdk.Duration{Seconds: 2}
 	_, err = l.Reserve(ctx, seconds)
@@ -1011,21 +985,21 @@ func TestLocalSDKServerStateUpdates(t *testing.T) {
 
 	gs, err = l.GetGameServer(ctx, e)
 	assert.NoError(t, err)
-	assert.Equal(t, gs.Status.State, string(agonesv1.GameServerStateReserved))
+	assert.Equal(t, gs.GetStatus().GetState(), string(agonesv1.GameServerStateReserved))
 
 	_, err = l.Allocate(ctx, e)
 	assert.NoError(t, err)
 
 	gs, err = l.GetGameServer(ctx, e)
 	assert.NoError(t, err)
-	assert.Equal(t, gs.Status.State, string(agonesv1.GameServerStateAllocated))
+	assert.Equal(t, gs.GetStatus().GetState(), string(agonesv1.GameServerStateAllocated))
 
 	_, err = l.Shutdown(ctx, e)
 	assert.NoError(t, err)
 
 	gs, err = l.GetGameServer(ctx, e)
 	assert.NoError(t, err)
-	assert.Equal(t, gs.Status.State, string(agonesv1.GameServerStateShutdown))
+	assert.Equal(t, gs.GetStatus().GetState(), string(agonesv1.GameServerStateShutdown))
 }
 
 // TestSDKConformanceFunctionality - run a number of record requests in parallel
@@ -1110,10 +1084,6 @@ func assertInitialWatchUpdate(t *testing.T, stream *gameServerMockStream) {
 // which defaults to defaultMaxListItems rather than being discovered from the GameServer.
 func TestLocalSDKServerUpdateListMaxCapacity(t *testing.T) {
 	t.Parallel()
-
-	runtime.FeatureTestMutex.Lock()
-	defer runtime.FeatureTestMutex.Unlock()
-	require.NoError(t, runtime.ParseFeatures(string(runtime.FeatureCountsAndLists)+"=true"))
 
 	const listMaxCapacity = int64(25)
 

@@ -82,7 +82,6 @@ func TestFindGameServerForAllocationPacked(t *testing.T) {
 			},
 		},
 		"one label with player state (StateAllocationFilter)": {
-			// nolint: dupl
 			list: []agonesv1.GameServer{
 				{ObjectMeta: metav1.ObjectMeta{Name: "gs6", Namespace: defaultNs, Labels: oneLabel, DeletionTimestamp: &n}, Status: agonesv1.GameServerStatus{NodeName: "node1", State: agonesv1.GameServerStateReady}},
 				{ObjectMeta: metav1.ObjectMeta{Name: "gs1", Namespace: defaultNs, Labels: oneLabel}, Status: agonesv1.GameServerStatus{NodeName: "node1", State: agonesv1.GameServerStateReady}},
@@ -238,12 +237,6 @@ func TestFindGameServerForAllocationPacked(t *testing.T) {
 
 func TestFindGameServerForAllocationDistributed(t *testing.T) {
 	t.Parallel()
-
-	// TODO: remove when `CountsAndLists` feature flag is moved to stable.
-	// NOTE: CountsAndLists has different behavior for Distributed, and the game server list is not random.
-	runtime.FeatureTestMutex.Lock()
-	defer runtime.FeatureTestMutex.Unlock()
-	require.NoError(t, runtime.ParseFeatures(string(runtime.FeatureCountsAndLists)+"=false"))
 
 	controller, m := newFakeController()
 	c := controller.allocator.allocationCache

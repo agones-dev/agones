@@ -249,8 +249,8 @@ func TestProcessAllocation(t *testing.T) {
 			} else {
 				assert.Nil(t, result.response)
 				require.NotNil(t, result.error)
-				assert.Equal(t, int32(tc.wantErrorCode), result.error.Code)
-				assert.Contains(t, result.error.Message, tc.wantErrorMsg)
+				assert.Equal(t, int32(tc.wantErrorCode), result.error.GetCode())
+				assert.Contains(t, result.error.GetMessage(), tc.wantErrorMsg)
 			}
 		})
 	}
@@ -475,11 +475,11 @@ func TestSubmitBatch(t *testing.T) {
 
 			resp := h.submitBatch(ctx, tc.wantBatchID, requestWrappers)
 
-			assert.Equal(t, tc.wantBatchID, resp.BatchId)
-			require.Len(t, resp.Responses, len(tc.wantErrors))
+			assert.Equal(t, tc.wantBatchID, resp.GetBatchId())
+			require.Len(t, resp.GetResponses(), len(tc.wantErrors))
 
-			for i, wrapper := range resp.Responses {
-				assert.Equal(t, fmt.Sprintf("req-%d", i), wrapper.RequestId)
+			for i, wrapper := range resp.GetResponses() {
+				assert.Equal(t, fmt.Sprintf("req-%d", i), wrapper.GetRequestId())
 				if tc.wantErrors[i] {
 					assert.NotNil(t, wrapper.GetError(), "request %d should have error", i)
 					assert.Nil(t, wrapper.GetResponse(), "request %d should not have response", i)
@@ -548,10 +548,10 @@ func TestStreamBatches(t *testing.T) {
 				require.Len(t, sent, 1)
 				batchResp := sent[0].GetBatchResponse()
 				require.NotNil(t, batchResp)
-				assert.Equal(t, "b-1", batchResp.BatchId)
-				require.Len(t, batchResp.Responses, 1)
-				assert.Equal(t, "r-1", batchResp.Responses[0].RequestId)
-				assert.NotNil(t, batchResp.Responses[0].GetResponse())
+				assert.Equal(t, "b-1", batchResp.GetBatchId())
+				require.Len(t, batchResp.GetResponses(), 1)
+				assert.Equal(t, "r-1", batchResp.GetResponses()[0].GetRequestId())
+				assert.NotNil(t, batchResp.GetResponses()[0].GetResponse())
 			},
 		},
 		{

@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// nolint:goconst
 package fleets
 
 import (
@@ -514,7 +513,6 @@ func TestControllerUpdateFleetStatus(t *testing.T) {
 		gsSet1.Status.AllocatedReplicas = 1
 
 		gsSet2 := fleet.GameServerSet()
-		// nolint:goconst
 		gsSet2.ObjectMeta.Name = "gsSet2"
 		gsSet2.Status.Replicas = 5
 		gsSet2.Status.ReadyReplicas = 5
@@ -570,14 +568,9 @@ func TestControllerUpdateFleetStatus(t *testing.T) {
 
 }
 
-// nolint:dupl // Linter errors on lines are duplicate of TestControllerUpdateFleetListStatus
+//nolint:dupl // Linter errors on lines are duplicate of TestControllerUpdateFleetListStatus
 func TestControllerUpdateFleetCounterStatus(t *testing.T) {
 	t.Parallel()
-
-	utilruntime.FeatureTestMutex.Lock()
-	defer utilruntime.FeatureTestMutex.Unlock()
-
-	require.NoError(t, utilruntime.ParseFeatures(string(utilruntime.FeatureCountsAndLists)+"=true"))
 
 	fleet := defaultFixture()
 	c, m := newFakeController()
@@ -660,14 +653,9 @@ func TestControllerUpdateFleetCounterStatus(t *testing.T) {
 	assert.True(t, updated)
 }
 
-// nolint:dupl // Linter errors on lines are duplicate of TestControllerUpdateFleetCounterStatus
+//nolint:dupl // Linter errors on lines are duplicate of TestControllerUpdateFleetCounterStatus
 func TestControllerUpdateFleetListStatus(t *testing.T) {
 	t.Parallel()
-
-	utilruntime.FeatureTestMutex.Lock()
-	defer utilruntime.FeatureTestMutex.Unlock()
-
-	require.NoError(t, utilruntime.ParseFeatures(string(utilruntime.FeatureCountsAndLists)+"=true"))
 
 	fleet := defaultFixture()
 	c, m := newFakeController()
@@ -746,96 +734,6 @@ func TestControllerUpdateFleetListStatus(t *testing.T) {
 	defer cancel()
 
 	err := c.updateFleetStatus(ctx, fleet)
-	assert.NoError(t, err)
-	assert.True(t, updated)
-}
-
-// Test that the aggregated Counters and Lists are removed from the Fleet status if the
-// FeatureCountsAndLists flag is set to false.
-func TestFleetDropCountsAndListsStatus(t *testing.T) {
-	t.Parallel()
-
-	utilruntime.FeatureTestMutex.Lock()
-	defer utilruntime.FeatureTestMutex.Unlock()
-
-	f := defaultFixture()
-	defaultFleetName := "default/fleet-1"
-	c, m := newFakeController()
-
-	gss := f.GameServerSet()
-	gss.ObjectMeta.Name = "gsSet1"
-	gss.ObjectMeta.UID = "4321"
-	gss.Spec.Replicas = f.Spec.Replicas
-	gss.Status.Counters = map[string]agonesv1.AggregatedCounterStatus{
-		"aCounter": {
-			AllocatedCount:    1,
-			AllocatedCapacity: 10,
-			Capacity:          1000,
-			Count:             100,
-		},
-	}
-	gss.Status.Lists = map[string]agonesv1.AggregatedListStatus{
-		"aList": {
-			AllocatedCount:    10,
-			AllocatedCapacity: 100,
-			Capacity:          10000,
-			Count:             1000,
-		},
-	}
-
-	flag := ""
-	updated := false
-
-	m.AgonesClient.AddReactor("list", "gameserversets",
-		func(_ k8stesting.Action) (bool, runtime.Object, error) {
-			return true, &agonesv1.GameServerSetList{Items: []agonesv1.GameServerSet{*gss}}, nil
-		})
-
-	m.AgonesClient.AddReactor("list", "fleets",
-		func(_ k8stesting.Action) (bool, runtime.Object, error) {
-			return true, &agonesv1.FleetList{Items: []agonesv1.Fleet{*f}}, nil
-		})
-
-	m.AgonesClient.AddReactor("update", "fleets",
-		func(action k8stesting.Action) (bool, runtime.Object, error) {
-			ua := action.(k8stesting.UpdateAction)
-			fleet := ua.GetObject().(*agonesv1.Fleet)
-			updated = true
-
-			switch flag {
-			case string(utilruntime.FeatureCountsAndLists) + "=true":
-				assert.Equal(t, gss.Status.Counters, fleet.Status.Counters)
-				assert.Equal(t, gss.Status.Lists, fleet.Status.Lists)
-			case string(utilruntime.FeatureCountsAndLists) + "=false":
-				assert.Nil(t, fleet.Status.Counters)
-				assert.Nil(t, fleet.Status.Lists)
-			default:
-				return false, fleet, errors.New("Flag string(utilruntime.FeatureCountsAndLists) should be set")
-			}
-			return true, fleet, nil
-		})
-
-	ctx, cancel := agtesting.StartInformers(m, c.fleetSynced, c.gameServerSetSynced)
-	defer cancel()
-
-	// Expect starting fleet to have Aggregated Counter and List Statuses
-	flag = string(utilruntime.FeatureCountsAndLists) + "=true"
-	require.NoError(t, utilruntime.ParseFeatures(flag))
-	err := c.syncFleet(ctx, defaultFleetName)
-	assert.NoError(t, err)
-	assert.True(t, updated)
-
-	updated = false
-	flag = string(utilruntime.FeatureCountsAndLists) + "=false"
-	require.NoError(t, utilruntime.ParseFeatures(flag))
-	err = c.syncFleet(ctx, defaultFleetName)
-	assert.NoError(t, err)
-	assert.True(t, updated)
-
-	updated = false
-	flag = string(utilruntime.FeatureCountsAndLists) + "=true"
-	require.NoError(t, utilruntime.ParseFeatures(flag))
-	err = c.syncFleet(ctx, defaultFleetName)
 	assert.NoError(t, err)
 	assert.True(t, updated)
 }
@@ -1100,10 +998,6 @@ func TestControllerUpsertGameServerSet(t *testing.T) {
 	})
 
 	t.Run("update Priorities", func(t *testing.T) {
-		utilruntime.FeatureTestMutex.Lock()
-		defer utilruntime.FeatureTestMutex.Unlock()
-		require.NoError(t, utilruntime.ParseFeatures(string(utilruntime.FeatureCountsAndLists)+"=true"))
-
 		c, m := newFakeController()
 		// Default GameServerSet has no Priorities
 		gsSet := f.GameServerSet()

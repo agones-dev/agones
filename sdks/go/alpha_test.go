@@ -80,19 +80,19 @@ type alphaMock struct {
 }
 
 func (a *alphaMock) PlayerConnect(_ context.Context, id *alpha.PlayerID, _ ...grpc.CallOption) (*alpha.Bool, error) {
-	a.playerConnected = id.PlayerID
+	a.playerConnected = id.GetPlayerID()
 	a.playerCount++
 	return &alpha.Bool{Bool: true}, nil
 }
 
 func (a *alphaMock) PlayerDisconnect(_ context.Context, id *alpha.PlayerID, _ ...grpc.CallOption) (*alpha.Bool, error) {
-	a.playerDisconnected = id.PlayerID
+	a.playerDisconnected = id.GetPlayerID()
 	a.playerCount--
 	return &alpha.Bool{Bool: true}, nil
 }
 
 func (a *alphaMock) IsPlayerConnected(_ context.Context, id *alpha.PlayerID, _ ...grpc.CallOption) (*alpha.Bool, error) {
-	return &alpha.Bool{Bool: id.PlayerID == a.playerConnected}, nil
+	return &alpha.Bool{Bool: id.GetPlayerID() == a.playerConnected}, nil
 }
 
 func (a *alphaMock) GetConnectedPlayers(_ context.Context, _ *alpha.Empty, _ ...grpc.CallOption) (*alpha.PlayerIDList, error) {
@@ -100,7 +100,7 @@ func (a *alphaMock) GetConnectedPlayers(_ context.Context, _ *alpha.Empty, _ ...
 }
 
 func (a *alphaMock) SetPlayerCapacity(_ context.Context, in *alpha.Count, _ ...grpc.CallOption) (*alpha.Empty, error) {
-	a.capacity = in.Count
+	a.capacity = in.GetCount()
 	return &alpha.Empty{}, nil
 }
 

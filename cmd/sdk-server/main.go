@@ -116,7 +116,7 @@ func main() {
 		Handler:           wsproxy.WebsocketProxy(healthCheckWrapper(mux)),
 		ReadHeaderTimeout: readHeaderTimeout,
 	}
-	defer httpServer.Close() // nolint: errcheck
+	defer httpServer.Close() //nolint:errcheck
 
 	switch {
 	case ctlConf.IsLocal:
@@ -265,7 +265,6 @@ func runGrpc(ctx context.Context, grpcServer *grpc.Server, grpcEndpoint string) 
 
 // runGateway runs the grpc-gateway
 func runGateway(ctx context.Context, grpcEndpoint string, mux *gwruntime.ServeMux, httpServer *http.Server) {
-	// nolint: staticcheck
 	conn, err := grpc.NewClient(grpcEndpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		logger.WithError(err).Fatal("Could not dial grpc server...")

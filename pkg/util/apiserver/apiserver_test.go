@@ -98,7 +98,7 @@ func TestAPIServerAddAPIResourceCRDHandler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.True(t, handled, "not handled!")
-	defer resp.Body.Close() // nolint: errcheck
+	defer resp.Body.Close() //nolint:errcheck
 
 	handled = false
 	path = ts.URL + "/apis/allocation.agones.dev/v1/namespaces/default/gameserverallZZZZions"
@@ -106,7 +106,7 @@ func TestAPIServerAddAPIResourceCRDHandler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 	assert.False(t, handled, "not handled!")
-	defer resp.Body.Close() // nolint: errcheck
+	defer resp.Body.Close() //nolint:errcheck
 }
 
 func TestAPIServerAddAPIResourceDiscovery(t *testing.T) {
@@ -129,7 +129,7 @@ func TestAPIServerAddAPIResourceDiscovery(t *testing.T) {
 	t.Run("No Accept Header", func(t *testing.T) {
 		resp, err := client.Get(path)
 		if resp != nil {
-			defer resp.Body.Close() // nolint: errcheck
+			defer resp.Body.Close() //nolint:errcheck
 		}
 		if !assert.NoError(t, err) {
 			assert.FailNow(t, "should not error")
@@ -155,7 +155,7 @@ func TestAPIServerAddAPIResourceDiscovery(t *testing.T) {
 		resp, err := client.Do(request)
 		assert.NoError(t, err)
 		if resp != nil {
-			defer resp.Body.Close() // nolint: errcheck
+			defer resp.Body.Close() //nolint:errcheck
 		}
 		assert.Equal(t, k8sruntime.ContentTypeJSON, resp.Header.Get("Content-Type"))
 
@@ -177,7 +177,7 @@ func TestAPIServerAddAPIResourceDiscovery(t *testing.T) {
 		resp, err := client.Do(request)
 		assert.NoError(t, err)
 		if resp != nil {
-			defer resp.Body.Close() // nolint: errcheck
+			defer resp.Body.Close() //nolint:errcheck
 		}
 		assert.Equal(t, "application/vnd.kubernetes.protobuf", resp.Header.Get("Content-Type"))
 
@@ -226,7 +226,7 @@ func TestAPIServerAddAPIResourceDiscoveryParallel(t *testing.T) {
 				resp, err := client.Do(request)
 				assert.NoError(t, err)
 				if resp != nil {
-					defer resp.Body.Close() // nolint: errcheck
+					defer resp.Body.Close() //nolint:errcheck
 				}
 				assert.Equal(t, k8sruntime.ContentTypeJSON, resp.Header.Get("Content-Type"))
 

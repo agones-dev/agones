@@ -176,18 +176,18 @@ steps:
     args: [-j, '4', --output-sync=recurse, build-sdks]
 
   #
-  # Build and push simple-game-server for e2e tests
+  # Build and push the example images used by the e2e tests.
+  # Builds are skipped for examples whose source hasn't changed since a previous build.
+  # Waits for the code generation checks, as they regenerate sources in the workspace
+  # that the example images are built from.
   #
   - name: make-docker
-    id: build-push-simple-game-server
-    dir: /workspace/examples/simple-game-server
-    waitFor: [push-images]
-    env:
-      - 'REPOSITORY=${_REGISTRY}'
-      - 'VERSION=${COMMIT_SHA}'
-      - 'WITH_WINDOWS=0'
-      - 'WITH_ARM64=0'
-    args: [push]
+    id: build-push-e2e-example-images
+    waitFor:
+      - test-gen-all-sdk-grpc
+      - test-gen-crd-code
+    entrypoint: bash
+    args: [./ci/push-e2e-example-images.sh, '${_REGISTRY}', '${COMMIT_SHA}']
 
   #
   # Example version checks
@@ -372,7 +372,7 @@ steps:
         echo "all done"
     waitFor:
       - cancel-orphan-e2e-tests
-      - build-push-simple-game-server
+      - build-push-e2e-example-images
 
   #
   # Store caches, to speed up subsequent builds (considerably)

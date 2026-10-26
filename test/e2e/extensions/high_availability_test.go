@@ -90,7 +90,7 @@ func TestGameServerCreationRightAfterDeletingOneExtensionsPod(t *testing.T) {
 		logger.Infof("Creating game-server %s...", gs.Name)
 		newGs, err := framework.AgonesClient.AgonesV1().GameServers(defaultNs).Create(context.Background(), gs, metav1.CreateOptions{})
 		assert.NoError(t, err)
-		assert.NoError(t, framework.AgonesClient.AgonesV1().GameServers(defaultNs).Delete(ctx, newGs.ObjectMeta.Name, metav1.DeleteOptions{})) // nolint: errcheck
+		assert.NoError(t, framework.AgonesClient.AgonesV1().GameServers(defaultNs).Delete(ctx, newGs.ObjectMeta.Name, metav1.DeleteOptions{}))
 	}
 }
 

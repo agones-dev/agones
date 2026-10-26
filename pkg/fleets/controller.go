@@ -181,7 +181,6 @@ func NewExtensions(apiHooks agonesv1.APIHooks, wh *webhooks.WebHook) *Extensions
 // creationMutationHandler is the handler for the mutating webhook that sets the
 // the default values on the Fleet
 // Should only be called on fleet create operations.
-// nolint:dupl
 func (ext *Extensions) creationMutationHandler(review admissionv1.AdmissionReview) (admissionv1.AdmissionReview, error) {
 	ext.baseLogger.WithField("review", review).Debug("creationMutationHandler")
 
@@ -398,17 +397,16 @@ func (c *Controller) upsertGameServerSet(ctx context.Context, fleet *agonesv1.Fl
 	}
 
 	// Update GameServerSet Counts and Lists Priorities if not equal to the Priorities on the Fleet
-	if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		if !cmp.Equal(active.Spec.Priorities, fleet.Spec.Priorities) {
-			gsSetCopy := active.DeepCopy()
-			gsSetCopy.Spec.Priorities = fleet.Spec.Priorities
-			_, err := c.gameServerSetGetter.GameServerSets(fleet.ObjectMeta.Namespace).Update(ctx, gsSetCopy, metav1.UpdateOptions{})
-			if err != nil {
-				return c.errs.Wrapf(err, "error updating priorities for gameserverset for fleet %s", fleet.ObjectMeta.Name)
-			}
-			c.recorder.Eventf(fleet, corev1.EventTypeNormal, "UpdatingGameServerSet",
-				"Updated GameServerSet %s Priorities", gsSetCopy.ObjectMeta.Name)
+
+	if !cmp.Equal(active.Spec.Priorities, fleet.Spec.Priorities) {
+		gsSetCopy := active.DeepCopy()
+		gsSetCopy.Spec.Priorities = fleet.Spec.Priorities
+		_, err := c.gameServerSetGetter.GameServerSets(fleet.ObjectMeta.Namespace).Update(ctx, gsSetCopy, metav1.UpdateOptions{})
+		if err != nil {
+			return c.errs.Wrapf(err, "error updating priorities for gameserverset for fleet %s", fleet.ObjectMeta.Name)
 		}
+		c.recorder.Eventf(fleet, corev1.EventTypeNormal, "UpdatingGameServerSet",
+			"Updated GameServerSet %s Priorities", gsSetCopy.ObjectMeta.Name)
 	}
 
 	return nil
@@ -527,7 +525,7 @@ func (c *Controller) rollingUpdateActive(fleet *agonesv1.Fleet, active *agonesv1
 		return fleet.LowerBoundReplicas(fleet.Spec.Replicas - sumAllocated), nil
 	}
 
-	r, err := intstr.GetValueFromIntOrPercent(fleet.Spec.Strategy.RollingUpdate.MaxSurge, int(fleet.Spec.Replicas), true)
+	r, err := intstr.GetScaledValueFromIntOrPercent(fleet.Spec.Strategy.RollingUpdate.MaxSurge, int(fleet.Spec.Replicas), true)
 	if err != nil {
 		return 0, c.errs.Wrapf(err, "error parsing MaxSurge value: %s", fleet.ObjectMeta.Name)
 	}
@@ -585,27 +583,18 @@ func (c *Controller) updateFleetStatus(ctx context.Context, fleet *agonesv1.Flee
 	fCopy.Status.ReadyReplicas = 0
 	fCopy.Status.ReservedReplicas = 0
 	fCopy.Status.AllocatedReplicas = 0
-	if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		fCopy.Status.Counters = make(map[string]agonesv1.AggregatedCounterStatus)
-		fCopy.Status.Lists = make(map[string]agonesv1.AggregatedListStatus)
-	}
-	// Drop Counters and Lists status if the feature flag has been set to false
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		if len(fCopy.Status.Counters) != 0 || len(fCopy.Status.Lists) != 0 {
-			fCopy.Status.Counters = map[string]agonesv1.AggregatedCounterStatus{}
-			fCopy.Status.Lists = map[string]agonesv1.AggregatedListStatus{}
-		}
-	}
+
+	fCopy.Status.Counters = make(map[string]agonesv1.AggregatedCounterStatus)
+	fCopy.Status.Lists = make(map[string]agonesv1.AggregatedListStatus)
 
 	for _, gsSet := range list {
 		fCopy.Status.Replicas += gsSet.Status.Replicas
 		fCopy.Status.ReadyReplicas += gsSet.Status.ReadyReplicas
 		fCopy.Status.ReservedReplicas += gsSet.Status.ReservedReplicas
 		fCopy.Status.AllocatedReplicas += gsSet.Status.AllocatedReplicas
-		if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-			fCopy.Status.Counters = mergeCounters(fCopy.Status.Counters, gsSet.Status.Counters)
-			fCopy.Status.Lists = mergeLists(fCopy.Status.Lists, gsSet.Status.Lists)
-		}
+		fCopy.Status.Counters = mergeCounters(fCopy.Status.Counters, gsSet.Status.Counters)
+		fCopy.Status.Lists = mergeLists(fCopy.Status.Lists, gsSet.Status.Lists)
+
 	}
 	if runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
 		// to make this code simpler, while the feature gate is in place,

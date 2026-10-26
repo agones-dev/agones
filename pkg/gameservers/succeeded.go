@@ -30,6 +30,7 @@ import (
 	"agones.dev/agones/pkg/util/workerqueue"
 	"github.com/heptiolabs/healthcheck"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -51,6 +52,7 @@ type SucceededController struct {
 	gameServerGetter getterv1.GameServersGetter
 	gameServerLister listerv1.GameServerLister
 	workerqueue      *workerqueue.WorkerQueue
+	shutdownLimiter  *rate.Limiter
 	recorder         record.EventRecorder
 	errs             *errors.Errors
 }
@@ -70,6 +72,7 @@ func NewSucceededController(health healthcheck.Handler,
 		gameServerSynced: gameServers.Informer().HasSynced,
 		gameServerGetter: agonesClient.AgonesV1(),
 		gameServerLister: gameServers.Lister(),
+		shutdownLimiter:  newStateUpdateLimiter(),
 	}
 
 	c.baseLogger = runtime.NewLoggerWithType(c)
@@ -82,17 +85,18 @@ func NewSucceededController(health healthcheck.Handler,
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeClient.CoreV1().Events("")})
 	c.recorder = eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "succeeded-controller"})
 
+	// Enqueue without rate limiting, and throttle the Shutdown write instead; see newStateUpdateLimiter.
 	_, _ = podInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj any) {
 			pod := obj.(*corev1.Pod)
 			if isGameServerPod(pod) && podCompleted(pod) {
-				c.workerqueue.Enqueue(pod)
+				c.workerqueue.EnqueueImmediately(pod)
 			}
 		},
 		UpdateFunc: func(_, newObj any) {
 			pod := newObj.(*corev1.Pod)
 			if isGameServerPod(pod) && podCompleted(pod) {
-				c.workerqueue.Enqueue(pod)
+				c.workerqueue.EnqueueImmediately(pod)
 			}
 		},
 	})
@@ -110,7 +114,7 @@ func NewSucceededController(health healthcheck.Handler,
 			}
 			pod, err := c.podLister.Pods(gs.ObjectMeta.Namespace).Get(gs.ObjectMeta.Name)
 			if err == nil && isGameServerPod(pod) && podCompleted(pod) {
-				c.workerqueue.Enqueue(pod)
+				c.workerqueue.EnqueueImmediately(pod)
 			}
 		},
 	})
@@ -176,6 +180,10 @@ func (c *SucceededController) syncGameServer(ctx context.Context, key string) er
 	if gs.IsBeingDeleted() || agonesv1.TerminalGameServerStates[gs.Status.State] {
 		c.loggerForGameServerKey(key).WithField("state", gs.Status.State).Debug("GameServer already being deleted/shutdown. Skipping.")
 		return nil
+	}
+
+	if err := c.shutdownLimiter.Wait(ctx); err != nil {
+		return c.errs.Wrap(err, "error waiting to update GameServer to Shutdown")
 	}
 
 	gsCopy := gs.DeepCopy()

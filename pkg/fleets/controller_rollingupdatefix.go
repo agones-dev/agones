@@ -8,7 +8,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/integer"
 )
 
 func (c *Controller) cleanupUnhealthyReplicasRollingUpdateFix(ctx context.Context, rest []*agonesv1.GameServerSet,
@@ -31,7 +30,7 @@ func (c *Controller) cleanupUnhealthyReplicasRollingUpdateFix(ctx context.Contex
 			continue
 		}
 
-		scaledDownCount := int32(integer.IntMin(int(maxCleanupCount-totalScaledDown), int(gsSet.Spec.Replicas-healthy)))
+		scaledDownCount := int32(min(int(maxCleanupCount-totalScaledDown), int(gsSet.Spec.Replicas-healthy)))
 		newReplicasCount := gsSet.Spec.Replicas - scaledDownCount
 		if newReplicasCount > gsSet.Spec.Replicas {
 			return nil, 0, fmt.Errorf("when cleaning up unhealthy replicas, got invalid request to scale down %s/%s %d -> %d", gsSet.Namespace, gsSet.Name, gsSet.Spec.Replicas, newReplicasCount)
@@ -57,7 +56,7 @@ func (c *Controller) rollingUpdateRestFixedOnReadyRollingUpdateFix(ctx context.C
 	}
 
 	// Look at Kubernetes Deployment util ResolveFenceposts() function
-	r, err := intstr.GetValueFromIntOrPercent(fleet.Spec.Strategy.RollingUpdate.MaxUnavailable, int(fleet.Status.ReadyReplicas), false)
+	r, err := intstr.GetScaledValueFromIntOrPercent(fleet.Spec.Strategy.RollingUpdate.MaxUnavailable, int(fleet.Status.ReadyReplicas), false)
 	if err != nil {
 		return c.errs.Wrapf(err, "error parsing MaxUnavailable value: %s", fleet.ObjectMeta.Name)
 	}
@@ -126,7 +125,7 @@ func (c *Controller) rollingUpdateRestFixedOnReadyRollingUpdateFix(ctx context.C
 		if gsSet.Status.ShutdownReplicas == 0 {
 			// Wait for new GameServers to become Ready before scaling down Inactive GameServerset
 			// Scale down.
-			scaleDownCount := int32(integer.IntMin(int(gsSet.Spec.Replicas), int(totalScaleDownCount-totalAlreadyScaledDown)))
+			scaleDownCount := int32(min(int(gsSet.Spec.Replicas), int(totalScaleDownCount-totalAlreadyScaledDown)))
 
 			newReplicasCount := gsSet.Spec.Replicas - scaleDownCount
 			if newReplicasCount > gsSet.Spec.Replicas {

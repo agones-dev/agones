@@ -64,7 +64,7 @@ func FourZeroFour(logger *logrus.Entry, w http.ResponseWriter, r *http.Request) 
 		if err != nil {
 			return errs.Wrap(err, "error in default handler")
 		}
-		defer r.Body.Close() // nolint: errcheck
+		defer r.Body.Close() //nolint:errcheck
 
 		LogRequest(logger, r).WithField("body", string(body)).Warn("404")
 		http.NotFound(w, r)

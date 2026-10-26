@@ -40,7 +40,7 @@ func testHTTPHealth(t *testing.T, url string, expectedResponse string, expectedS
 
 		assert.NotNil(t, resp)
 		if resp != nil {
-			defer resp.Body.Close() // nolint: errcheck
+			defer resp.Body.Close() //nolint:errcheck
 			body, err := io.ReadAll(resp.Body)
 			assert.NoError(t, err, "(%s) read response error should be nil: %v", url, err)
 			assert.Equal(t, expectedStatus, resp.StatusCode, "url: %s", url)

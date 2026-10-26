@@ -12,22 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-type PlayerId = string;
-
-declare class Alpha {
-	playerConnect(playerID: PlayerId): Promise<boolean>;
-
-	playerDisconnect(playerID: PlayerId): Promise<boolean>;
-
-	setPlayerCapacity(capacity: number): Promise<Record<string, unknown>>;
-
-	getPlayerCapacity(): Promise<number>;
-
-	getPlayerCount(): Promise<number>;
-
-	isPlayerConnected(playerID: PlayerId): Promise<boolean>;
-
-	getConnectedPlayers(): Promise<PlayerId[]>;
-}
+declare class Alpha {}
 
 export default Alpha;

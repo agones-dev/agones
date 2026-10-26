@@ -155,22 +155,22 @@ func main() {
 		if err != nil {
 			log.Fatalf("error listing builds: %v", err)
 		}
-		createTime := resp.CreateTime.AsTime()
+		createTime := resp.GetCreateTime().AsTime()
 		if createTime.Before(windowStart) {
 			break
 		}
 		// We only care about Agones builds.
-		if resp.BuildTriggerId != wantBuildTriggerID {
+		if resp.GetBuildTriggerId() != wantBuildTriggerID {
 			continue
 		}
 		// Ignore if it's still running.
-		if resp.FinishTime == nil {
+		if resp.GetFinishTime() == nil {
 			continue
 		}
 
-		id := resp.Id
-		sha := resp.Substitutions["COMMIT_SHA"]
-		status := resp.Status
+		id := resp.GetId()
+		sha := resp.GetSubstitutions()["COMMIT_SHA"]
+		status := resp.GetStatus()
 		idTime[id] = createTime
 		log.Printf("id = %v, sha = %v, status = %v", id, sha, status)
 

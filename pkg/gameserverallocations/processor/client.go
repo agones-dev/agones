@@ -292,11 +292,11 @@ func (p *client) handlePullRequest(stream allocationpb.Processor_StreamBatchesCl
 
 	// Filter out requests whose callers have already timed out or cancelled
 	filteredRequests := make([]*pendingRequest, 0, len(readyRequests))
-	filteredWrappers := make([]*allocationpb.RequestWrapper, 0, len(readyBatch.Requests))
+	filteredWrappers := make([]*allocationpb.RequestWrapper, 0, len(readyBatch.GetRequests()))
 	for i, req := range readyRequests {
 		if _, exists := p.requestIDMapping[req.id]; exists {
 			filteredRequests = append(filteredRequests, req)
-			filteredWrappers = append(filteredWrappers, readyBatch.Requests[i])
+			filteredWrappers = append(filteredWrappers, readyBatch.GetRequests()[i])
 		} else {
 			p.logger.WithField(logFieldRequestID, req.id).Debug("Dropping stale request from batch")
 		}
@@ -356,7 +356,7 @@ func (p *client) sendBatch(stream allocationpb.Processor_StreamBatchesClient, ba
 
 	sendDuration := time.Since(sendStart)
 	p.logger.WithFields(logrus.Fields{
-		logFieldBatchID:      batch.BatchId,
+		logFieldBatchID:      batch.GetBatchId(),
 		logFieldRequestCount: len(requests),
 		"sendDuration":       sendDuration,
 	}).Debug("Batch sent successfully")
@@ -367,16 +367,16 @@ func (p *client) sendBatch(stream allocationpb.Processor_StreamBatchesClient, ba
 func (p *client) handleBatchResponse(batchResp *allocationpb.BatchResponse) {
 	p.logger.WithFields(logrus.Fields{
 		logFieldComponent: componentProcessorClient,
-		logFieldBatchID:   batchResp.BatchId,
-		"responseCount":   len(batchResp.Responses),
+		logFieldBatchID:   batchResp.GetBatchId(),
+		"responseCount":   len(batchResp.GetResponses()),
 	}).Debug("Processing batch response")
 
 	successCount := 0
 	errorCount := 0
 	notFoundCount := 0
 
-	for _, respWrapper := range batchResp.Responses {
-		requestID := respWrapper.RequestId
+	for _, respWrapper := range batchResp.GetResponses() {
+		requestID := respWrapper.GetRequestId()
 
 		// Try to load the pending request for this response
 		p.batchMutex.RLock()
@@ -388,7 +388,7 @@ func (p *client) handleBatchResponse(batchResp *allocationpb.BatchResponse) {
 			// below sets this before it can be read.
 			var responseProcessed bool
 
-			switch result := respWrapper.Result.(type) {
+			switch result := respWrapper.GetResult().(type) {
 			case *allocationpb.ResponseWrapper_Response:
 				// Success case: send response to caller
 				successCount++
@@ -407,13 +407,13 @@ func (p *client) handleBatchResponse(batchResp *allocationpb.BatchResponse) {
 				errorCount++
 				responseProcessed = true
 
-				code := codes.Code(result.Error.Code)
-				msg := result.Error.Message
+				code := codes.Code(result.Error.GetCode())
+				msg := result.Error.GetMessage()
 
 				p.logger.WithFields(logrus.Fields{
 					logFieldComponent: componentProcessorClient,
 					logFieldRequestID: requestID,
-					logFieldBatchID:   batchResp.BatchId,
+					logFieldBatchID:   batchResp.GetBatchId(),
 					"errorCode":       code,
 					"errorMsg":        msg,
 				}).Error("Request failed with error from processor")
@@ -434,7 +434,7 @@ func (p *client) handleBatchResponse(batchResp *allocationpb.BatchResponse) {
 				p.logger.WithFields(logrus.Fields{
 					logFieldComponent: componentProcessorClient,
 					logFieldRequestID: requestID,
-					logFieldBatchID:   batchResp.BatchId,
+					logFieldBatchID:   batchResp.GetBatchId(),
 				}).Error("Response wrapper has no result")
 
 				select {
@@ -461,7 +461,7 @@ func (p *client) handleBatchResponse(batchResp *allocationpb.BatchResponse) {
 			p.logger.WithFields(logrus.Fields{
 				logFieldComponent: componentProcessorClient,
 				logFieldRequestID: requestID,
-				logFieldBatchID:   batchResp.BatchId,
+				logFieldBatchID:   batchResp.GetBatchId(),
 			}).Warn("No pending request found for response - may have timed out")
 		}
 	}
@@ -469,11 +469,11 @@ func (p *client) handleBatchResponse(batchResp *allocationpb.BatchResponse) {
 	// Log summary of batch response processing
 	p.logger.WithFields(logrus.Fields{
 		logFieldComponent: componentProcessorClient,
-		logFieldBatchID:   batchResp.BatchId,
+		logFieldBatchID:   batchResp.GetBatchId(),
 		"successCount":    successCount,
 		"errorCount":      errorCount,
 		"notFoundCount":   notFoundCount,
-		"totalCount":      len(batchResp.Responses),
+		"totalCount":      len(batchResp.GetResponses()),
 	}).Debug("Batch response processing completed")
 }
 
@@ -548,8 +548,8 @@ func (p *client) healthCheck(ctx context.Context, conn *grpc.ClientConn) error {
 		return err
 	}
 
-	if resp.Status != grpc_health_v1.HealthCheckResponse_SERVING {
-		return p.errs.Errorf("processor not serving: %v", resp.Status)
+	if resp.GetStatus() != grpc_health_v1.HealthCheckResponse_SERVING {
+		return p.errs.Errorf("processor not serving: %v", resp.GetStatus())
 	}
 
 	return nil
@@ -588,7 +588,7 @@ func (p *client) drainPendingRequests() {
 	}
 	clear(p.requestIDMapping)
 
-	p.hotBatch.Requests = p.hotBatch.Requests[:0]
+	p.hotBatch.Requests = p.hotBatch.GetRequests()[:0]
 	p.pendingRequests = p.pendingRequests[:0]
 
 	p.logger.Info("Drained all pending requests on shutdown")

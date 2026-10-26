@@ -15,115 +15,12 @@
 
 const grpc = require("@grpc/grpc-js");
 
-const messages = require("../lib/alpha/alpha_pb");
 const servicesPackageDefinition = require("../lib/alpha/alpha_grpc_pb");
 
 class Alpha {
 	constructor(address, credentials) {
 		const services = grpc.loadPackageDefinition(servicesPackageDefinition);
 		this.client = new services.agones.dev.sdk.alpha.SDK(address, credentials);
-	}
-
-	async playerConnect(playerID) {
-		const request = new messages.PlayerID();
-		request.setPlayerid(playerID);
-
-		return new Promise((resolve, reject) => {
-			this.client.playerConnect(request, (error, response) => {
-				if (error) {
-					reject(error);
-				} else {
-					resolve(response.getBool());
-				}
-			});
-		});
-	}
-
-	async playerDisconnect(playerID) {
-		const request = new messages.PlayerID();
-		request.setPlayerid(playerID);
-
-		return new Promise((resolve, reject) => {
-			this.client.playerDisconnect(request, (error, response) => {
-				if (error) {
-					reject(error);
-				} else {
-					resolve(response.getBool());
-				}
-			});
-		});
-	}
-
-	async setPlayerCapacity(capacity) {
-		const request = new messages.Count();
-		request.setCount(capacity);
-
-		return new Promise((resolve, reject) => {
-			this.client.setPlayerCapacity(request, (error, response) => {
-				if (error) {
-					reject(error);
-				} else {
-					resolve(response.toObject());
-				}
-			});
-		});
-	}
-
-	async getPlayerCapacity() {
-		const request = new messages.Empty();
-
-		return new Promise((resolve, reject) => {
-			this.client.getPlayerCapacity(request, (error, response) => {
-				if (error) {
-					reject(error);
-				} else {
-					resolve(response.getCount());
-				}
-			});
-		});
-	}
-
-	async getPlayerCount() {
-		const request = new messages.Empty();
-
-		return new Promise((resolve, reject) => {
-			this.client.getPlayerCount(request, (error, response) => {
-				if (error) {
-					reject(error);
-				} else {
-					resolve(response.getCount());
-				}
-			});
-		});
-	}
-
-	async isPlayerConnected(playerID) {
-		const request = new messages.PlayerID();
-		request.setPlayerid(playerID);
-
-		return new Promise((resolve, reject) => {
-			this.client.isPlayerConnected(request, (error, response) => {
-				if (error) {
-					reject(error);
-				} else {
-					resolve(response.getBool());
-				}
-			});
-		});
-	}
-
-	async getConnectedPlayers() {
-		const request = new messages.Empty();
-
-		return new Promise((resolve, reject) => {
-			this.client.getConnectedPlayers(request, (error, response) => {
-				if (error) {
-					reject(error);
-				} else {
-					resolve(response.getListList());
-				}
-			});
-		});
 	}
 }
 

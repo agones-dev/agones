@@ -418,15 +418,15 @@ func (c *Controller) scaleFleet(ctx context.Context, fas *autoscalingv1.FleetAut
 	if replicas != f.Spec.Replicas {
 		fCopy := f.DeepCopy()
 		fCopy.Spec.Replicas = replicas
-		fCopy, err := c.fleetGetter.Fleets(f.ObjectMeta.Namespace).Update(ctx, fCopy, metav1.UpdateOptions{})
+		updated, err := c.fleetGetter.Fleets(f.ObjectMeta.Namespace).Update(ctx, fCopy, metav1.UpdateOptions{})
 		if err != nil {
 			c.recorder.Eventf(fas, corev1.EventTypeWarning, "AutoScalingFleetError",
-				"Error on scaling fleet %s from %d to %d. Error: %s", fCopy.ObjectMeta.Name, f.Spec.Replicas, fCopy.Spec.Replicas, err.Error())
+				"Error on scaling fleet %s from %d to %d. Error: %s", f.ObjectMeta.Name, f.Spec.Replicas, replicas, err.Error())
 			return c.errs.Wrapf(err, "error updating replicas for fleet %s", f.ObjectMeta.Name)
 		}
 
 		c.recorder.Eventf(fas, corev1.EventTypeNormal, "AutoScalingFleet",
-			"Scaling fleet %s from %d to %d", fCopy.ObjectMeta.Name, f.Spec.Replicas, fCopy.Spec.Replicas)
+			"Scaling fleet %s from %d to %d", updated.ObjectMeta.Name, f.Spec.Replicas, updated.Spec.Replicas)
 	}
 
 	return nil

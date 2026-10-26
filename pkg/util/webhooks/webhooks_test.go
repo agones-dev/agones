@@ -120,7 +120,7 @@ func TestWebHookAddHandler(t *testing.T) {
 
 			resp, err := client.Do(r)
 			assert.NoError(t, err)
-			defer resp.Body.Close() // nolint: errcheck
+			defer resp.Body.Close() //nolint:errcheck
 			assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 			assert.Equal(t, handles.expected.count, callCount, "[%v] /test should have been called for %#v", k, handles)
@@ -216,7 +216,7 @@ func TestWebHookFleetValidationHandler(t *testing.T) {
 
 			resp, err := client.Do(r)
 			assert.NoError(t, err)
-			defer resp.Body.Close() // nolint: errcheck
+			defer resp.Body.Close() //nolint:errcheck
 			assert.Equal(t, http.StatusOK, resp.StatusCode)
 			body, err := io.ReadAll(resp.Body)
 			assert.NoError(t, err)

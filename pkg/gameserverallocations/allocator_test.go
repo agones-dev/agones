@@ -17,7 +17,6 @@ package gameserverallocations
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
@@ -27,7 +26,6 @@ import (
 	multiclusterv1 "agones.dev/agones/pkg/apis/multicluster/v1"
 	"agones.dev/agones/pkg/gameservers"
 	agtesting "agones.dev/agones/pkg/testing"
-	"agones.dev/agones/pkg/util/runtime"
 	"agones.dev/agones/test/e2e/framework"
 	"github.com/heptiolabs/healthcheck"
 	"github.com/sirupsen/logrus"
@@ -47,10 +45,6 @@ const defaultTestListMaxCapacity = int64(1000)
 
 func TestAllocatorAllocate(t *testing.T) {
 	t.Parallel()
-
-	// TODO: remove when `CountsAndLists` feature flag is moved to stable.
-	runtime.FeatureTestMutex.Lock()
-	defer runtime.FeatureTestMutex.Unlock()
 
 	f, gsList := defaultFixtures(4)
 	a, m := newFakeAllocator()
@@ -134,10 +128,6 @@ func TestAllocatorAllocate(t *testing.T) {
 
 func TestAllocatorAllocatePriority(t *testing.T) {
 	t.Parallel()
-
-	// TODO: remove when `CountsAndLists` feature flag is moved to stable.
-	runtime.FeatureTestMutex.Lock()
-	defer runtime.FeatureTestMutex.Unlock()
 
 	run := func(t *testing.T, name string, test func(t *testing.T, a *Allocator, gas *allocationv1.GameServerAllocation)) {
 		f, gsList := defaultFixtures(4)
@@ -338,15 +328,13 @@ func TestAllocatorApplyAllocationToGameServerCountsListsActions(t *testing.T) {
 				}}}}
 
 	testScenarios := map[string]struct {
-		features     string
 		gs           *agonesv1.GameServer
 		gsa          *allocationv1.GameServerAllocation
 		wantCounters map[string]agonesv1.CounterStatus
 		wantLists    map[string]agonesv1.ListStatus
 	}{
 		"CounterActions increment and ListActions add, delete, and update capacity": {
-			features: fmt.Sprintf("%s=true", runtime.FeatureCountsAndLists),
-			gs:       &gs1,
+			gs: &gs1,
 			gsa: &allocationv1.GameServerAllocation{
 				ObjectMeta: metav1.ObjectMeta{Namespace: defaultNs},
 				Spec: allocationv1.GameServerAllocationSpec{
@@ -377,8 +365,7 @@ func TestAllocatorApplyAllocationToGameServerCountsListsActions(t *testing.T) {
 				}},
 		},
 		"CounterActions and ListActions truncate counter Count and update list capacity": {
-			features: fmt.Sprintf("%s=true", runtime.FeatureCountsAndLists),
-			gs:       &gs2,
+			gs: &gs2,
 			gsa: &allocationv1.GameServerAllocation{
 				ObjectMeta: metav1.ObjectMeta{Namespace: defaultNs},
 				Spec: allocationv1.GameServerAllocationSpec{
@@ -411,11 +398,6 @@ func TestAllocatorApplyAllocationToGameServerCountsListsActions(t *testing.T) {
 
 	for test, testScenario := range testScenarios {
 		t.Run(test, func(t *testing.T) {
-			runtime.FeatureTestMutex.Lock()
-			defer runtime.FeatureTestMutex.Unlock()
-			// we always set the feature flag in all these tests, so always process it.
-			require.NoError(t, runtime.ParseFeatures(testScenario.features))
-
 			foundGs, err := allocator.applyAllocationToGameServer(ctx, mp, testScenario.gs, testScenario.gsa)
 			assert.NoError(t, err)
 			for counter, counterStatus := range testScenario.wantCounters {
@@ -456,11 +438,6 @@ func TestAllocationApplyAllocationError(t *testing.T) {
 
 func TestAllocatorAllocateOnGameServerUpdateError(t *testing.T) {
 	t.Parallel()
-
-	// TODO: remove when `CountsAndLists` feature flag is moved to stable.
-	runtime.FeatureTestMutex.Lock()
-	defer runtime.FeatureTestMutex.Unlock()
-	require.NoError(t, runtime.ParseFeatures(fmt.Sprintf("%s=false", runtime.FeatureCountsAndLists)))
 
 	a, m := newFakeAllocator()
 	log := framework.TestLogger(t)
@@ -522,10 +499,6 @@ func TestAllocatorAllocateOnGameServerUpdateError(t *testing.T) {
 
 func TestAllocatorRunLocalAllocations(t *testing.T) {
 	t.Parallel()
-
-	// TODO: remove when `CountsAndLists` feature flag is moved to stable.
-	runtime.FeatureTestMutex.Lock()
-	defer runtime.FeatureTestMutex.Unlock()
 
 	t.Run("no problems", func(t *testing.T) {
 		f, gsList := defaultFixtures(5)
@@ -673,10 +646,6 @@ func TestAllocatorRunLocalAllocations(t *testing.T) {
 
 func TestAllocatorRunLocalAllocationsCountsAndLists(t *testing.T) {
 	t.Parallel()
-
-	runtime.FeatureTestMutex.Lock()
-	defer runtime.FeatureTestMutex.Unlock()
-	require.NoError(t, runtime.ParseFeatures(string(runtime.FeatureCountsAndLists)+"=true"))
 
 	a, m := newFakeAllocator()
 

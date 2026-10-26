@@ -26,6 +26,7 @@ import (
 	"github.com/heptiolabs/healthcheck"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -322,10 +323,11 @@ func TestHealthControllerSyncGameServer(t *testing.T) {
 		updated bool
 	}
 	fixtures := map[string]struct {
-		state     agonesv1.GameServerState
-		podStatus *corev1.PodStatus
-		feature   string
-		expected  expected
+		state           agonesv1.GameServerState
+		podStatus       *corev1.PodStatus
+		feature         string
+		extraContainers []corev1.Container
+		expected        expected
 	}{
 		"started": {
 			state: agonesv1.GameServerStateStarting,
@@ -358,10 +360,21 @@ func TestHealthControllerSyncGameServer(t *testing.T) {
 			},
 		},
 		"container failed before ready": {
-			state: agonesv1.GameServerStateStarting,
+			state:   agonesv1.GameServerStateStarting,
+			feature: string(agruntime.FeatureSidecarContainers) + "=false",
 			podStatus: &corev1.PodStatus{ContainerStatuses: []corev1.ContainerStatus{
 				{Name: "container", State: corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{}}}}},
 			expected: expected{updated: false},
+		},
+		"sidecar mode, game container failed before ready while Pod is running": {
+			state:           agonesv1.GameServerStateScheduled,
+			feature:         string(agruntime.FeatureSidecarContainers) + "=true",
+			extraContainers: []corev1.Container{{Name: "other-container", Image: "container/image"}},
+			podStatus: &corev1.PodStatus{Phase: corev1.PodRunning, ContainerStatuses: []corev1.ContainerStatus{
+				{Name: "container", State: corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{ExitCode: 23}}},
+				{Name: "other-container", State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{}}},
+			}},
+			expected: expected{updated: true},
 		},
 		"container failed after ready": {
 			state:   agonesv1.GameServerStateAllocated,
@@ -410,6 +423,8 @@ func TestHealthControllerSyncGameServer(t *testing.T) {
 
 			gs := agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "test"}, Spec: newSingleContainerSpec(),
 				Status: agonesv1.GameServerStatus{State: test.state}}
+			gs.Spec.Template.Spec.Containers = append(gs.Spec.Template.Spec.Containers, test.extraContainers...)
+			gs.Spec.Container = gs.Spec.Template.Spec.Containers[0].Name
 			gs.ApplyDefaults()
 
 			got := false
@@ -481,6 +496,79 @@ func TestHealthControllerSyncGameServerUpdateFailed(t *testing.T) {
 	assert.ErrorContains(t, err, "error updating GameServer test/default to unhealthy: update-err")
 }
 
+func TestHealthControllerSyncGameServerUnhealthyLimiter(t *testing.T) {
+	t.Parallel()
+
+	fixtures := map[string]struct {
+		state     agonesv1.GameServerState
+		podStatus corev1.PodStatus
+		expectErr bool
+	}{
+		"unhealthy write waits on the limiter": {
+			state:     agonesv1.GameServerStateAllocated,
+			podStatus: corev1.PodStatus{Reason: "Evicted"},
+			expectErr: true,
+		},
+		"no-op sync does not wait on the limiter": {
+			state:     agonesv1.GameServerStateUnhealthy,
+			podStatus: corev1.PodStatus{Reason: "Evicted"},
+			expectErr: false,
+		},
+		"skipped container failure does not wait on the limiter": {
+			state: agonesv1.GameServerStateStarting,
+			podStatus: corev1.PodStatus{ContainerStatuses: []corev1.ContainerStatus{
+				{Name: "container", State: corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{}}}}},
+			expectErr: false,
+		},
+	}
+
+	for name, test := range fixtures {
+		t.Run(name, func(t *testing.T) {
+			agruntime.FeatureTestMutex.Lock()
+			defer agruntime.FeatureTestMutex.Unlock()
+			require.NoError(t, agruntime.ParseFeatures(string(agruntime.FeatureSidecarContainers)+"=false"))
+
+			m := agtesting.NewMocks()
+			hc := NewHealthController(healthcheck.NewHandler(), m.KubeClient, m.AgonesClient, m.KubeInformerFactory, m.AgonesInformerFactory, false)
+			hc.recorder = m.FakeRecorder
+			// a zero burst limiter can never grant a token, so Wait fails immediately.
+			hc.unhealthyLimiter = rate.NewLimiter(0, 0)
+
+			gs := agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "test"}, Spec: newSingleContainerSpec(),
+				Status: agonesv1.GameServerStatus{State: test.state}}
+			gs.ApplyDefaults()
+
+			pod, err := gs.Pod(agtesting.FakeAPIHooks{})
+			require.NoError(t, err)
+			pod.Status = test.podStatus
+
+			m.KubeClient.AddReactor("list", "pods", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+				return true, &corev1.PodList{Items: []corev1.Pod{*pod}}, nil
+			})
+			m.AgonesClient.AddReactor("list", "gameservers", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+				return true, &agonesv1.GameServerList{Items: []agonesv1.GameServer{gs}}, nil
+			})
+
+			updated := false
+			m.AgonesClient.AddReactor("update", "gameservers", func(action k8stesting.Action) (bool, runtime.Object, error) {
+				updated = true
+				return true, action.(k8stesting.UpdateAction).GetObject(), nil
+			})
+
+			ctx, cancel := agtesting.StartInformers(m, hc.gameServerSynced, hc.podSynced)
+			defer cancel()
+
+			err = hc.syncGameServer(ctx, "default/test")
+			if test.expectErr {
+				require.ErrorContains(t, err, "error waiting to update GameServer to Unhealthy")
+			} else {
+				require.NoError(t, err)
+			}
+			require.False(t, updated)
+		})
+	}
+}
+
 func TestHealthControllerRunNoSideCar(t *testing.T) {
 	t.Parallel()
 
@@ -522,7 +610,7 @@ func TestHealthControllerRunNoSideCar(t *testing.T) {
 	gsWatch.Add(gs.DeepCopy())
 	podWatch.Add(pod.DeepCopy())
 
-	go hc.Run(stop, 1) // nolint: errcheck
+	go hc.Run(stop, 1) //nolint:errcheck
 	err = wait.PollUntilContextTimeout(context.Background(), time.Second, 10*time.Second, true, func(_ context.Context) (bool, error) {
 		return hc.workerqueue.RunCount() == 1, nil
 	})
@@ -613,7 +701,7 @@ func TestHealthControllerRunWithSideCar(t *testing.T) {
 	gsWatch.Add(gs.DeepCopy())
 	podWatch.Add(pod.DeepCopy())
 
-	go hc.Run(stop, 1) // nolint: errcheck
+	go hc.Run(stop, 1) //nolint:errcheck
 	err = wait.PollUntilContextTimeout(context.Background(), time.Second, 10*time.Second, true, func(_ context.Context) (bool, error) {
 		return hc.workerqueue.RunCount() == 1, nil
 	})

@@ -30,6 +30,7 @@ import (
 	"agones.dev/agones/pkg/util/workerqueue"
 	"github.com/heptiolabs/healthcheck"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -54,6 +55,7 @@ type HealthController struct {
 	gameServerGetter getterv1.GameServersGetter
 	gameServerLister listerv1.GameServerLister
 	workerqueue      *workerqueue.WorkerQueue
+	unhealthyLimiter *rate.Limiter
 	recorder         record.EventRecorder
 	waitOnFreePorts  bool
 }
@@ -76,6 +78,7 @@ func NewHealthController(
 		gameServerGetter: agonesClient.AgonesV1(),
 		gameServerLister: gameserverInformer.Lister(),
 		waitOnFreePorts:  waitOnFreePorts,
+		unhealthyLimiter: newStateUpdateLimiter(),
 	}
 
 	hc.baseLogger = runtime.NewLoggerWithType(hc)
@@ -88,18 +91,19 @@ func NewHealthController(
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeClient.CoreV1().Events("")})
 	hc.recorder = eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "health-controller"})
 
+	// Enqueue without rate limiting, and throttle the Unhealthy write instead; see newStateUpdateLimiter.
 	_, _ = podInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		UpdateFunc: func(_, newObj any) {
 			pod := newObj.(*corev1.Pod)
 			if pod.ObjectMeta.DeletionTimestamp.IsZero() && isGameServerPod(pod) && hc.isUnhealthy(pod) {
-				hc.workerqueue.Enqueue(pod)
+				hc.workerqueue.EnqueueImmediately(pod)
 			}
 		},
 		DeleteFunc: func(obj any) {
 			// Could be a DeletedFinalStateUnknown, in which case, just ignore it
 			pod, ok := obj.(*corev1.Pod)
 			if ok && isGameServerPod(pod) {
-				hc.workerqueue.Enqueue(pod)
+				hc.workerqueue.EnqueueImmediately(pod)
 			}
 		},
 	})
@@ -274,6 +278,10 @@ func (hc *HealthController) syncGameServer(ctx context.Context, key string) erro
 		}
 	}
 
+	if err := hc.unhealthyLimiter.Wait(ctx); err != nil {
+		return hc.errs.Wrap(err, "error waiting to update GameServer to Unhealthy")
+	}
+
 	hc.loggerForGameServer(gs).Debug("Issue with GameServer pod, marking as GameServerStateUnhealthy")
 	gsCopy := gs.DeepCopy()
 	gsCopy.Status.State = agonesv1.GameServerStateUnhealthy
@@ -292,7 +300,7 @@ func (hc *HealthController) syncGameServer(ctx context.Context, key string) erro
 // It does this by checking a combination of the current GameServer state and annotation data that stores
 // which container instance was live if the GameServer has been marked as Ready.
 // The logic is as follows:
-//   - If the GameServer is not yet Ready, allow to restart (return true)
+//   - If the GameServer is not yet Ready, allow to restart unless SidecarContainers is enabled
 //   - If the GameServer is in a state past Ready, move to Unhealthy
 func (hc *HealthController) skipUnhealthyGameContainer(gs *agonesv1.GameServer, pod *corev1.Pod) (bool, error) {
 	if !metav1.IsControlledBy(pod, gs) {
@@ -300,15 +308,9 @@ func (hc *HealthController) skipUnhealthyGameContainer(gs *agonesv1.GameServer, 
 		return false, nil
 	}
 
-	// if Sidecar is enabled, there is no skip once the GameServer is past Ready - it's just
-	// whatever K8s/Agones wants to do. Before Ready we still skip on a game container
-	// failure, matching the non-sidecar path below: a container that dies during startup is
-	// left to normal Kubernetes handling rather than immediately failing the GameServer.
+	// With SidecarContainers, failedContainer only reports failures that cannot restart.
 	// on move to stable, this function can be deleted.
 	if runtime.FeatureEnabled(runtime.FeatureSidecarContainers) {
-		if gs.IsBeforeReady() {
-			return hc.failedContainer(pod), nil
-		}
 		return false, nil
 	}
 

@@ -129,22 +129,22 @@ const (
 	// [Stage:Beta]
 	// [FeatureFlag:CountsAndLists]
 	// CounterPolicyType is for Counter based fleet autoscaling
-	// nolint:revive // Linter contains comment doesn't start with CounterPolicyType
+	//nolint:revive // Linter contains comment doesn't start with CounterPolicyType
 	CounterPolicyType FleetAutoscalerPolicyType = "Counter"
 	// [Stage:Beta]
 	// [FeatureFlag:CountsAndLists]
 	// ListPolicyType is for List based fleet autoscaling
-	// nolint:revive // Linter contains comment doesn't start with ListPolicyType
+	//nolint:revive // Linter contains comment doesn't start with ListPolicyType
 	ListPolicyType FleetAutoscalerPolicyType = "List"
 	// [Stage:Beta]
 	// [FeatureFlag:ScheduledAutoscaler]
 	// SchedulePolicyType is for Schedule based fleet autoscaling
-	// nolint:revive // Linter contains comment doesn't start with SchedulePolicyType
+	//nolint:revive // Linter contains comment doesn't start with SchedulePolicyType
 	SchedulePolicyType FleetAutoscalerPolicyType = "Schedule"
 	// [Stage:Beta]
 	// [FeatureFlag:ScheduledAutoscaler]
 	// ChainPolicyType is for Chain based fleet autoscaling
-	// nolint:revive // Linter contains comment doesn't start with ChainPolicyType
+	//nolint:revive // Linter contains comment doesn't start with ChainPolicyType
 	ChainPolicyType FleetAutoscalerPolicyType = "Chain"
 	// WasmPolicyType is for WebAssembly based fleet autoscaling
 	// [Stage:Alpha]
@@ -476,7 +476,8 @@ func (b *BufferPolicy) ValidateBufferPolicy(fldPath *field.Path) field.ErrorList
 
 // ValidateCounterPolicy validates the FleetAutoscaler Counter policy settings.
 // Does not validate if a Counter with name CounterPolicy.Key is present in the fleet.
-// nolint:dupl  // Linter errors on lines are duplicate of ValidateListPolicy
+//
+//nolint:dupl  // Linter errors on lines are duplicate of ValidateListPolicy
 func (c *CounterPolicy) ValidateCounterPolicy(fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
 
@@ -514,7 +515,8 @@ func (c *CounterPolicy) ValidateCounterPolicy(fldPath *field.Path) field.ErrorLi
 
 // ValidateListPolicy validates the FleetAutoscaler List policy settings.
 // Does not validate if a List with name ListPolicy.Key is present in the fleet.
-// nolint:dupl  // Linter errors on lines are duplicate of ValidateCounterPolicy
+//
+//nolint:dupl  // Linter errors on lines are duplicate of ValidateCounterPolicy
 func (l *ListPolicy) ValidateListPolicy(fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
 

@@ -39,14 +39,14 @@ func main() {
 	if dialErr != nil {
 		log.Fatalf("Could not dial watch websocket: %v", dialErr)
 	}
-	defer connectResponse.Body.Close() // nolint: errcheck
-	defer websocketClient.Close()      // nolint: errcheck
+	defer connectResponse.Body.Close() //nolint:errcheck
+	defer websocketClient.Close()      //nolint:errcheck
 
 	// Send reserved request
 	log.Printf("Change to status to reserved")
 	req, reqErr := http.NewRequest(http.MethodPost, reserveURL.String(), nil)
 	if reqErr != nil {
-		log.Fatalf("Could not create reserve request: %v", reqErr) // nolint: gocritic
+		log.Fatalf("Could not create reserve request: %v", reqErr) //nolint:gocritic
 	}
 
 	httpClient := &http.Client{
@@ -54,16 +54,16 @@ func main() {
 	}
 	response, respErr := httpClient.Do(req)
 	if respErr != nil {
-		log.Fatalf("Could not post reserve request: %v", respErr) // nolint: gocritic
+		log.Fatalf("Could not post reserve request: %v", respErr)
 	}
-	defer response.Body.Close() // nolint: errcheck
+	defer response.Body.Close() //nolint:errcheck
 
 	// Wait for gameserver become Reserved (max 10 seconds)
 	for range 10 {
 		log.Printf("Get GameServer status...util GameServer status become Reserved")
 		req, reqErr = http.NewRequest(http.MethodGet, gameServerURL.String(), nil)
 		if reqErr != nil {
-			log.Fatalf("Could not create gameserver request: %v", reqErr) // nolint: gocritic
+			log.Fatalf("Could not create gameserver request: %v", reqErr)
 		}
 		response, respErr = httpClient.Do(req)
 		if respErr != nil {

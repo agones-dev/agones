@@ -30,6 +30,7 @@ import (
 	"agones.dev/agones/pkg/util/workerqueue"
 	"github.com/heptiolabs/healthcheck"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,6 +61,7 @@ type MissingPodController struct {
 	gameServerGetter getterv1.GameServersGetter
 	gameServerLister listerv1.GameServerLister
 	workerqueue      *workerqueue.WorkerQueue
+	unhealthyLimiter *rate.Limiter
 	recorder         record.EventRecorder
 	errs             *errors.Errors
 }
@@ -79,6 +81,7 @@ func NewMissingPodController(health healthcheck.Handler,
 		gameServerSynced: gameServers.Informer().HasSynced,
 		gameServerGetter: agonesClient.AgonesV1(),
 		gameServerLister: gameServers.Lister(),
+		unhealthyLimiter: newStateUpdateLimiter(),
 	}
 
 	c.baseLogger = runtime.NewLoggerWithType(c)
@@ -91,6 +94,7 @@ func NewMissingPodController(health healthcheck.Handler,
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeClient.CoreV1().Events("")})
 	c.recorder = eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "missing-pod-controller"})
 
+	// Enqueue without rate limiting, and throttle the Unhealthy write instead; see newStateUpdateLimiter.
 	_, _ = gameServers.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		UpdateFunc: func(_, newObj any) {
 			gs := newObj.(*agonesv1.GameServer)
@@ -101,7 +105,7 @@ func NewMissingPodController(health healthcheck.Handler,
 				// Enqueue if the pod is missing, not a game server pod, or has failed.
 				// If there was an error accessing the Kubernetes control plane then enqueue it, so it can be rechecked when the control plane comes back up.
 				if pod, err := c.podLister.Pods(gs.ObjectMeta.Namespace).Get(gs.ObjectMeta.Name); err != nil || !isGameServerPod(pod) || pod.Status.Phase == corev1.PodFailed {
-					c.workerqueue.Enqueue(gs)
+					c.workerqueue.EnqueueImmediately(gs)
 				}
 			}
 		},
@@ -168,6 +172,10 @@ func (c *MissingPodController) syncGameServer(ctx context.Context, key string) e
 	if gs.IsBeingDeleted() || gs.Status.State == agonesv1.GameServerStateUnhealthy {
 		c.loggerForGameServerKey(key).WithField("state", gs.Status.State).Debug("GameServer already being deleted/unhealthy. Skipping.")
 		return nil
+	}
+
+	if err := c.unhealthyLimiter.Wait(ctx); err != nil {
+		return c.errs.Wrap(err, "error waiting to update GameServer to Unhealthy")
 	}
 
 	gsCopy := gs.DeepCopy()

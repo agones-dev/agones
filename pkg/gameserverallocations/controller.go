@@ -154,7 +154,7 @@ func (c *Extensions) Run(ctx context.Context, _ int) error {
 
 func (c *Extensions) processAllocationRequest(ctx context.Context, w http.ResponseWriter, r *http.Request, namespace string) (err error) {
 	if r.Body != nil {
-		defer r.Body.Close() // nolint: errcheck
+		defer r.Body.Close() //nolint:errcheck
 	}
 
 	log := https.LogRequest(c.baseLogger, r)
@@ -299,9 +299,9 @@ func (c *Extensions) convertProcessorError(err error, gsa *allocationv1.GameServ
 // convertProcessorResponse handles successful processor responses
 func (c *Extensions) convertProcessorResponse(resp *pb.AllocationResponse, originalGSA *allocationv1.GameServerAllocation) k8sruntime.Object {
 	resultGSA := originalGSA.DeepCopy()
-	converted := converters.ConvertAllocationResponseToGSA(resp, resp.Source)
+	converted := converters.ConvertAllocationResponseToGSA(resp, resp.GetSource())
 	resultGSA.Status = converted.Status
-	resultGSA.ObjectMeta.Name = resp.GameServerName
+	resultGSA.ObjectMeta.Name = resp.GetGameServerName()
 
 	return resultGSA
 }

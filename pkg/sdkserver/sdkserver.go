@@ -185,13 +185,9 @@ func NewSDKServer(gameServerName, namespace string, kubeClient kubernetes.Interf
 		gsWaitForSync:      sync.WaitGroup{},
 		gsConnectedPlayers: []string{},
 		gsStateChannel:     make(chan agonesv1.GameServerState, 2),
+		gsCounterUpdates:   map[string]counterUpdateRequest{},
+		gsListUpdates:      map[string]listUpdateRequest{},
 		listMaxCapacity:    listMaxCapacity,
-	}
-
-	if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		// Once FeatureCountsAndLists is in GA, move this into SDKServer creation above.
-		s.gsCounterUpdates = map[string]counterUpdateRequest{}
-		s.gsListUpdates = map[string]listUpdateRequest{}
 	}
 
 	s.informerFactory = factory
@@ -296,7 +292,7 @@ func (s *SDKServer) Run(ctx context.Context) error {
 			}
 		}
 	}()
-	defer s.server.Close() // nolint: errcheck
+	defer s.server.Close() //nolint:errcheck
 
 	s.workerqueue.Run(ctx, 1)
 	return nil
@@ -593,27 +589,27 @@ func (s *SDKServer) SetLabel(_ context.Context, kv *sdk.KeyValue) (*sdk.Empty, e
 		return nil, status.Error(codes.InvalidArgument, "label key/value cannot be nil")
 	}
 
-	if errs := validation.IsQualifiedName(kv.Key); len(errs) > 0 {
+	if errs := validation.IsQualifiedName(kv.GetKey()); len(errs) > 0 {
 		return nil, status.Errorf(
 			codes.InvalidArgument,
 			"invalid label key %q: %s",
-			kv.Key,
+			kv.GetKey(),
 			strings.Join(errs, ", "),
 		)
 	}
 
-	if errs := validation.IsValidLabelValue(kv.Value); len(errs) > 0 {
+	if errs := validation.IsValidLabelValue(kv.GetValue()); len(errs) > 0 {
 		return nil, status.Errorf(
 			codes.InvalidArgument,
 			"invalid label value %q for key %q: %s",
-			kv.Value,
-			kv.Key,
+			kv.GetValue(),
+			kv.GetKey(),
 			strings.Join(errs, ", "),
 		)
 	}
 
 	s.gsUpdateMutex.Lock()
-	s.gsLabels[kv.Key] = kv.Value
+	s.gsLabels[kv.GetKey()] = kv.GetValue()
 	s.gsUpdateMutex.Unlock()
 
 	s.workerqueue.Enqueue(cache.ExplicitKey(string(updateLabel)))
@@ -630,16 +626,16 @@ func (s *SDKServer) SetAnnotation(_ context.Context, kv *sdk.KeyValue) (*sdk.Emp
 	}
 	// TODO(k8s-1.35): Replace validation.IsQualifiedName with the new
 	// qualified name validation function once we bump apimachinery to v0.35+
-	if errs := validation.IsQualifiedName(kv.Key); len(errs) > 0 {
+	if errs := validation.IsQualifiedName(kv.GetKey()); len(errs) > 0 {
 		return nil, status.Errorf(
 			codes.InvalidArgument,
 			"invalid annotation key %q: %s",
-			kv.Key,
+			kv.GetKey(),
 			strings.Join(errs, ", "),
 		)
 	}
 	s.gsUpdateMutex.Lock()
-	s.gsAnnotations[kv.Key] = kv.Value
+	s.gsAnnotations[kv.GetKey()] = kv.GetValue()
 	s.gsUpdateMutex.Unlock()
 
 	s.workerqueue.Enqueue(cache.ExplicitKey(string(updateAnnotation)))
@@ -685,8 +681,8 @@ func (s *SDKServer) Reserve(_ context.Context, d *sdk.Duration) (*sdk.Empty, err
 	e := &sdk.Empty{}
 
 	// 0 is forever.
-	if d.Seconds > 0 {
-		duration := time.Duration(d.Seconds) * time.Second
+	if d.GetSeconds() > 0 {
+		duration := time.Duration(d.GetSeconds()) * time.Second
 		s.gsUpdateMutex.Lock()
 		s.gsReserveDuration = &duration
 		s.gsUpdateMutex.Unlock()
@@ -730,13 +726,13 @@ func (s *SDKServer) PlayerConnect(_ context.Context, id *alpha.PlayerID) (*alpha
 	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
 		return &alpha.Bool{Bool: false}, s.errs.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
 	}
-	s.logger.WithField("playerID", id.PlayerID).Debug("Player Connected")
+	s.logger.WithField("playerID", id.GetPlayerID()).Debug("Player Connected")
 
 	s.gsUpdateMutex.Lock()
 	defer s.gsUpdateMutex.Unlock()
 
 	// the player is already connected, return false.
-	if slices.Contains(s.gsConnectedPlayers, id.PlayerID) {
+	if slices.Contains(s.gsConnectedPlayers, id.GetPlayerID()) {
 		return &alpha.Bool{Bool: false}, nil
 	}
 
@@ -745,7 +741,7 @@ func (s *SDKServer) PlayerConnect(_ context.Context, id *alpha.PlayerID) (*alpha
 	}
 
 	// let's retain the original order, as it should be a smaller patch on data change
-	s.gsConnectedPlayers = append(s.gsConnectedPlayers, id.PlayerID)
+	s.gsConnectedPlayers = append(s.gsConnectedPlayers, id.GetPlayerID())
 	s.workerqueue.EnqueueAfter(cache.ExplicitKey(string(updateConnectedPlayers)), updatePeriod)
 
 	return &alpha.Bool{Bool: true}, nil
@@ -758,14 +754,14 @@ func (s *SDKServer) PlayerDisconnect(_ context.Context, id *alpha.PlayerID) (*al
 	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
 		return &alpha.Bool{Bool: false}, s.errs.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
 	}
-	s.logger.WithField("playerID", id.PlayerID).Debug("Player Disconnected")
+	s.logger.WithField("playerID", id.GetPlayerID()).Debug("Player Disconnected")
 
 	s.gsUpdateMutex.Lock()
 	defer s.gsUpdateMutex.Unlock()
 
 	found := -1
 	for i, playerID := range s.gsConnectedPlayers {
-		if playerID == id.PlayerID {
+		if playerID == id.GetPlayerID() {
 			found = i
 			break
 		}
@@ -794,7 +790,7 @@ func (s *SDKServer) IsPlayerConnected(_ context.Context, id *alpha.PlayerID) (*a
 
 	result := &alpha.Bool{Bool: false}
 
-	if slices.Contains(s.gsConnectedPlayers, id.PlayerID) {
+	if slices.Contains(s.gsConnectedPlayers, id.GetPlayerID()) {
 		result.Bool = true
 	}
 
@@ -835,7 +831,7 @@ func (s *SDKServer) SetPlayerCapacity(_ context.Context, count *alpha.Count) (*a
 		return nil, s.errs.Errorf("%s not enabled", runtime.FeaturePlayerTracking)
 	}
 	s.gsUpdateMutex.Lock()
-	s.gsPlayerCapacity = count.Count
+	s.gsPlayerCapacity = count.GetCount()
 	s.gsUpdateMutex.Unlock()
 	s.workerqueue.Enqueue(cache.ExplicitKey(string(updatePlayerCapacity)))
 
@@ -858,11 +854,7 @@ func (s *SDKServer) GetPlayerCapacity(_ context.Context, _ *alpha.Empty) (*alpha
 // [Stage:Beta]
 // [FeatureFlag:CountsAndLists]
 func (s *SDKServer) GetCounter(_ context.Context, in *beta.GetCounterRequest) (*beta.Counter, error) {
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return nil, s.errs.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
-	}
-
-	s.logger.WithField("name", in.Name).Debug("Getting Counter")
+	s.logger.WithField("name", in.GetName()).Debug("Getting Counter")
 
 	gs, err := s.gameServer()
 	if err != nil {
@@ -872,15 +864,15 @@ func (s *SDKServer) GetCounter(_ context.Context, in *beta.GetCounterRequest) (*
 	s.gsUpdateMutex.RLock()
 	defer s.gsUpdateMutex.RUnlock()
 
-	counter, ok := gs.Status.Counters[in.Name]
+	counter, ok := gs.Status.Counters[in.GetName()]
 	if !ok {
-		return nil, s.errs.Errorf("counter not found: %s", in.Name)
+		return nil, s.errs.Errorf("counter not found: %s", in.GetName())
 	}
-	s.logger.WithField("Get Counter", counter).Debugf("Got Counter %s", in.Name)
-	protoCounter := &beta.Counter{Name: in.Name, Count: counter.Count, Capacity: counter.Capacity}
+	s.logger.WithField("Get Counter", counter).Debugf("Got Counter %s", in.GetName())
+	protoCounter := &beta.Counter{Name: in.GetName(), Count: counter.Count, Capacity: counter.Capacity}
 	// If there are batched changes that have not yet been applied, apply them to the Counter.
 	// This does NOT validate batched the changes.
-	if counterUpdate, ok := s.gsCounterUpdates[in.Name]; ok {
+	if counterUpdate, ok := s.gsCounterUpdates[in.GetName()]; ok {
 		if counterUpdate.capacitySet != nil {
 			protoCounter.Capacity = *counterUpdate.capacitySet
 		}
@@ -888,12 +880,12 @@ func (s *SDKServer) GetCounter(_ context.Context, in *beta.GetCounterRequest) (*
 			protoCounter.Count = *counterUpdate.countSet
 		}
 		protoCounter.Count += counterUpdate.diff
-		if protoCounter.Count < 0 {
+		if protoCounter.GetCount() < 0 {
 			protoCounter.Count = 0
 			s.logger.Debug("truncating Count in Get Counter request to 0")
 		}
-		if protoCounter.Count > protoCounter.Capacity {
-			protoCounter.Count = protoCounter.Capacity
+		if protoCounter.GetCount() > protoCounter.GetCapacity() {
+			protoCounter.Count = protoCounter.GetCapacity()
 			s.logger.Debug("truncating Count in Get Counter request to Capacity")
 		}
 		s.logger.WithField("Get Counter", counter).Debugf("Applied Batched Counter Updates %v", counterUpdate)
@@ -909,18 +901,14 @@ func (s *SDKServer) GetCounter(_ context.Context, in *beta.GetCounterRequest) (*
 // [Stage:Beta]
 // [FeatureFlag:CountsAndLists]
 func (s *SDKServer) UpdateCounter(_ context.Context, in *beta.UpdateCounterRequest) (*beta.Counter, error) {
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return nil, s.errs.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
+	if in.GetCounterUpdateRequest() == nil {
+		return nil, s.errs.Errorf("invalid argument. CounterUpdateRequest: %v cannot be nil", in.GetCounterUpdateRequest())
+	}
+	if in.GetCounterUpdateRequest().GetCountDiff() == 0 && in.GetCounterUpdateRequest().GetCount() == nil && in.GetCounterUpdateRequest().GetCapacity() == nil {
+		return nil, s.errs.Errorf("invalid argument. Malformed CounterUpdateRequest: %v", in.GetCounterUpdateRequest())
 	}
 
-	if in.CounterUpdateRequest == nil {
-		return nil, s.errs.Errorf("invalid argument. CounterUpdateRequest: %v cannot be nil", in.CounterUpdateRequest)
-	}
-	if in.CounterUpdateRequest.CountDiff == 0 && in.CounterUpdateRequest.Count == nil && in.CounterUpdateRequest.Capacity == nil {
-		return nil, s.errs.Errorf("invalid argument. Malformed CounterUpdateRequest: %v", in.CounterUpdateRequest)
-	}
-
-	s.logger.WithField("name", in.CounterUpdateRequest.Name).Debug("Update Counter Request")
+	s.logger.WithField("name", in.GetCounterUpdateRequest().GetName()).Debug("Update Counter Request")
 
 	gs, err := s.gameServer()
 	if err != nil {
@@ -932,7 +920,7 @@ func (s *SDKServer) UpdateCounter(_ context.Context, in *beta.UpdateCounterReque
 
 	// Check if we already have a batch request started for this Counter. If not, add new request to
 	// the gsCounterUpdates map.
-	name := in.CounterUpdateRequest.Name
+	name := in.GetCounterUpdateRequest().GetName()
 	batchCounter := s.gsCounterUpdates[name]
 
 	counter, ok := gs.Status.Counters[name]
@@ -944,18 +932,18 @@ func (s *SDKServer) UpdateCounter(_ context.Context, in *beta.UpdateCounterReque
 	batchCounter.counter = *counter.DeepCopy()
 
 	// Updated based on if client call is CapacitySet
-	if in.CounterUpdateRequest.Capacity != nil {
-		if in.CounterUpdateRequest.Capacity.GetValue() < 0 {
-			return nil, s.errs.Errorf("out of range. Capacity must be greater than or equal to 0. Found Capacity: %d", in.CounterUpdateRequest.Capacity.GetValue())
+	if in.GetCounterUpdateRequest().GetCapacity() != nil {
+		if in.GetCounterUpdateRequest().GetCapacity().GetValue() < 0 {
+			return nil, s.errs.Errorf("out of range. Capacity must be greater than or equal to 0. Found Capacity: %d", in.GetCounterUpdateRequest().GetCapacity().GetValue())
 		}
-		capacitySet := in.CounterUpdateRequest.Capacity.GetValue()
+		capacitySet := in.GetCounterUpdateRequest().GetCapacity().GetValue()
 		batchCounter.capacitySet = &capacitySet
 	}
 
 	// Update based on if Client call is CountSet
-	if in.CounterUpdateRequest.Count != nil {
+	if in.GetCounterUpdateRequest().GetCount() != nil {
 		// Verify that 0 <= Count >= Capacity
-		countSet := in.CounterUpdateRequest.Count.GetValue()
+		countSet := in.GetCounterUpdateRequest().GetCount().GetValue()
 		capacity := batchCounter.counter.Capacity
 		if batchCounter.capacitySet != nil {
 			capacity = *batchCounter.capacitySet
@@ -969,12 +957,12 @@ func (s *SDKServer) UpdateCounter(_ context.Context, in *beta.UpdateCounterReque
 	}
 
 	// Update based on if Client call is CountIncrement or CountDecrement
-	if in.CounterUpdateRequest.CountDiff != 0 {
+	if in.GetCounterUpdateRequest().GetCountDiff() != 0 {
 		count := batchCounter.counter.Count
 		if batchCounter.countSet != nil {
 			count = *batchCounter.countSet
 		}
-		count += batchCounter.diff + in.CounterUpdateRequest.CountDiff
+		count += batchCounter.diff + in.GetCounterUpdateRequest().GetCountDiff()
 		// Verify that 0 <= Count >= Capacity
 		capacity := batchCounter.counter.Capacity
 		if batchCounter.capacitySet != nil {
@@ -983,7 +971,7 @@ func (s *SDKServer) UpdateCounter(_ context.Context, in *beta.UpdateCounterReque
 		if count < 0 || count > capacity {
 			return nil, s.errs.Errorf("out of range. Count must be within range [0,Capacity]. Found Count: %d, Capacity: %d", count, capacity)
 		}
-		batchCounter.diff += in.CounterUpdateRequest.CountDiff
+		batchCounter.diff += in.GetCounterUpdateRequest().GetCountDiff()
 	}
 
 	s.gsCounterUpdates[name] = batchCounter
@@ -1083,13 +1071,10 @@ func (s *SDKServer) updateCounter(ctx context.Context) error {
 // [Stage:Beta]
 // [FeatureFlag:CountsAndLists]
 func (s *SDKServer) GetList(_ context.Context, in *beta.GetListRequest) (*beta.List, error) {
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return nil, s.errs.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
-	}
 	if in == nil {
 		return nil, s.errs.Errorf("GetListRequest cannot be nil")
 	}
-	s.logger.WithField("name", in.Name).Debug("Getting List")
+	s.logger.WithField("name", in.GetName()).Debug("Getting List")
 
 	gs, err := s.gameServer()
 	if err != nil {
@@ -1099,28 +1084,28 @@ func (s *SDKServer) GetList(_ context.Context, in *beta.GetListRequest) (*beta.L
 	s.gsUpdateMutex.RLock()
 	defer s.gsUpdateMutex.RUnlock()
 
-	list, ok := gs.Status.Lists[in.Name]
+	list, ok := gs.Status.Lists[in.GetName()]
 	if !ok {
-		return nil, s.errs.Errorf("list not found: %s", in.Name)
+		return nil, s.errs.Errorf("list not found: %s", in.GetName())
 	}
 
-	s.logger.WithField("Get List", list).Debugf("Got List %s", in.Name)
-	protoList := beta.List{Name: in.Name, Values: list.Values, Capacity: list.Capacity}
+	s.logger.WithField("Get List", list).Debugf("Got List %s", in.GetName())
+	protoList := beta.List{Name: in.GetName(), Values: list.Values, Capacity: list.Capacity}
 	// If there are batched changes that have not yet been applied, apply them to the List.
 	// This does NOT validate batched the changes, and does NOT modify the List.
-	if listUpdate, ok := s.gsListUpdates[in.Name]; ok {
+	if listUpdate, ok := s.gsListUpdates[in.GetName()]; ok {
 		if listUpdate.capacitySet != nil {
 			protoList.Capacity = *listUpdate.capacitySet
 		}
 		if len(listUpdate.valuesToDelete) != 0 {
-			protoList.Values = deleteValues(protoList.Values, listUpdate.valuesToDelete)
+			protoList.Values = deleteValues(protoList.GetValues(), listUpdate.valuesToDelete)
 		}
 		if len(listUpdate.valuesToAppend) != 0 {
-			protoList.Values = agonesv1.MergeRemoveDuplicates(protoList.Values, listUpdate.valuesToAppend)
+			protoList.Values = agonesv1.MergeRemoveDuplicates(protoList.GetValues(), listUpdate.valuesToAppend)
 		}
 		// Truncates Values to less than or equal to Capacity
-		if len(protoList.Values) > int(protoList.Capacity) {
-			protoList.Values = append([]string{}, protoList.Values[:protoList.Capacity]...)
+		if len(protoList.GetValues()) > int(protoList.GetCapacity()) {
+			protoList.Values = append([]string{}, protoList.GetValues()[:protoList.GetCapacity()]...)
 		}
 		s.logger.WithField("Get List", list).Debugf("Applied Batched List Updates %v", listUpdate)
 	}
@@ -1135,52 +1120,49 @@ func (s *SDKServer) GetList(_ context.Context, in *beta.GetListRequest) (*beta.L
 // [Stage:Beta]
 // [FeatureFlag:CountsAndLists]
 func (s *SDKServer) UpdateList(ctx context.Context, in *beta.UpdateListRequest) (*beta.List, error) {
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return nil, s.errs.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
-	}
 	if in == nil {
 		return nil, s.errs.Errorf("UpdateListRequest cannot be nil")
 	}
-	if in.List == nil || in.UpdateMask == nil {
-		return nil, s.errs.Errorf("invalid argument. List: %v and UpdateMask %v cannot be nil", in.List, in.UpdateMask)
+	if in.GetList() == nil || in.GetUpdateMask() == nil {
+		return nil, s.errs.Errorf("invalid argument. List: %v and UpdateMask %v cannot be nil", in.GetList(), in.GetUpdateMask())
 	}
-	if !in.UpdateMask.IsValid(in.List.ProtoReflect().Interface()) {
-		return nil, s.errs.Errorf("invalid argument. Field Mask Path(s): %v are invalid for List. Use valid field name(s): %v", in.UpdateMask.GetPaths(), in.List.ProtoReflect().Descriptor().Fields())
-	}
-
-	if in.List.Capacity < 0 || in.List.Capacity > s.listMaxCapacity {
-		return nil, s.errs.Errorf("out of range. Capacity must be within range [0,%d]. Found Capacity: %d", s.listMaxCapacity, in.List.Capacity)
+	if !in.GetUpdateMask().IsValid(in.GetList().ProtoReflect().Interface()) {
+		return nil, s.errs.Errorf("invalid argument. Field Mask Path(s): %v are invalid for List. Use valid field name(s): %v", in.GetUpdateMask().GetPaths(), in.GetList().ProtoReflect().Descriptor().Fields())
 	}
 
-	list, err := s.GetList(ctx, &beta.GetListRequest{Name: in.List.Name})
+	if in.GetList().GetCapacity() < 0 || in.GetList().GetCapacity() > s.listMaxCapacity {
+		return nil, s.errs.Errorf("out of range. Capacity must be within range [0,%d]. Found Capacity: %d", s.listMaxCapacity, in.GetList().GetCapacity())
+	}
+
+	list, err := s.GetList(ctx, &beta.GetListRequest{Name: in.GetList().GetName()})
 	if err != nil {
 
-		return nil, s.errs.Errorf("not found. %s List not found", in.List.Name)
+		return nil, s.errs.Errorf("not found. %s List not found", in.GetList().GetName())
 	}
 
 	s.gsUpdateMutex.Lock()
 	defer s.gsUpdateMutex.Unlock()
 
 	// Removes any fields from the request object that are not included in the FieldMask Paths.
-	fmutils.Filter(in.List, in.UpdateMask.Paths)
+	fmutils.Filter(in.GetList(), in.GetUpdateMask().GetPaths())
 
 	// The list will allow the current list to be overwritten
 	batchList := listUpdateRequest{}
 
 	// Only set the capacity if its included in the update mask paths
-	if slices.Contains(in.UpdateMask.Paths, "capacity") {
+	if slices.Contains(in.GetUpdateMask().GetPaths(), "capacity") {
 		batchList.capacitySet = &in.List.Capacity
 	}
 
 	// Only change the values if its included in the update mask paths
-	if slices.Contains(in.UpdateMask.Paths, "values") {
+	if slices.Contains(in.GetUpdateMask().GetPaths(), "values") {
 		currList := list
 
 		// Find values to remove from the current list
 		valuesToDelete := map[string]bool{}
-		for _, value := range currList.Values {
+		for _, value := range currList.GetValues() {
 			valueFound := false
-			for _, element := range in.List.Values {
+			for _, element := range in.GetList().GetValues() {
 				if value == element {
 					valueFound = true
 				}
@@ -1194,9 +1176,9 @@ func (s *SDKServer) UpdateList(ctx context.Context, in *beta.UpdateListRequest) 
 
 		// Find values that need to be added to the current list from the incomming list
 		valuesToAdd := []string{}
-		for _, value := range in.List.Values {
+		for _, value := range in.GetList().GetValues() {
 			valueFound := false
-			for _, element := range currList.Values {
+			for _, element := range currList.GetValues() {
 				if value == element {
 					valueFound = true
 				}
@@ -1210,7 +1192,7 @@ func (s *SDKServer) UpdateList(ctx context.Context, in *beta.UpdateListRequest) 
 	}
 
 	// Queue up the Update for later batch processing by updateLists.
-	s.gsListUpdates[list.Name] = batchList
+	s.gsListUpdates[list.GetName()] = batchList
 	s.workerqueue.Enqueue(cache.ExplicitKey(updateLists))
 	return &beta.List{}, nil
 
@@ -1223,15 +1205,12 @@ func (s *SDKServer) UpdateList(ctx context.Context, in *beta.UpdateListRequest) 
 // [Stage:Beta]
 // [FeatureFlag:CountsAndLists]
 func (s *SDKServer) AddListValue(ctx context.Context, in *beta.AddListValueRequest) (*beta.List, error) {
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return nil, s.errs.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
-	}
 	if in == nil {
 		return nil, s.errs.Errorf("AddListValueRequest cannot be nil")
 	}
-	s.logger.WithField("name", in.Name).Debug("Add List Value")
+	s.logger.WithField("name", in.GetName()).Debug("Add List Value")
 
-	list, err := s.GetList(ctx, &beta.GetListRequest{Name: in.Name})
+	list, err := s.GetList(ctx, &beta.GetListRequest{Name: in.GetName()})
 	if err != nil {
 		return nil, err
 	}
@@ -1240,17 +1219,17 @@ func (s *SDKServer) AddListValue(ctx context.Context, in *beta.AddListValueReque
 	defer s.gsUpdateMutex.Unlock()
 
 	// Verify room to add another value
-	if int(list.Capacity) <= len(list.Values) {
-		return nil, s.errs.Errorf("out of range. No available capacity. Current Capacity: %d, List Size: %d", list.Capacity, len(list.Values))
+	if int(list.GetCapacity()) <= len(list.GetValues()) {
+		return nil, s.errs.Errorf("out of range. No available capacity. Current Capacity: %d, List Size: %d", list.GetCapacity(), len(list.GetValues()))
 	}
 	// Verify value does not already exist in the list
-	if slices.Contains(list.Values, in.Value) {
-		return nil, s.errs.Errorf("already exists. Value: %s already in List: %s", in.Value, in.Name)
+	if slices.Contains(list.GetValues(), in.GetValue()) {
+		return nil, s.errs.Errorf("already exists. Value: %s already in List: %s", in.GetValue(), in.GetName())
 	}
-	list.Values = append(list.Values, in.Value)
-	batchList := s.gsListUpdates[in.Name]
-	batchList.valuesToAppend = append(batchList.valuesToAppend, in.Value)
-	s.gsListUpdates[in.Name] = batchList
+	list.Values = append(list.Values, in.GetValue())
+	batchList := s.gsListUpdates[in.GetName()]
+	batchList.valuesToAppend = append(batchList.valuesToAppend, in.GetValue())
+	s.gsListUpdates[in.GetName()] = batchList
 	// Queue up the Update for later batch processing by updateLists.
 	s.workerqueue.Enqueue(cache.ExplicitKey(updateLists))
 	return list, nil
@@ -1262,15 +1241,12 @@ func (s *SDKServer) AddListValue(ctx context.Context, in *beta.AddListValueReque
 // [Stage:Beta]
 // [FeatureFlag:CountsAndLists]
 func (s *SDKServer) RemoveListValue(ctx context.Context, in *beta.RemoveListValueRequest) (*beta.List, error) {
-	if !runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		return nil, s.errs.Errorf("%s not enabled", runtime.FeatureCountsAndLists)
-	}
 	if in == nil {
 		return nil, s.errs.Errorf("RemoveListValueRequest cannot be nil")
 	}
-	s.logger.WithField("name", in.Name).WithField("value", in.Value).Debug("Remove List Value")
+	s.logger.WithField("name", in.GetName()).WithField("value", in.GetValue()).Debug("Remove List Value")
 
-	list, err := s.GetList(ctx, &beta.GetListRequest{Name: in.Name})
+	list, err := s.GetList(ctx, &beta.GetListRequest{Name: in.GetName()})
 	if err != nil {
 		return nil, err
 	}
@@ -1279,13 +1255,13 @@ func (s *SDKServer) RemoveListValue(ctx context.Context, in *beta.RemoveListValu
 	defer s.gsUpdateMutex.Unlock()
 
 	// Track this removal for batch persistence to K8s
-	batchList := s.gsListUpdates[in.Name]
+	batchList := s.gsListUpdates[in.GetName()]
 
 	removedFromBatch := false
 	if len(batchList.valuesToAppend) > 0 {
 		newAppend := make([]string, 0, len(batchList.valuesToAppend))
 		for _, v := range batchList.valuesToAppend {
-			if v == in.Value {
+			if v == in.GetValue() {
 				removedFromBatch = true
 				continue // skip value
 			}
@@ -1295,25 +1271,25 @@ func (s *SDKServer) RemoveListValue(ctx context.Context, in *beta.RemoveListValu
 	}
 	if !removedFromBatch {
 		found := false
-		newValues := make([]string, 0, len(list.Values))
-		for _, val := range list.Values {
-			if val == in.Value {
+		newValues := make([]string, 0, len(list.GetValues()))
+		for _, val := range list.GetValues() {
+			if val == in.GetValue() {
 				found = true
 				continue
 			}
 			newValues = append(newValues, val)
 		}
 		if !found {
-			return nil, fmt.Errorf("not found: value %s not in list %s", in.Value, in.Name)
+			return nil, fmt.Errorf("not found: value %s not in list %s", in.GetValue(), in.GetName())
 		}
 		list.Values = newValues
 		// Track deletions
 		if batchList.valuesToDelete == nil {
 			batchList.valuesToDelete = make(map[string]bool)
 		}
-		batchList.valuesToDelete[in.Value] = true
+		batchList.valuesToDelete[in.GetValue()] = true
 	}
-	s.gsListUpdates[in.Name] = batchList
+	s.gsListUpdates[in.GetName()] = batchList
 	// Queue up the Update for later batch processing by updateLists.
 	s.workerqueue.Enqueue(cache.ExplicitKey(updateLists))
 	return list, nil

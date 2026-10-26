@@ -68,6 +68,11 @@ KIND_CONTAINER_NAME=$(KIND_PROFILE)-control-plane
 # Game Server image to use while doing end-to-end tests
 GS_TEST_IMAGE ?= us-docker.pkg.dev/agones-images/examples/simple-game-server:0.44
 
+# Registry and tag of the example images used in the examples end-to-end tests.
+# If EXAMPLE_IMAGE_TAG is empty, the published example images are used.
+EXAMPLE_IMAGE_REGISTRY ?= us-docker.pkg.dev/agones-images/examples
+EXAMPLE_IMAGE_TAG ?=
+
 # Enable all beta feature gates. Keep in sync with `true` (beta) entries in pkg/util/runtime/features.go:featureDefaults
 BETA_FEATURE_GATES ?= "CountsAndLists=true&GKEAutopilotExtendedDurationPods=true&ScheduledAutoscaler=true&SidecarContainers=true&FleetAutoscaleRequestMetaData=true"
 
@@ -100,6 +105,15 @@ common_mounts = -v $(build_path)/.config/gcloud:/root/.config/gcloud \
 				-v $(helm_cache):/root/.cache/helm \
 				-v $(agones_path):$(mount_path) \
 				-v $(build_path)/.gomod:/go/pkg/mod
+
+# In a git worktree, .git is a file pointing at the main repository's .git directory by absolute host path,
+# so mount that directory read-only at the same path for git (and golangci-lint) to work inside the container.
+git_common_dir := $(shell cd $(agones_path) && dir=$$(git rev-parse --git-common-dir 2>/dev/null) && cd "$$dir" && pwd -P)
+ifneq ($(git_common_dir),)
+ifneq ($(git_common_dir),$(agones_path)/.git)
+	common_mounts += -v "$(git_common_dir):$(git_common_dir):ro"
+endif
+endif
 
 # Its possible for this to change in the future, so it gets its own variable.
 REGISTRY ?= local
@@ -338,6 +352,8 @@ test-e2e-integration: GAMESERVERS_NAMESPACE ?= ""
 test-e2e-integration: GO_E2E_TEST_INTEGRATION_ARGS ?=\
   --cloud-product=$(CLOUD_PRODUCT) \
   --gameserver-image=$(GS_TEST_IMAGE) \
+  --example-image-registry=$(EXAMPLE_IMAGE_REGISTRY) \
+  --example-image-tag=$(EXAMPLE_IMAGE_TAG) \
   --pullsecret=$(IMAGE_PULL_SECRET) \
   --feature-gates=$(FEATURE_GATES) \
   --namespace=$(GAMESERVERS_NAMESPACE)

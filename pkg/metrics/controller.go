@@ -250,14 +250,13 @@ func (c *Controller) recordFleetChanges(obj any) {
 
 	c.recordFleetRolloutPercentage(f)
 
-	if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) {
-		if f.Status.Counters != nil {
-			c.recordCounters(f.Name, f.Namespace, f.Status.Counters)
-		}
-		if f.Status.Lists != nil {
-			c.recordLists(f.Name, f.Namespace, f.Status.Lists)
-		}
+	if f.Status.Counters != nil {
+		c.recordCounters(f.Name, f.Namespace, f.Status.Counters)
 	}
+	if f.Status.Lists != nil {
+		c.recordLists(f.Name, f.Namespace, f.Status.Lists)
+	}
+
 }
 
 func (c *Controller) recordFleetRolloutPercentage(fleet *agonesv1.Fleet) {
@@ -382,7 +381,7 @@ func (c *Controller) recordFleetReplicas(fleetName, fleetNamespace string, total
 		fleetsReplicasCountStats.M(int64(reserved)))
 }
 
-// nolint:dupl // Linter errors on lines are duplicate of recordLists
+//nolint:dupl // Linter errors on lines are duplicate of recordLists
 func (c *Controller) recordCounters(fleetName, fleetNamespace string, counters map[string]agonesv1.AggregatedCounterStatus) {
 
 	ctx, _ := tag.New(context.Background(), tag.Upsert(keyName, fleetName), tag.Upsert(keyNamespace, fleetNamespace))
@@ -399,7 +398,7 @@ func (c *Controller) recordCounters(fleetName, fleetNamespace string, counters m
 	}
 }
 
-// nolint:dupl // Linter errors on lines are duplicate of recordCounters
+//nolint:dupl // Linter errors on lines are duplicate of recordCounters
 func (c *Controller) recordLists(fleetName, fleetNamespace string, lists map[string]agonesv1.AggregatedListStatus) {
 
 	ctx, _ := tag.New(context.Background(), tag.Upsert(keyName, fleetName), tag.Upsert(keyNamespace, fleetNamespace))

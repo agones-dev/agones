@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License
 
-//nolint:typecheck
+// Package main runs an allocation load test against the Agones allocator service,
+// using a configurable number of parallel clients.
 package main
 
 import (

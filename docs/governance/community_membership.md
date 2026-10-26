@@ -23,6 +23,7 @@ _Members of Team @Approvers_
 - @igooch
 - @lacroixthomas
 - @vicentefb
+- @nrwiersma
 
 ### Releasers - @Releasers
 

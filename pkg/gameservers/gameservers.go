@@ -19,12 +19,34 @@ import (
 
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
 	"agones.dev/agones/pkg/util/errors"
+	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
 
 var errs = errors.FromPackage()
+
+const (
+	// stateUpdateRate and stateUpdateBurst match the overall token bucket in
+	// workqueue.DefaultTypedControllerRateLimiter.
+	stateUpdateRate  = 10
+	stateUpdateBurst = 100
+)
+
+// newStateUpdateLimiter returns a limiter for the controllers that move a GameServer to a terminal
+// state (SucceededController, MissingPodController and HealthController), to be waited on just
+// before that Update, so a large wave of completed, missing or failed Pods doesn't swamp the API
+// server.
+//
+// Those controllers' informer handlers fire on every informer resync, so they enqueue with
+// EnqueueImmediately rather than Enqueue: a rate-limited enqueue spends a token from the queue's
+// shared bucket on every call, even when the key is already queued, which lets the bucket's backlog
+// grow without bound under load. Throttling the write instead only spends tokens on real updates,
+// and failed syncs still retry with backoff through the workerqueue.
+func newStateUpdateLimiter() *rate.Limiter {
+	return rate.NewLimiter(stateUpdateRate, stateUpdateBurst)
+}
 
 // isGameServerPod returns if this Pod is a Pod that comes from a GameServer
 func isGameServerPod(pod *corev1.Pod) bool {

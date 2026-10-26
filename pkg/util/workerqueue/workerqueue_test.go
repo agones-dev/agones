@@ -133,7 +133,7 @@ func TestWorkQueueHealthCheck(t *testing.T) {
 		err := wait.PollUntilContextTimeout(context.Background(), time.Second, 5*time.Second, true, func(_ context.Context) (done bool, err error) {
 			resp, err := http.Get(url)
 			assert.NoError(t, err)
-			defer resp.Body.Close() // nolint: errcheck
+			defer resp.Body.Close() //nolint:errcheck
 
 			if status != resp.StatusCode {
 				return false, nil

@@ -25,6 +25,7 @@ import (
 	"github.com/heptiolabs/healthcheck"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -173,6 +174,60 @@ func TestMissingPodControllerSyncGameServer(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, v.expected.updated, updated, "updated state")
 			v.expected.postTests(t, m)
+		})
+	}
+}
+
+func TestMissingPodControllerSyncGameServerUnhealthyLimiter(t *testing.T) {
+	fixtures := map[string]struct {
+		state     agonesv1.GameServerState
+		expectErr bool
+	}{
+		"unhealthy write waits on the limiter": {
+			state:     agonesv1.GameServerStateReady,
+			expectErr: true,
+		},
+		"no-op sync does not wait on the limiter": {
+			state:     agonesv1.GameServerStateUnhealthy,
+			expectErr: false,
+		},
+	}
+
+	for k, v := range fixtures {
+		t.Run(k, func(t *testing.T) {
+			m := agtesting.NewMocks()
+			c := NewMissingPodController(healthcheck.NewHandler(), m.KubeClient, m.AgonesClient, m.KubeInformerFactory, m.AgonesInformerFactory)
+			c.recorder = m.FakeRecorder
+			// a zero burst limiter can never grant a token, so Wait fails immediately.
+			c.unhealthyLimiter = rate.NewLimiter(0, 0)
+
+			gs := &agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "default"},
+				Spec: newSingleContainerSpec(), Status: agonesv1.GameServerStatus{State: v.state}}
+			gs.ApplyDefaults()
+
+			m.AgonesClient.AddReactor("list", "gameservers", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+				return true, &agonesv1.GameServerList{Items: []agonesv1.GameServer{*gs}}, nil
+			})
+			m.KubeClient.AddReactor("list", "pods", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+				return true, &corev1.PodList{Items: []corev1.Pod{}}, nil
+			})
+
+			updated := false
+			m.AgonesClient.AddReactor("update", "gameservers", func(action k8stesting.Action) (bool, runtime.Object, error) {
+				updated = true
+				return true, action.(k8stesting.UpdateAction).GetObject(), nil
+			})
+
+			ctx, cancel := agtesting.StartInformers(m, c.gameServerSynced, c.podSynced)
+			defer cancel()
+
+			err := c.syncGameServer(ctx, "default/test")
+			if v.expectErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+			require.False(t, updated)
 		})
 	}
 }

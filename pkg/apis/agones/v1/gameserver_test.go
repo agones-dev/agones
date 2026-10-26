@@ -449,7 +449,7 @@ func TestGameServerApplyDefaults(t *testing.T) {
 	}
 }
 
-// nolint:dupl
+//nolint:dupl
 func TestGameServerValidate(t *testing.T) {
 	t.Parallel()
 
@@ -543,7 +543,7 @@ func TestGameServerValidate(t *testing.T) {
 			},
 			applyDefaults: false,
 			want: field.ErrorList{
-				field.TooLongMaxLength(field.NewPath("metadata", "name"), longNameLen64, 63),
+				field.TooLong(field.NewPath("metadata", "name"), longNameLen64, 63),
 			},
 		},
 		{

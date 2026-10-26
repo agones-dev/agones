@@ -211,7 +211,7 @@ func (c *AllocationCache) ListSortedGameServers(gsa *allocationv1.GameServerAllo
 		}
 
 		// if we end up here, then break the tie with Counter or List Priority.
-		if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) && (gsa != nil) {
+		if gsa != nil {
 			if res := gs1.CompareCountAndListPriorities(gsa.Spec.Priorities, gs2); res != nil {
 				return *res
 			}
@@ -236,7 +236,7 @@ func (c *AllocationCache) ListSortedGameServersPriorities(gsa *allocationv1.Game
 		gs1 := list[i]
 		gs2 := list[j]
 
-		if runtime.FeatureEnabled(runtime.FeatureCountsAndLists) && (gsa != nil) {
+		if gsa != nil {
 			if res := gs1.CompareCountAndListPriorities(gsa.Spec.Priorities, gs2); res != nil {
 				return *res
 			}

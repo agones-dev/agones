@@ -165,7 +165,7 @@ func TestComputeDesiredFleetSize(t *testing.T) {
 			policy: autoscalingv1.FleetAutoscalerPolicy{
 				Type: autoscalingv1.BufferPolicyType,
 				Buffer: &autoscalingv1.BufferPolicy{
-					BufferSize:  intstr.FromInt(20),
+					BufferSize:  intstr.FromInt32(20),
 					MaxReplicas: 100,
 				},
 			},
@@ -184,7 +184,7 @@ func TestComputeDesiredFleetSize(t *testing.T) {
 			policy: autoscalingv1.FleetAutoscalerPolicy{
 				Type: "",
 				Buffer: &autoscalingv1.BufferPolicy{
-					BufferSize:  intstr.FromInt(20),
+					BufferSize:  intstr.FromInt32(20),
 					MaxReplicas: 100,
 				},
 			},
@@ -261,7 +261,7 @@ func TestApplyBufferPolicy(t *testing.T) {
 			statusAllocatedReplicas: 40,
 			statusReadyReplicas:     10,
 			buffer: &autoscalingv1.BufferPolicy{
-				BufferSize:  intstr.FromInt(20),
+				BufferSize:  intstr.FromInt32(20),
 				MaxReplicas: 100,
 			},
 			expected: expected{
@@ -277,7 +277,7 @@ func TestApplyBufferPolicy(t *testing.T) {
 			statusAllocatedReplicas: 40,
 			statusReadyReplicas:     10,
 			buffer: &autoscalingv1.BufferPolicy{
-				BufferSize:  intstr.FromInt(20),
+				BufferSize:  intstr.FromInt32(20),
 				MinReplicas: 65,
 				MaxReplicas: 100,
 			},
@@ -294,7 +294,7 @@ func TestApplyBufferPolicy(t *testing.T) {
 			statusAllocatedReplicas: 40,
 			statusReadyReplicas:     10,
 			buffer: &autoscalingv1.BufferPolicy{
-				BufferSize:  intstr.FromInt(20),
+				BufferSize:  intstr.FromInt32(20),
 				MinReplicas: 0,
 				MaxReplicas: 55,
 			},
@@ -352,7 +352,7 @@ func TestApplyBufferPolicy(t *testing.T) {
 			expected: expected{
 				replicas: 0,
 				limited:  false,
-				err:      "invalid value for IntOrString: invalid value \"asd\": strconv.Atoi: parsing \"asd\": invalid syntax",
+				err:      "invalid value for IntOrString: invalid type: string is not a percentage",
 			},
 		},
 	}
@@ -423,6 +423,22 @@ func TestApplyWebhookPolicy(t *testing.T) {
 			statusReadyReplicas:     40,
 			expected: expected{
 				replicas: 50,
+				limited:  false,
+				err:      "",
+			},
+		},
+		{
+			description: "Scale down in progress, no scaling",
+			webhookPolicy: &autoscalingv1.URLConfiguration{
+				Service: nil,
+				URL:     &(server.URL),
+			},
+			specReplicas:            10,
+			statusReplicas:          20,
+			statusAllocatedReplicas: 14,
+			statusReadyReplicas:     6,
+			expected: expected{
+				replicas: 10,
 				limited:  false,
 				err:      "",
 			},
@@ -958,7 +974,7 @@ func TestBuildURLFromConfiguration(t *testing.T) {
 	}
 }
 
-// nolint:dupl  // Linter errors on lines are duplicate of TestApplyListPolicy
+//nolint:dupl  // Linter errors on lines are duplicate of TestApplyListPolicy
 func TestApplyCounterPolicy(t *testing.T) {
 	t.Parallel()
 
@@ -985,34 +1001,6 @@ func TestApplyCounterPolicy(t *testing.T) {
 		gsList       []agonesv1.GameServer
 		want         expected
 	}{
-		"counts and lists not enabled": {
-			fleet: modifiedFleet(func(f *agonesv1.Fleet) {
-				f.Spec.Template.Spec.Counters = make(map[string]agonesv1.CounterStatus)
-				f.Spec.Template.Spec.Counters["rooms"] = agonesv1.CounterStatus{
-					Count:    0,
-					Capacity: 7}
-				f.Status.Replicas = 10
-				f.Status.ReadyReplicas = 5
-				f.Status.AllocatedReplicas = 5
-				f.Status.Counters = make(map[string]agonesv1.AggregatedCounterStatus)
-				f.Status.Counters["rooms"] = agonesv1.AggregatedCounterStatus{
-					Count:    31,
-					Capacity: 70,
-				}
-			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=false",
-			cp: &autoscalingv1.CounterPolicy{
-				Key:         "rooms",
-				MaxCapacity: 100,
-				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(10),
-			},
-			want: expected{
-				replicas: 0,
-				limited:  false,
-				wantErr:  true,
-			},
-		},
 		"Counter based fleet does not have any replicas": {
 			fleet: modifiedFleet(func(f *agonesv1.Fleet) {
 				f.Spec.Template.Spec.Counters = make(map[string]agonesv1.CounterStatus)
@@ -1025,12 +1013,11 @@ func TestApplyCounterPolicy(t *testing.T) {
 				f.Status.Counters = make(map[string]agonesv1.AggregatedCounterStatus)
 				f.Status.Counters["gamers"] = agonesv1.AggregatedCounterStatus{}
 			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=true",
 			cp: &autoscalingv1.CounterPolicy{
 				Key:         "gamers",
 				MaxCapacity: 100,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(10),
+				BufferSize:  intstr.FromInt32(10),
 			},
 			want: expected{
 				replicas: 2,
@@ -1053,12 +1040,11 @@ func TestApplyCounterPolicy(t *testing.T) {
 					Capacity: 70,
 				}
 			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=true",
 			cp: &autoscalingv1.CounterPolicy{
 				Key:         "rooms",
 				MaxCapacity: 100,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(10),
+				BufferSize:  intstr.FromInt32(10),
 			},
 			want: expected{
 				replicas: 0,
@@ -1081,12 +1067,11 @@ func TestApplyCounterPolicy(t *testing.T) {
 					Capacity: 70,
 				}
 			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=true",
 			cp: &autoscalingv1.CounterPolicy{
 				Key:         "rooms",
 				MaxCapacity: 100,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(10),
+				BufferSize:  intstr.FromInt32(10),
 			},
 			want: expected{
 				replicas: 0,
@@ -1110,12 +1095,11 @@ func TestApplyCounterPolicy(t *testing.T) {
 					Capacity: 70,
 				}
 			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=true",
 			cp: &autoscalingv1.CounterPolicy{
 				Key:         "rooms",
 				MaxCapacity: 100,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(10),
+				BufferSize:  intstr.FromInt32(10),
 			},
 			gsList: []agonesv1.GameServer{
 				{ObjectMeta: metav1.ObjectMeta{
@@ -1233,12 +1217,11 @@ func TestApplyCounterPolicy(t *testing.T) {
 					Count:    68,
 					Capacity: 70}
 			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=true",
 			cp: &autoscalingv1.CounterPolicy{
 				Key:         "rooms",
 				MaxCapacity: 100,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(10),
+				BufferSize:  intstr.FromInt32(10),
 			},
 			want: expected{
 				replicas: 12,
@@ -1260,12 +1243,11 @@ func TestApplyCounterPolicy(t *testing.T) {
 					Count:    21,
 					Capacity: 30}
 			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=true",
 			cp: &autoscalingv1.CounterPolicy{
 				Key:         "rooms",
 				MaxCapacity: 100,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(25),
+				BufferSize:  intstr.FromInt32(25),
 			},
 			want: expected{
 				replicas: 9,
@@ -1287,12 +1269,11 @@ func TestApplyCounterPolicy(t *testing.T) {
 					Count:    60,
 					Capacity: 70}
 			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=true",
 			cp: &autoscalingv1.CounterPolicy{
 				Key:         "rooms",
 				MaxCapacity: 100,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(10),
+				BufferSize:  intstr.FromInt32(10),
 			},
 			want: expected{
 				replicas: 10,
@@ -1314,12 +1295,11 @@ func TestApplyCounterPolicy(t *testing.T) {
 					Count:    1,
 					Capacity: 70}
 			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=true",
 			cp: &autoscalingv1.CounterPolicy{
 				Key:         "rooms",
 				MaxCapacity: 700,
 				MinCapacity: 70,
-				BufferSize:  intstr.FromInt(10),
+				BufferSize:  intstr.FromInt32(10),
 			},
 			want: expected{
 				replicas: 10,
@@ -1342,12 +1322,11 @@ func TestApplyCounterPolicy(t *testing.T) {
 					Count:    1,
 					Capacity: 36}
 			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=true",
 			cp: &autoscalingv1.CounterPolicy{
 				Key:         "rooms",
 				MaxCapacity: 700,
 				MinCapacity: 7,
-				BufferSize:  intstr.FromInt(1),
+				BufferSize:  intstr.FromInt32(1),
 			},
 			gsList: []agonesv1.GameServer{
 				{ObjectMeta: metav1.ObjectMeta{
@@ -1414,12 +1393,11 @@ func TestApplyCounterPolicy(t *testing.T) {
 					Count:    1,
 					Capacity: 49}
 			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=true",
 			cp: &autoscalingv1.CounterPolicy{
 				Key:         "rooms",
 				MaxCapacity: 700,
 				MinCapacity: 70,
-				BufferSize:  intstr.FromInt(10),
+				BufferSize:  intstr.FromInt32(10),
 			},
 			want: expected{
 				replicas: 10,
@@ -1441,12 +1419,11 @@ func TestApplyCounterPolicy(t *testing.T) {
 					Count:    98,
 					Capacity: 98}
 			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=true",
 			cp: &autoscalingv1.CounterPolicy{
 				Key:         "rooms",
 				MaxCapacity: 100,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(10),
+				BufferSize:  intstr.FromInt32(10),
 			},
 			want: expected{
 				replicas: 14,
@@ -1469,12 +1446,11 @@ func TestApplyCounterPolicy(t *testing.T) {
 					Count:    7,
 					Capacity: 7}
 			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=true",
 			cp: &autoscalingv1.CounterPolicy{
 				Key:         "rooms",
 				MaxCapacity: 2,
 				MinCapacity: 0,
-				BufferSize:  intstr.FromInt(1),
+				BufferSize:  intstr.FromInt32(1),
 			},
 			gsList: []agonesv1.GameServer{
 				{ObjectMeta: metav1.ObjectMeta{
@@ -1508,12 +1484,11 @@ func TestApplyCounterPolicy(t *testing.T) {
 					Count:    0,
 					Capacity: 15}
 			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=true",
 			cp: &autoscalingv1.CounterPolicy{
 				Key:         "rooms",
 				MaxCapacity: 5,
 				MinCapacity: 1,
-				BufferSize:  intstr.FromInt(5),
+				BufferSize:  intstr.FromInt32(5),
 			},
 			gsList: []agonesv1.GameServer{
 				{ObjectMeta: metav1.ObjectMeta{
@@ -1572,7 +1547,6 @@ func TestApplyCounterPolicy(t *testing.T) {
 					Capacity: 30,
 				}
 			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=true",
 			cp: &autoscalingv1.CounterPolicy{
 				Key:         "rooms",
 				MaxCapacity: 100,
@@ -1602,7 +1576,6 @@ func TestApplyCounterPolicy(t *testing.T) {
 					Capacity:          10,
 				}
 			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=true",
 			cp: &autoscalingv1.CounterPolicy{
 				Key:         "players",
 				MaxCapacity: 100,
@@ -1632,7 +1605,6 @@ func TestApplyCounterPolicy(t *testing.T) {
 					Capacity:          30,
 				}
 			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=true",
 			cp: &autoscalingv1.CounterPolicy{
 				Key:         "players",
 				MaxCapacity: 100,
@@ -1660,12 +1632,11 @@ func TestApplyCounterPolicy(t *testing.T) {
 					Capacity: 30,
 				}
 			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=true",
 			cp: &autoscalingv1.CounterPolicy{
 				Key:         "players",
 				MaxCapacity: 100,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(5),
+				BufferSize:  intstr.FromInt32(5),
 			},
 			gsList: []agonesv1.GameServer{
 				{ObjectMeta: metav1.ObjectMeta{
@@ -1740,7 +1711,6 @@ func TestApplyCounterPolicy(t *testing.T) {
 	}
 }
 
-// nolint:dupl  // Linter errors on lines are duplicate of TestApplyCounterPolicy
 // NOTE: Does not test for the validity of a fleet autoscaler policy (ValidateListPolicy)
 func TestApplyListPolicy(t *testing.T) {
 	t.Parallel()
@@ -1769,34 +1739,6 @@ func TestApplyListPolicy(t *testing.T) {
 		gsList       []agonesv1.GameServer
 		want         expected
 	}{
-		"counts and lists not enabled": {
-			fleet: modifiedFleet(func(f *agonesv1.Fleet) {
-				f.Spec.Template.Spec.Lists = make(map[string]agonesv1.ListStatus)
-				f.Spec.Template.Spec.Lists["gamers"] = agonesv1.ListStatus{
-					Values:   []string{},
-					Capacity: 7}
-				f.Status.Replicas = 10
-				f.Status.ReadyReplicas = 5
-				f.Status.AllocatedReplicas = 5
-				f.Status.Lists = make(map[string]agonesv1.AggregatedListStatus)
-				f.Status.Lists["gamers"] = agonesv1.AggregatedListStatus{
-					Count:    31,
-					Capacity: 70,
-				}
-			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=false",
-			lp: &autoscalingv1.ListPolicy{
-				Key:         "gamers",
-				MaxCapacity: 100,
-				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(10),
-			},
-			want: expected{
-				replicas: 0,
-				limited:  false,
-				wantErr:  true,
-			},
-		},
 		"fleet spec does not have list": {
 			fleet: modifiedFleet(func(f *agonesv1.Fleet) {
 				f.Spec.Template.Spec.Lists = make(map[string]agonesv1.ListStatus)
@@ -1812,12 +1754,11 @@ func TestApplyListPolicy(t *testing.T) {
 					Capacity: 70,
 				}
 			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=true",
 			lp: &autoscalingv1.ListPolicy{
 				Key:         "gamers",
 				MaxCapacity: 100,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(10),
+				BufferSize:  intstr.FromInt32(10),
 			},
 			want: expected{
 				replicas: 0,
@@ -1840,12 +1781,11 @@ func TestApplyListPolicy(t *testing.T) {
 					Capacity: 70,
 				}
 			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=true",
 			lp: &autoscalingv1.ListPolicy{
 				Key:         "gamers",
 				MaxCapacity: 100,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(10),
+				BufferSize:  intstr.FromInt32(10),
 			},
 			want: expected{
 				replicas: 0,
@@ -1865,12 +1805,11 @@ func TestApplyListPolicy(t *testing.T) {
 				f.Status.Lists = make(map[string]agonesv1.AggregatedListStatus)
 				f.Status.Lists["gamers"] = agonesv1.AggregatedListStatus{}
 			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=true",
 			lp: &autoscalingv1.ListPolicy{
 				Key:         "gamers",
 				MaxCapacity: 100,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(10),
+				BufferSize:  intstr.FromInt32(10),
 			},
 			want: expected{
 				replicas: 2,
@@ -1893,12 +1832,11 @@ func TestApplyListPolicy(t *testing.T) {
 					Capacity: 30,
 				}
 			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=true",
 			lp: &autoscalingv1.ListPolicy{
 				Key:         "gamers",
 				MaxCapacity: 100,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(5),
+				BufferSize:  intstr.FromInt32(5),
 			},
 			want: expected{
 				replicas: 14,
@@ -1921,12 +1859,11 @@ func TestApplyListPolicy(t *testing.T) {
 					Capacity: 15,
 				}
 			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=true",
 			lp: &autoscalingv1.ListPolicy{
 				Key:         "gamers",
 				MaxCapacity: 25,
 				MinCapacity: 15,
-				BufferSize:  intstr.FromInt(15),
+				BufferSize:  intstr.FromInt32(15),
 			},
 			want: expected{
 				replicas: 5,
@@ -1950,12 +1887,11 @@ func TestApplyListPolicy(t *testing.T) {
 					Capacity: 70,
 				}
 			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=true",
 			lp: &autoscalingv1.ListPolicy{
 				Key:         "gamers",
 				MaxCapacity: 70,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(10),
+				BufferSize:  intstr.FromInt32(10),
 			},
 			gsList: []agonesv1.GameServer{
 				{ObjectMeta: metav1.ObjectMeta{
@@ -2068,12 +2004,11 @@ func TestApplyListPolicy(t *testing.T) {
 					Capacity: 30,
 				}
 			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=true",
 			lp: &autoscalingv1.ListPolicy{
 				Key:         "gamers",
 				MaxCapacity: 30,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(5),
+				BufferSize:  intstr.FromInt32(5),
 			},
 			want: expected{
 				replicas: 10,
@@ -2097,12 +2032,11 @@ func TestApplyListPolicy(t *testing.T) {
 					Capacity: 20,
 				}
 			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=true",
 			lp: &autoscalingv1.ListPolicy{
 				Key:         "gamers",
 				MaxCapacity: 100,
 				MinCapacity: 10,
-				BufferSize:  intstr.FromInt(1),
+				BufferSize:  intstr.FromInt32(1),
 			},
 			gsList: []agonesv1.GameServer{
 				{ObjectMeta: metav1.ObjectMeta{
@@ -2172,7 +2106,6 @@ func TestApplyListPolicy(t *testing.T) {
 					Capacity:          30,
 				}
 			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=true",
 			lp: &autoscalingv1.ListPolicy{
 				Key:         "gamers",
 				MaxCapacity: 45,
@@ -2202,7 +2135,6 @@ func TestApplyListPolicy(t *testing.T) {
 					Capacity:          30,
 				}
 			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=true",
 			lp: &autoscalingv1.ListPolicy{
 				Key:         "gamers",
 				MaxCapacity: 50,
@@ -2233,7 +2165,6 @@ func TestApplyListPolicy(t *testing.T) {
 					Capacity:          30,
 				}
 			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=true",
 			lp: &autoscalingv1.ListPolicy{
 				Key:         "gamers",
 				MaxCapacity: 50,
@@ -2296,7 +2227,6 @@ func TestApplyListPolicy(t *testing.T) {
 					Capacity:          50,
 				}
 			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=true",
 			lp: &autoscalingv1.ListPolicy{
 				Key:         "gamers",
 				MaxCapacity: 50,
@@ -2384,7 +2314,6 @@ func TestApplyListPolicy(t *testing.T) {
 					Capacity:          30,
 				}
 			}),
-			featureFlags: string(utilruntime.FeatureCountsAndLists) + "=true",
 			lp: &autoscalingv1.ListPolicy{
 				Key:         "gamers",
 				MaxCapacity: 50,
@@ -2468,17 +2397,12 @@ func TestApplyListPolicy(t *testing.T) {
 // logic counted un-deletable (Allocated) game servers toward a reduction, along with scaling up
 // and down against the Min/MaxCapacity limiter.
 func TestApplyListPolicyFlapping(t *testing.T) {
-	utilruntime.FeatureTestMutex.Lock()
-	defer utilruntime.FeatureTestMutex.Unlock()
-
-	require.NoError(t, utilruntime.ParseFeatures(string(utilruntime.FeatureCountsAndLists)+"=true"))
-
 	// One replica provides 60 capacity; the buffer wants 120 available.
 	lp := &autoscalingv1.ListPolicy{
 		Key:         "players",
 		MaxCapacity: 300,
 		MinCapacity: 120,
-		BufferSize:  intstr.FromInt(120),
+		BufferSize:  intstr.FromInt32(120),
 	}
 
 	nc := map[string]gameservers.NodeCount{
@@ -2615,7 +2539,6 @@ func TestApplyListPolicyFlapping(t *testing.T) {
 	}
 }
 
-// nolint:dupl  // Linter errors on lines are duplicate of TestApplySchedulePolicy
 // NOTE: Does not test for the validity of a fleet autoscaler policy (ValidateSchedulePolicy)
 func TestApplySchedulePolicy(t *testing.T) {
 	t.Parallel()
@@ -2629,7 +2552,7 @@ func TestApplySchedulePolicy(t *testing.T) {
 	bufferPolicy := autoscalingv1.FleetAutoscalerPolicy{
 		Type: autoscalingv1.BufferPolicyType,
 		Buffer: &autoscalingv1.BufferPolicy{
-			BufferSize:  intstr.FromInt(1),
+			BufferSize:  intstr.FromInt32(1),
 			MinReplicas: 3,
 			MaxReplicas: 10,
 		},
@@ -2836,7 +2759,6 @@ func TestApplySchedulePolicy(t *testing.T) {
 	}
 }
 
-// nolint:dupl  // Linter errors on lines are duplicate of TestApplyChainPolicy
 // NOTE: Does not test for the validity of a fleet autoscaler policy (ValidateChainPolicy)
 func TestApplyChainPolicy(t *testing.T) {
 	t.Parallel()
@@ -2869,7 +2791,7 @@ func TestApplyChainPolicy(t *testing.T) {
 				Policy: autoscalingv1.FleetAutoscalerPolicy{
 					Type: autoscalingv1.BufferPolicyType,
 					Buffer: &autoscalingv1.BufferPolicy{
-						BufferSize:  intstr.FromInt(1),
+						BufferSize:  intstr.FromInt32(1),
 						MinReplicas: 10,
 						MaxReplicas: 10,
 					},
@@ -2893,7 +2815,7 @@ func TestApplyChainPolicy(t *testing.T) {
 				Policy: autoscalingv1.FleetAutoscalerPolicy{
 					Type: autoscalingv1.BufferPolicyType,
 					Buffer: &autoscalingv1.BufferPolicy{
-						BufferSize:  intstr.FromInt(1),
+						BufferSize:  intstr.FromInt32(1),
 						MinReplicas: 3,
 						MaxReplicas: 10,
 					},
@@ -2920,7 +2842,7 @@ func TestApplyChainPolicy(t *testing.T) {
 		FleetAutoscalerPolicy: autoscalingv1.FleetAutoscalerPolicy{
 			Type: autoscalingv1.BufferPolicyType,
 			Buffer: &autoscalingv1.BufferPolicy{
-				BufferSize:  intstr.FromInt(1),
+				BufferSize:  intstr.FromInt32(1),
 				MinReplicas: 6,
 				MaxReplicas: 10,
 			},
