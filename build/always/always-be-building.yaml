@@ -32,6 +32,6 @@ steps:
         exit 0
       fi
       echo "== Build queue empty, starting `main` build =="
-      gcloud builds triggers run 709790cf-29e1-4350-9407-de7cb5b1dc9e --branch=main
+      gcloud builds triggers run agones-dev-branch-build --branch=main
 tags: [always-be-building]
 timeout: 300s  # generous time in case builds take a while to list
