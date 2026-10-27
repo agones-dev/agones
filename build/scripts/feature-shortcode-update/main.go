@@ -12,7 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package main implements a program that removes the contents of feature expiry version and publish version shortcodes in .md files within the site/content/en/docs directory.
+// Package main implements a program that resolves feature shortcodes in .md
+// and .html files within the site/content/en/docs directory, for versions at
+// or before the given release. Expired expiryVersion blocks are removed along
+// with their content. Published publishVersion blocks in .md files are
+// unwrapped: their tags are removed and their content is kept. publishVersion
+// blocks in .html files are left in place, since gen-api-docs.sh relies on
+// that wrapper to locate the previous API docs.
 package main
 
 import (
