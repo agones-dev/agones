@@ -21,11 +21,11 @@ terraform {
   required_version = ">= 1.0.0"
   required_providers {
     google = {
-      source = "hashicorp/google"
+      source  = "hashicorp/google"
       version = "~> 4.25.0"
     }
     helm = {
-      source = "hashicorp/helm"
+      source  = "hashicorp/helm"
       version = "~> 2.3"
     }
   }
@@ -37,11 +37,11 @@ variable "project" {}
 variable "kubernetes_versions" {
   description = "Create upgrade test clusters with these k8s versions in these regions"
   type        = map(list(string))
-  default     = {
-    "1.34" = ["us-east1", "RAPID"]
+  default = {
     "1.35" = ["us-west1", "RAPID"]
     "1.36" = ["us-east4", "RAPID"]
-    //"1.37" = ["us-east1", "RAPID"]
+    "1.37" = ["us-east1", "RAPID"]
+    //"1.38" = ["us-east1", "RAPID"]
     // Before merge: When adding Kubernetes version 1.{N}, first uncomment the line above. Come back
     // to these instructions after the update PR merges.
     //
@@ -60,21 +60,21 @@ variable "kubernetes_versions" {
 }
 
 module "gke_standard_cluster" {
-  for_each = var.kubernetes_versions
-  source = "./gke-standard"
-  project = var.project
+  for_each          = var.kubernetes_versions
+  source            = "./gke-standard"
+  project           = var.project
   kubernetesVersion = each.key
-  location = each.value[0]
-  releaseChannel = each.value[1]
+  location          = each.value[0]
+  releaseChannel    = each.value[1]
 }
 
 module "gke_autopilot_cluster" {
-  for_each = var.kubernetes_versions
-  source = "./gke-autopilot"
-  project = var.project
+  for_each          = var.kubernetes_versions
+  source            = "./gke-autopilot"
+  project           = var.project
   kubernetesVersion = each.key
-  location = each.value[0]
-  releaseChannel = each.value[1]
+  location          = each.value[0]
+  releaseChannel    = each.value[1]
 }
 
 // NOTE: These are the same firewall rules as the e2e tests. If running only the upgrade clusters on
