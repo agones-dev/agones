@@ -551,12 +551,11 @@ build-extensions-debug-binary: build-extensions-binary-linux-amd64
 # module boundaries, so each is linted from its own directory against the root
 # config. They are not vendored, so dependencies come from the module cache instead.
 # Every tracked nested module is linted, so new ones are picked up automatically.
+# Discovery runs in the build image, and lint fails if discovery fails.
 # Modules that should not be linted.
 NESTED_LINT_EXCLUDE =
 # Modules that only build for wasm, linted with GOOS/GOARCH set.
 NESTED_LINT_WASM_MODULES = examples/autoscaler-wasm
-NESTED_LINT_MODULES = $(filter-out $(NESTED_LINT_EXCLUDE) $(NESTED_LINT_WASM_MODULES), \
-	$(patsubst %/go.mod,%,$(shell git -C $(agones_path) ls-files '*/go.mod')))
 
 # The root config's exclusion rules are written for the root module, so in a
 # nested module most of them match nothing and warn-unused reports each one.
@@ -571,7 +570,11 @@ lint: $(ensure-build-image)
 	docker run -t -e "TERM=xterm-256color" -e "$(gomod_on)" --rm $(common_mounts) -w $(workdir_path) $(DOCKER_RUN_ARGS) $(build_tag) bash -c \
 		"$(git_safe) && \
 		golangci-lint run --timeout $(LINT_TIMEOUT) ./... && \
-		for m in $(NESTED_LINT_MODULES); do (cd \$$m && $(nested_lint)) || exit 1; done && \
+		modules=\$$(git ls-files '*/go.mod') && \
+		for m in \$${modules//\/go.mod/}; do \
+			case ' $(NESTED_LINT_EXCLUDE) $(NESTED_LINT_WASM_MODULES) ' in *' '\$$m' '*) continue;; esac; \
+			(cd \$$m && $(nested_lint)) || exit 1; \
+		done && \
 		for m in $(filter-out $(NESTED_LINT_EXCLUDE),$(NESTED_LINT_WASM_MODULES)); do (cd \$$m && GOOS=wasip1 GOARCH=wasm $(nested_lint)) || exit 1; done && \
 		yamllint ."
 
