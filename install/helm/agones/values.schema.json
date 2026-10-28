@@ -657,6 +657,60 @@
                 },
                 "annotations": {
                   "type": "object"
+                },
+                "additionalServices": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "port": {
+                        "type": "integer"
+                      },
+                      "nodePort": {
+                        "type": "integer"
+                      },
+                      "serviceType": {
+                        "type": "string",
+                        "enum": [
+                          "ClusterIP",
+                          "NodePort",
+                          "LoadBalancer"
+                        ]
+                      },
+                      "loadBalancerIP": {
+                        "type": "string"
+                      },
+                      "loadBalancerSourceRanges": {
+                        "type": "array",
+                        "items": {}
+                      },
+                      "externalTrafficPolicy": {
+                        "type": "string",
+                        "enum": [
+                          "Cluster",
+                          "Local"
+                        ]
+                      },
+                      "annotations": {
+                        "type": "object"
+                      },
+                      "ipFamilyPolicy": {
+                        "type": "string"
+                      },
+                      "ipFamilies": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
                 }
               },
               "allOf": [
