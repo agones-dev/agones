@@ -572,7 +572,7 @@ lint: $(ensure-build-image)
 		"$(git_safe) && \
 		golangci-lint run --timeout $(LINT_TIMEOUT) ./... && \
 		for m in $(NESTED_LINT_MODULES); do (cd \$$m && $(nested_lint)) || exit 1; done && \
-		for m in $(NESTED_LINT_WASM_MODULES); do (cd \$$m && GOOS=wasip1 GOARCH=wasm $(nested_lint)) || exit 1; done && \
+		for m in $(filter-out $(NESTED_LINT_EXCLUDE),$(NESTED_LINT_WASM_MODULES)); do (cd \$$m && GOOS=wasip1 GOARCH=wasm $(nested_lint)) || exit 1; done && \
 		yamllint ."
 
 # Extract licenses from source tree
