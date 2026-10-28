@@ -180,8 +180,8 @@ func NewFromFlags() (*Framework, error) {
 
 	pflag.String(kubeconfigFlag, viper.GetString(kubeconfigFlag), "kube config path, e.g. $HOME/.kube/config")
 	pflag.String(gsimageFlag, viper.GetString(gsimageFlag), "gameserver image to use for those tests")
-	pflag.String(exampleImageRegistryFlag, viper.GetString(exampleImageRegistryFlag), "registry of the example images to use for the examples tests")
-	pflag.String(exampleImageTagFlag, viper.GetString(exampleImageTagFlag), "optional tag of the example images to use for the examples tests; if empty, the published version of each example image is used")
+	pflag.String(exampleImageRegistryFlag, viper.GetString(exampleImageRegistryFlag), "registry of the example images to use for the e2e tests")
+	pflag.String(exampleImageTagFlag, viper.GetString(exampleImageTagFlag), "optional tag of the example images to use for the e2e tests; if empty, the published version of each example image is used")
 	pflag.String(pullSecretFlag, viper.GetString(pullSecretFlag), "optional secret to be used for pulling the gameserver and/or Agones SDK sidecar images")
 	pflag.Int(stressTestLevelFlag, viper.GetInt(stressTestLevelFlag), "enable stress test at given level 0-100")
 	pflag.String(perfOutputDirFlag, viper.GetString(perfOutputDirFlag), "write performance statistics to the specified directory")
