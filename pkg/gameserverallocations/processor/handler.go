@@ -42,6 +42,10 @@ import (
 
 var handlerLogger = runtime.NewLoggerWithSource("processorHandler")
 
+// maxInFlightBatches is the maximum number of batches being processed at once for a single client stream
+// Once reached, the handler stops receiving batches until one completes
+const maxInFlightBatches = 10
+
 // GameServerAllocator represents the interface to allocate game servers.
 type GameServerAllocator interface {
 	Allocate(ctx context.Context, gsa *allocationv1.GameServerAllocation) (k8sruntime.Object, error)
@@ -51,6 +55,35 @@ type GameServerAllocator interface {
 type allocationResult struct {
 	response *allocationpb.AllocationResponse
 	error    *rpcstatus.Status
+}
+
+// lockedStream serialises the sends on a stream. gRPC does not allow concurrent Send calls on
+// the same stream, but the pull request ticker and the batch goroutines (which each send their
+// response once processed) can send at the same time, so the sends must take turns
+type lockedStream struct {
+	allocationpb.Processor_StreamBatchesServer
+	// inFlight holds one token per batch being processed, which bounds the work queued for the stream
+	inFlight chan struct{}
+	mu       sync.Mutex
+}
+
+// Send sends the message, one at a time
+func (s *lockedStream) Send(msg *allocationpb.ProcessorMessage) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.Processor_StreamBatchesServer.Send(msg)
+}
+
+// sendPull sends a pull request, unless the stream is at capacity or busy sending something else, as a
+// pull is not needed then and must not hold up the pulls to the other clients.
+func (s *lockedStream) sendPull(msg *allocationpb.ProcessorMessage) error {
+	if len(s.inFlight) == cap(s.inFlight) || !s.mu.TryLock() {
+		return nil
+	}
+	defer s.mu.Unlock()
+
+	return s.Processor_StreamBatchesServer.Send(msg)
 }
 
 // Handler is the gRPC server for processing allocation requests.
@@ -93,8 +126,20 @@ func (h *Handler) StreamBatches(stream allocationpb.Processor_StreamBatchesServe
 		return status.Error(codes.InvalidArgument, "clientID is required")
 	}
 
+	// batch responses and pull requests are sent from different goroutines, and a gRPC stream
+	// does not allow concurrent sends
+	locked := &lockedStream{
+		Processor_StreamBatchesServer: stream,
+		inFlight:                      make(chan struct{}, maxInFlightBatches),
+	}
+	stream = locked
+
 	h.addClient(clientID, stream)
-	defer h.removeClient(clientID)
+	defer h.removeClient(clientID, stream)
+
+	// sends must be over before the handler returns
+	var batches sync.WaitGroup
+	defer batches.Wait()
 	handlerLogger.WithField(logFieldClientID, clientID).Debug("Client registered")
 
 	// Main loop: handle incoming messages
@@ -131,24 +176,36 @@ func (h *Handler) StreamBatches(stream allocationpb.Processor_StreamBatchesServe
 			logFieldRequestCount: len(requestWrappers),
 		}).Debug("Received batch request")
 
-		// Submit batch for processing
-		response := h.submitBatch(stream.Context(), batchID, requestWrappers)
-
-		respMsg := &allocationpb.ProcessorMessage{
-			ClientId: clientID,
-			Payload: &allocationpb.ProcessorMessage_BatchResponse{
-				BatchResponse: response,
-			},
+		// Wait for capacity before starting more work, so that a stalled allocator applies backpressure
+		// to the client instead of piling up goroutines and memory
+		select {
+		case locked.inFlight <- struct{}{}:
+		case <-stream.Context().Done():
+			return stream.Context().Err()
 		}
 
-		if err := stream.Send(respMsg); err != nil {
-			handlerLogger.WithFields(logrus.Fields{
-				logFieldClientID:     clientID,
-				logFieldBatchID:      batchID,
-				logFieldRequestCount: len(requestWrappers),
-			}).WithError(err).Error("Failed to send response")
-			continue
-		}
+		// Process the batch on its own, so that a slow request only delays the response of its own batch,
+		// and not the receipt and processing of the next ones.
+		batches.Go(func() {
+			defer func() { <-locked.inFlight }()
+
+			response := h.submitBatch(stream.Context(), batchID, requestWrappers)
+
+			respMsg := &allocationpb.ProcessorMessage{
+				ClientId: clientID,
+				Payload: &allocationpb.ProcessorMessage_BatchResponse{
+					BatchResponse: response,
+				},
+			}
+
+			if err := stream.Send(respMsg); err != nil {
+				handlerLogger.WithFields(logrus.Fields{
+					logFieldClientID:     clientID,
+					logFieldBatchID:      batchID,
+					logFieldRequestCount: len(requestWrappers),
+				}).WithError(err).Error("Failed to send response")
+			}
+		})
 	}
 }
 
@@ -184,12 +241,16 @@ func (h *Handler) sendPullRequestsToClients() {
 				Pull: &allocationpb.PullRequest{Message: "pull"},
 			},
 		}
-		if err := stream.Send(pullMsg); err != nil {
+		send := stream.Send
+		if ls, ok := stream.(*lockedStream); ok {
+			send = ls.sendPull
+		}
+		if err := send(pullMsg); err != nil {
 			handlerLogger.WithFields(logrus.Fields{
 				logFieldClientID: clientID,
 				"error":          err,
 			}).Warn("Failed to send pull request, removing client")
-			h.removeClient(clientID)
+			h.removeClient(clientID, stream)
 		}
 	}
 }
@@ -314,10 +375,13 @@ func (h *Handler) addClient(clientID string, stream allocationpb.Processor_Strea
 	h.clients[clientID] = stream
 }
 
-// removeClient unregisters a client from streaming allocation responses.
-func (h *Handler) removeClient(clientID string) {
+// removeClient unregisters the stream of a client from streaming allocation responses. It is a no-op if the
+// client has registered another stream since, as a client reconnects with the same ID.
+func (h *Handler) removeClient(clientID string, stream allocationpb.Processor_StreamBatchesServer) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	delete(h.clients, clientID)
+	if h.clients[clientID] == stream {
+		delete(h.clients, clientID)
+	}
 }

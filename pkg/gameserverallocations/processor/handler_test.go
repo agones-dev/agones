@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -134,13 +135,31 @@ func TestRemoveClient(t *testing.T) {
 				h.addClient(id, stream)
 			}
 
-			h.removeClient(tc.removeID)
+			h.removeClient(tc.removeID, stream)
 
 			h.mu.RLock()
 			defer h.mu.RUnlock()
 			assert.Len(t, h.clients, tc.wantLen)
 		})
 	}
+
+	t.Run("removing a stale stream keeps the stream the client reconnected with", func(t *testing.T) {
+		t.Parallel()
+
+		h := &Handler{
+			clients: make(map[string]allocationpb.Processor_StreamBatchesServer),
+		}
+		stale := newMockServerStream(context.Background())
+		current := newMockServerStream(context.Background())
+		h.addClient("client-1", stale)
+		h.addClient("client-1", current)
+
+		h.removeClient("client-1", stale)
+
+		h.mu.RLock()
+		defer h.mu.RUnlock()
+		assert.Same(t, current, h.clients["client-1"])
+	})
 }
 
 func TestProcessAllocation(t *testing.T) {
@@ -765,4 +784,254 @@ type failingSendStream struct {
 
 func (f *failingSendStream) Send(_ *allocationpb.ProcessorMessage) error {
 	return errors.New("send failed")
+}
+
+func allocatedGSA() k8sruntime.Object {
+	return &allocationv1.GameServerAllocation{
+		Status: allocationv1.GameServerAllocationStatus{
+			State:          allocationv1.GameServerAllocationAllocated,
+			GameServerName: "gs-1",
+		},
+	}
+}
+
+// batchMessage builds a single request batch, whose namespace is the batch ID.
+func batchMessage(batchID string) *allocationpb.ProcessorMessage {
+	return &allocationpb.ProcessorMessage{
+		ClientId: "client-1",
+		Payload: &allocationpb.ProcessorMessage_BatchRequest{
+			BatchRequest: &allocationpb.BatchRequest{
+				BatchId: batchID,
+				Requests: []*allocationpb.RequestWrapper{
+					{RequestId: "r-" + batchID, Request: &allocationpb.AllocationRequest{Namespace: batchID}},
+				},
+			},
+		},
+	}
+}
+
+// runStreamBatches runs StreamBatches in the background and returns a channel with its result
+func runStreamBatches(h *Handler, stream allocationpb.Processor_StreamBatchesServer) <-chan error {
+	done := make(chan error, 1)
+	go func() { done <- h.StreamBatches(stream) }()
+	return done
+}
+
+// overlapDetectingStream records whether two sends were ever in progress at the same time
+type overlapDetectingStream struct {
+	*mockServerStream
+	sending atomic.Int32
+	overlap atomic.Bool
+}
+
+func (o *overlapDetectingStream) Send(msg *allocationpb.ProcessorMessage) error {
+	if o.sending.Add(1) > 1 {
+		o.overlap.Store(true)
+	}
+	defer o.sending.Add(-1)
+	return o.mockServerStream.Send(msg)
+}
+
+// blockingSendStream blocks every send until release is closed
+type blockingSendStream struct {
+	*mockServerStream
+	release chan struct{}
+}
+
+func (b *blockingSendStream) Send(msg *allocationpb.ProcessorMessage) error {
+	<-b.release
+	return b.mockServerStream.Send(msg)
+}
+
+func TestStreamBatchesSerialisesSends(t *testing.T) {
+	t.Parallel()
+	ctx := t.Context()
+
+	h := newTestHandler(ctx, func(context.Context, *allocationv1.GameServerAllocation) (k8sruntime.Object, error) {
+		return allocatedGSA(), nil
+	})
+	stream := &overlapDetectingStream{mockServerStream: newMockServerStream(ctx)}
+	stream.sendChan = make(chan *allocationpb.ProcessorMessage, 100)
+
+	const batches = 8
+	stream.recvChan <- &allocationpb.ProcessorMessage{ClientId: "client-1"}
+	for i := range batches {
+		stream.recvChan <- batchMessage(fmt.Sprintf("b-%d", i))
+	}
+	done := runStreamBatches(h, stream)
+
+	// pull requests race with the batch responses
+	for range 50 {
+		h.sendPullRequestsToClients()
+	}
+
+	responses := 0
+	for responses < batches {
+		select {
+		case msg := <-stream.sendChan:
+			if msg.GetBatchResponse() != nil {
+				responses++
+			}
+		case <-time.After(5 * time.Second):
+			t.Fatalf("timed out after %d responses", responses)
+		}
+	}
+	assert.False(t, stream.overlap.Load(), "sends on the stream must not overlap")
+
+	close(stream.recvChan)
+	require.ErrorIs(t, <-done, io.EOF)
+}
+
+func TestStreamBatchesBlockedBatchDoesNotDelayOthers(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+
+	release := make(chan struct{})
+	h := newTestHandler(ctx, func(_ context.Context, gsa *allocationv1.GameServerAllocation) (k8sruntime.Object, error) {
+		if gsa.Namespace == "slow" {
+			<-release
+		}
+		return allocatedGSA(), nil
+	})
+	stream := newMockServerStream(ctx)
+	stream.recvChan <- &allocationpb.ProcessorMessage{ClientId: "client-1"}
+	stream.recvChan <- batchMessage("slow")
+	stream.recvChan <- batchMessage("fast")
+	done := runStreamBatches(h, stream)
+
+	select {
+	case msg := <-stream.sendChan:
+		assert.Equal(t, "fast", msg.GetBatchResponse().GetBatchId())
+	case <-time.After(5 * time.Second):
+		t.Fatal("fast batch was held back by the slow one")
+	}
+
+	close(release)
+	close(stream.recvChan)
+	require.ErrorIs(t, <-done, io.EOF)
+}
+
+func TestStreamBatchesWaitsForResponsesBeforeReturning(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+
+	h := newTestHandler(ctx, func(context.Context, *allocationv1.GameServerAllocation) (k8sruntime.Object, error) {
+		return allocatedGSA(), nil
+	})
+	stream := &blockingSendStream{
+		mockServerStream: newMockServerStream(ctx),
+		release:          make(chan struct{}),
+	}
+	stream.recvChan <- &allocationpb.ProcessorMessage{ClientId: "client-1"}
+	stream.recvChan <- batchMessage("b-1")
+	close(stream.recvChan)
+	done := runStreamBatches(h, stream)
+
+	// the receive side is over, but the response is still stuck in Send
+	select {
+	case <-done:
+		t.Fatal("handler returned while a response was still being sent")
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	close(stream.release)
+	require.ErrorIs(t, <-done, io.EOF)
+	assert.Len(t, stream.sendChan, 1)
+}
+
+func TestStreamBatchesInFlightLimit(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		batches     int
+		wantStarted int // batches started while the allocator is blocked
+		wantUnread  int // batches the handler has not read from the stream yet
+	}{
+		{
+			name:        "batches under the limit all start",
+			batches:     maxInFlightBatches,
+			wantStarted: maxInFlightBatches,
+		},
+		{
+			name:        "batches over the limit wait for capacity",
+			batches:     maxInFlightBatches + 2,
+			wantStarted: maxInFlightBatches,
+			wantUnread:  1, // the handler holds one received batch while waiting for capacity
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := t.Context()
+			release := make(chan struct{})
+			var started atomic.Int32
+			h := newTestHandler(ctx, func(context.Context, *allocationv1.GameServerAllocation) (k8sruntime.Object, error) {
+				started.Add(1)
+				<-release
+				return allocatedGSA(), nil
+			})
+			stream := newMockServerStream(ctx)
+			stream.recvChan = make(chan *allocationpb.ProcessorMessage, tc.batches+1)
+			stream.sendChan = make(chan *allocationpb.ProcessorMessage, tc.batches)
+
+			stream.recvChan <- &allocationpb.ProcessorMessage{ClientId: "client-1"}
+			for i := range tc.batches {
+				stream.recvChan <- batchMessage(fmt.Sprintf("b-%d", i))
+			}
+			done := runStreamBatches(h, stream)
+
+			require.Eventually(t, func() bool { return int(started.Load()) == tc.wantStarted }, 5*time.Second, time.Millisecond)
+			assert.Never(t, func() bool { return int(started.Load()) > tc.wantStarted }, 50*time.Millisecond, 5*time.Millisecond)
+			assert.Len(t, stream.recvChan, tc.wantUnread)
+
+			// once the allocator is unblocked, the waiting batches get the capacity freed by finished ones
+			close(release)
+			close(stream.recvChan)
+			require.ErrorIs(t, <-done, io.EOF)
+			assert.EqualValues(t, tc.batches, started.Load())
+		})
+	}
+}
+
+func TestLockedStreamSendPull(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		inFlight int  // batches being processed
+		busy     bool // another send is in progress
+		wantSent bool
+	}{
+		{name: "idle stream gets the pull", wantSent: true},
+		{name: "stream below capacity gets the pull", inFlight: maxInFlightBatches - 1, wantSent: true},
+		{name: "stream at capacity is skipped", inFlight: maxInFlightBatches},
+		{name: "stream busy sending is skipped", busy: true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			mock := newMockServerStream(t.Context())
+			stream := &lockedStream{
+				Processor_StreamBatchesServer: mock,
+				inFlight:                      make(chan struct{}, maxInFlightBatches),
+			}
+			for range tc.inFlight {
+				stream.inFlight <- struct{}{}
+			}
+			if tc.busy {
+				stream.mu.Lock()
+				defer stream.mu.Unlock()
+			}
+
+			require.NoError(t, stream.sendPull(&allocationpb.ProcessorMessage{}))
+			assert.Equal(t, tc.wantSent, len(mock.sendChan) == 1)
+		})
+	}
 }
