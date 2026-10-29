@@ -122,14 +122,10 @@ List of items to do for upgrading to {version_1} {version_2} {version_3}
       terraform init -backend-config="bucket=agones-images-upgrade-infra-bucket-tfstate" -backend-config="prefix=terraform/state"
       terraform apply -var project="agones-images"
       ```
-- [ ] Recreate the performance test cluster, and config the performance test to run on the new cluster
+- [ ] Update the Kubernetes version of the performance test configuration. There is no running
+      performance test cluster, so do **not** run `terraform apply`. This only keeps the code current
+      for future manual runs (see `build/docs/performance-testing.md`).
   - [ ] In `build/terraform/performance/module.tf`, update the `kubernetes_versions` to {version_2}
         and make sure the region is always set to `us-central1`.
-  - [ ] Recreate the cluster with the new script:
-    ```
-    cd build; make shell; cd build/terraform/performance
-    terraform init -backend-config="bucket=agones-images-performance-infra-bucket-tfstate" -backend-config="prefix=terraform/state"
-    terraform apply -var project="agones-images"
-    ```
-  - [ ] Update the `_TEST_CLUSTER_NAME` in `ci/perf-test-cloudbuild.yaml` to the name of the newly
-        created performance test cluster, and send a PR with the changes.
+  - [ ] Update the `_TEST_CLUSTER_NAME` in `ci/perf-test-cloudbuild.yaml` to match, i.e.
+        `standard-performance-test-cluster-{version_2 with "." replaced by "-"}`, and send a PR with the changes.
