@@ -26,7 +26,7 @@ be disabled.
 
 The current set of `alpha`, `beta` and `stable` feature gates include:
 
-
+{{% feature expiryVersion="1.62.0" %}}
 
 ### Alpha
 
@@ -34,6 +34,20 @@ The current set of `alpha`, `beta` and `stable` feature gates include:
 |-------------------------------------------------------------------------------------------------------------------|--------------------------|----------|---------|--------|
 | Example Gate (not in use)                                                                                         | `Example`                | Disabled | None    | 0.13.0 |
 | [Wasm Autoscaler](https://github.com/agones-dev/agones/issues/4080)                                               | `WasmAutoscaler`         | Disabled | `Alpha` | 1.54.0 |
+
+{{% /feature %}}
+
+{{% feature publishVersion="1.62.0" %}}
+
+### Alpha
+
+| Feature Name                                                                                                      | Gate                     | Default  | Stage   | Since  |
+|-------------------------------------------------------------------------------------------------------------------|--------------------------|----------|---------|--------|
+| Example Gate (not in use)                                                                                         | `Example`                | Disabled | None    | 0.13.0 |
+| [Rolling Update Surge](https://agones.dev/site/docs/guides/fleet-updates/#rolling-update-strategy)                | `RollingUpdateSurge`     | Disabled | `Alpha` | 1.62.0 |
+| [Wasm Autoscaler](https://github.com/agones-dev/agones/issues/4080)                                               | `WasmAutoscaler`         | Disabled | `Alpha` | 1.54.0 |
+
+{{% /feature %}}
 
 
 ### Beta

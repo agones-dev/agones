@@ -76,6 +76,10 @@ const (
 	// FeaturePlayerTracking is a feature flag to enable/disable player tracking features.
 	FeaturePlayerTracking Feature = "PlayerTracking"
 
+	// FeatureRollingUpdateSurge is a feature flag to apply maxSurge on top of the Fleet replicas during a
+	// rolling update, even when the inactive GameServerSets hold Allocated GameServers.
+	FeatureRollingUpdateSurge Feature = "RollingUpdateSurge"
+
 	// FeatureWasmAutoscaler is a feature flag to enable/disable the script based autoscaler.
 	FeatureWasmAutoscaler Feature = "WasmAutoscaler"
 
@@ -166,6 +170,7 @@ var (
 		// Alpha features
 		FeaturePlayerAllocationFilter: false,
 		FeaturePlayerTracking:         false,
+		FeatureRollingUpdateSurge:     false,
 		FeatureWasmAutoscaler:         false,
 
 		// Dev features
