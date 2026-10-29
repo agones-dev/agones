@@ -12,10 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package main prints the Agones release that precedes a given version, using the
+// published Helm charts to find the latest patch of the previous minor release.
 package main
 
 import (
 	"bytes"
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -37,14 +40,14 @@ type gcsLister interface {
 type gsutilLister struct{}
 
 func (g gsutilLister) List(prefix string) (string, error) {
-	cmd := exec.Command("gsutil", "ls", prefix+"*.tgz")
+	cmd := exec.CommandContext(context.Background(), "gsutil", "ls", prefix+"*.tgz")
 	var out bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if err != nil {
-		return "", fmt.Errorf("gsutil command failed: %v: %s", err, stderr.String())
+		return "", fmt.Errorf("gsutil command failed: %w: %s", err, stderr.String())
 	}
 	return out.String(), nil
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"strings"
 )
@@ -44,7 +43,7 @@ func groupByExampleName(filePaths []string) map[string][]string {
 }
 
 func splitPath(filePath string) (string, string) {
-	trimmed, _ := strings.CutPrefix(filePath, fmt.Sprintf("%s/", examplesDir))
+	trimmed, _ := strings.CutPrefix(filePath, examplesDir+"/")
 	split := strings.SplitN(trimmed, "/", 2)
 
 	exampleName := split[0]

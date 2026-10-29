@@ -27,6 +27,12 @@ import (
 	"github.com/pelletier/go-toml"
 )
 
+// Release stages accepted by the release-stage flag.
+const (
+	stageMinor = "minor"
+	stagePatch = "patch"
+)
+
 // The Config struct holds two nested structs, DevConfig and ProdConfig, which represent the current and previous version of Kubernetes.
 type Config struct {
 	DevConfig struct {
@@ -50,7 +56,7 @@ type Config struct {
 
 func main() {
 	var releaseStage, configFile string
-	flag.StringVar(&releaseStage, "release-stage", "minor", "Specify the release stage ('minor' or 'patch')")
+	flag.StringVar(&releaseStage, "release-stage", stageMinor, "Specify the release stage ('minor' or 'patch')")
 	flag.StringVar(&configFile, "config-file", "site/config.toml", "Path to the config.toml file")
 	flag.Parse()
 
@@ -61,7 +67,7 @@ func main() {
 }
 
 func updateSiteConfig(filePath, stage string) error {
-	if stage != "minor" && stage != "patch" {
+	if stage != stageMinor && stage != stagePatch {
 		log.Fatalf("invalid release stage: must be 'minor' or 'patch'")
 	}
 
@@ -71,7 +77,7 @@ func updateSiteConfig(filePath, stage string) error {
 	}
 
 	var updatedLines []string
-	if stage == "minor" {
+	if stage == stageMinor {
 		var config Config
 		err = toml.Unmarshal(content, &config)
 		if err != nil {
@@ -87,7 +93,7 @@ func updateSiteConfig(filePath, stage string) error {
 		config.ProdConfig.MinikubeExampleClusterVersion = config.DevConfig.DevMinikubeExampleClusterVersion
 
 		var lines []string
-		for _, line := range strings.Split(string(content), "\n") {
+		for line := range strings.SplitSeq(string(content), "\n") {
 			switch {
 			case strings.HasPrefix(line, "supported_k8s"):
 				line = "supported_k8s = " + tomlArray(config.ProdConfig.SupportedK8s)
@@ -136,7 +142,7 @@ func updateReleaseValues(lines []string, stage string) []string {
 		trimmedLine := strings.TrimSpace(line) // Trim leading/trailing spaces
 
 		if strings.HasPrefix(trimmedLine, "release_branch") || strings.HasPrefix(trimmedLine, "release_version") {
-			if stage == "minor" {
+			if stage == stageMinor {
 				updatedLine = incrementMinorVersion(line)
 			} else {
 				updatedLine = incrementPatchVersion(line)

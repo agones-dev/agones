@@ -13,7 +13,7 @@ import (
 
 const cloneDir = "tmp"
 const rootDir = "../../../"
-const gitUrl = "https://github.com/agones-dev/agones.git"
+const gitURL = "https://github.com/agones-dev/agones.git"
 const targetBranch = "refs/heads/main"
 
 func getFailedFiles() []string {
@@ -150,7 +150,7 @@ func getFileContentsFromTree(tree *object.Tree, filePath string) (string, error)
 	if err != nil {
 		return "", err
 	}
-	defer reader.Close()
+	defer reader.Close() //nolint:errcheck
 
 	content, err := io.ReadAll(reader)
 	if err != nil {
@@ -161,9 +161,11 @@ func getFileContentsFromTree(tree *object.Tree, filePath string) (string, error)
 }
 
 func cloneRemoteRepo() *git.Repository {
-	os.RemoveAll(cloneDir)
+	if err := os.RemoveAll(cloneDir); err != nil {
+		log.Fatalf("Failed to remove the previous clone: %v", err)
+	}
 	cloneOptions := &git.CloneOptions{
-		URL:           gitUrl,
+		URL:           gitURL,
 		ReferenceName: targetBranch,
 	}
 	repo, err := git.PlainClone(cloneDir, false, cloneOptions)

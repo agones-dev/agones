@@ -161,16 +161,15 @@ func findMeta(data []byte, name string) string {
 	sep = append(sep, `<meta name="`...)
 	sep = append(sep, name...)
 	sep = append(sep, `" content="`...)
-	i := bytes.Index(data, sep)
-	if i == -1 {
+	_, content, ok := bytes.Cut(data, sep)
+	if !ok {
 		return ""
 	}
-	content := data[i+len(sep):]
-	j := bytes.IndexByte(content, '"')
-	if j == -1 {
+	value, _, ok := bytes.Cut(content, []byte{'"'})
+	if !ok {
 		return ""
 	}
-	return string(content[:j])
+	return string(value)
 }
 
 func TestPathConfigSetFind(t *testing.T) {

@@ -59,10 +59,10 @@ func main() {
 	var successLatency float64
 	errorGroup := make(map[string]int64)
 	startRun := time.Now()
-	waitBetweenRunsInSec := time.Second * 3
+	waitBetweenRuns := time.Second * 3
 
-	audience := fmt.Sprintf("https://%s", *serverAddr)
-	ts, err := idtoken.NewTokenSource(context.Background(), audience, idtoken.WithCredentialsJSON([]byte(saKey)))
+	audience := "https://" + *serverAddr
+	ts, err := idtoken.NewTokenSource(context.Background(), audience, idtoken.WithAuthCredentialsJSON(idtoken.ServiceAccount, []byte(saKey)))
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -75,7 +75,7 @@ func main() {
 			cred := credentials.NewTLS(&tls.Config{})
 			opts := []grpc.DialOption{grpc.WithTransportCredentials(cred)}
 
-			conn, err := grpc.Dial(fmt.Sprintf("%s:%s", *serverAddr, port), opts...)
+			conn, err := grpc.NewClient(fmt.Sprintf("%s:%s", *serverAddr, port), opts...)
 			if err != nil {
 				logger.Printf("Failed to dial for client %v: %v", k, err)
 				return
@@ -87,10 +87,8 @@ func main() {
 			for r := 0; r < *runs; r++ {
 				var wgInner sync.WaitGroup
 
-				for i := 0; i < *perClientCalls; i++ {
-					wgInner.Add(1)
-					go func(i int) {
-						defer wgInner.Done()
+				for range *perClientCalls {
+					wgInner.Go(func() {
 
 						start := time.Now()
 						if err := allocate(client, ts); err != nil {
@@ -105,20 +103,22 @@ func main() {
 
 							muSucc.Lock()
 							successCalls++
-							successLatency += time.Now().Sub(start).Seconds()
+							successLatency += time.Since(start).Seconds()
 							muSucc.Unlock()
 						}
-					}(i)
+					})
 				}
 				wgInner.Wait()
-				time.Sleep(waitBetweenRunsInSec)
+				time.Sleep(waitBetweenRuns)
 			}
-			conn.Close()
+			if err := conn.Close(); err != nil {
+				logger.Printf("Failed to close the connection for client %v: %v", k, err)
+			}
 		}(k)
 	}
 	wg.Wait()
 
-	runDuration := time.Now().Sub(startRun).Seconds() - float64(*runs)*waitBetweenRunsInSec.Seconds() // except all the sleeps
+	runDuration := time.Since(startRun).Seconds() - float64(*runs)*waitBetweenRuns.Seconds() // except all the sleeps
 	report(errorCalls, successCalls, runDuration, successLatency, errorGroup)
 }
 
@@ -148,7 +148,7 @@ func allocate(client pb.AllocationServiceClient, ts oauth2.TokenSource) error {
 	if err != nil {
 		logger.Fatal(err)
 	}
-	token := fmt.Sprintf("Bearer %s", t.AccessToken)
+	token := "Bearer " + t.AccessToken
 
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	ctx = metadata.AppendToOutgoingContext(ctx, "Authorization", token)
@@ -158,6 +158,6 @@ func allocate(client pb.AllocationServiceClient, ts oauth2.TokenSource) error {
 	if err != nil {
 		return err
 	}
-	logger.Printf("allocated game server: %v\n", *resp)
+	logger.Printf("allocated game server: %v\n", resp)
 	return nil
 }

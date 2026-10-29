@@ -12,9 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package main wraps the SuperTuxKart dedicated game server, and follows its log
+// file to drive the Agones SDK integration.
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -54,7 +57,7 @@ func main() {
 	cmdString := strings.Split(*input, " ")
 	command, args := cmdString[0], cmdString[1:]
 
-	cmd := exec.Command(command, args...) // #nosec
+	cmd := exec.CommandContext(context.Background(), command, args...) // #nosec
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 
@@ -71,7 +74,7 @@ func main() {
 
 	t := &tail.Tail{}
 	// Loop to make sure the log has been created. Let's give it at least a minute, because it can be slow.
-	for i := 0; i < 60; i++ {
+	for i := range 60 {
 		time.Sleep(time.Second)
 
 		absoluteLogPath := path.Join(home, logLocation)
@@ -91,11 +94,9 @@ func main() {
 		if err != nil {
 			log.Printf("Error tailing file: %s", err)
 			continue
-		} else {
-			break
 		}
+		break
 	}
-	defer t.Cleanup()
 	for line := range t.Lines {
 		// Don't use the logger here. This would add multiple prefixes to the logs. We just want
 		// to show the supertuxkart logs as they are, and layer the wrapper logs in with them.
@@ -117,10 +118,10 @@ func main() {
 }
 
 // doHealth sends the regular Health Pings
-func doHealth(sdk *sdk.SDK) {
+func doHealth(s *sdk.SDK) {
 	tick := time.Tick(2 * time.Second)
 	for {
-		if err := sdk.Health(); err != nil {
+		if err := s.Health(); err != nil {
 			log.Fatalf("could not send health ping: %v", err)
 		}
 		<-tick
@@ -130,7 +131,7 @@ func doHealth(sdk *sdk.SDK) {
 // handleLogLine compares the log line to a series of regexes to determine if any action should be taken.
 func handleLogLine(line string) string {
 	// The various regexes that match server lines
-	playerJoin := regexp.MustCompile(`ServerLobby: New player (.+) with online id [0-9][0-9]?`)
+	playerJoin := regexp.MustCompile(`ServerLobby: New player (.+) with online id \d\d?`)
 	playerLeave := regexp.MustCompile(`ServerLobby: (.+) disconnected$`)
 	noMorePlayers := regexp.MustCompile(`STKHost.+There are now 0 peers\.$`)
 	serverStart := regexp.MustCompile(`Listening has been started`)

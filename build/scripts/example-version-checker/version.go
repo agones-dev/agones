@@ -17,12 +17,9 @@ var excludedPatterns = [...]string{"*.md", "*.yaml", "*.yml", "OWNERS", ".gitign
 var excludedExamples = []string{"autoscaler-wasm"}
 
 func dirIsExample(dirName string) bool {
-	makefileName := fmt.Sprintf("%s/Makefile", dirName)
-	if _, err := os.Stat(makefileName); err == nil {
-		return true
-	} else {
-		return false
-	}
+	makefileName := dirName + "/Makefile"
+	_, err := os.Stat(makefileName)
+	return err == nil
 }
 
 func getAllExampleNames() []string {

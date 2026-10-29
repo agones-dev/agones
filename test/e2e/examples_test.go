@@ -54,7 +54,7 @@ func TestSuperTuxKartGameServerReady(t *testing.T) {
 					Containers: []corev1.Container{
 						{
 							Name:  "supertuxkart",
-							Image: framework.ExampleImage("supertuxkart-example", "0.25"),
+							Image: framework.ExampleImage("supertuxkart-example", "0.26"),
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("1Gi"),
@@ -235,7 +235,7 @@ func TestXonoticGameServerReady(t *testing.T) {
 					Containers: []corev1.Container{
 						{
 							Name:  "xonotic",
-							Image: framework.ExampleImage("xonotic-example", "2.8"),
+							Image: framework.ExampleImage("xonotic-example", "2.9"),
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("700Mi"),

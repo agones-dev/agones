@@ -12,9 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package main wraps the Xonotic dedicated game server, and watches its stdout to
+// drive the Agones SDK integration.
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"io"
@@ -65,7 +68,7 @@ func main() {
 	// track references to listening count
 	listeningCount := 0
 
-	cmd := exec.Command(*input, argsList...) // #nosec
+	cmd := exec.CommandContext(context.Background(), *input, argsList...) // #nosec
 	cmd.Stderr = &interceptor{forward: os.Stderr}
 	cmd.Stdout = &interceptor{
 		forward: os.Stdout,
@@ -102,10 +105,10 @@ func main() {
 }
 
 // doHealth sends the regular Health Pings
-func doHealth(sdk *sdk.SDK) {
+func doHealth(s *sdk.SDK) {
 	tick := time.Tick(2 * time.Second)
 	for {
-		err := sdk.Health()
+		err := s.Health()
 		if err != nil {
 			log.Fatalf("[wrapper] Could not send health ping, %v", err)
 		}

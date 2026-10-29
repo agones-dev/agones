@@ -60,14 +60,14 @@ func (cc *ClusterConns) Get(index int) (*grpc.ClientConn, time.Time, bool) {
 }
 
 // Set sets the grpc connection and created time in the connection pool list by the index given if the connection list is longer than the index given, otherwise, return errors.
-func (cc *ClusterConns) Set(index int, conn *grpc.ClientConn, time time.Time) error {
+func (cc *ClusterConns) Set(index int, conn *grpc.ClientConn, createdTime time.Time) error {
 	cc.m.Lock()
 	defer cc.m.Unlock()
 	if len(cc.conns) <= index || len(cc.createdTSs) <= index {
 		return fmt.Errorf("current connections are less than %d", index)
 	}
 	cc.conns[index] = conn
-	cc.createdTSs[index] = time
+	cc.createdTSs[index] = createdTime
 	return nil
 }
 
@@ -88,7 +88,7 @@ func selectCluster(clustersInfo []*ClusterInfo, allocatedClusters map[string]boo
 	if len(aggregatedRates) == 0 {
 		return nil
 	}
-	r := rand.Float64() * cur
+	r := rand.Float64() * cur //nolint:gosec // weighted cluster selection, not security sensitive
 	prev := float64(0)
 
 	for i, aggregatedRate := range aggregatedRates {

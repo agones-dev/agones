@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package main is an example client that creates a GameServer through the Agones
+// clientset, and optionally waits for it to become Ready.
 package main
 
 import (
@@ -117,7 +119,7 @@ func main() {
 	logrus.Infof("New GameServer name is: %s", newGS.ObjectMeta.Name)
 
 	if viper.GetBool(isHelmTest) {
-		err = wait.PollImmediate(1*time.Second, 60*time.Second, func() (bool, error) {
+		err = wait.PollUntilContextTimeout(ctx, 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
 			checkGs, err := agonesClient.AgonesV1().GameServers(gs.Namespace).Get(ctx, newGS.Name, metav1.GetOptions{})
 
 			if err != nil {

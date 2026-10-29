@@ -59,8 +59,7 @@ var (
 	clustersConnections  = make(map[string]*ClusterConns)
 	mClustersConnections = sync.RWMutex{}
 	failedClusters       = sync.Map{}
-	ctx                  = context.Background()
-	cred                 = credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})
+	cred                 = credentials.NewTLS(&tls.Config{InsecureSkipVerify: true}) //nolint:gosec // skips cert validation until a valid TLS cert is set up; see the README
 	tokenSource          oauth2.TokenSource
 )
 
@@ -78,7 +77,7 @@ func main() {
 
 	readEnvVariables()
 
-	listener, err := net.Listen("tcp", ":"+port)
+	listener, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", ":"+port)
 	if err != nil {
 		log.Fatalf("net.Listen: %v", err)
 	}
@@ -207,7 +206,9 @@ func getConnection(ctx context.Context, clusterInfo *ClusterInfo) (*grpc.ClientC
 				log.Error(err)
 				continue
 			}
-			clusterConnection.Set(randIndex, conn, time.Now())
+			if err := clusterConnection.Set(randIndex, conn, time.Now()); err != nil {
+				log.Error(err)
+			}
 			return conn, randIndex, nil
 		}
 		return currentConn, randIndex, nil
@@ -248,7 +249,7 @@ func (s *allocationEndpointService) Allocate(ctx context.Context, req *pb.Alloca
 		resp, err = allocateFromAgones(ctx, selectedClstr, req)
 		if err != nil {
 			log.Warningf("allocation request to Agones failed: %v", err)
-			go updateFailed(selectedClstr.Name, err)
+			go updateFailed(selectedClstr.Name)
 			continue
 		}
 		return resp, nil
@@ -256,7 +257,7 @@ func (s *allocationEndpointService) Allocate(ctx context.Context, req *pb.Alloca
 	return nil, err
 }
 
-func updateFailed(clusterName string, err error) {
+func updateFailed(clusterName string) {
 	// Mark all game servers in the cluster are allocated for now.
 	failedClusterInterface, ok := failedClusters.Load(clusterName)
 	if ok && time.Since(failedClusterInterface.(failedConnectCluster).failedTime) < failureDuration {
@@ -271,7 +272,7 @@ func updateFailed(clusterName string, err error) {
 
 func connectToAgonesCluster(ctx context.Context, clusterInfo *ClusterInfo) (*grpc.ClientConn, error) {
 	//nolint:staticcheck
-	conn, err := grpc.DialContext(ctx, fmt.Sprintf("%s:443", clusterInfo.Endpoint), grpc.WithTransportCredentials(cred))
+	conn, err := grpc.DialContext(ctx, clusterInfo.Endpoint+":443", grpc.WithTransportCredentials(cred))
 	if err != nil {
 		return nil, fmt.Errorf("could not connect to %s with endpoint %s: %w", clusterInfo.Name, clusterInfo.Endpoint, err)
 	}
@@ -294,7 +295,7 @@ func allocateFromAgones(ctx context.Context, clusterInfo *ClusterInfo, req *pb.A
 	if err != nil {
 		return nil, status.Error(codes.Internal, fmt.Sprintf("could not retrieve token to connect the backend: %v", err))
 	}
-	ctx = metadata.AppendToOutgoingContext(ctx, "Authorization", fmt.Sprintf("Bearer %s", tk.AccessToken))
+	ctx = metadata.AppendToOutgoingContext(ctx, "Authorization", "Bearer "+tk.AccessToken)
 
 	client := pb.NewAllocationServiceClient(conn)
 
@@ -305,7 +306,9 @@ func allocateFromAgones(ctx context.Context, clusterInfo *ClusterInfo, req *pb.A
 			mClustersConnections.RLock()
 			clustersConnection := clustersConnections[clusterInfo.Name]
 			mClustersConnections.RUnlock()
-			clustersConnection.Set(index, nil, time.Time{})
+			if err := clustersConnection.Set(index, nil, time.Time{}); err != nil {
+				log.Error(err)
+			}
 		}
 		return nil, err
 	}

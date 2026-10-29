@@ -30,7 +30,7 @@ MINIKUBE_PROFILE ?= agones
 
 mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
 project_path := $(dir $(mkfile_path))
-version := 0.25
+version := 0.26
 ifeq ($(REPOSITORY),)
 	image_tag := supertuxkart-example:$(version)
 else

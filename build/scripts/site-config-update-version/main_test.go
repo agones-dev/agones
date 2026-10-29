@@ -27,7 +27,7 @@ func TestIncrementMinorVersion(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"Standard minor increment",`release_version = "1.52.0"`, `release_version = "1.53.0"`},
+		{"Standard minor increment", `release_version = "1.52.0"`, `release_version = "1.53.0"`},
 		{"Increment with existing patch", `release_version = "1.52.1"`, `release_version = "1.53.0"`},
 		{"Double digit minor", `release_version = "1.9.5"`, `release_version = "1.10.0"`},
 	}
@@ -108,13 +108,7 @@ func TestTomlArray(t *testing.T) {
 }
 
 func TestUpdateSiteConfig(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "test-run-logic")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	configFile := filepath.Join(tmpDir, "config.toml")
+	configFile := filepath.Join(t.TempDir(), "config.toml")
 
 	initialContent := `
 [params]
@@ -126,7 +120,7 @@ func TestUpdateSiteConfig(t *testing.T) {
   dev_supported_k8s = ["1.26", "1.27"]
   dev_k8s_api_version = "1.27"
 `
-	if err := os.WriteFile(configFile, []byte(initialContent), 0644); err != nil {
+	if err := os.WriteFile(configFile, []byte(initialContent), 0o644); err != nil {
 		t.Fatalf("Failed to write initial config file: %v", err)
 	}
 

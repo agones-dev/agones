@@ -66,7 +66,7 @@ KIND_PROFILE ?= agones
 KIND_CONTAINER_NAME=$(KIND_PROFILE)-control-plane
 
 # Game Server image to use while doing end-to-end tests
-GS_TEST_IMAGE ?= us-docker.pkg.dev/agones-images/examples/simple-game-server:0.44
+GS_TEST_IMAGE ?= us-docker.pkg.dev/agones-images/examples/simple-game-server:0.45
 
 # Registry and tag of the example images used in the examples end-to-end tests.
 # If EXAMPLE_IMAGE_TAG is empty, the published example images are used.
@@ -547,14 +547,35 @@ build-extensions-binary-linux-arm64: $(ensure-build-image)
 build-extensions-debug-binary: GO_BUILD_TAGS += -gcflags="all=-N -l"
 build-extensions-debug-binary: build-extensions-binary-linux-amd64
 
+# Nested Go modules (each with its own go.mod) are linted too. `./...` stops at
+# module boundaries, so each is linted from its own directory against the root
+# config. They are not vendored, so dependencies come from the module cache instead.
+# Every tracked nested module is linted, so new ones are picked up automatically.
+# Discovery runs in the build image, and lint fails if discovery fails.
+# Modules that should not be linted.
+NESTED_LINT_EXCLUDE =
+# Modules that only build for wasm, linted with GOOS/GOARCH set.
+NESTED_LINT_WASM_MODULES = examples/autoscaler-wasm
+
+# The root config's exclusion rules are written for the root module, so in a
+# nested module most of them match nothing and warn-unused reports each one.
+# The root run still reports genuinely unused rules; drop just those warnings here.
+nested_lint = golangci-lint run --timeout $(LINT_TIMEOUT) --modules-download-mode=mod ./... \
+	2> >(grep -v -e 'Skipped 0 issues by rules' -e 'match no issues' >&2)
+
 # Lint the go source code and yaml files.
 # use LINT_TIMEOUT to manipulate the linter timeout
 lint: LINT_TIMEOUT ?= 15m
 lint: $(ensure-build-image)
 	docker run -t -e "TERM=xterm-256color" -e "$(gomod_on)" --rm $(common_mounts) -w $(workdir_path) $(DOCKER_RUN_ARGS) $(build_tag) bash -c \
 		"$(git_safe) && \
-		golangci-lint run ./examples/... && \
 		golangci-lint run --timeout $(LINT_TIMEOUT) ./... && \
+		modules=\$$(git ls-files '*/go.mod') && \
+		for m in \$${modules//\/go.mod/}; do \
+			case ' $(NESTED_LINT_EXCLUDE) $(NESTED_LINT_WASM_MODULES) ' in *' '\$$m' '*) continue;; esac; \
+			(cd \$$m && $(nested_lint)) || exit 1; \
+		done && \
+		for m in $(filter-out $(NESTED_LINT_EXCLUDE),$(NESTED_LINT_WASM_MODULES)); do (cd \$$m && GOOS=wasip1 GOARCH=wasm $(nested_lint)) || exit 1; done && \
 		yamllint ."
 
 # Extract licenses from source tree

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"testing"
 )
 
@@ -25,7 +24,7 @@ func TestFilenameIsIrrelevant(t *testing.T) {
 	for filename, expected := range irrelevantMap {
 		observed := filenameIsIrrelevant(filename, exampleNames)
 		if observed != expected {
-			log.Fatalf("%s was expected to be: %t", filename, expected)
+			t.Errorf("%s was expected to be: %t", filename, expected)
 		}
 	}
 }

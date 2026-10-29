@@ -11,9 +11,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-// This custom controller is deployed in the Kubernetes cluster, specifically in the agones-system namespace,
-// and it's designed to observe and react to changes in GameServer instances.
 
+// Package main is a custom controller that is deployed in the Kubernetes cluster, specifically in the
+// agones-system namespace, and it's designed to observe and react to changes in GameServer instances.
 package main
 
 import (

@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	autoscalingv1 "agones.dev/agones/pkg/apis/autoscaling/v1"
 	"agones.dev/agones/pkg/util/runtime" // for the logger
@@ -41,6 +42,8 @@ var (
 var (
 	logger = runtime.NewLoggerWithSource("main")
 )
+
+const readHeaderTimeout = 60 * time.Second
 
 // Get all parameters from ENV variables
 // Extra check is performed not to fall into the infinite loop:
@@ -115,22 +118,27 @@ func main() {
 	// Return the target replica count which is used by Webhook fleet autoscaling policy
 	http.HandleFunc("/scale", handleAutoscale)
 
+	srv := &http.Server{
+		Addr:              ":" + *port,
+		ReadHeaderTimeout: readHeaderTimeout,
+	}
+
 	_, err := os.Stat("/home/service/certs/tls.crt")
 	if err == nil {
 		logger.Info("Starting HTTPS server on port ", *port)
-		if err := http.ListenAndServeTLS(":"+*port, "/home/service/certs/tls.crt", "/home/service/certs/tls.key", nil); err != nil {
+		if err := srv.ListenAndServeTLS("/home/service/certs/tls.crt", "/home/service/certs/tls.key"); err != nil {
 			logger.WithError(err).Fatal("HTTPS server failed to run")
 		}
 	} else {
 		logger.Info("Starting HTTP server on port ", *port)
-		if err := http.ListenAndServe(":"+*port, nil); err != nil {
+		if err := srv.ListenAndServe(); err != nil {
 			logger.WithError(err).Fatal("HTTP server failed to run")
 		}
 	}
 }
 
 // Let /health return Healthy and status code 200
-func handleHealth(w http.ResponseWriter, r *http.Request) {
+func handleHealth(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, err := io.WriteString(w, "Healthy")
@@ -151,11 +159,13 @@ func handleAutoscale(w http.ResponseWriter, r *http.Request) {
 	res, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	err = json.Unmarshal(res, &faReq)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	faResp := autoscalingv1.FleetAutoscaleResponse{
 		Scale:    false,
@@ -166,7 +176,7 @@ func handleAutoscale(w http.ResponseWriter, r *http.Request) {
 	if fixedReplicasOverrideEnabled {
 		if faReq.Request.Annotations != nil {
 			if value, ok := faReq.Request.Annotations["fixedReplicas"]; ok {
-				replicas, err := strconv.Atoi(value)
+				replicas, err := strconv.ParseInt(value, 10, 32)
 				if err != nil {
 					logger.WithError(err).Error("Invalid fixedReplicas value in annotations")
 					http.Error(w, "Invalid fixedReplicas value. Must be an integer.", http.StatusBadRequest)
@@ -204,7 +214,7 @@ func handleAutoscale(w http.ResponseWriter, r *http.Request) {
 	logger.WithField("review", review).Info("FleetAutoscaleReview")
 	result, _ := json.Marshal(&review)
 
-	_, err = io.WriteString(w, string(result))
+	_, err = w.Write(result)
 	if err != nil {
 		logger.WithError(err).Fatal("Error writing json from /scale")
 	}

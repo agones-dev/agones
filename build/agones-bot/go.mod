@@ -17,12 +17,12 @@ module github-bot
 go 1.26.5
 
 require (
+	cloud.google.com/go/cloudbuild v1.25.0
 	github.com/GoogleCloudPlatform/cloud-build-notifiers v0.0.0-20260318173334-9bb54edb0b8b
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/golang/glog v1.2.5
 	github.com/google/go-github/v74 v74.0.0
 	golang.org/x/oauth2 v0.36.0
-	google.golang.org/genproto v0.0.0-20260330182312-d5a96adf58d8
 )
 
 require (
@@ -30,7 +30,6 @@ require (
 	cloud.google.com/go v0.123.0 // indirect
 	cloud.google.com/go/auth v0.19.0 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
-	cloud.google.com/go/cloudbuild v1.25.0 // indirect
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	cloud.google.com/go/iam v1.6.0 // indirect
 	cloud.google.com/go/longrunning v0.8.0 // indirect
@@ -83,6 +82,7 @@ require (
 	golang.org/x/text v0.41.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/api v0.273.0 // indirect
+	google.golang.org/genproto v0.0.0-20260330182312-d5a96adf58d8 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	google.golang.org/grpc v1.83.2 // indirect

@@ -54,7 +54,7 @@ func Test_handleLogLine(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.EqualValues(t, tt.want, handleLogLine(tt.line))
+			assert.Equal(t, tt.want, handleLogLine(tt.line))
 		})
 	}
 }

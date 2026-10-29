@@ -167,7 +167,7 @@ func NewFromFlags() (*Framework, error) {
 	}
 
 	viper.SetDefault(kubeconfigFlag, filepath.Join(usr.HomeDir, ".kube", "config"))
-	viper.SetDefault(gsimageFlag, "us-docker.pkg.dev/agones-images/examples/simple-game-server:0.44")
+	viper.SetDefault(gsimageFlag, "us-docker.pkg.dev/agones-images/examples/simple-game-server:0.45")
 	viper.SetDefault(exampleImageRegistryFlag, "us-docker.pkg.dev/agones-images/examples")
 	viper.SetDefault(exampleImageTagFlag, "")
 	viper.SetDefault(pullSecretFlag, "")

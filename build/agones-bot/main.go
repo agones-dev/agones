@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+// Package main is a Cloud Build notifier that comments on the GitHub pull request
+// for each Agones CI build with its result.
 package main
 
 import (
@@ -23,12 +25,12 @@ import (
 	"strconv"
 	"text/template"
 
+	cloudbuild "cloud.google.com/go/cloudbuild/apiv1/v2/cloudbuildpb"
 	"github.com/GoogleCloudPlatform/cloud-build-notifiers/lib/notifiers"
 	"github.com/Masterminds/sprig/v3"
 	log "github.com/golang/glog"
 	"github.com/google/go-github/v74/github"
 	"golang.org/x/oauth2"
-	"google.golang.org/genproto/googleapis/devtools/cloudbuild/v1"
 )
 
 const (
@@ -53,7 +55,7 @@ type githubNotifier struct {
 	failureTemplate *template.Template
 }
 
-func (g *githubNotifier) SetUp(ctx context.Context, config *notifiers.Config, _ string, sg notifiers.SecretGetter, resolver notifiers.BindingResolver) error {
+func (g *githubNotifier) SetUp(ctx context.Context, config *notifiers.Config, _ string, sg notifiers.SecretGetter, _ notifiers.BindingResolver) error {
 	tokenResource, err := notifiers.FindSecretResourceName(config.Spec.Secrets, tokenSecretName)
 	if err != nil {
 		return fmt.Errorf("failed to find Secret for ref %q: %w", tokenSecretName, err)
@@ -83,21 +85,21 @@ func (g *githubNotifier) SetUp(ctx context.Context, config *notifiers.Config, _ 
 }
 
 func (g *githubNotifier) SendNotification(ctx context.Context, build *cloudbuild.Build) error {
-	statusName := cloudbuild.Build_Status_name[int32(build.Status)]
-	log.Infof("Build Status: %s, Detail: %s", statusName, build.StatusDetail)
-	if build.Status == cloudbuild.Build_QUEUED || build.Status == cloudbuild.Build_WORKING || build.Status == cloudbuild.Build_CANCELLED {
+	statusName := cloudbuild.Build_Status_name[int32(build.GetStatus())]
+	log.Infof("Build Status: %s, Detail: %s", statusName, build.GetStatusDetail())
+	if build.GetStatus() == cloudbuild.Build_QUEUED || build.GetStatus() == cloudbuild.Build_WORKING || build.GetStatus() == cloudbuild.Build_CANCELLED {
 		log.Info("Skipping notification")
 		return nil
 	}
 
-	if build.StatusDetail == "" {
+	if build.GetStatusDetail() == "" {
 		build.StatusDetail = statusName
 	}
 
 	// if this isn't a pull request, ignore it.
-	prNumber, ok := build.Substitutions["_PR_NUMBER"]
+	prNumber, ok := build.GetSubstitutions()["_PR_NUMBER"]
 	if !ok {
-		log.Errorf("Could not find PR number in build %s", build.Id)
+		log.Errorf("Could not find PR number in build %s", build.GetId())
 		return nil
 	}
 	log.Infof("Serving Pull Request #%s: %v", prNumber, build)
@@ -105,8 +107,8 @@ func (g *githubNotifier) SendNotification(ctx context.Context, build *cloudbuild
 	// if we get weird data, ignore it.
 	pr, err := strconv.Atoi(prNumber)
 	if err != nil {
-		log.Errorf("Could not convert the PR number (%s) to an integer in build %s", prNumber, build.Id)
-		return nil
+		log.Errorf("Could not convert the PR number (%s) to an integer in build %s", prNumber, build.GetId())
+		return nil //nolint:nilerr // bad data won't improve on a retry, so log it and drop the build
 	}
 
 	dryRun := false
@@ -121,14 +123,14 @@ func (g *githubNotifier) SendNotification(ctx context.Context, build *cloudbuild
 	// hack to allow backticks in multiline strings
 	build.Substitutions["_DELIM"] = "`"
 
-	if build.Status == cloudbuild.Build_SUCCESS {
+	if build.GetStatus() == cloudbuild.Build_SUCCESS {
 		if err := g.successTemplate.Execute(body, build); err != nil {
-			log.Errorf("Error executing success template: %v, in build %s", err, build.Id)
+			log.Errorf("Error executing success template: %v, in build %s", err, build.GetId())
 			return nil
 		}
 	} else {
 		if err := g.failureTemplate.Execute(body, build); err != nil {
-			log.Errorf("Error executing failure template: %v, in build %s", err, build.Id)
+			log.Errorf("Error executing failure template: %v, in build %s", err, build.GetId())
 			return nil
 		}
 	}
