@@ -368,7 +368,8 @@ func TestSetPassthroughLabel(t *testing.T) {
 			runtime.FeatureTestMutex.Lock()
 			defer runtime.FeatureTestMutex.Unlock()
 			require.NoError(t, runtime.ParseFeatures(tc.features))
-			gs := (&autopilotPortAllocator{minPort: 7000, maxPort: 8000}).Allocate(&agonesv1.GameServer{Spec: agonesv1.GameServerSpec{Ports: tc.ports}})
+			gs, err := (&autopilotPortAllocator{minPort: 7000, maxPort: 8000}).Allocate(&agonesv1.GameServer{Spec: agonesv1.GameServerSpec{Ports: tc.ports}})
+			assert.NoError(t, err)
 			pod := tc.pod.DeepCopy()
 			setPassthroughLabel(&gs.Spec, pod)
 			assert.Equal(t, tc.wantPod, pod)
@@ -618,7 +619,8 @@ func TestAutopilotPortAllocator(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			gs := (&autopilotPortAllocator{minPort: 8000, maxPort: 9000}).Allocate(&agonesv1.GameServer{Spec: agonesv1.GameServerSpec{Ports: tc.ports}})
+			gs, err := (&autopilotPortAllocator{minPort: 8000, maxPort: 9000}).Allocate(&agonesv1.GameServer{Spec: agonesv1.GameServerSpec{Ports: tc.ports}})
+			assert.NoError(t, err)
 			wantGS := &agonesv1.GameServer{Spec: agonesv1.GameServerSpec{Ports: tc.wantPorts}}
 			if tc.wantAnnotation {
 				wantGS.Spec.Template = corev1.PodTemplateSpec{

@@ -15,6 +15,11 @@
 #
 # Google Cloud Builder CI configuration
 #
+# NOTE: The automated Cloud Build trigger for this config has been removed and the performance
+# test cluster is no longer kept running. This config is retained for manual runs only. See
+# build/docs/performance-testing.md for how to provision the cluster, run this config with
+# `gcloud builds submit`, and tear the cluster down afterwards.
+#
 steps:
   #
   # Creates the initial make + docker build platform
