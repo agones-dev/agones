@@ -79,6 +79,10 @@ func findGameServerForAllocation(gsa *allocationv1.GameServerAllocation, list []
 	}
 
 	loop(list, func(i int, gs *agonesv1.GameServer) {
+		if gs == nil {
+			return
+		}
+
 		// only search the same namespace
 		if gs.ObjectMeta.Namespace != gsa.ObjectMeta.Namespace {
 			return
