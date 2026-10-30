@@ -255,9 +255,9 @@ type autopilotPortAllocator struct {
 func (*autopilotPortAllocator) Run(_ context.Context) error       { return nil }
 func (*autopilotPortAllocator) DeAllocate(_ *agonesv1.GameServer) {}
 
-func (apa *autopilotPortAllocator) Allocate(gs *agonesv1.GameServer) *agonesv1.GameServer {
+func (apa *autopilotPortAllocator) Allocate(gs *agonesv1.GameServer) (*agonesv1.GameServer, error) {
 	if len(gs.Spec.Ports) == 0 {
-		return gs // Nothing to do.
+		return gs, nil // Nothing to do.
 	}
 
 	var ports []agonesv1.GameServerPort
@@ -265,7 +265,7 @@ func (apa *autopilotPortAllocator) Allocate(gs *agonesv1.GameServer) *agonesv1.G
 		if p.PortPolicy != agonesv1.Dynamic && p.PortPolicy != agonesv1.Passthrough {
 			logger.WithField("gs", gs.Name).WithField("portPolicy", p.PortPolicy).Error(
 				"GameServer has invalid PortPolicy for Autopilot - this should have been rejected by webhooks. Refusing to assign ports.")
-			return gs
+			return gs, nil
 		}
 		p.HostPort = int32(i + 1) // Autopilot expects _some_ host port - use a value unique to this GameServer Port.
 
@@ -286,7 +286,7 @@ func (apa *autopilotPortAllocator) Allocate(gs *agonesv1.GameServer) *agonesv1.G
 	if err != nil {
 		logger.WithError(err).WithField("hostPort", hpa).WithField("gs", gs.Name).Error("Internal error marshalling hostPortAssignment for GameServer")
 		// In error cases, return the original gs - on Autopilot this will result in a policy failure.
-		return gs
+		return gs, nil
 	}
 
 	// No errors past here.
@@ -295,7 +295,7 @@ func (apa *autopilotPortAllocator) Allocate(gs *agonesv1.GameServer) *agonesv1.G
 		gs.Spec.Template.ObjectMeta.Annotations = make(map[string]string)
 	}
 	gs.Spec.Template.ObjectMeta.Annotations[hostPortAssignmentAnnotation] = string(hpaJSON)
-	return gs
+	return gs, nil
 }
 
 // validatePortPolicy is a helper function to validate a single GameServerPort's PortPolicy
