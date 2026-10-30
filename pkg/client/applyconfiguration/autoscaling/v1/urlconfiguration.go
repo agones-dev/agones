@@ -28,7 +28,7 @@ import (
 // URLConfiguration is a generic configuration for any integration with an external URL or
 // cluster provided service. For example, it can be used to configure a webhook or Wasm module
 type URLConfigurationApplyConfiguration struct {
-	// `url` gives the location of the webhook, in standard URL form
+	// url gives the location of the webhook, in standard URL form
 	// (`scheme://host:port/path`). Exactly one of `url` or `service`
 	// must be specified.
 	//
@@ -54,12 +54,12 @@ type URLConfigurationApplyConfiguration struct {
 	// allowed. Fragments ("#...") and query parameters ("?...") are not
 	// allowed, either.
 	URL *string `json:"url,omitempty"`
-	// `service` is a reference to the service for this webhook. Either
+	// service is a reference to the service for this webhook. Either
 	// `service` or `url` must be specified.
 	//
 	// If the webhook is running within the cluster, then you should use `service`.
 	Service *admissionregistrationv1.ServiceReference `json:"service,omitempty"`
-	// `caBundle` is a PEM encoded CA bundle which will be used to validate the webhook's server certificate.
+	// caBundle is a PEM encoded CA bundle which will be used to validate the webhook's server certificate.
 	// If unspecified, system trust roots on the apiserver are used.
 	CABundle []byte `json:"caBundle,omitempty"`
 }

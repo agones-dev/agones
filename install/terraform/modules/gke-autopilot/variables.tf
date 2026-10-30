@@ -26,7 +26,7 @@ variable "cluster" {
     "network"                       = "default"
     "subnetwork"                    = ""
     "releaseChannel"                = "REGULAR"
-    "kubernetesVersion"             = "1.35"
+    "kubernetesVersion"             = "1.36"
     "deletionProtection"            = true
     "maintenanceExclusionStartTime" = null
     "maintenanceExclusionEndTime"   = null

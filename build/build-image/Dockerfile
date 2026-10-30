@@ -53,7 +53,7 @@ RUN go install golang.org/x/tools/cmd/goimports@latest && \
     go install golang.org/x/pkgsite/cmd/pkgsite@latest
 
 # the kubernetes version for the file
-ENV KUBERNETES_VER=1.35.6
+ENV KUBERNETES_VER=1.36.5
 
 # overwrite kubectl as we want a specific version
 RUN ARCH=$(dpkg --print-architecture) && \
