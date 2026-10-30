@@ -455,9 +455,11 @@ func runHTTP(listenCtx context.Context, workerCtx context.Context, h *serviceHan
 			err = server.ListenAndServe()
 		}
 
+		// ErrServerClosed is returned as soon as Shutdown starts, so return and let main
+		// wait for open connections to drain rather than exiting here.
 		if stderrors.Is(err, http.ErrServerClosed) {
 			logger.WithError(err).Info("HTTP/HTTPS server closed")
-			os.Exit(0)
+			return
 		}
 		logger.WithError(err).Fatal("Unable to start HTTP/HTTPS listener")
 		os.Exit(1)
@@ -488,9 +490,9 @@ func runGRPC(ctx context.Context, h *serviceHandler, grpcHealth *grpchealth.Serv
 			logger.WithError(err).Fatal("allocation service crashed")
 			os.Exit(1)
 		}
+		// Serve returns once the listener closes, while GracefulStop may still be draining,
+		// so let main finish the shutdown instead of exiting here.
 		logger.Info("allocation server closed")
-		os.Exit(0)
-
 	}()
 }
 

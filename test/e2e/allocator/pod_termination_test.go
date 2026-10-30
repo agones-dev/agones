@@ -33,8 +33,11 @@ import (
 )
 
 const (
-	retryInterval = 5 * time.Second
-	retryTimeout  = 45 * time.Second
+	retryInterval   = 5 * time.Second
+	retryTimeout    = 45 * time.Second
+	allocateTimeout = 10 * time.Second
+	// one allocation per poll tick, plus the immediate call, so the fleet can't run dry mid-drain
+	fleetReplicas = int32(retryTimeout/retryInterval) + 1
 )
 
 func TestAllocatorAfterDeleteReplica(t *testing.T) {
@@ -60,7 +63,9 @@ func TestAllocatorAfterDeleteReplica(t *testing.T) {
 	require.NoError(t, err, "Failed to stabilize agones-allocator")
 
 	// create fleet
-	flt, err := helper.CreateFleet(ctx, framework.Namespace, framework)
+	flt, err := helper.CreateFleetWithOpts(ctx, framework.Namespace, framework, func(f *agonesv1.Fleet) {
+		f.Spec.Replicas = fleetReplicas
+	})
 	require.NoError(t, err)
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
 
@@ -88,9 +93,16 @@ func TestAllocatorAfterDeleteReplica(t *testing.T) {
 		Metadata:                     &pb.MetaPatch{Labels: map[string]string{"gslabel": "allocatedbytest"}},
 	}
 
-	// Wait and keep making calls till we know the draining time has passed
-	_ = wait.PollUntilContextTimeout(context.Background(), retryInterval, retryTimeout, true, func(_ context.Context) (bool, error) {
-		response, err := grpcClient.Allocate(context.Background(), request)
+	// Wait and keep making calls till we know the draining time has passed.
+	// Each call gets its own deadline so a request stuck on a dead connection fails the test
+	// instead of hanging until the go test timeout (#4727).
+	// The call deadline derives from ctx, not the poll context: the last tick can land just before the
+	// poll deadline, which would leave that call with almost no time and fail it with DeadlineExceeded.
+	_ = wait.PollUntilContextTimeout(ctx, retryInterval, retryTimeout, true, func(context.Context) (bool, error) {
+		callCtx, cancel := context.WithTimeout(ctx, allocateTimeout)
+		defer cancel()
+
+		response, err := grpcClient.Allocate(callCtx, request)
 		logger.Infof("err = %v (code = %v), response = %v", err, status.Code(err), response)
 		helper.ValidateAllocatorResponse(t, response)
 		require.NoError(t, err, "Failed grpc allocation request")
