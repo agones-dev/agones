@@ -239,4 +239,54 @@ spec:
 {{- end }}
   {{- end }}
 
+{{- range .Values.agones.ping.udp.additionalServices }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .name }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    component: ping
+    app: {{ template "agones.name" $ }}
+    chart: {{ template "agones.chart" $ }}
+    release: {{ $.Release.Name }}
+    heritage: {{ $.Release.Service }}
+{{- if .annotations }}
+  annotations:
+{{ toYaml .annotations | indent 4 }}
+{{- end }}
+spec:
+  selector:
+    agones.dev/role: ping
+{{- if .ipFamilyPolicy }}
+  ipFamilyPolicy: {{ .ipFamilyPolicy }}
+{{- end }}
+{{- if .ipFamilies }}
+  ipFamilies: {{ toYaml .ipFamilies | nindent 4 }}
+{{- end }}
+  {{- $serviceType := .serviceType | default $.Values.agones.ping.udp.serviceType }}
+  ports:
+    - port: {{ .port | default $.Values.agones.ping.udp.port }}
+      name: udp
+      targetPort: 8080
+      protocol: UDP
+      {{- if and (or (eq $serviceType "NodePort") (eq $serviceType "LoadBalancer")) .nodePort }}
+      nodePort: {{ .nodePort }}
+      {{- end }}
+  type: {{ $serviceType }}
+{{- if or (eq $serviceType "NodePort") (eq $serviceType "LoadBalancer") }}
+  externalTrafficPolicy: {{ .externalTrafficPolicy | default $.Values.agones.ping.udp.externalTrafficPolicy }}
+{{- end }}
+{{- if eq $serviceType "LoadBalancer" }}
+  {{- if .loadBalancerIP }}
+  loadBalancerIP: {{ .loadBalancerIP }}
+  {{- end }}
+  {{- if .loadBalancerSourceRanges }}
+  loadBalancerSourceRanges:
+{{ toYaml .loadBalancerSourceRanges | indent 4 }}
+  {{- end }}
+{{- end }}
+{{- end }}
+
 {{- end }}
