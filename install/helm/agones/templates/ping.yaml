@@ -271,15 +271,17 @@ spec:
       name: udp
       targetPort: 8080
       protocol: UDP
-      {{- if and (eq $serviceType "NodePort") .nodePort }}
+      {{- if and (or (eq $serviceType "NodePort") (eq $serviceType "LoadBalancer")) .nodePort }}
       nodePort: {{ .nodePort }}
       {{- end }}
   type: {{ $serviceType }}
+{{- if or (eq $serviceType "NodePort") (eq $serviceType "LoadBalancer") }}
+  externalTrafficPolicy: {{ .externalTrafficPolicy | default $.Values.agones.ping.udp.externalTrafficPolicy }}
+{{- end }}
 {{- if eq $serviceType "LoadBalancer" }}
   {{- if .loadBalancerIP }}
   loadBalancerIP: {{ .loadBalancerIP }}
   {{- end }}
-  externalTrafficPolicy: {{ .externalTrafficPolicy | default $.Values.agones.ping.udp.externalTrafficPolicy }}
   {{- if .loadBalancerSourceRanges }}
   loadBalancerSourceRanges:
 {{ toYaml .loadBalancerSourceRanges | indent 4 }}

@@ -214,7 +214,7 @@ agones:
       ipFamilyPolicy: ""
       ipFamilies: []
       # Extra UDP Services in front of the same ping pods, e.g. a separate IPv6 LoadBalancer.
-      # Each entry needs a unique name; unset fields fall back to the agones.ping.udp values.
+      # Each entry needs a unique name; unset port, serviceType and externalTrafficPolicy fall back to the agones.ping.udp values.
       additionalServices: []
       # - name: agones-ping-udp-service-ipv6
       #   ipFamilyPolicy: SingleStack
