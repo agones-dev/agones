@@ -49,6 +49,12 @@ static const char* SDK_method_names[] = {
   "/agones.dev.sdk.SDK/SetLabel",
   "/agones.dev.sdk.SDK/SetAnnotation",
   "/agones.dev.sdk.SDK/Reserve",
+  "/agones.dev.sdk.SDK/GetCounter",
+  "/agones.dev.sdk.SDK/UpdateCounter",
+  "/agones.dev.sdk.SDK/GetList",
+  "/agones.dev.sdk.SDK/UpdateList",
+  "/agones.dev.sdk.SDK/AddListValue",
+  "/agones.dev.sdk.SDK/RemoveListValue",
 };
 
 std::unique_ptr< SDK::Stub> SDK::NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options) {
@@ -67,6 +73,12 @@ SDK::Stub::Stub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const
   , rpcmethod_SetLabel_(SDK_method_names[6], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_SetAnnotation_(SDK_method_names[7], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_Reserve_(SDK_method_names[8], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_GetCounter_(SDK_method_names[9], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_UpdateCounter_(SDK_method_names[10], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_GetList_(SDK_method_names[11], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_UpdateList_(SDK_method_names[12], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_AddListValue_(SDK_method_names[13], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_RemoveListValue_(SDK_method_names[14], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   {}
 
 ::grpc::Status SDK::Stub::Ready(::grpc::ClientContext* context, const ::agones::dev::sdk::Empty& request, ::agones::dev::sdk::Empty* response) {
@@ -262,6 +274,144 @@ void SDK::Stub::async::Reserve(::grpc::ClientContext* context, const ::agones::d
   return result;
 }
 
+::grpc::Status SDK::Stub::GetCounter(::grpc::ClientContext* context, const ::agones::dev::sdk::GetCounterRequest& request, ::agones::dev::sdk::Counter* response) {
+  return ::grpc::internal::BlockingUnaryCall< ::agones::dev::sdk::GetCounterRequest, ::agones::dev::sdk::Counter, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), rpcmethod_GetCounter_, context, request, response);
+}
+
+void SDK::Stub::async::GetCounter(::grpc::ClientContext* context, const ::agones::dev::sdk::GetCounterRequest* request, ::agones::dev::sdk::Counter* response, std::function<void(::grpc::Status)> f) {
+  ::grpc::internal::CallbackUnaryCall< ::agones::dev::sdk::GetCounterRequest, ::agones::dev::sdk::Counter, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_GetCounter_, context, request, response, std::move(f));
+}
+
+void SDK::Stub::async::GetCounter(::grpc::ClientContext* context, const ::agones::dev::sdk::GetCounterRequest* request, ::agones::dev::sdk::Counter* response, ::grpc::ClientUnaryReactor* reactor) {
+  ::grpc::internal::ClientCallbackUnaryFactory::Create< ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_GetCounter_, context, request, response, reactor);
+}
+
+::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::Counter>* SDK::Stub::PrepareAsyncGetCounterRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::GetCounterRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderHelper::Create< ::agones::dev::sdk::Counter, ::agones::dev::sdk::GetCounterRequest, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), cq, rpcmethod_GetCounter_, context, request);
+}
+
+::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::Counter>* SDK::Stub::AsyncGetCounterRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::GetCounterRequest& request, ::grpc::CompletionQueue* cq) {
+  auto* result =
+    this->PrepareAsyncGetCounterRaw(context, request, cq);
+  result->StartCall();
+  return result;
+}
+
+::grpc::Status SDK::Stub::UpdateCounter(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateCounterRequest& request, ::agones::dev::sdk::Counter* response) {
+  return ::grpc::internal::BlockingUnaryCall< ::agones::dev::sdk::UpdateCounterRequest, ::agones::dev::sdk::Counter, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), rpcmethod_UpdateCounter_, context, request, response);
+}
+
+void SDK::Stub::async::UpdateCounter(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateCounterRequest* request, ::agones::dev::sdk::Counter* response, std::function<void(::grpc::Status)> f) {
+  ::grpc::internal::CallbackUnaryCall< ::agones::dev::sdk::UpdateCounterRequest, ::agones::dev::sdk::Counter, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_UpdateCounter_, context, request, response, std::move(f));
+}
+
+void SDK::Stub::async::UpdateCounter(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateCounterRequest* request, ::agones::dev::sdk::Counter* response, ::grpc::ClientUnaryReactor* reactor) {
+  ::grpc::internal::ClientCallbackUnaryFactory::Create< ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_UpdateCounter_, context, request, response, reactor);
+}
+
+::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::Counter>* SDK::Stub::PrepareAsyncUpdateCounterRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateCounterRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderHelper::Create< ::agones::dev::sdk::Counter, ::agones::dev::sdk::UpdateCounterRequest, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), cq, rpcmethod_UpdateCounter_, context, request);
+}
+
+::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::Counter>* SDK::Stub::AsyncUpdateCounterRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateCounterRequest& request, ::grpc::CompletionQueue* cq) {
+  auto* result =
+    this->PrepareAsyncUpdateCounterRaw(context, request, cq);
+  result->StartCall();
+  return result;
+}
+
+::grpc::Status SDK::Stub::GetList(::grpc::ClientContext* context, const ::agones::dev::sdk::GetListRequest& request, ::agones::dev::sdk::List* response) {
+  return ::grpc::internal::BlockingUnaryCall< ::agones::dev::sdk::GetListRequest, ::agones::dev::sdk::List, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), rpcmethod_GetList_, context, request, response);
+}
+
+void SDK::Stub::async::GetList(::grpc::ClientContext* context, const ::agones::dev::sdk::GetListRequest* request, ::agones::dev::sdk::List* response, std::function<void(::grpc::Status)> f) {
+  ::grpc::internal::CallbackUnaryCall< ::agones::dev::sdk::GetListRequest, ::agones::dev::sdk::List, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_GetList_, context, request, response, std::move(f));
+}
+
+void SDK::Stub::async::GetList(::grpc::ClientContext* context, const ::agones::dev::sdk::GetListRequest* request, ::agones::dev::sdk::List* response, ::grpc::ClientUnaryReactor* reactor) {
+  ::grpc::internal::ClientCallbackUnaryFactory::Create< ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_GetList_, context, request, response, reactor);
+}
+
+::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>* SDK::Stub::PrepareAsyncGetListRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::GetListRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderHelper::Create< ::agones::dev::sdk::List, ::agones::dev::sdk::GetListRequest, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), cq, rpcmethod_GetList_, context, request);
+}
+
+::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>* SDK::Stub::AsyncGetListRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::GetListRequest& request, ::grpc::CompletionQueue* cq) {
+  auto* result =
+    this->PrepareAsyncGetListRaw(context, request, cq);
+  result->StartCall();
+  return result;
+}
+
+::grpc::Status SDK::Stub::UpdateList(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateListRequest& request, ::agones::dev::sdk::List* response) {
+  return ::grpc::internal::BlockingUnaryCall< ::agones::dev::sdk::UpdateListRequest, ::agones::dev::sdk::List, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), rpcmethod_UpdateList_, context, request, response);
+}
+
+void SDK::Stub::async::UpdateList(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateListRequest* request, ::agones::dev::sdk::List* response, std::function<void(::grpc::Status)> f) {
+  ::grpc::internal::CallbackUnaryCall< ::agones::dev::sdk::UpdateListRequest, ::agones::dev::sdk::List, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_UpdateList_, context, request, response, std::move(f));
+}
+
+void SDK::Stub::async::UpdateList(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateListRequest* request, ::agones::dev::sdk::List* response, ::grpc::ClientUnaryReactor* reactor) {
+  ::grpc::internal::ClientCallbackUnaryFactory::Create< ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_UpdateList_, context, request, response, reactor);
+}
+
+::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>* SDK::Stub::PrepareAsyncUpdateListRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateListRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderHelper::Create< ::agones::dev::sdk::List, ::agones::dev::sdk::UpdateListRequest, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), cq, rpcmethod_UpdateList_, context, request);
+}
+
+::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>* SDK::Stub::AsyncUpdateListRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateListRequest& request, ::grpc::CompletionQueue* cq) {
+  auto* result =
+    this->PrepareAsyncUpdateListRaw(context, request, cq);
+  result->StartCall();
+  return result;
+}
+
+::grpc::Status SDK::Stub::AddListValue(::grpc::ClientContext* context, const ::agones::dev::sdk::AddListValueRequest& request, ::agones::dev::sdk::List* response) {
+  return ::grpc::internal::BlockingUnaryCall< ::agones::dev::sdk::AddListValueRequest, ::agones::dev::sdk::List, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), rpcmethod_AddListValue_, context, request, response);
+}
+
+void SDK::Stub::async::AddListValue(::grpc::ClientContext* context, const ::agones::dev::sdk::AddListValueRequest* request, ::agones::dev::sdk::List* response, std::function<void(::grpc::Status)> f) {
+  ::grpc::internal::CallbackUnaryCall< ::agones::dev::sdk::AddListValueRequest, ::agones::dev::sdk::List, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_AddListValue_, context, request, response, std::move(f));
+}
+
+void SDK::Stub::async::AddListValue(::grpc::ClientContext* context, const ::agones::dev::sdk::AddListValueRequest* request, ::agones::dev::sdk::List* response, ::grpc::ClientUnaryReactor* reactor) {
+  ::grpc::internal::ClientCallbackUnaryFactory::Create< ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_AddListValue_, context, request, response, reactor);
+}
+
+::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>* SDK::Stub::PrepareAsyncAddListValueRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::AddListValueRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderHelper::Create< ::agones::dev::sdk::List, ::agones::dev::sdk::AddListValueRequest, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), cq, rpcmethod_AddListValue_, context, request);
+}
+
+::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>* SDK::Stub::AsyncAddListValueRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::AddListValueRequest& request, ::grpc::CompletionQueue* cq) {
+  auto* result =
+    this->PrepareAsyncAddListValueRaw(context, request, cq);
+  result->StartCall();
+  return result;
+}
+
+::grpc::Status SDK::Stub::RemoveListValue(::grpc::ClientContext* context, const ::agones::dev::sdk::RemoveListValueRequest& request, ::agones::dev::sdk::List* response) {
+  return ::grpc::internal::BlockingUnaryCall< ::agones::dev::sdk::RemoveListValueRequest, ::agones::dev::sdk::List, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), rpcmethod_RemoveListValue_, context, request, response);
+}
+
+void SDK::Stub::async::RemoveListValue(::grpc::ClientContext* context, const ::agones::dev::sdk::RemoveListValueRequest* request, ::agones::dev::sdk::List* response, std::function<void(::grpc::Status)> f) {
+  ::grpc::internal::CallbackUnaryCall< ::agones::dev::sdk::RemoveListValueRequest, ::agones::dev::sdk::List, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_RemoveListValue_, context, request, response, std::move(f));
+}
+
+void SDK::Stub::async::RemoveListValue(::grpc::ClientContext* context, const ::agones::dev::sdk::RemoveListValueRequest* request, ::agones::dev::sdk::List* response, ::grpc::ClientUnaryReactor* reactor) {
+  ::grpc::internal::ClientCallbackUnaryFactory::Create< ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_RemoveListValue_, context, request, response, reactor);
+}
+
+::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>* SDK::Stub::PrepareAsyncRemoveListValueRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::RemoveListValueRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderHelper::Create< ::agones::dev::sdk::List, ::agones::dev::sdk::RemoveListValueRequest, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), cq, rpcmethod_RemoveListValue_, context, request);
+}
+
+::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>* SDK::Stub::AsyncRemoveListValueRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::RemoveListValueRequest& request, ::grpc::CompletionQueue* cq) {
+  auto* result =
+    this->PrepareAsyncRemoveListValueRaw(context, request, cq);
+  result->StartCall();
+  return result;
+}
+
 SDK::Service::Service() {
   AddMethod(new ::grpc::internal::RpcServiceMethod(
       SDK_method_names[0],
@@ -353,6 +503,66 @@ SDK::Service::Service() {
              ::agones::dev::sdk::Empty* resp) {
                return service->Reserve(ctx, req, resp);
              }, this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      SDK_method_names[9],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< SDK::Service, ::agones::dev::sdk::GetCounterRequest, ::agones::dev::sdk::Counter, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
+          [](SDK::Service* service,
+             ::grpc::ServerContext* ctx,
+             const ::agones::dev::sdk::GetCounterRequest* req,
+             ::agones::dev::sdk::Counter* resp) {
+               return service->GetCounter(ctx, req, resp);
+             }, this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      SDK_method_names[10],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< SDK::Service, ::agones::dev::sdk::UpdateCounterRequest, ::agones::dev::sdk::Counter, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
+          [](SDK::Service* service,
+             ::grpc::ServerContext* ctx,
+             const ::agones::dev::sdk::UpdateCounterRequest* req,
+             ::agones::dev::sdk::Counter* resp) {
+               return service->UpdateCounter(ctx, req, resp);
+             }, this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      SDK_method_names[11],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< SDK::Service, ::agones::dev::sdk::GetListRequest, ::agones::dev::sdk::List, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
+          [](SDK::Service* service,
+             ::grpc::ServerContext* ctx,
+             const ::agones::dev::sdk::GetListRequest* req,
+             ::agones::dev::sdk::List* resp) {
+               return service->GetList(ctx, req, resp);
+             }, this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      SDK_method_names[12],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< SDK::Service, ::agones::dev::sdk::UpdateListRequest, ::agones::dev::sdk::List, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
+          [](SDK::Service* service,
+             ::grpc::ServerContext* ctx,
+             const ::agones::dev::sdk::UpdateListRequest* req,
+             ::agones::dev::sdk::List* resp) {
+               return service->UpdateList(ctx, req, resp);
+             }, this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      SDK_method_names[13],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< SDK::Service, ::agones::dev::sdk::AddListValueRequest, ::agones::dev::sdk::List, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
+          [](SDK::Service* service,
+             ::grpc::ServerContext* ctx,
+             const ::agones::dev::sdk::AddListValueRequest* req,
+             ::agones::dev::sdk::List* resp) {
+               return service->AddListValue(ctx, req, resp);
+             }, this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      SDK_method_names[14],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< SDK::Service, ::agones::dev::sdk::RemoveListValueRequest, ::agones::dev::sdk::List, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
+          [](SDK::Service* service,
+             ::grpc::ServerContext* ctx,
+             const ::agones::dev::sdk::RemoveListValueRequest* req,
+             ::agones::dev::sdk::List* resp) {
+               return service->RemoveListValue(ctx, req, resp);
+             }, this)));
 }
 
 SDK::Service::~Service() {
@@ -415,6 +625,48 @@ SDK::Service::~Service() {
 }
 
 ::grpc::Status SDK::Service::Reserve(::grpc::ServerContext* context, const ::agones::dev::sdk::Duration* request, ::agones::dev::sdk::Empty* response) {
+  (void) context;
+  (void) request;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status SDK::Service::GetCounter(::grpc::ServerContext* context, const ::agones::dev::sdk::GetCounterRequest* request, ::agones::dev::sdk::Counter* response) {
+  (void) context;
+  (void) request;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status SDK::Service::UpdateCounter(::grpc::ServerContext* context, const ::agones::dev::sdk::UpdateCounterRequest* request, ::agones::dev::sdk::Counter* response) {
+  (void) context;
+  (void) request;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status SDK::Service::GetList(::grpc::ServerContext* context, const ::agones::dev::sdk::GetListRequest* request, ::agones::dev::sdk::List* response) {
+  (void) context;
+  (void) request;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status SDK::Service::UpdateList(::grpc::ServerContext* context, const ::agones::dev::sdk::UpdateListRequest* request, ::agones::dev::sdk::List* response) {
+  (void) context;
+  (void) request;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status SDK::Service::AddListValue(::grpc::ServerContext* context, const ::agones::dev::sdk::AddListValueRequest* request, ::agones::dev::sdk::List* response) {
+  (void) context;
+  (void) request;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status SDK::Service::RemoveListValue(::grpc::ServerContext* context, const ::agones::dev::sdk::RemoveListValueRequest* request, ::agones::dev::sdk::List* response) {
   (void) context;
   (void) request;
   (void) response;

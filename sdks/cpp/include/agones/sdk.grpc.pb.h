@@ -145,6 +145,63 @@ class SDK final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::Empty>> PrepareAsyncReserve(::grpc::ClientContext* context, const ::agones::dev::sdk::Duration& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::Empty>>(PrepareAsyncReserveRaw(context, request, cq));
     }
+    // Gets a Counter. Returns NOT_FOUND if the Counter does not exist.
+    virtual ::grpc::Status GetCounter(::grpc::ClientContext* context, const ::agones::dev::sdk::GetCounterRequest& request, ::agones::dev::sdk::Counter* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::Counter>> AsyncGetCounter(::grpc::ClientContext* context, const ::agones::dev::sdk::GetCounterRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::Counter>>(AsyncGetCounterRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::Counter>> PrepareAsyncGetCounter(::grpc::ClientContext* context, const ::agones::dev::sdk::GetCounterRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::Counter>>(PrepareAsyncGetCounterRaw(context, request, cq));
+    }
+    // UpdateCounter returns the updated Counter. Returns NOT_FOUND if the Counter does not exist (name cannot be updated).
+    // Returns OUT_OF_RANGE if the Count is out of range [0,Capacity].
+    virtual ::grpc::Status UpdateCounter(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateCounterRequest& request, ::agones::dev::sdk::Counter* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::Counter>> AsyncUpdateCounter(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateCounterRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::Counter>>(AsyncUpdateCounterRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::Counter>> PrepareAsyncUpdateCounter(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateCounterRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::Counter>>(PrepareAsyncUpdateCounterRaw(context, request, cq));
+    }
+    // Gets a List. Returns NOT_FOUND if the List does not exist.
+    virtual ::grpc::Status GetList(::grpc::ClientContext* context, const ::agones::dev::sdk::GetListRequest& request, ::agones::dev::sdk::List* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::List>> AsyncGetList(::grpc::ClientContext* context, const ::agones::dev::sdk::GetListRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::List>>(AsyncGetListRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::List>> PrepareAsyncGetList(::grpc::ClientContext* context, const ::agones::dev::sdk::GetListRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::List>>(PrepareAsyncGetListRaw(context, request, cq));
+    }
+    // UpdateList returns the updated List. Returns NOT_FOUND if the List does not exist (name cannot be updated).
+    // **THIS WILL OVERWRITE ALL EXISTING LIST.VALUES WITH ANY REQUEST LIST.VALUES**
+    // Use AddListValue() or RemoveListValue() for modifying the List.Values field.
+    // Returns INVALID_ARGUMENT if the field mask path(s) are not field(s) of the List.
+    // If a field mask path(s) is specified, but the value is not set in the request List object,
+    // then the default value for the variable will be set (i.e. 0 for "capacity", empty list for "values").
+    virtual ::grpc::Status UpdateList(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateListRequest& request, ::agones::dev::sdk::List* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::List>> AsyncUpdateList(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateListRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::List>>(AsyncUpdateListRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::List>> PrepareAsyncUpdateList(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateListRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::List>>(PrepareAsyncUpdateListRaw(context, request, cq));
+    }
+    // Adds a value to a List and returns updated List. Returns NOT_FOUND if the List does not exist.
+    // Returns ALREADY_EXISTS if the value is already in the List.
+    // Returns OUT_OF_RANGE if the List is already at Capacity.
+    virtual ::grpc::Status AddListValue(::grpc::ClientContext* context, const ::agones::dev::sdk::AddListValueRequest& request, ::agones::dev::sdk::List* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::List>> AsyncAddListValue(::grpc::ClientContext* context, const ::agones::dev::sdk::AddListValueRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::List>>(AsyncAddListValueRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::List>> PrepareAsyncAddListValue(::grpc::ClientContext* context, const ::agones::dev::sdk::AddListValueRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::List>>(PrepareAsyncAddListValueRaw(context, request, cq));
+    }
+    // Removes a value from a List and returns updated List. Returns NOT_FOUND if the List does not exist.
+    // Returns NOT_FOUND if the value is not in the List.
+    virtual ::grpc::Status RemoveListValue(::grpc::ClientContext* context, const ::agones::dev::sdk::RemoveListValueRequest& request, ::agones::dev::sdk::List* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::List>> AsyncRemoveListValue(::grpc::ClientContext* context, const ::agones::dev::sdk::RemoveListValueRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::List>>(AsyncRemoveListValueRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::List>> PrepareAsyncRemoveListValue(::grpc::ClientContext* context, const ::agones::dev::sdk::RemoveListValueRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::List>>(PrepareAsyncRemoveListValueRaw(context, request, cq));
+    }
     class async_interface {
      public:
       virtual ~async_interface() {}
@@ -173,6 +230,33 @@ class SDK final {
       // Marks the GameServer as the Reserved state for Duration
       virtual void Reserve(::grpc::ClientContext* context, const ::agones::dev::sdk::Duration* request, ::agones::dev::sdk::Empty* response, std::function<void(::grpc::Status)>) = 0;
       virtual void Reserve(::grpc::ClientContext* context, const ::agones::dev::sdk::Duration* request, ::agones::dev::sdk::Empty* response, ::grpc::ClientUnaryReactor* reactor) = 0;
+      // Gets a Counter. Returns NOT_FOUND if the Counter does not exist.
+      virtual void GetCounter(::grpc::ClientContext* context, const ::agones::dev::sdk::GetCounterRequest* request, ::agones::dev::sdk::Counter* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void GetCounter(::grpc::ClientContext* context, const ::agones::dev::sdk::GetCounterRequest* request, ::agones::dev::sdk::Counter* response, ::grpc::ClientUnaryReactor* reactor) = 0;
+      // UpdateCounter returns the updated Counter. Returns NOT_FOUND if the Counter does not exist (name cannot be updated).
+      // Returns OUT_OF_RANGE if the Count is out of range [0,Capacity].
+      virtual void UpdateCounter(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateCounterRequest* request, ::agones::dev::sdk::Counter* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void UpdateCounter(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateCounterRequest* request, ::agones::dev::sdk::Counter* response, ::grpc::ClientUnaryReactor* reactor) = 0;
+      // Gets a List. Returns NOT_FOUND if the List does not exist.
+      virtual void GetList(::grpc::ClientContext* context, const ::agones::dev::sdk::GetListRequest* request, ::agones::dev::sdk::List* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void GetList(::grpc::ClientContext* context, const ::agones::dev::sdk::GetListRequest* request, ::agones::dev::sdk::List* response, ::grpc::ClientUnaryReactor* reactor) = 0;
+      // UpdateList returns the updated List. Returns NOT_FOUND if the List does not exist (name cannot be updated).
+      // **THIS WILL OVERWRITE ALL EXISTING LIST.VALUES WITH ANY REQUEST LIST.VALUES**
+      // Use AddListValue() or RemoveListValue() for modifying the List.Values field.
+      // Returns INVALID_ARGUMENT if the field mask path(s) are not field(s) of the List.
+      // If a field mask path(s) is specified, but the value is not set in the request List object,
+      // then the default value for the variable will be set (i.e. 0 for "capacity", empty list for "values").
+      virtual void UpdateList(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateListRequest* request, ::agones::dev::sdk::List* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void UpdateList(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateListRequest* request, ::agones::dev::sdk::List* response, ::grpc::ClientUnaryReactor* reactor) = 0;
+      // Adds a value to a List and returns updated List. Returns NOT_FOUND if the List does not exist.
+      // Returns ALREADY_EXISTS if the value is already in the List.
+      // Returns OUT_OF_RANGE if the List is already at Capacity.
+      virtual void AddListValue(::grpc::ClientContext* context, const ::agones::dev::sdk::AddListValueRequest* request, ::agones::dev::sdk::List* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void AddListValue(::grpc::ClientContext* context, const ::agones::dev::sdk::AddListValueRequest* request, ::agones::dev::sdk::List* response, ::grpc::ClientUnaryReactor* reactor) = 0;
+      // Removes a value from a List and returns updated List. Returns NOT_FOUND if the List does not exist.
+      // Returns NOT_FOUND if the value is not in the List.
+      virtual void RemoveListValue(::grpc::ClientContext* context, const ::agones::dev::sdk::RemoveListValueRequest* request, ::agones::dev::sdk::List* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void RemoveListValue(::grpc::ClientContext* context, const ::agones::dev::sdk::RemoveListValueRequest* request, ::agones::dev::sdk::List* response, ::grpc::ClientUnaryReactor* reactor) = 0;
     };
     typedef class async_interface experimental_async_interface;
     virtual class async_interface* async() { return nullptr; }
@@ -198,6 +282,18 @@ class SDK final {
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::Empty>* PrepareAsyncSetAnnotationRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::KeyValue& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::Empty>* AsyncReserveRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::Duration& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::Empty>* PrepareAsyncReserveRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::Duration& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::Counter>* AsyncGetCounterRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::GetCounterRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::Counter>* PrepareAsyncGetCounterRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::GetCounterRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::Counter>* AsyncUpdateCounterRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateCounterRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::Counter>* PrepareAsyncUpdateCounterRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateCounterRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::List>* AsyncGetListRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::GetListRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::List>* PrepareAsyncGetListRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::GetListRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::List>* AsyncUpdateListRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateListRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::List>* PrepareAsyncUpdateListRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateListRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::List>* AsyncAddListValueRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::AddListValueRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::List>* PrepareAsyncAddListValueRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::AddListValueRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::List>* AsyncRemoveListValueRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::RemoveListValueRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::agones::dev::sdk::List>* PrepareAsyncRemoveListValueRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::RemoveListValueRequest& request, ::grpc::CompletionQueue* cq) = 0;
   };
   class Stub final : public StubInterface {
    public:
@@ -269,6 +365,48 @@ class SDK final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::Empty>> PrepareAsyncReserve(::grpc::ClientContext* context, const ::agones::dev::sdk::Duration& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::Empty>>(PrepareAsyncReserveRaw(context, request, cq));
     }
+    ::grpc::Status GetCounter(::grpc::ClientContext* context, const ::agones::dev::sdk::GetCounterRequest& request, ::agones::dev::sdk::Counter* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::Counter>> AsyncGetCounter(::grpc::ClientContext* context, const ::agones::dev::sdk::GetCounterRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::Counter>>(AsyncGetCounterRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::Counter>> PrepareAsyncGetCounter(::grpc::ClientContext* context, const ::agones::dev::sdk::GetCounterRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::Counter>>(PrepareAsyncGetCounterRaw(context, request, cq));
+    }
+    ::grpc::Status UpdateCounter(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateCounterRequest& request, ::agones::dev::sdk::Counter* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::Counter>> AsyncUpdateCounter(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateCounterRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::Counter>>(AsyncUpdateCounterRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::Counter>> PrepareAsyncUpdateCounter(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateCounterRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::Counter>>(PrepareAsyncUpdateCounterRaw(context, request, cq));
+    }
+    ::grpc::Status GetList(::grpc::ClientContext* context, const ::agones::dev::sdk::GetListRequest& request, ::agones::dev::sdk::List* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>> AsyncGetList(::grpc::ClientContext* context, const ::agones::dev::sdk::GetListRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>>(AsyncGetListRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>> PrepareAsyncGetList(::grpc::ClientContext* context, const ::agones::dev::sdk::GetListRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>>(PrepareAsyncGetListRaw(context, request, cq));
+    }
+    ::grpc::Status UpdateList(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateListRequest& request, ::agones::dev::sdk::List* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>> AsyncUpdateList(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateListRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>>(AsyncUpdateListRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>> PrepareAsyncUpdateList(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateListRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>>(PrepareAsyncUpdateListRaw(context, request, cq));
+    }
+    ::grpc::Status AddListValue(::grpc::ClientContext* context, const ::agones::dev::sdk::AddListValueRequest& request, ::agones::dev::sdk::List* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>> AsyncAddListValue(::grpc::ClientContext* context, const ::agones::dev::sdk::AddListValueRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>>(AsyncAddListValueRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>> PrepareAsyncAddListValue(::grpc::ClientContext* context, const ::agones::dev::sdk::AddListValueRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>>(PrepareAsyncAddListValueRaw(context, request, cq));
+    }
+    ::grpc::Status RemoveListValue(::grpc::ClientContext* context, const ::agones::dev::sdk::RemoveListValueRequest& request, ::agones::dev::sdk::List* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>> AsyncRemoveListValue(::grpc::ClientContext* context, const ::agones::dev::sdk::RemoveListValueRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>>(AsyncRemoveListValueRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>> PrepareAsyncRemoveListValue(::grpc::ClientContext* context, const ::agones::dev::sdk::RemoveListValueRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>>(PrepareAsyncRemoveListValueRaw(context, request, cq));
+    }
     class async final :
       public StubInterface::async_interface {
      public:
@@ -288,6 +426,18 @@ class SDK final {
       void SetAnnotation(::grpc::ClientContext* context, const ::agones::dev::sdk::KeyValue* request, ::agones::dev::sdk::Empty* response, ::grpc::ClientUnaryReactor* reactor) override;
       void Reserve(::grpc::ClientContext* context, const ::agones::dev::sdk::Duration* request, ::agones::dev::sdk::Empty* response, std::function<void(::grpc::Status)>) override;
       void Reserve(::grpc::ClientContext* context, const ::agones::dev::sdk::Duration* request, ::agones::dev::sdk::Empty* response, ::grpc::ClientUnaryReactor* reactor) override;
+      void GetCounter(::grpc::ClientContext* context, const ::agones::dev::sdk::GetCounterRequest* request, ::agones::dev::sdk::Counter* response, std::function<void(::grpc::Status)>) override;
+      void GetCounter(::grpc::ClientContext* context, const ::agones::dev::sdk::GetCounterRequest* request, ::agones::dev::sdk::Counter* response, ::grpc::ClientUnaryReactor* reactor) override;
+      void UpdateCounter(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateCounterRequest* request, ::agones::dev::sdk::Counter* response, std::function<void(::grpc::Status)>) override;
+      void UpdateCounter(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateCounterRequest* request, ::agones::dev::sdk::Counter* response, ::grpc::ClientUnaryReactor* reactor) override;
+      void GetList(::grpc::ClientContext* context, const ::agones::dev::sdk::GetListRequest* request, ::agones::dev::sdk::List* response, std::function<void(::grpc::Status)>) override;
+      void GetList(::grpc::ClientContext* context, const ::agones::dev::sdk::GetListRequest* request, ::agones::dev::sdk::List* response, ::grpc::ClientUnaryReactor* reactor) override;
+      void UpdateList(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateListRequest* request, ::agones::dev::sdk::List* response, std::function<void(::grpc::Status)>) override;
+      void UpdateList(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateListRequest* request, ::agones::dev::sdk::List* response, ::grpc::ClientUnaryReactor* reactor) override;
+      void AddListValue(::grpc::ClientContext* context, const ::agones::dev::sdk::AddListValueRequest* request, ::agones::dev::sdk::List* response, std::function<void(::grpc::Status)>) override;
+      void AddListValue(::grpc::ClientContext* context, const ::agones::dev::sdk::AddListValueRequest* request, ::agones::dev::sdk::List* response, ::grpc::ClientUnaryReactor* reactor) override;
+      void RemoveListValue(::grpc::ClientContext* context, const ::agones::dev::sdk::RemoveListValueRequest* request, ::agones::dev::sdk::List* response, std::function<void(::grpc::Status)>) override;
+      void RemoveListValue(::grpc::ClientContext* context, const ::agones::dev::sdk::RemoveListValueRequest* request, ::agones::dev::sdk::List* response, ::grpc::ClientUnaryReactor* reactor) override;
      private:
       friend class Stub;
       explicit async(Stub* stub): stub_(stub) { }
@@ -319,6 +469,18 @@ class SDK final {
     ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::Empty>* PrepareAsyncSetAnnotationRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::KeyValue& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::Empty>* AsyncReserveRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::Duration& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::Empty>* PrepareAsyncReserveRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::Duration& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::Counter>* AsyncGetCounterRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::GetCounterRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::Counter>* PrepareAsyncGetCounterRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::GetCounterRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::Counter>* AsyncUpdateCounterRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateCounterRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::Counter>* PrepareAsyncUpdateCounterRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateCounterRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>* AsyncGetListRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::GetListRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>* PrepareAsyncGetListRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::GetListRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>* AsyncUpdateListRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateListRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>* PrepareAsyncUpdateListRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::UpdateListRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>* AsyncAddListValueRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::AddListValueRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>* PrepareAsyncAddListValueRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::AddListValueRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>* AsyncRemoveListValueRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::RemoveListValueRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::agones::dev::sdk::List>* PrepareAsyncRemoveListValueRaw(::grpc::ClientContext* context, const ::agones::dev::sdk::RemoveListValueRequest& request, ::grpc::CompletionQueue* cq) override;
     const ::grpc::internal::RpcMethod rpcmethod_Ready_;
     const ::grpc::internal::RpcMethod rpcmethod_Allocate_;
     const ::grpc::internal::RpcMethod rpcmethod_Shutdown_;
@@ -328,6 +490,12 @@ class SDK final {
     const ::grpc::internal::RpcMethod rpcmethod_SetLabel_;
     const ::grpc::internal::RpcMethod rpcmethod_SetAnnotation_;
     const ::grpc::internal::RpcMethod rpcmethod_Reserve_;
+    const ::grpc::internal::RpcMethod rpcmethod_GetCounter_;
+    const ::grpc::internal::RpcMethod rpcmethod_UpdateCounter_;
+    const ::grpc::internal::RpcMethod rpcmethod_GetList_;
+    const ::grpc::internal::RpcMethod rpcmethod_UpdateList_;
+    const ::grpc::internal::RpcMethod rpcmethod_AddListValue_;
+    const ::grpc::internal::RpcMethod rpcmethod_RemoveListValue_;
   };
   static std::unique_ptr<Stub> NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options = ::grpc::StubOptions());
 
@@ -353,6 +521,27 @@ class SDK final {
     virtual ::grpc::Status SetAnnotation(::grpc::ServerContext* context, const ::agones::dev::sdk::KeyValue* request, ::agones::dev::sdk::Empty* response);
     // Marks the GameServer as the Reserved state for Duration
     virtual ::grpc::Status Reserve(::grpc::ServerContext* context, const ::agones::dev::sdk::Duration* request, ::agones::dev::sdk::Empty* response);
+    // Gets a Counter. Returns NOT_FOUND if the Counter does not exist.
+    virtual ::grpc::Status GetCounter(::grpc::ServerContext* context, const ::agones::dev::sdk::GetCounterRequest* request, ::agones::dev::sdk::Counter* response);
+    // UpdateCounter returns the updated Counter. Returns NOT_FOUND if the Counter does not exist (name cannot be updated).
+    // Returns OUT_OF_RANGE if the Count is out of range [0,Capacity].
+    virtual ::grpc::Status UpdateCounter(::grpc::ServerContext* context, const ::agones::dev::sdk::UpdateCounterRequest* request, ::agones::dev::sdk::Counter* response);
+    // Gets a List. Returns NOT_FOUND if the List does not exist.
+    virtual ::grpc::Status GetList(::grpc::ServerContext* context, const ::agones::dev::sdk::GetListRequest* request, ::agones::dev::sdk::List* response);
+    // UpdateList returns the updated List. Returns NOT_FOUND if the List does not exist (name cannot be updated).
+    // **THIS WILL OVERWRITE ALL EXISTING LIST.VALUES WITH ANY REQUEST LIST.VALUES**
+    // Use AddListValue() or RemoveListValue() for modifying the List.Values field.
+    // Returns INVALID_ARGUMENT if the field mask path(s) are not field(s) of the List.
+    // If a field mask path(s) is specified, but the value is not set in the request List object,
+    // then the default value for the variable will be set (i.e. 0 for "capacity", empty list for "values").
+    virtual ::grpc::Status UpdateList(::grpc::ServerContext* context, const ::agones::dev::sdk::UpdateListRequest* request, ::agones::dev::sdk::List* response);
+    // Adds a value to a List and returns updated List. Returns NOT_FOUND if the List does not exist.
+    // Returns ALREADY_EXISTS if the value is already in the List.
+    // Returns OUT_OF_RANGE if the List is already at Capacity.
+    virtual ::grpc::Status AddListValue(::grpc::ServerContext* context, const ::agones::dev::sdk::AddListValueRequest* request, ::agones::dev::sdk::List* response);
+    // Removes a value from a List and returns updated List. Returns NOT_FOUND if the List does not exist.
+    // Returns NOT_FOUND if the value is not in the List.
+    virtual ::grpc::Status RemoveListValue(::grpc::ServerContext* context, const ::agones::dev::sdk::RemoveListValueRequest* request, ::agones::dev::sdk::List* response);
   };
   template <class BaseClass>
   class WithAsyncMethod_Ready : public BaseClass {
@@ -534,7 +723,127 @@ class SDK final {
       ::grpc::Service::RequestAsyncUnary(8, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
-  typedef WithAsyncMethod_Ready<WithAsyncMethod_Allocate<WithAsyncMethod_Shutdown<WithAsyncMethod_Health<WithAsyncMethod_GetGameServer<WithAsyncMethod_WatchGameServer<WithAsyncMethod_SetLabel<WithAsyncMethod_SetAnnotation<WithAsyncMethod_Reserve<Service > > > > > > > > > AsyncService;
+  template <class BaseClass>
+  class WithAsyncMethod_GetCounter : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithAsyncMethod_GetCounter() {
+      ::grpc::Service::MarkMethodAsync(9);
+    }
+    ~WithAsyncMethod_GetCounter() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetCounter(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::GetCounterRequest* /*request*/, ::agones::dev::sdk::Counter* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestGetCounter(::grpc::ServerContext* context, ::agones::dev::sdk::GetCounterRequest* request, ::grpc::ServerAsyncResponseWriter< ::agones::dev::sdk::Counter>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(9, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithAsyncMethod_UpdateCounter : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithAsyncMethod_UpdateCounter() {
+      ::grpc::Service::MarkMethodAsync(10);
+    }
+    ~WithAsyncMethod_UpdateCounter() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status UpdateCounter(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::UpdateCounterRequest* /*request*/, ::agones::dev::sdk::Counter* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestUpdateCounter(::grpc::ServerContext* context, ::agones::dev::sdk::UpdateCounterRequest* request, ::grpc::ServerAsyncResponseWriter< ::agones::dev::sdk::Counter>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(10, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithAsyncMethod_GetList : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithAsyncMethod_GetList() {
+      ::grpc::Service::MarkMethodAsync(11);
+    }
+    ~WithAsyncMethod_GetList() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetList(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::GetListRequest* /*request*/, ::agones::dev::sdk::List* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestGetList(::grpc::ServerContext* context, ::agones::dev::sdk::GetListRequest* request, ::grpc::ServerAsyncResponseWriter< ::agones::dev::sdk::List>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(11, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithAsyncMethod_UpdateList : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithAsyncMethod_UpdateList() {
+      ::grpc::Service::MarkMethodAsync(12);
+    }
+    ~WithAsyncMethod_UpdateList() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status UpdateList(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::UpdateListRequest* /*request*/, ::agones::dev::sdk::List* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestUpdateList(::grpc::ServerContext* context, ::agones::dev::sdk::UpdateListRequest* request, ::grpc::ServerAsyncResponseWriter< ::agones::dev::sdk::List>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(12, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithAsyncMethod_AddListValue : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithAsyncMethod_AddListValue() {
+      ::grpc::Service::MarkMethodAsync(13);
+    }
+    ~WithAsyncMethod_AddListValue() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status AddListValue(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::AddListValueRequest* /*request*/, ::agones::dev::sdk::List* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestAddListValue(::grpc::ServerContext* context, ::agones::dev::sdk::AddListValueRequest* request, ::grpc::ServerAsyncResponseWriter< ::agones::dev::sdk::List>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(13, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithAsyncMethod_RemoveListValue : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithAsyncMethod_RemoveListValue() {
+      ::grpc::Service::MarkMethodAsync(14);
+    }
+    ~WithAsyncMethod_RemoveListValue() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status RemoveListValue(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::RemoveListValueRequest* /*request*/, ::agones::dev::sdk::List* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestRemoveListValue(::grpc::ServerContext* context, ::agones::dev::sdk::RemoveListValueRequest* request, ::grpc::ServerAsyncResponseWriter< ::agones::dev::sdk::List>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(14, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  typedef WithAsyncMethod_Ready<WithAsyncMethod_Allocate<WithAsyncMethod_Shutdown<WithAsyncMethod_Health<WithAsyncMethod_GetGameServer<WithAsyncMethod_WatchGameServer<WithAsyncMethod_SetLabel<WithAsyncMethod_SetAnnotation<WithAsyncMethod_Reserve<WithAsyncMethod_GetCounter<WithAsyncMethod_UpdateCounter<WithAsyncMethod_GetList<WithAsyncMethod_UpdateList<WithAsyncMethod_AddListValue<WithAsyncMethod_RemoveListValue<Service > > > > > > > > > > > > > > > AsyncService;
   template <class BaseClass>
   class WithCallbackMethod_Ready : public BaseClass {
    private:
@@ -768,7 +1077,169 @@ class SDK final {
     virtual ::grpc::ServerUnaryReactor* Reserve(
       ::grpc::CallbackServerContext* /*context*/, const ::agones::dev::sdk::Duration* /*request*/, ::agones::dev::sdk::Empty* /*response*/)  { return nullptr; }
   };
-  typedef WithCallbackMethod_Ready<WithCallbackMethod_Allocate<WithCallbackMethod_Shutdown<WithCallbackMethod_Health<WithCallbackMethod_GetGameServer<WithCallbackMethod_WatchGameServer<WithCallbackMethod_SetLabel<WithCallbackMethod_SetAnnotation<WithCallbackMethod_Reserve<Service > > > > > > > > > CallbackService;
+  template <class BaseClass>
+  class WithCallbackMethod_GetCounter : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithCallbackMethod_GetCounter() {
+      ::grpc::Service::MarkMethodCallback(9,
+          new ::grpc::internal::CallbackUnaryHandler< ::agones::dev::sdk::GetCounterRequest, ::agones::dev::sdk::Counter>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::agones::dev::sdk::GetCounterRequest* request, ::agones::dev::sdk::Counter* response) { return this->GetCounter(context, request, response); }));}
+    void SetMessageAllocatorFor_GetCounter(
+        ::grpc::MessageAllocator< ::agones::dev::sdk::GetCounterRequest, ::agones::dev::sdk::Counter>* allocator) {
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(9);
+      static_cast<::grpc::internal::CallbackUnaryHandler< ::agones::dev::sdk::GetCounterRequest, ::agones::dev::sdk::Counter>*>(handler)
+              ->SetMessageAllocator(allocator);
+    }
+    ~WithCallbackMethod_GetCounter() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetCounter(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::GetCounterRequest* /*request*/, ::agones::dev::sdk::Counter* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* GetCounter(
+      ::grpc::CallbackServerContext* /*context*/, const ::agones::dev::sdk::GetCounterRequest* /*request*/, ::agones::dev::sdk::Counter* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithCallbackMethod_UpdateCounter : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithCallbackMethod_UpdateCounter() {
+      ::grpc::Service::MarkMethodCallback(10,
+          new ::grpc::internal::CallbackUnaryHandler< ::agones::dev::sdk::UpdateCounterRequest, ::agones::dev::sdk::Counter>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::agones::dev::sdk::UpdateCounterRequest* request, ::agones::dev::sdk::Counter* response) { return this->UpdateCounter(context, request, response); }));}
+    void SetMessageAllocatorFor_UpdateCounter(
+        ::grpc::MessageAllocator< ::agones::dev::sdk::UpdateCounterRequest, ::agones::dev::sdk::Counter>* allocator) {
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(10);
+      static_cast<::grpc::internal::CallbackUnaryHandler< ::agones::dev::sdk::UpdateCounterRequest, ::agones::dev::sdk::Counter>*>(handler)
+              ->SetMessageAllocator(allocator);
+    }
+    ~WithCallbackMethod_UpdateCounter() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status UpdateCounter(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::UpdateCounterRequest* /*request*/, ::agones::dev::sdk::Counter* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* UpdateCounter(
+      ::grpc::CallbackServerContext* /*context*/, const ::agones::dev::sdk::UpdateCounterRequest* /*request*/, ::agones::dev::sdk::Counter* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithCallbackMethod_GetList : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithCallbackMethod_GetList() {
+      ::grpc::Service::MarkMethodCallback(11,
+          new ::grpc::internal::CallbackUnaryHandler< ::agones::dev::sdk::GetListRequest, ::agones::dev::sdk::List>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::agones::dev::sdk::GetListRequest* request, ::agones::dev::sdk::List* response) { return this->GetList(context, request, response); }));}
+    void SetMessageAllocatorFor_GetList(
+        ::grpc::MessageAllocator< ::agones::dev::sdk::GetListRequest, ::agones::dev::sdk::List>* allocator) {
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(11);
+      static_cast<::grpc::internal::CallbackUnaryHandler< ::agones::dev::sdk::GetListRequest, ::agones::dev::sdk::List>*>(handler)
+              ->SetMessageAllocator(allocator);
+    }
+    ~WithCallbackMethod_GetList() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetList(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::GetListRequest* /*request*/, ::agones::dev::sdk::List* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* GetList(
+      ::grpc::CallbackServerContext* /*context*/, const ::agones::dev::sdk::GetListRequest* /*request*/, ::agones::dev::sdk::List* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithCallbackMethod_UpdateList : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithCallbackMethod_UpdateList() {
+      ::grpc::Service::MarkMethodCallback(12,
+          new ::grpc::internal::CallbackUnaryHandler< ::agones::dev::sdk::UpdateListRequest, ::agones::dev::sdk::List>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::agones::dev::sdk::UpdateListRequest* request, ::agones::dev::sdk::List* response) { return this->UpdateList(context, request, response); }));}
+    void SetMessageAllocatorFor_UpdateList(
+        ::grpc::MessageAllocator< ::agones::dev::sdk::UpdateListRequest, ::agones::dev::sdk::List>* allocator) {
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(12);
+      static_cast<::grpc::internal::CallbackUnaryHandler< ::agones::dev::sdk::UpdateListRequest, ::agones::dev::sdk::List>*>(handler)
+              ->SetMessageAllocator(allocator);
+    }
+    ~WithCallbackMethod_UpdateList() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status UpdateList(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::UpdateListRequest* /*request*/, ::agones::dev::sdk::List* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* UpdateList(
+      ::grpc::CallbackServerContext* /*context*/, const ::agones::dev::sdk::UpdateListRequest* /*request*/, ::agones::dev::sdk::List* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithCallbackMethod_AddListValue : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithCallbackMethod_AddListValue() {
+      ::grpc::Service::MarkMethodCallback(13,
+          new ::grpc::internal::CallbackUnaryHandler< ::agones::dev::sdk::AddListValueRequest, ::agones::dev::sdk::List>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::agones::dev::sdk::AddListValueRequest* request, ::agones::dev::sdk::List* response) { return this->AddListValue(context, request, response); }));}
+    void SetMessageAllocatorFor_AddListValue(
+        ::grpc::MessageAllocator< ::agones::dev::sdk::AddListValueRequest, ::agones::dev::sdk::List>* allocator) {
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(13);
+      static_cast<::grpc::internal::CallbackUnaryHandler< ::agones::dev::sdk::AddListValueRequest, ::agones::dev::sdk::List>*>(handler)
+              ->SetMessageAllocator(allocator);
+    }
+    ~WithCallbackMethod_AddListValue() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status AddListValue(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::AddListValueRequest* /*request*/, ::agones::dev::sdk::List* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* AddListValue(
+      ::grpc::CallbackServerContext* /*context*/, const ::agones::dev::sdk::AddListValueRequest* /*request*/, ::agones::dev::sdk::List* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithCallbackMethod_RemoveListValue : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithCallbackMethod_RemoveListValue() {
+      ::grpc::Service::MarkMethodCallback(14,
+          new ::grpc::internal::CallbackUnaryHandler< ::agones::dev::sdk::RemoveListValueRequest, ::agones::dev::sdk::List>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::agones::dev::sdk::RemoveListValueRequest* request, ::agones::dev::sdk::List* response) { return this->RemoveListValue(context, request, response); }));}
+    void SetMessageAllocatorFor_RemoveListValue(
+        ::grpc::MessageAllocator< ::agones::dev::sdk::RemoveListValueRequest, ::agones::dev::sdk::List>* allocator) {
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(14);
+      static_cast<::grpc::internal::CallbackUnaryHandler< ::agones::dev::sdk::RemoveListValueRequest, ::agones::dev::sdk::List>*>(handler)
+              ->SetMessageAllocator(allocator);
+    }
+    ~WithCallbackMethod_RemoveListValue() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status RemoveListValue(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::RemoveListValueRequest* /*request*/, ::agones::dev::sdk::List* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* RemoveListValue(
+      ::grpc::CallbackServerContext* /*context*/, const ::agones::dev::sdk::RemoveListValueRequest* /*request*/, ::agones::dev::sdk::List* /*response*/)  { return nullptr; }
+  };
+  typedef WithCallbackMethod_Ready<WithCallbackMethod_Allocate<WithCallbackMethod_Shutdown<WithCallbackMethod_Health<WithCallbackMethod_GetGameServer<WithCallbackMethod_WatchGameServer<WithCallbackMethod_SetLabel<WithCallbackMethod_SetAnnotation<WithCallbackMethod_Reserve<WithCallbackMethod_GetCounter<WithCallbackMethod_UpdateCounter<WithCallbackMethod_GetList<WithCallbackMethod_UpdateList<WithCallbackMethod_AddListValue<WithCallbackMethod_RemoveListValue<Service > > > > > > > > > > > > > > > CallbackService;
   typedef CallbackService ExperimentalCallbackService;
   template <class BaseClass>
   class WithGenericMethod_Ready : public BaseClass {
@@ -919,6 +1390,108 @@ class SDK final {
     }
     // disable synchronous version of this method
     ::grpc::Status Reserve(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::Duration* /*request*/, ::agones::dev::sdk::Empty* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+  };
+  template <class BaseClass>
+  class WithGenericMethod_GetCounter : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithGenericMethod_GetCounter() {
+      ::grpc::Service::MarkMethodGeneric(9);
+    }
+    ~WithGenericMethod_GetCounter() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetCounter(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::GetCounterRequest* /*request*/, ::agones::dev::sdk::Counter* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+  };
+  template <class BaseClass>
+  class WithGenericMethod_UpdateCounter : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithGenericMethod_UpdateCounter() {
+      ::grpc::Service::MarkMethodGeneric(10);
+    }
+    ~WithGenericMethod_UpdateCounter() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status UpdateCounter(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::UpdateCounterRequest* /*request*/, ::agones::dev::sdk::Counter* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+  };
+  template <class BaseClass>
+  class WithGenericMethod_GetList : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithGenericMethod_GetList() {
+      ::grpc::Service::MarkMethodGeneric(11);
+    }
+    ~WithGenericMethod_GetList() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetList(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::GetListRequest* /*request*/, ::agones::dev::sdk::List* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+  };
+  template <class BaseClass>
+  class WithGenericMethod_UpdateList : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithGenericMethod_UpdateList() {
+      ::grpc::Service::MarkMethodGeneric(12);
+    }
+    ~WithGenericMethod_UpdateList() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status UpdateList(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::UpdateListRequest* /*request*/, ::agones::dev::sdk::List* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+  };
+  template <class BaseClass>
+  class WithGenericMethod_AddListValue : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithGenericMethod_AddListValue() {
+      ::grpc::Service::MarkMethodGeneric(13);
+    }
+    ~WithGenericMethod_AddListValue() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status AddListValue(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::AddListValueRequest* /*request*/, ::agones::dev::sdk::List* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+  };
+  template <class BaseClass>
+  class WithGenericMethod_RemoveListValue : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithGenericMethod_RemoveListValue() {
+      ::grpc::Service::MarkMethodGeneric(14);
+    }
+    ~WithGenericMethod_RemoveListValue() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status RemoveListValue(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::RemoveListValueRequest* /*request*/, ::agones::dev::sdk::List* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -1101,6 +1674,126 @@ class SDK final {
     }
     void RequestReserve(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
       ::grpc::Service::RequestAsyncUnary(8, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithRawMethod_GetCounter : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawMethod_GetCounter() {
+      ::grpc::Service::MarkMethodRaw(9);
+    }
+    ~WithRawMethod_GetCounter() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetCounter(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::GetCounterRequest* /*request*/, ::agones::dev::sdk::Counter* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestGetCounter(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(9, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithRawMethod_UpdateCounter : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawMethod_UpdateCounter() {
+      ::grpc::Service::MarkMethodRaw(10);
+    }
+    ~WithRawMethod_UpdateCounter() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status UpdateCounter(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::UpdateCounterRequest* /*request*/, ::agones::dev::sdk::Counter* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestUpdateCounter(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(10, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithRawMethod_GetList : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawMethod_GetList() {
+      ::grpc::Service::MarkMethodRaw(11);
+    }
+    ~WithRawMethod_GetList() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetList(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::GetListRequest* /*request*/, ::agones::dev::sdk::List* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestGetList(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(11, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithRawMethod_UpdateList : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawMethod_UpdateList() {
+      ::grpc::Service::MarkMethodRaw(12);
+    }
+    ~WithRawMethod_UpdateList() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status UpdateList(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::UpdateListRequest* /*request*/, ::agones::dev::sdk::List* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestUpdateList(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(12, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithRawMethod_AddListValue : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawMethod_AddListValue() {
+      ::grpc::Service::MarkMethodRaw(13);
+    }
+    ~WithRawMethod_AddListValue() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status AddListValue(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::AddListValueRequest* /*request*/, ::agones::dev::sdk::List* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestAddListValue(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(13, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithRawMethod_RemoveListValue : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawMethod_RemoveListValue() {
+      ::grpc::Service::MarkMethodRaw(14);
+    }
+    ~WithRawMethod_RemoveListValue() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status RemoveListValue(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::RemoveListValueRequest* /*request*/, ::agones::dev::sdk::List* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestRemoveListValue(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(14, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -1302,6 +1995,138 @@ class SDK final {
       ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
   };
   template <class BaseClass>
+  class WithRawCallbackMethod_GetCounter : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawCallbackMethod_GetCounter() {
+      ::grpc::Service::MarkMethodRawCallback(9,
+          new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->GetCounter(context, request, response); }));
+    }
+    ~WithRawCallbackMethod_GetCounter() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetCounter(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::GetCounterRequest* /*request*/, ::agones::dev::sdk::Counter* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* GetCounter(
+      ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithRawCallbackMethod_UpdateCounter : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawCallbackMethod_UpdateCounter() {
+      ::grpc::Service::MarkMethodRawCallback(10,
+          new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->UpdateCounter(context, request, response); }));
+    }
+    ~WithRawCallbackMethod_UpdateCounter() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status UpdateCounter(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::UpdateCounterRequest* /*request*/, ::agones::dev::sdk::Counter* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* UpdateCounter(
+      ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithRawCallbackMethod_GetList : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawCallbackMethod_GetList() {
+      ::grpc::Service::MarkMethodRawCallback(11,
+          new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->GetList(context, request, response); }));
+    }
+    ~WithRawCallbackMethod_GetList() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetList(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::GetListRequest* /*request*/, ::agones::dev::sdk::List* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* GetList(
+      ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithRawCallbackMethod_UpdateList : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawCallbackMethod_UpdateList() {
+      ::grpc::Service::MarkMethodRawCallback(12,
+          new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->UpdateList(context, request, response); }));
+    }
+    ~WithRawCallbackMethod_UpdateList() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status UpdateList(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::UpdateListRequest* /*request*/, ::agones::dev::sdk::List* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* UpdateList(
+      ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithRawCallbackMethod_AddListValue : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawCallbackMethod_AddListValue() {
+      ::grpc::Service::MarkMethodRawCallback(13,
+          new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->AddListValue(context, request, response); }));
+    }
+    ~WithRawCallbackMethod_AddListValue() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status AddListValue(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::AddListValueRequest* /*request*/, ::agones::dev::sdk::List* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* AddListValue(
+      ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithRawCallbackMethod_RemoveListValue : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawCallbackMethod_RemoveListValue() {
+      ::grpc::Service::MarkMethodRawCallback(14,
+          new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->RemoveListValue(context, request, response); }));
+    }
+    ~WithRawCallbackMethod_RemoveListValue() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status RemoveListValue(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::RemoveListValueRequest* /*request*/, ::agones::dev::sdk::List* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* RemoveListValue(
+      ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
   class WithStreamedUnaryMethod_Ready : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
@@ -1490,7 +2315,169 @@ class SDK final {
     // replace default version of method with streamed unary
     virtual ::grpc::Status StreamedReserve(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::agones::dev::sdk::Duration,::agones::dev::sdk::Empty>* server_unary_streamer) = 0;
   };
-  typedef WithStreamedUnaryMethod_Ready<WithStreamedUnaryMethod_Allocate<WithStreamedUnaryMethod_Shutdown<WithStreamedUnaryMethod_GetGameServer<WithStreamedUnaryMethod_SetLabel<WithStreamedUnaryMethod_SetAnnotation<WithStreamedUnaryMethod_Reserve<Service > > > > > > > StreamedUnaryService;
+  template <class BaseClass>
+  class WithStreamedUnaryMethod_GetCounter : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithStreamedUnaryMethod_GetCounter() {
+      ::grpc::Service::MarkMethodStreamed(9,
+        new ::grpc::internal::StreamedUnaryHandler<
+          ::agones::dev::sdk::GetCounterRequest, ::agones::dev::sdk::Counter>(
+            [this](::grpc::ServerContext* context,
+                   ::grpc::ServerUnaryStreamer<
+                     ::agones::dev::sdk::GetCounterRequest, ::agones::dev::sdk::Counter>* streamer) {
+                       return this->StreamedGetCounter(context,
+                         streamer);
+                  }));
+    }
+    ~WithStreamedUnaryMethod_GetCounter() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable regular version of this method
+    ::grpc::Status GetCounter(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::GetCounterRequest* /*request*/, ::agones::dev::sdk::Counter* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    // replace default version of method with streamed unary
+    virtual ::grpc::Status StreamedGetCounter(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::agones::dev::sdk::GetCounterRequest,::agones::dev::sdk::Counter>* server_unary_streamer) = 0;
+  };
+  template <class BaseClass>
+  class WithStreamedUnaryMethod_UpdateCounter : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithStreamedUnaryMethod_UpdateCounter() {
+      ::grpc::Service::MarkMethodStreamed(10,
+        new ::grpc::internal::StreamedUnaryHandler<
+          ::agones::dev::sdk::UpdateCounterRequest, ::agones::dev::sdk::Counter>(
+            [this](::grpc::ServerContext* context,
+                   ::grpc::ServerUnaryStreamer<
+                     ::agones::dev::sdk::UpdateCounterRequest, ::agones::dev::sdk::Counter>* streamer) {
+                       return this->StreamedUpdateCounter(context,
+                         streamer);
+                  }));
+    }
+    ~WithStreamedUnaryMethod_UpdateCounter() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable regular version of this method
+    ::grpc::Status UpdateCounter(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::UpdateCounterRequest* /*request*/, ::agones::dev::sdk::Counter* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    // replace default version of method with streamed unary
+    virtual ::grpc::Status StreamedUpdateCounter(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::agones::dev::sdk::UpdateCounterRequest,::agones::dev::sdk::Counter>* server_unary_streamer) = 0;
+  };
+  template <class BaseClass>
+  class WithStreamedUnaryMethod_GetList : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithStreamedUnaryMethod_GetList() {
+      ::grpc::Service::MarkMethodStreamed(11,
+        new ::grpc::internal::StreamedUnaryHandler<
+          ::agones::dev::sdk::GetListRequest, ::agones::dev::sdk::List>(
+            [this](::grpc::ServerContext* context,
+                   ::grpc::ServerUnaryStreamer<
+                     ::agones::dev::sdk::GetListRequest, ::agones::dev::sdk::List>* streamer) {
+                       return this->StreamedGetList(context,
+                         streamer);
+                  }));
+    }
+    ~WithStreamedUnaryMethod_GetList() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable regular version of this method
+    ::grpc::Status GetList(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::GetListRequest* /*request*/, ::agones::dev::sdk::List* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    // replace default version of method with streamed unary
+    virtual ::grpc::Status StreamedGetList(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::agones::dev::sdk::GetListRequest,::agones::dev::sdk::List>* server_unary_streamer) = 0;
+  };
+  template <class BaseClass>
+  class WithStreamedUnaryMethod_UpdateList : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithStreamedUnaryMethod_UpdateList() {
+      ::grpc::Service::MarkMethodStreamed(12,
+        new ::grpc::internal::StreamedUnaryHandler<
+          ::agones::dev::sdk::UpdateListRequest, ::agones::dev::sdk::List>(
+            [this](::grpc::ServerContext* context,
+                   ::grpc::ServerUnaryStreamer<
+                     ::agones::dev::sdk::UpdateListRequest, ::agones::dev::sdk::List>* streamer) {
+                       return this->StreamedUpdateList(context,
+                         streamer);
+                  }));
+    }
+    ~WithStreamedUnaryMethod_UpdateList() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable regular version of this method
+    ::grpc::Status UpdateList(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::UpdateListRequest* /*request*/, ::agones::dev::sdk::List* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    // replace default version of method with streamed unary
+    virtual ::grpc::Status StreamedUpdateList(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::agones::dev::sdk::UpdateListRequest,::agones::dev::sdk::List>* server_unary_streamer) = 0;
+  };
+  template <class BaseClass>
+  class WithStreamedUnaryMethod_AddListValue : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithStreamedUnaryMethod_AddListValue() {
+      ::grpc::Service::MarkMethodStreamed(13,
+        new ::grpc::internal::StreamedUnaryHandler<
+          ::agones::dev::sdk::AddListValueRequest, ::agones::dev::sdk::List>(
+            [this](::grpc::ServerContext* context,
+                   ::grpc::ServerUnaryStreamer<
+                     ::agones::dev::sdk::AddListValueRequest, ::agones::dev::sdk::List>* streamer) {
+                       return this->StreamedAddListValue(context,
+                         streamer);
+                  }));
+    }
+    ~WithStreamedUnaryMethod_AddListValue() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable regular version of this method
+    ::grpc::Status AddListValue(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::AddListValueRequest* /*request*/, ::agones::dev::sdk::List* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    // replace default version of method with streamed unary
+    virtual ::grpc::Status StreamedAddListValue(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::agones::dev::sdk::AddListValueRequest,::agones::dev::sdk::List>* server_unary_streamer) = 0;
+  };
+  template <class BaseClass>
+  class WithStreamedUnaryMethod_RemoveListValue : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithStreamedUnaryMethod_RemoveListValue() {
+      ::grpc::Service::MarkMethodStreamed(14,
+        new ::grpc::internal::StreamedUnaryHandler<
+          ::agones::dev::sdk::RemoveListValueRequest, ::agones::dev::sdk::List>(
+            [this](::grpc::ServerContext* context,
+                   ::grpc::ServerUnaryStreamer<
+                     ::agones::dev::sdk::RemoveListValueRequest, ::agones::dev::sdk::List>* streamer) {
+                       return this->StreamedRemoveListValue(context,
+                         streamer);
+                  }));
+    }
+    ~WithStreamedUnaryMethod_RemoveListValue() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable regular version of this method
+    ::grpc::Status RemoveListValue(::grpc::ServerContext* /*context*/, const ::agones::dev::sdk::RemoveListValueRequest* /*request*/, ::agones::dev::sdk::List* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    // replace default version of method with streamed unary
+    virtual ::grpc::Status StreamedRemoveListValue(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::agones::dev::sdk::RemoveListValueRequest,::agones::dev::sdk::List>* server_unary_streamer) = 0;
+  };
+  typedef WithStreamedUnaryMethod_Ready<WithStreamedUnaryMethod_Allocate<WithStreamedUnaryMethod_Shutdown<WithStreamedUnaryMethod_GetGameServer<WithStreamedUnaryMethod_SetLabel<WithStreamedUnaryMethod_SetAnnotation<WithStreamedUnaryMethod_Reserve<WithStreamedUnaryMethod_GetCounter<WithStreamedUnaryMethod_UpdateCounter<WithStreamedUnaryMethod_GetList<WithStreamedUnaryMethod_UpdateList<WithStreamedUnaryMethod_AddListValue<WithStreamedUnaryMethod_RemoveListValue<Service > > > > > > > > > > > > > StreamedUnaryService;
   template <class BaseClass>
   class WithSplitStreamingMethod_WatchGameServer : public BaseClass {
    private:
@@ -1519,7 +2506,7 @@ class SDK final {
     virtual ::grpc::Status StreamedWatchGameServer(::grpc::ServerContext* context, ::grpc::ServerSplitStreamer< ::agones::dev::sdk::Empty,::agones::dev::sdk::GameServer>* server_split_streamer) = 0;
   };
   typedef WithSplitStreamingMethod_WatchGameServer<Service > SplitStreamedService;
-  typedef WithStreamedUnaryMethod_Ready<WithStreamedUnaryMethod_Allocate<WithStreamedUnaryMethod_Shutdown<WithStreamedUnaryMethod_GetGameServer<WithSplitStreamingMethod_WatchGameServer<WithStreamedUnaryMethod_SetLabel<WithStreamedUnaryMethod_SetAnnotation<WithStreamedUnaryMethod_Reserve<Service > > > > > > > > StreamedService;
+  typedef WithStreamedUnaryMethod_Ready<WithStreamedUnaryMethod_Allocate<WithStreamedUnaryMethod_Shutdown<WithStreamedUnaryMethod_GetGameServer<WithSplitStreamingMethod_WatchGameServer<WithStreamedUnaryMethod_SetLabel<WithStreamedUnaryMethod_SetAnnotation<WithStreamedUnaryMethod_Reserve<WithStreamedUnaryMethod_GetCounter<WithStreamedUnaryMethod_UpdateCounter<WithStreamedUnaryMethod_GetList<WithStreamedUnaryMethod_UpdateList<WithStreamedUnaryMethod_AddListValue<WithStreamedUnaryMethod_RemoveListValue<Service > > > > > > > > > > > > > > StreamedService;
 };
 
 }  // namespace sdk

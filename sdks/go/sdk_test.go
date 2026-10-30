@@ -134,6 +134,8 @@ var _ sdk.SDK_HealthClient = &healthMock{}
 var _ sdk.SDK_WatchGameServerClient = &watchMock{}
 
 type sdkMock struct {
+	// embedded so the mock satisfies the Counter and List methods, which these tests do not call
+	sdk.SDKClient
 	ready       bool
 	shutdown    bool
 	allocated   bool
