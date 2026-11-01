@@ -29,39 +29,62 @@ import (
 	sdk "agones.dev/agones/sdks/go"
 )
 
+// Commands the game server accepts, as the first word of a message.
 const (
-	// exitCommand shuts the game server down, after it has responded.
-	exitCommand = "EXIT"
-	// successResponse is the reply to a command that succeeded.
-	successResponse = "SUCCESS\n"
+	exitCommand               = "EXIT"
+	unhealthyCommand          = "UNHEALTHY"
+	gameserverCommand         = "GAMESERVER"
+	readyCommand              = "READY"
+	allocateCommand           = "ALLOCATE"
+	reserveCommand            = "RESERVE"
+	watchCommand              = "WATCH"
+	labelCommand              = "LABEL"
+	crashCommand              = "CRASH"
+	annotationCommand         = "ANNOTATION"
+	getCounterCountCommand    = "GET_COUNTER_COUNT"
+	incrementCounterCommand   = "INCREMENT_COUNTER"
+	decrementCounterCommand   = "DECREMENT_COUNTER"
+	setCounterCountCommand    = "SET_COUNTER_COUNT"
+	getCounterCapacityCommand = "GET_COUNTER_CAPACITY"
+	setCounterCapacityCommand = "SET_COUNTER_CAPACITY"
+	getListCapacityCommand    = "GET_LIST_CAPACITY"
+	setListCapacityCommand    = "SET_LIST_CAPACITY"
+	listContainsCommand       = "LIST_CONTAINS"
+	getListLengthCommand      = "GET_LIST_LENGTH"
+	getListValuesCommand      = "GET_LIST_VALUES"
+	appendListValueCommand    = "APPEND_LIST_VALUE"
+	deleteListValueCommand    = "DELETE_LIST_VALUE"
 )
+
+// successResponse is the reply to a command that succeeded.
+const successResponse = "SUCCESS\n"
 
 type responseHandler func(s *sdk.SDK, parts []string, cancel ...context.CancelFunc) (response string, addACK bool, responseError error)
 
 var responseMap = map[string]responseHandler{
-	exitCommand:            handleExit,
-	"UNHEALTHY":            handleUnhealthy,
-	"GAMESERVER":           handleGameServer,
-	"READY":                handleReady,
-	"ALLOCATE":             handleAllocate,
-	"RESERVE":              handleReserve,
-	"WATCH":                handleWatch,
-	"LABEL":                handleLabel,
-	"CRASH":                handleCrash,
-	"ANNOTATION":           handleAnnotation,
-	"GET_COUNTER_COUNT":    handleGetCounterCount,
-	"INCREMENT_COUNTER":    handleIncrementCounter,
-	"DECREMENT_COUNTER":    handleDecrementCounter,
-	"SET_COUNTER_COUNT":    handleSetCounterCount,
-	"GET_COUNTER_CAPACITY": handleGetCounterCapacity,
-	"SET_COUNTER_CAPACITY": handleSetCounterCapacity,
-	"GET_LIST_CAPACITY":    handleGetListCapacity,
-	"SET_LIST_CAPACITY":    handleSetListCapacity,
-	"LIST_CONTAINS":        handleListContains,
-	"GET_LIST_LENGTH":      handleGetListLength,
-	"GET_LIST_VALUES":      handleGetListValues,
-	"APPEND_LIST_VALUE":    handleAppendListValue,
-	"DELETE_LIST_VALUE":    handleDeleteListValue,
+	exitCommand:               handleExit,
+	unhealthyCommand:          handleUnhealthy,
+	gameserverCommand:         handleGameServer,
+	readyCommand:              handleReady,
+	allocateCommand:           handleAllocate,
+	reserveCommand:            handleReserve,
+	watchCommand:              handleWatch,
+	labelCommand:              handleLabel,
+	crashCommand:              handleCrash,
+	annotationCommand:         handleAnnotation,
+	getCounterCountCommand:    handleGetCounterCount,
+	incrementCounterCommand:   handleIncrementCounter,
+	decrementCounterCommand:   handleDecrementCounter,
+	setCounterCountCommand:    handleSetCounterCount,
+	getCounterCapacityCommand: handleGetCounterCapacity,
+	setCounterCapacityCommand: handleSetCounterCapacity,
+	getListCapacityCommand:    handleGetListCapacity,
+	setListCapacityCommand:    handleSetListCapacity,
+	listContainsCommand:       handleListContains,
+	getListLengthCommand:      handleGetListLength,
+	getListValuesCommand:      handleGetListValues,
+	appendListValueCommand:    handleAppendListValue,
+	deleteListValueCommand:    handleDeleteListValue,
 }
 
 func handleResponse(txt string, s *sdk.SDK, cancel context.CancelFunc) (response string, addACK bool, responseError error) {
@@ -74,7 +97,7 @@ func handleResponse(txt string, s *sdk.SDK, cancel context.CancelFunc) (response
 	if !exists {
 		return response, addACK, responseError
 	}
-	if parts[0] == "UNHEALTHY" {
+	if parts[0] == unhealthyCommand {
 		return handler(s, parts, cancel)
 	}
 
