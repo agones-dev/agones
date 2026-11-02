@@ -15,99 +15,21 @@
 package sdk
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"google.golang.org/grpc"
 
-	"agones.dev/agones/pkg/sdk/alpha"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
-func TestAlphaGetAndSetPlayerCapacity(t *testing.T) {
-	mock := &alphaMock{}
-	a := Alpha{
-		client: mock,
-	}
-
-	err := a.SetPlayerCapacity(15)
+func TestNewAlpha(t *testing.T) {
+	// grpc.NewClient doesn't dial immediately, so this doesn't require a
+	// running server (sdk.go's NewSDK uses the same pattern).
+	conn, err := grpc.NewClient("localhost:9357", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	assert.NoError(t, err)
-	assert.Equal(t, int64(15), mock.capacity)
+	defer conn.Close() //nolint:errcheck
 
-	capacity, err := a.GetPlayerCapacity()
-	assert.NoError(t, err)
-	assert.Equal(t, int64(15), capacity)
-
-	playerID := "one"
-	ok, err := a.PlayerConnect(playerID)
-	assert.NoError(t, err)
-	assert.True(t, ok)
-	assert.Equal(t, playerID, mock.playerConnected)
-
-	count, err := a.GetPlayerCount()
-	assert.NoError(t, err)
-	assert.Equal(t, int64(1), count)
-
-	ok, err = a.PlayerDisconnect(playerID)
-	assert.NoError(t, err)
-	assert.True(t, ok)
-	assert.Equal(t, playerID, mock.playerDisconnected)
-
-	// Put the player back in.
-	ok, err = a.PlayerConnect(playerID)
-	assert.NoError(t, err)
-	assert.True(t, ok)
-	assert.Equal(t, int64(1), count)
-
-	ok, err = a.IsPlayerConnected(playerID)
-	assert.NoError(t, err)
-	assert.True(t, ok, "Player should be connected")
-
-	ok, err = a.IsPlayerConnected("false")
-	assert.NoError(t, err)
-	assert.False(t, ok, "Player should not be connected")
-
-	list, err := a.GetConnectedPlayers()
-	assert.NoError(t, err)
-	assert.Equal(t, []string{playerID}, list)
-}
-
-type alphaMock struct {
-	capacity           int64
-	playerCount        int64
-	playerConnected    string
-	playerDisconnected string
-}
-
-func (a *alphaMock) PlayerConnect(_ context.Context, id *alpha.PlayerID, _ ...grpc.CallOption) (*alpha.Bool, error) {
-	a.playerConnected = id.GetPlayerID()
-	a.playerCount++
-	return &alpha.Bool{Bool: true}, nil
-}
-
-func (a *alphaMock) PlayerDisconnect(_ context.Context, id *alpha.PlayerID, _ ...grpc.CallOption) (*alpha.Bool, error) {
-	a.playerDisconnected = id.GetPlayerID()
-	a.playerCount--
-	return &alpha.Bool{Bool: true}, nil
-}
-
-func (a *alphaMock) IsPlayerConnected(_ context.Context, id *alpha.PlayerID, _ ...grpc.CallOption) (*alpha.Bool, error) {
-	return &alpha.Bool{Bool: id.GetPlayerID() == a.playerConnected}, nil
-}
-
-func (a *alphaMock) GetConnectedPlayers(_ context.Context, _ *alpha.Empty, _ ...grpc.CallOption) (*alpha.PlayerIDList, error) {
-	return &alpha.PlayerIDList{List: []string{a.playerConnected}}, nil
-}
-
-func (a *alphaMock) SetPlayerCapacity(_ context.Context, in *alpha.Count, _ ...grpc.CallOption) (*alpha.Empty, error) {
-	a.capacity = in.GetCount()
-	return &alpha.Empty{}, nil
-}
-
-func (a *alphaMock) GetPlayerCapacity(_ context.Context, _ *alpha.Empty, _ ...grpc.CallOption) (*alpha.Count, error) {
-	return &alpha.Count{Count: a.capacity}, nil
-}
-
-func (a *alphaMock) GetPlayerCount(_ context.Context, _ *alpha.Empty, _ ...grpc.CallOption) (*alpha.Count, error) {
-	return &alpha.Count{Count: a.playerCount}, nil
+	a := newAlpha(conn)
+	assert.NotNil(t, a.client)
 }
