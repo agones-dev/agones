@@ -78,17 +78,19 @@ var NamespaceLabel = map[string]string{"owner": "e2e-test"}
 
 // Framework is a testing framework
 type Framework struct {
-	KubeClient      kubernetes.Interface
-	AgonesClient    versioned.Interface
-	GameServerImage string
-	PullSecret      string
-	StressTestLevel int
-	PerfOutputDir   string
-	Version         string
-	Namespace       string
-	CloudProduct    string
-	WaitForState    time.Duration // default time to wait for state changes, may change based on cloud product.
-	errs            *errors.Errors
+	KubeClient           kubernetes.Interface
+	AgonesClient         versioned.Interface
+	GameServerImage      string
+	ExampleImageRegistry string
+	ExampleImageTag      string
+	PullSecret           string
+	StressTestLevel      int
+	PerfOutputDir        string
+	Version              string
+	Namespace            string
+	CloudProduct         string
+	WaitForState         time.Duration // default time to wait for state changes, may change based on cloud product.
+	errs                 *errors.Errors
 }
 
 func newFramework(kubeconfig string, qps float32, burst int) (*Framework, error) {
@@ -124,14 +126,16 @@ func newFramework(kubeconfig string, qps float32, burst int) (*Framework, error)
 }
 
 const (
-	kubeconfigFlag      = "kubeconfig"
-	gsimageFlag         = "gameserver-image"
-	pullSecretFlag      = "pullsecret"
-	stressTestLevelFlag = "stress"
-	perfOutputDirFlag   = "perf-output"
-	versionFlag         = "version"
-	namespaceFlag       = "namespace"
-	cloudProductFlag    = "cloud-product"
+	kubeconfigFlag           = "kubeconfig"
+	gsimageFlag              = "gameserver-image"
+	exampleImageRegistryFlag = "example-image-registry"
+	exampleImageTagFlag      = "example-image-tag"
+	pullSecretFlag           = "pullsecret"
+	stressTestLevelFlag      = "stress"
+	perfOutputDirFlag        = "perf-output"
+	versionFlag              = "version"
+	namespaceFlag            = "namespace"
+	cloudProductFlag         = "cloud-product"
 )
 
 // ParseTestFlags Parses go test flags separately because pflag package ignores flags with '-test.' prefix
@@ -164,6 +168,8 @@ func NewFromFlags() (*Framework, error) {
 
 	viper.SetDefault(kubeconfigFlag, filepath.Join(usr.HomeDir, ".kube", "config"))
 	viper.SetDefault(gsimageFlag, "us-docker.pkg.dev/agones-images/examples/simple-game-server:0.44")
+	viper.SetDefault(exampleImageRegistryFlag, "us-docker.pkg.dev/agones-images/examples")
+	viper.SetDefault(exampleImageTagFlag, "")
 	viper.SetDefault(pullSecretFlag, "")
 	viper.SetDefault(stressTestLevelFlag, 0)
 	viper.SetDefault(perfOutputDirFlag, "")
@@ -174,6 +180,8 @@ func NewFromFlags() (*Framework, error) {
 
 	pflag.String(kubeconfigFlag, viper.GetString(kubeconfigFlag), "kube config path, e.g. $HOME/.kube/config")
 	pflag.String(gsimageFlag, viper.GetString(gsimageFlag), "gameserver image to use for those tests")
+	pflag.String(exampleImageRegistryFlag, viper.GetString(exampleImageRegistryFlag), "registry of the example images to use for the e2e tests")
+	pflag.String(exampleImageTagFlag, viper.GetString(exampleImageTagFlag), "optional tag of the example images to use for the e2e tests; if empty, the published version of each example image is used")
 	pflag.String(pullSecretFlag, viper.GetString(pullSecretFlag), "optional secret to be used for pulling the gameserver and/or Agones SDK sidecar images")
 	pflag.Int(stressTestLevelFlag, viper.GetInt(stressTestLevelFlag), "enable stress test at given level 0-100")
 	pflag.String(perfOutputDirFlag, viper.GetString(perfOutputDirFlag), "write performance statistics to the specified directory")
@@ -186,6 +194,8 @@ func NewFromFlags() (*Framework, error) {
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	runtime.Must(viper.BindEnv(kubeconfigFlag))
 	runtime.Must(viper.BindEnv(gsimageFlag))
+	runtime.Must(viper.BindEnv(exampleImageRegistryFlag))
+	runtime.Must(viper.BindEnv(exampleImageTagFlag))
 	runtime.Must(viper.BindEnv(pullSecretFlag))
 	runtime.Must(viper.BindEnv(stressTestLevelFlag))
 	runtime.Must(viper.BindEnv(perfOutputDirFlag))
@@ -201,6 +211,8 @@ func NewFromFlags() (*Framework, error) {
 		return framework, err
 	}
 	framework.GameServerImage = viper.GetString(gsimageFlag)
+	framework.ExampleImageRegistry = viper.GetString(exampleImageRegistryFlag)
+	framework.ExampleImageTag = viper.GetString(exampleImageTagFlag)
 	framework.PullSecret = viper.GetString(pullSecretFlag)
 	framework.StressTestLevel = viper.GetInt(stressTestLevelFlag)
 	framework.PerfOutputDir = viper.GetString(perfOutputDirFlag)
@@ -215,6 +227,8 @@ func NewFromFlags() (*Framework, error) {
 	}
 
 	logrus.WithField("gameServerImage", framework.GameServerImage).
+		WithField("exampleImageRegistry", framework.ExampleImageRegistry).
+		WithField("exampleImageTag", framework.ExampleImageTag).
 		WithField("pullSecret", framework.PullSecret).
 		WithField("stressTestLevel", framework.StressTestLevel).
 		WithField("perfOutputDir", framework.PerfOutputDir).
@@ -225,6 +239,20 @@ func NewFromFlags() (*Framework, error) {
 		Info("Starting e2e test(s)")
 
 	return framework, nil
+}
+
+// ExampleImage returns the image for the named example image (e.g. "cpp-simple-server") from ExampleImageRegistry,
+// tagged with ExampleImageTag, or with defaultVersion if ExampleImageTag is empty.
+//
+// CI builds the example images from source and always sets ExampleImageTag (see ci/push-e2e-example-images.sh),
+// so defaultVersion is only a fallback for local runs, which use the published example image at that version.
+// Update defaultVersion when the version in the example's Makefile is bumped.
+func (f *Framework) ExampleImage(name, defaultVersion string) string {
+	tag := f.ExampleImageTag
+	if tag == "" {
+		tag = defaultVersion
+	}
+	return fmt.Sprintf("%s/%s:%s", f.ExampleImageRegistry, name, tag)
 }
 
 // CreateGameServerAndWaitUntilReady Creates a GameServer and wait for its state to become ready.

@@ -76,7 +76,7 @@ type WorkerQueue struct {
 	logger  *logrus.Entry
 	errs    *errors.Errors
 	keyName string
-	queue   workqueue.TypedRateLimitingInterface[any]
+	queue   workqueue.TypedRateLimitingInterface[string]
 	// SyncHandler is exported to make testing easier (hack)
 	SyncHandler Handler
 
@@ -86,32 +86,32 @@ type WorkerQueue struct {
 }
 
 // FastRateLimiter returns a rate limiter without exponential back-off, with specified maximum per-item retry delay.
-func FastRateLimiter(maxDelay time.Duration) workqueue.TypedRateLimiter[any] {
+func FastRateLimiter(maxDelay time.Duration) workqueue.TypedRateLimiter[string] {
 	const numFastRetries = 5
 	const fastDelay = 200 * time.Millisecond // first few retries up to 'numFastRetries' are fast
 
-	return workqueue.NewTypedItemFastSlowRateLimiter[any](fastDelay, maxDelay, numFastRetries)
+	return workqueue.NewTypedItemFastSlowRateLimiter[string](fastDelay, maxDelay, numFastRetries)
 }
 
 // ConstantRateLimiter returns a rate limiter without exponential back-off, with constant retry delay.
-func ConstantRateLimiter(maxDelay time.Duration) workqueue.TypedRateLimiter[any] {
+func ConstantRateLimiter(maxDelay time.Duration) workqueue.TypedRateLimiter[string] {
 	const numFastRetries = 0                 // only constant delay
 	const fastDelay = 200 * time.Millisecond // not needed
 
-	return workqueue.NewTypedItemFastSlowRateLimiter[any](fastDelay, maxDelay, numFastRetries)
+	return workqueue.NewTypedItemFastSlowRateLimiter[string](fastDelay, maxDelay, numFastRetries)
 }
 
 // NewWorkerQueue returns a new worker queue for a given name
 func NewWorkerQueue(handler Handler, logger *logrus.Entry, keyName logfields.ResourceType, queueName string) *WorkerQueue {
-	return NewWorkerQueueWithRateLimiter(handler, logger, keyName, queueName, workqueue.DefaultTypedControllerRateLimiter[any]())
+	return NewWorkerQueueWithRateLimiter(handler, logger, keyName, queueName, workqueue.DefaultTypedControllerRateLimiter[string]())
 }
 
 // NewWorkerQueueWithRateLimiter returns a new worker queue for a given name and a custom rate limiter.
-func NewWorkerQueueWithRateLimiter(handler Handler, logger *logrus.Entry, keyName logfields.ResourceType, queueName string, rateLimiter workqueue.TypedRateLimiter[any]) *WorkerQueue {
+func NewWorkerQueueWithRateLimiter(handler Handler, logger *logrus.Entry, keyName logfields.ResourceType, queueName string, rateLimiter workqueue.TypedRateLimiter[string]) *WorkerQueue {
 	wq := &WorkerQueue{
 		keyName:     string(keyName),
 		logger:      logger.WithField("queue", queueName),
-		queue:       workqueue.NewNamedRateLimitingQueue(rateLimiter, queueName),
+		queue:       workqueue.NewTypedRateLimitingQueueWithConfig(rateLimiter, workqueue.TypedRateLimitingQueueConfig[string]{Name: queueName}),
 		SyncHandler: handler,
 	}
 	wq.errs = errors.FromStruct(wq)
@@ -173,38 +173,29 @@ func (wq *WorkerQueue) runWorker(ctx context.Context) {
 // processNextWorkItem processes the next work item.
 // pretty self explanatory :)
 func (wq *WorkerQueue) processNextWorkItem(ctx context.Context) bool {
-	obj, quit := wq.queue.Get()
+	key, quit := wq.queue.Get()
 	if quit {
 		return false
 	}
-	defer wq.queue.Done(obj)
+	defer wq.queue.Done(key)
 
-	wq.logger.WithField(wq.keyName, obj).Debug("Processing")
-
-	var key string
-	var ok bool
-	if key, ok = obj.(string); !ok {
-		runtime.HandleError(wq.logger.WithField(wq.keyName, obj), wq.errs.Errorf("expected string in queue, but got %T", obj))
-		// this is a bad entry, we don't want to reprocess
-		wq.queue.Forget(obj)
-		return true
-	}
+	wq.logger.WithField(wq.keyName, key).Debug("Processing")
 
 	if err := wq.SyncHandler(ctx, key); err != nil {
 		// Conflicts are expected, so only show them in debug operations.
 		// Also check is traceError for other expected errors.
 		if k8serror.IsConflict(err) || isTraceError(err) {
-			wq.logger.WithField(wq.keyName, obj).Trace(err)
+			wq.logger.WithField(wq.keyName, key).Trace(err)
 		} else {
-			runtime.HandleError(wq.logger.WithField(wq.keyName, obj), err)
+			runtime.HandleError(wq.logger.WithField(wq.keyName, key), err)
 		}
 
 		// we don't forget here, because we want this to be retried via the queue
-		wq.queue.AddRateLimited(obj)
+		wq.queue.AddRateLimited(key)
 		return true
 	}
 
-	wq.queue.Forget(obj)
+	wq.queue.Forget(key)
 	return true
 }
 

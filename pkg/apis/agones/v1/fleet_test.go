@@ -183,13 +183,20 @@ func TestFleetGameserverSpec(t *testing.T) {
 	errs = f.Validate(fakeAPIHooks{})
 	assert.Len(t, errs, 2)
 
-	intParam := intstr.FromInt(0)
+	intParam := intstr.FromInt32(0)
 	f.Spec.Strategy.RollingUpdate.MaxUnavailable = &intParam
 	f.Spec.Strategy.RollingUpdate.MaxSurge = &intParam
 	errs = f.Validate(fakeAPIHooks{})
 	assert.Len(t, errs, 2)
 
 	percent = intstr.FromString("2a")
+	f.Spec.Strategy.RollingUpdate.MaxUnavailable = &percent
+	f.Spec.Strategy.RollingUpdate.MaxSurge = &percent
+	errs = f.Validate(fakeAPIHooks{})
+	assert.Len(t, errs, 2)
+
+	// A percentage must carry a trailing '%', matching Kubernetes Deployments.
+	percent = intstr.FromString("25")
 	f.Spec.Strategy.RollingUpdate.MaxUnavailable = &percent
 	f.Spec.Strategy.RollingUpdate.MaxSurge = &percent
 	errs = f.Validate(fakeAPIHooks{})

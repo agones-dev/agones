@@ -856,11 +856,10 @@ func (l *LocalSDKServer) setGameServerFromFilePath(filePath string) error {
 	l.logger.WithField("filePath", filePath).Info("Reading GameServer configuration")
 
 	reader, err := os.Open(filePath) //nolint:gosec
-	defer reader.Close()             //nolint:staticcheck,errcheck
-
 	if err != nil {
 		return err
 	}
+	defer reader.Close() //nolint:errcheck
 
 	var gs agonesv1.GameServer
 	// 4096 is the number of bytes the YAMLOrJSONDecoder goes looking

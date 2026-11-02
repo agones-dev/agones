@@ -54,7 +54,7 @@ func TestSuperTuxKartGameServerReady(t *testing.T) {
 					Containers: []corev1.Container{
 						{
 							Name:  "supertuxkart",
-							Image: "us-docker.pkg.dev/agones-images/examples/supertuxkart-example:0.25",
+							Image: framework.ExampleImage("supertuxkart-example", "0.25"),
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("1Gi"),
@@ -117,7 +117,7 @@ func TestRustGameServerReady(t *testing.T) {
 					Containers: []corev1.Container{
 						{
 							Name:  "rust-simple",
-							Image: "us-docker.pkg.dev/agones-images/examples/rust-simple-server:0.13",
+							Image: framework.ExampleImage("rust-simple-server", "0.14"),
 						},
 					},
 				},
@@ -151,7 +151,7 @@ func TestCppSimpleGameServerReady(t *testing.T) {
 					Containers: []corev1.Container{
 						{
 							Name:  "cpp-simple",
-							Image: "us-docker.pkg.dev/agones-images/examples/cpp-simple-server:0.27",
+							Image: framework.ExampleImage("cpp-simple-server", "0.27"),
 						},
 					},
 				},
@@ -189,7 +189,7 @@ func TestNodeJSGameServerReady(t *testing.T) {
 					Containers: []corev1.Container{
 						{
 							Name:  "nodejs-simple",
-							Image: "us-docker.pkg.dev/agones-images/examples/nodejs-simple-server:0.12",
+							Image: framework.ExampleImage("nodejs-simple-server", "0.12"),
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("100Mi"),
@@ -235,7 +235,7 @@ func TestXonoticGameServerReady(t *testing.T) {
 					Containers: []corev1.Container{
 						{
 							Name:  "xonotic",
-							Image: "us-docker.pkg.dev/agones-images/examples/xonotic-example:2.8",
+							Image: framework.ExampleImage("xonotic-example", "2.8"),
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("700Mi"),

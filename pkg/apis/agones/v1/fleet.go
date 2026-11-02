@@ -190,7 +190,7 @@ func (f *Fleet) GetGameServerSpec() *GameServerSpec {
 
 func (f *Fleet) validateRollingUpdate(value *intstr.IntOrString, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	r, err := intstr.GetValueFromIntOrPercent(value, 100, true)
+	r, err := intstr.GetScaledValueFromIntOrPercent(value, 100, true)
 	if value.Type == intstr.String {
 		if err != nil || r < 1 || r > 99 {
 			allErrs = append(allErrs, field.Invalid(fldPath, value, "must be between 1% and 99%"))

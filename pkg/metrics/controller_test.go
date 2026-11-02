@@ -193,7 +193,7 @@ func TestControllerFleetAutoScalerState_ResetMetricsOnDelete(t *testing.T) {
 	fasFleetNameChange := fleetAutoScaler("first-fleet", "name-switch")
 	c.fasWatch.Add(fasFleetNameChange)
 	fasFleetNameChange = fasFleetNameChange.DeepCopy()
-	fasFleetNameChange.Spec.Policy.Buffer.BufferSize = intstr.FromInt(10)
+	fasFleetNameChange.Spec.Policy.Buffer.BufferSize = intstr.FromInt32(10)
 	fasFleetNameChange.Spec.Policy.Buffer.MaxReplicas = 50
 	fasFleetNameChange.Spec.Policy.Buffer.MinReplicas = 10
 	fasFleetNameChange.Status.CurrentReplicas = 20

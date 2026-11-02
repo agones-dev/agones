@@ -125,7 +125,7 @@ func TestControllerAllocator(t *testing.T) {
 			if len(gsa.Spec.Selectors) != 0 {
 				require.Equal(t, gsa.Spec.Selectors[0].LabelSelector, ret.Spec.Selectors[0].LabelSelector)
 			} else {
-				//nolint:staticcheck
+				//nolint:staticcheck // SA1019: covers the deprecated Required field
 				require.Equal(t, gsa.Spec.Required.LabelSelector, ret.Spec.Selectors[0].LabelSelector)
 			}
 

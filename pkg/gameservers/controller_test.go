@@ -950,6 +950,35 @@ func TestControllerSyncGameServerPortAllocationState(t *testing.T) {
 	})
 }
 
+func TestControllerPortAllocationRejectsOversizedRequest(t *testing.T) {
+	c, mocks := newFakeController()
+	gs := &agonesv1.GameServer{
+		ObjectMeta: metav1.ObjectMeta{Name: "too-many-ports", Namespace: "default"},
+		Status:     agonesv1.GameServerStatus{State: agonesv1.GameServerStatePortAllocation},
+	}
+	// The fake controller's default range is 10 through 20 inclusive.
+	for i := range 12 {
+		gs.Spec.Ports = append(gs.Spec.Ports, agonesv1.GameServerPort{
+			Name: fmt.Sprintf("port-%d", i), Range: agonesv1.DefaultPortRange, PortPolicy: agonesv1.Dynamic,
+		})
+	}
+	updates := 0
+	mocks.AgonesClient.AddReactor("update", "gameservers", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		updates++
+		updated := action.(k8stesting.UpdateAction).GetObject().(*agonesv1.GameServer)
+		assert.Equal(t, agonesv1.GameServerStateError, updated.Status.State)
+		for _, port := range updated.Spec.Ports {
+			assert.Zero(t, port.HostPort)
+		}
+		return true, updated, nil
+	})
+	result, err := c.syncGameServerPortAllocationState(context.Background(), gs)
+	require.NoError(t, err)
+	assert.Equal(t, agonesv1.GameServerStateError, result.Status.State)
+	assert.Equal(t, 1, updates)
+	assert.Equal(t, agonesv1.GameServerStatePortAllocation, gs.Status.State)
+}
+
 func TestControllerSyncGameServerCreatingState(t *testing.T) {
 	t.Parallel()
 
@@ -1633,8 +1662,8 @@ func TestControllerCreateGameServerPod(t *testing.T) {
 			assert.Equal(t, fixture.Spec.Ports[0].ContainerPort, gsContainer.Ports[0].ContainerPort)
 			assert.Equal(t, corev1.Protocol("UDP"), gsContainer.Ports[0].Protocol)
 			assert.Equal(t, "/gshealthz", gsContainer.LivenessProbe.HTTPGet.Path)
-			assert.Equal(t, gsContainer.LivenessProbe.HTTPGet.Port, intstr.FromInt(8080))
-			assert.Equal(t, intstr.FromInt(8080), gsContainer.LivenessProbe.HTTPGet.Port)
+			assert.Equal(t, gsContainer.LivenessProbe.HTTPGet.Port, intstr.FromInt32(8080))
+			assert.Equal(t, intstr.FromInt32(8080), gsContainer.LivenessProbe.HTTPGet.Port)
 			assert.Equal(t, fixture.Spec.Health.InitialDelaySeconds, gsContainer.LivenessProbe.InitialDelaySeconds)
 			assert.Equal(t, fixture.Spec.Health.PeriodSeconds, gsContainer.LivenessProbe.PeriodSeconds)
 			assert.Equal(t, fixture.Spec.Health.FailureThreshold, gsContainer.LivenessProbe.FailureThreshold)

@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -78,7 +79,7 @@ func TestControllerCreationMutationHandler(t *testing.T) {
 					Policy: autoscalingv1.FleetAutoscalerPolicy{
 						Type: autoscalingv1.BufferPolicyType,
 						Buffer: &autoscalingv1.BufferPolicy{
-							BufferSize:  intstr.FromInt(5),
+							BufferSize:  intstr.FromInt32(5),
 							MaxReplicas: 100,
 						},
 					},
@@ -109,7 +110,7 @@ func TestControllerCreationMutationHandler(t *testing.T) {
 					Policy: autoscalingv1.FleetAutoscalerPolicy{
 						Type: autoscalingv1.BufferPolicyType,
 						Buffer: &autoscalingv1.BufferPolicy{
-							BufferSize:  intstr.FromInt(5),
+							BufferSize:  intstr.FromInt32(5),
 							MaxReplicas: 100,
 						},
 					},
@@ -284,7 +285,7 @@ func TestControllerSyncFleetAutoscaler(t *testing.T) {
 		t.Parallel()
 		c, m := newFakeController()
 		fas, f := defaultFixtures()
-		fas.Spec.Policy.Buffer.BufferSize = intstr.FromInt(7)
+		fas.Spec.Policy.Buffer.BufferSize = intstr.FromInt32(7)
 
 		f.Spec.Replicas = 5
 		f.Status.Replicas = 5
@@ -325,7 +326,7 @@ func TestControllerSyncFleetAutoscaler(t *testing.T) {
 		t.Parallel()
 		c, m := newFakeController()
 		fas, f := defaultFixtures()
-		fas.Spec.Policy.Buffer.BufferSize = intstr.FromInt(7)
+		fas.Spec.Policy.Buffer.BufferSize = intstr.FromInt32(7)
 
 		f.Spec.Replicas = 5
 		f.Status.Replicas = 5
@@ -486,7 +487,7 @@ func TestControllerSyncFleetAutoscaler(t *testing.T) {
 		t.Parallel()
 		c, m := newFakeController()
 		fas, f := defaultFixtures()
-		fas.Spec.Policy.Buffer.BufferSize = intstr.FromInt(8)
+		fas.Spec.Policy.Buffer.BufferSize = intstr.FromInt32(8)
 
 		f.Spec.Replicas = 20
 		f.Status.Replicas = 20
@@ -542,7 +543,7 @@ func TestControllerSyncFleetAutoscaler(t *testing.T) {
 		t.Parallel()
 		c, m := newFakeController()
 		fas, f := defaultFixtures()
-		fas.Spec.Policy.Buffer.BufferSize = intstr.FromInt(8)
+		fas.Spec.Policy.Buffer.BufferSize = intstr.FromInt32(8)
 
 		f.Spec.Replicas = 20
 		f.Status.Replicas = 20
@@ -588,7 +589,7 @@ func TestControllerSyncFleetAutoscaler(t *testing.T) {
 		f.Spec.Replicas = 10
 		f.Status.Replicas = 10
 		f.Status.ReadyReplicas = 5
-		fas.Spec.Policy.Buffer.BufferSize = intstr.FromInt(5)
+		fas.Spec.Policy.Buffer.BufferSize = intstr.FromInt32(5)
 		fas.Status.CurrentReplicas = 10
 		fas.Status.DesiredReplicas = 10
 
@@ -827,16 +828,16 @@ func TestControllerScaleFleet(t *testing.T) {
 		fas, f := defaultFixtures()
 		replicas := f.Spec.Replicas + 5
 
-		m.AgonesClient.AddReactor("update", "fleets", func(action k8stesting.Action) (bool, runtime.Object, error) {
-			ca := action.(k8stesting.UpdateAction)
-			return true, ca.GetObject().(*agonesv1.Fleet), errors.New("random-err")
+		m.AgonesClient.AddReactor("update", "fleets", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+			return true, nil, errors.New("random-err")
 		})
 
 		err := c.scaleFleet(context.Background(), fas, f, replicas)
 		if assert.Error(t, err) {
 			assert.ErrorContains(t, err, "error updating replicas for fleet fleet-1: random-err")
 		}
-		agtesting.AssertEventContains(t, m.FakeRecorder.Events, "AutoScalingFleetError")
+		agtesting.AssertEventContains(t, m.FakeRecorder.Events,
+			fmt.Sprintf("AutoScalingFleetError Error on scaling fleet fleet-1 from %d to %d.", f.Spec.Replicas, replicas))
 	})
 
 	t.Run("equal replicas, no update", func(t *testing.T) {
@@ -1224,7 +1225,7 @@ func defaultFixtures() (*autoscalingv1.FleetAutoscaler, *agonesv1.Fleet) {
 			Policy: autoscalingv1.FleetAutoscalerPolicy{
 				Type: autoscalingv1.BufferPolicyType,
 				Buffer: &autoscalingv1.BufferPolicy{
-					BufferSize:  intstr.FromInt(5),
+					BufferSize:  intstr.FromInt32(5),
 					MaxReplicas: 100,
 				},
 			},
