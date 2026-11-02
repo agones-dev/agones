@@ -1490,7 +1490,7 @@ func TestGameServerPodTemplateSpecFailSchemaValidation(t *testing.T) {
 	// The schema's from Kubernetes don't include anything like `pattern:` or `enum:` which would
 	// potentially make this easier to test.
 
-	gsYaml := `
+	gsYaml := fmt.Sprintf(`
 apiVersion: "agones.dev/v1"
 kind: GameServer
 metadata:
@@ -1507,8 +1507,8 @@ spec:
           preferredDuringSchedulingIgnoredDuringExecution: ERROR
       containers:
         - name: simple-game-server
-          image: us-docker.pkg.dev/agones-images/examples/simple-game-server:0.44
-`
+          image: %s
+`, framework.GameServerImage)
 	err := os.WriteFile("/tmp/invalid.yaml", []byte(gsYaml), 0o644)
 	require.NoError(t, err)
 

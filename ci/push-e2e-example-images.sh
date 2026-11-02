@@ -37,6 +37,7 @@ examples=(
   "rust-simple|rust-simple-server|version|sdks/rust"
   "cpp-simple|cpp-simple-server|version|sdks/cpp .dockerignore"
   "nodejs-simple|nodejs-simple-server|version|sdks/nodejs .dockerignore"
+  "autoscaler-webhook|autoscaler-webhook|version|pkg go.mod go.sum .dockerignore"
 )
 
 push_example() {

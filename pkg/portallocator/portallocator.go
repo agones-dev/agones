@@ -42,8 +42,8 @@ type Interface interface {
 	// starts tracking Pod and Node changes
 	Run(ctx context.Context) error
 
-	// Allocate assigns a port to the GameServer and returns it.
-	Allocate(gs *agonesv1.GameServer) *agonesv1.GameServer
+	// Allocate assigns ports to the GameServer, or returns an error if a request exceeds the range capacity.
+	Allocate(gs *agonesv1.GameServer) (*agonesv1.GameServer, error)
 
 	// DeAllocate marks the given ports as no longer allocated
 	DeAllocate(gs *agonesv1.GameServer)
@@ -93,12 +93,21 @@ func (pa *portAllocator) Run(ctx context.Context) error {
 	return nil
 }
 
-// Allocate assigns a port to the GameServer and returns it.
-func (pa *portAllocator) Allocate(gs *agonesv1.GameServer) *agonesv1.GameServer {
+// Allocate assigns ports to the GameServer, or returns an error if a request exceeds the range capacity.
+func (pa *portAllocator) Allocate(gs *agonesv1.GameServer) (*agonesv1.GameServer, error) {
 	for _, a := range pa.allocators {
-		gs = a.Allocate(gs)
+		if _, err := a.requestedPorts(gs); err != nil {
+			return nil, err
+		}
 	}
-	return gs
+	for _, a := range pa.allocators {
+		allocated, err := a.Allocate(gs)
+		if err != nil {
+			return nil, err
+		}
+		gs = allocated
+	}
+	return gs, nil
 }
 
 // DeAllocate marks the given ports as no longer allocated.
@@ -177,10 +186,26 @@ func (pa *portRangeAllocator) Run(ctx context.Context) error {
 	return nil
 }
 
-// Allocate assigns a port to the GameServer and returns it.
-func (pa *portRangeAllocator) Allocate(gs *agonesv1.GameServer) *agonesv1.GameServer {
+func (pa *portRangeAllocator) requestedPorts(gs *agonesv1.GameServer) (int, error) {
+	amount := gs.CountPortsForRange(pa.name, func(policy agonesv1.PortPolicy) bool {
+		return policy == agonesv1.Dynamic || policy == agonesv1.Passthrough
+	})
+	capacity := int(pa.maxPort - pa.minPort + 1)
+	if amount > capacity {
+		return 0, pa.errs.Errorf("GameServer %s requests %d ports from range %s with capacity %d", gs.Name, amount, pa.name, capacity)
+	}
+	return amount, nil
+}
+
+// Allocate assigns ports to the GameServer, or returns an error if a request exceeds the range capacity.
+func (pa *portRangeAllocator) Allocate(gs *agonesv1.GameServer) (*agonesv1.GameServer, error) {
 	pa.mutex.Lock()
 	defer pa.mutex.Unlock()
+
+	amount, err := pa.requestedPorts(gs)
+	if err != nil {
+		return nil, err
+	}
 
 	type pn struct {
 		pa   portAllocation
@@ -196,6 +221,7 @@ func (pa *portRangeAllocator) Allocate(gs *agonesv1.GameServer) *agonesv1.GameSe
 			return ports
 		}
 		for _, n := range pa.portAllocations {
+			ports = nil
 			for p, taken := range n {
 				if !taken {
 					ports = append(ports, pn{pa: n, port: p})
@@ -206,15 +232,12 @@ func (pa *portRangeAllocator) Allocate(gs *agonesv1.GameServer) *agonesv1.GameSe
 				}
 			}
 		}
-		return ports
+		return nil
 	}
 
 	// this allows us to do recursion, within the mutex lock
 	var allocate func(gs *agonesv1.GameServer) *agonesv1.GameServer
 	allocate = func(gs *agonesv1.GameServer) *agonesv1.GameServer {
-		amount := gs.CountPortsForRange(pa.name, func(policy agonesv1.PortPolicy) bool {
-			return policy == agonesv1.Dynamic || policy == agonesv1.Passthrough
-		})
 		allocations := findOpenPorts(amount)
 
 		if len(allocations) == amount {
@@ -274,7 +297,7 @@ func (pa *portRangeAllocator) Allocate(gs *agonesv1.GameServer) *agonesv1.GameSe
 		return allocate(gs)
 	}
 
-	return allocate(gs)
+	return allocate(gs), nil
 }
 
 // DeAllocate marks the given ports as no longer allocated
