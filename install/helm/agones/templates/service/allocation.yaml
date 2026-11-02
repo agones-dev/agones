@@ -223,7 +223,8 @@ spec:
 {{ toYaml .Values.agones.allocator.tolerations | indent 8 }}
       {{- end }}
       serviceAccountName: {{ $.Values.agones.serviceaccount.allocator.name }}
-      terminationGracePeriodSeconds: {{ mul .Values.agones.allocator.readiness.periodSeconds .Values.agones.allocator.readiness.failureThreshold 3 }}
+      {{- /* Cover the whole shutdown: READINESS_SHUTDOWN_DURATION, then up to 5s of drainTimeout and 1s of worker shutdown in cmd/allocator, plus 3s of margin. */}}
+      terminationGracePeriodSeconds: {{ max (mul .Values.agones.allocator.readiness.periodSeconds .Values.agones.allocator.readiness.failureThreshold 3) (add (mul .Values.agones.allocator.readiness.periodSeconds .Values.agones.extensions.readiness.failureThreshold 2) 9) }}
       {{- if eq .Values.agones.allocator.disableTLS false }}
       volumes:
       - name: tls

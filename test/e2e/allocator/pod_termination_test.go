@@ -36,8 +36,9 @@ const (
 	retryInterval   = 5 * time.Second
 	retryTimeout    = 45 * time.Second
 	allocateTimeout = 10 * time.Second
-	// one allocation per poll tick, plus the immediate call, so the fleet can't run dry mid-drain
-	fleetReplicas = int32(retryTimeout/retryInterval) + 1
+	// allocations made retryInterval apart, enough to span the deleted allocators' shutdown.
+	// The fleet is sized from it so it can't run dry mid-drain.
+	allocations = 10
 )
 
 func TestAllocatorAfterDeleteReplica(t *testing.T) {
@@ -64,9 +65,10 @@ func TestAllocatorAfterDeleteReplica(t *testing.T) {
 
 	// create fleet
 	flt, err := helper.CreateFleetWithOpts(ctx, framework.Namespace, framework, func(f *agonesv1.Fleet) {
-		f.Spec.Replicas = fleetReplicas
+		f.Spec.Replicas = allocations
 	})
 	require.NoError(t, err)
+	defer framework.AgonesClient.AgonesV1().Fleets(framework.Namespace).Delete(ctx, flt.Name, metav1.DeleteOptions{}) //nolint:errcheck
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
 
 	logger.Infof("=== agones-allocator available, gRPC client initialized ===")
@@ -93,19 +95,19 @@ func TestAllocatorAfterDeleteReplica(t *testing.T) {
 		Metadata:                     &pb.MetaPatch{Labels: map[string]string{"gslabel": "allocatedbytest"}},
 	}
 
-	// Wait and keep making calls till we know the draining time has passed.
+	// Keep making calls till we know the draining time has passed.
 	// Each call gets its own deadline so a request stuck on a dead connection fails the test
 	// instead of hanging until the go test timeout (#4727).
-	// The call deadline derives from ctx, not the poll context: the last tick can land just before the
-	// poll deadline, which would leave that call with almost no time and fail it with DeadlineExceeded.
-	_ = wait.PollUntilContextTimeout(ctx, retryInterval, retryTimeout, true, func(context.Context) (bool, error) {
-		callCtx, cancel := context.WithTimeout(ctx, allocateTimeout)
-		defer cancel()
+	for i := range allocations {
+		if i > 0 {
+			time.Sleep(retryInterval)
+		}
 
+		callCtx, cancel := context.WithTimeout(ctx, allocateTimeout)
 		response, err := grpcClient.Allocate(callCtx, request)
+		cancel()
 		logger.Infof("err = %v (code = %v), response = %v", err, status.Code(err), response)
-		helper.ValidateAllocatorResponse(t, response)
 		require.NoError(t, err, "Failed grpc allocation request")
-		return false, nil
-	})
+		helper.ValidateAllocatorResponse(t, response)
+	}
 }
