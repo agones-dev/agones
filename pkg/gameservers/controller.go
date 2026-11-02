@@ -576,13 +576,16 @@ func (c *Controller) syncGameServerPortAllocationState(ctx context.Context, gs *
 		return gs, nil
 	}
 
-	gsCopy := c.portAllocator.Allocate(gs.DeepCopy())
+	gsCopy, err := c.portAllocator.Allocate(gs.DeepCopy())
+	if err != nil {
+		return c.moveToErrorState(ctx, gs, err.Error())
+	}
 
 	gsCopy.Status.State = agonesv1.GameServerStateCreating
 	c.recorder.Event(gs, corev1.EventTypeNormal, string(gs.Status.State), "Port allocated")
 
 	loggerForGameServer(gsCopy, c.baseLogger).Debug("Syncing Port Allocation GameServerState")
-	gs, err := c.gameServerGetter.GameServers(gs.ObjectMeta.Namespace).Update(ctx, gsCopy, metav1.UpdateOptions{})
+	gs, err = c.gameServerGetter.GameServers(gs.ObjectMeta.Namespace).Update(ctx, gsCopy, metav1.UpdateOptions{})
 	if err != nil {
 		// if the GameServer doesn't get updated with the port data, then put the port
 		// back in the pool, as it will get retried on the next pass

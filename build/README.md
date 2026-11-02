@@ -21,7 +21,7 @@ tasks you may wish to accomplish.
 - **[Cluster Setup](docs/cluster-setup.md)** - Set up GKE, Minikube, Kind, or custom clusters
 - **[Development Workflow](docs/development-workflow.md)** - Advanced development patterns and remote debugging
 - **[Dependencies](docs/dependencies.md)** - Go modules and vendoring
-- **[Performance Testing](docs/performance-testing.md)** - Performance testing setup and procedures
+- **[Performance Testing](docs/performance-testing.md)** - Manual runbook for the performance tests, which require provisioning a large, costly dedicated cluster
 - **[Troubleshooting](docs/troubleshooting.md)** - Common issues and solutions
 
 ### Reference
