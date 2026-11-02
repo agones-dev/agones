@@ -48,8 +48,8 @@ type unimplementedSDKServer struct {
 // stableSDKServer serves the stable SDK service. The Counter and List RPCs return
 // codes.Unimplemented until they are implemented on the stable API surface.
 type stableSDKServer struct {
-	stableServer
 	unimplementedSDKServer
+	stableServer
 }
 
 // NewStableSDKServer returns an implementation of the stable SDK service backed by s.
