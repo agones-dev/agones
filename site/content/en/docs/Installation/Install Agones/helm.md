@@ -112,6 +112,14 @@ The following tables lists the configurable parameters of the Agones chart and t
 | `agones.priorityClassName`       | Name of the priority classes to create                                                                                                                                                                                  | `agones-system` |
 | `agones.requireDedicatedNodes`   | Forces Agones system components to be scheduled on dedicated nodes, only applies to the GKE Standard without node auto-provisioning                                                                                     | `false`         |
 
+{{% feature publishVersion="1.62.0" %}}
+
+| Parameter             | Description                                                                                                                                                                                                 | Default |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `agones.extraObjects` | Extra Kubernetes manifests to deploy with the chart, for example an additional IPv6 Service for the ping pods. Each entry is an object or a YAML string and is rendered through [tpl](https://helm.sh/docs/howto/charts_tips_and_tricks/#using-the-tpl-function) | `[]`    |
+
+{{% /feature %}}
+
 ### Custom Resource Definitions
 
 | Parameter                                | Description                                                                                                                                                                                                                         | Default |
@@ -273,14 +281,6 @@ The following tables lists the configurable parameters of the Agones chart and t
 | Parameter | Description | Default |
 | --------- | ----------- | ------- |
 | `agones.ping.env` | Additional [environment variables](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/) to inject into the ping pod | `[]` |
-
-{{% feature publishVersion="1.62.0" %}}
-
-| Parameter | Description | Default |
-| --------- | ----------- | ------- |
-| `agones.ping.udp.additionalServices` | Extra UDP [Services][service] in front of the ping pods, for example a separate IPv6 LoadBalancer when IPv4 and IPv6 need different annotations or addresses. Each entry requires a unique `name` and accepts `port`, `serviceType`, `nodePort`, `loadBalancerIP`, `loadBalancerSourceRanges`, `externalTrafficPolicy`, `annotations`, `ipFamilyPolicy` and `ipFamilies`. Unset `port`, `serviceType` and `externalTrafficPolicy` fall back to the `agones.ping.udp` values. | `[]` |
-
-{{% /feature %}}
 
 
 
