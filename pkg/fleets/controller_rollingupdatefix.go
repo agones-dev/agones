@@ -119,6 +119,10 @@ func (c *Controller) rollingUpdateRestFixedOnReadyRollingUpdateFix(ctx context.C
 		// If the Spec.Replicas does not equal the Status.Replicas for this GameServerSet, this means
 		// that the rolling down process is currently ongoing, and we should therefore exit so we can wait for it to finish
 		if gsSet.Spec.Replicas != gsSet.Status.Replicas {
+			if gsSet.Status.Replicas > gsSet.Spec.Replicas &&
+				gsSet.Status.Replicas == gsSet.Status.AllocatedReplicas+gsSet.Status.ReservedReplicas {
+				continue
+			}
 			break
 		}
 		gsSetCopy := gsSet.DeepCopy()
