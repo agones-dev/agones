@@ -112,7 +112,7 @@ The following tables lists the configurable parameters of the Agones chart and t
 | `agones.priorityClassName`       | Name of the priority classes to create                                                                                                                                                                                  | `agones-system` |
 | `agones.requireDedicatedNodes`   | Forces Agones system components to be scheduled on dedicated nodes, only applies to the GKE Standard without node auto-provisioning                                                                                     | `false`         |
 
-{{% feature publishVersion="1.62.0" %}}
+{{% feature publishVersion="1.63.0" %}}
 
 | Parameter             | Description                                                                                                                                                                                                 | Default |
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
