@@ -10,7 +10,6 @@ Check the [Client SDK Documentation]({{< relref "_index.md" >}}) for more detail
 
 ## SDK Functionality
 
-{{% feature publishVersion="1.52.0" %}}
 | Area            | Action              | Implemented |
 |-----------------|---------------------|-------------|
 | Lifecycle       | Ready               | ✔️          |
@@ -35,34 +34,7 @@ Check the [Client SDK Documentation]({{< relref "_index.md" >}}) for more detail
 | Lists           | ListContains        | ✔️          |
 | Lists           | GetListLength       | ✔️          |
 | Lists           | GetListValues       | ✔️          |
-{{% /feature %}}
 
-{{% feature expiryVersion="1.52.0" %}}
-| Area            | Action              | Implemented |
-|-----------------|---------------------|-------------|
-| Lifecycle       | Ready               | ✔️          |
-| Lifecycle       | Health              | ✔️          |
-| Lifecycle       | Reserve             | ✔️          |
-| Lifecycle       | Allocate            | ✔️          |
-| Lifecycle       | Shutdown            | ✔️          |
-| Configuration   | GameServer          | ✔️          |
-| Configuration   | Watch               | ✔️          |
-| Metadata        | SetAnnotation       | ✔️          |
-| Metadata        | SetLabel            | ✔️          |
-| Counters        | GetCounterCount     | ❌         |
-| Counters        | SetCounterCount     | ❌         |
-| Counters        | IncrementCounter    | ❌         |
-| Counters        | DecrementCounter    | ❌         |
-| Counters        | SetCounterCapacity  | ❌         |
-| Counters        | GetCounterCapacity  | ❌         |
-| Lists           | AppendListValue     | ❌         |
-| Lists           | DeleteListValue     | ❌         |
-| Lists           | SetListCapacity     | ❌         |
-| Lists           | GetListCapacity     | ❌         |
-| Lists           | ListContains        | ❌         |
-| Lists           | GetListLength       | ❌         |
-| Lists           | GetListValues       | ❌         |
-{{% /feature %}}
 
 ## Prerequisites
 
