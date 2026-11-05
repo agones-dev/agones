@@ -33,7 +33,9 @@ The current set of `alpha`, `beta` and `stable` feature gates include:
 | Feature Name                                                                                                      | Gate                     | Default  | Stage   | Since  |
 |-------------------------------------------------------------------------------------------------------------------|--------------------------|----------|---------|--------|
 | Example Gate (not in use)                                                                                         | `Example`                | Disabled | None    | 0.13.0 |
+| [Rolling Update Surge](https://github.com/agones-dev/agones/issues/4794)                | `RollingUpdateSurge`     | Disabled | `Alpha` | 1.62.0 |
 | [Wasm Autoscaler](https://github.com/agones-dev/agones/issues/4080)                                               | `WasmAutoscaler`         | Disabled | `Alpha` | 1.54.0 |
+
 
 
 ### Beta
