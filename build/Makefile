@@ -24,7 +24,7 @@
 #
 
 # base version target. This is usually the next release.
-base_version = 1.62.0
+base_version = 1.63.0
 
 #
 # All of the following can be overwritten with environment variables
@@ -78,7 +78,7 @@ BETA_FEATURE_GATES ?= "CountsAndLists=true&GKEAutopilotExtendedDurationPods=true
 
 
 # Enable all alpha feature gates. Keep in sync with `false` (alpha) entries in pkg/util/runtime/features.go:featureDefaults
-ALPHA_FEATURE_GATES ?= "PlayerAllocationFilter=true&PlayerTracking=true&WasmAutoscaler=true&Example=true"
+ALPHA_FEATURE_GATES ?= "PlayerAllocationFilter=true&PlayerTracking=true&RollingUpdateSurge=true&WasmAutoscaler=true&Example=true"
 
 # Build with Windows support
 WITH_WINDOWS=1
