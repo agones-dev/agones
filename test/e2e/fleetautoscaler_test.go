@@ -705,7 +705,7 @@ func defaultAutoscalerWebhook(namespace string, fixedReplicasEnabled string) (*c
 			Containers: []corev1.Container{
 				{
 					Name:            "webhook",
-					Image:           framework.ExampleImage("autoscaler-webhook", "0.23"),
+					Image:           framework.ExampleImage("autoscaler-webhook", "0.24"),
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Ports: []corev1.ContainerPort{{
 						ContainerPort: 8000,
