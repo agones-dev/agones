@@ -46,10 +46,9 @@ example-image-markdown.%:
 
 # Deploys the site by taking in the base version and deploying the previous minor or patch version
 release-deploy-site: $(ensure-build-image)
-release-deploy-site: DOCKER_RUN_ARGS += -e GOFLAGS="-mod=mod" --entrypoint=/usr/local/go/bin/go
 release-deploy-site:
 	version_to_process=$(if $(VERSION),$(VERSION),$(base_version)) && \
-	version=$$($(DOCKER_RUN) run $(mount_path)/build/scripts/previousversion/main.go -version $$version_to_process) && \
+	version=$$($(DOCKER_RUN) go run -mod=mod $(mount_path)/build/scripts/previousversion/main.go -version $$version_to_process) && \
 	echo "Deploying Site Version: $$version" && \
 	$(MAKE) ENV=HUGO_ENV=snapshot site-deploy SERVICE=$$version
 
@@ -121,10 +120,9 @@ post-build-release:
 # (e.g., 1-52-1 becomes 1.52.1), which is the format needed for the Docker image tag.
 tag-deprecated-images: VERSION ?=
 tag-deprecated-images: $(ensure-build-image)
-tag-deprecated-images: DOCKER_RUN_ARGS += -e GOFLAGS="-mod=mod" --entrypoint=/usr/local/go/bin/go
 tag-deprecated-images:
 	$(if $(VERSION),,$(error VERSION is not set. Please provide the current release version.))
-	previous_version=$$($(DOCKER_RUN) run $(mount_path)/build/scripts/previousversion/main.go -version $(VERSION)| tr '-' '.') && \
+	previous_version=$$($(DOCKER_RUN) go run -mod=mod $(mount_path)/build/scripts/previousversion/main.go -version $(VERSION)| tr '-' '.') && \
 	images="agones-controller agones-extensions agones-sdk agones-allocator agones-ping agones-processor" && \
 	for image in $$images; do \
 		echo "Tagging ${release_registry}/$$image:$$previous_version as deprecated..."; \
