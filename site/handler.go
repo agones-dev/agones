@@ -41,15 +41,15 @@ type pathConfig struct {
 
 func newHandler(config []byte) (*handler, error) {
 	var parsed struct {
-		Host     string `yaml:"host,omitempty"`
 		CacheAge *int64 `yaml:"cache_max_age,omitempty"`
 		Paths    map[string]struct {
 			Repo    string `yaml:"repo,omitempty"`
 			Display string `yaml:"display,omitempty"`
 			VCS     string `yaml:"vcs,omitempty"`
 		} `yaml:"paths,omitempty"`
+		Host string `yaml:"host,omitempty"`
 	}
-	if err := yaml.Unmarshal(config, &parsed); err != nil {
+	if err := yaml.Unmarshal(config, &parsed); err != nil { //nolint:gosec // config is the operator-supplied vanity file
 		return nil, err
 	}
 	h := &handler{host: parsed.Host}
@@ -137,7 +137,7 @@ func (h *handler) serveIndex(w http.ResponseWriter, r *http.Request) {
 
 func (h *handler) serveChart(w http.ResponseWriter, r *http.Request, path string) {
 	root := "https://storage.googleapis.com/agones-chart"
-	http.Redirect(w, r, root+path, http.StatusTemporaryRedirect)
+	http.Redirect(w, r, root+path, http.StatusTemporaryRedirect) //nolint:gosec // host is fixed; path only extends the bucket path
 }
 
 func (h *handler) Host(r *http.Request) string {

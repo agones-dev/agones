@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package main is an example Fleet autoscaler compiled to WebAssembly, which keeps
+// a buffer of Ready replicas on top of the Allocated ones.
 package main
 
 import (
@@ -21,7 +23,7 @@ import (
 	"github.com/extism/go-pdk"
 )
 
-const DEFAULT_BUFFER_SIZE = 5
+const defaultBufferSize = 5
 
 // Scale makes sure there is a buffer of replicas available for the fleet.
 //
@@ -49,10 +51,10 @@ func Scale() int32 {
 	var bufferSize int32
 	b, ok := pdk.GetConfig("buffer_size")
 	if !ok {
-		bufferSize = DEFAULT_BUFFER_SIZE
+		bufferSize = defaultBufferSize
 	} else {
 		// convert b to an int32, and store it in bufferSize
-		i, err := strconv.Atoi(b)
+		i, err := strconv.ParseInt(b, 10, 32)
 		if err != nil {
 			pdk.SetErrorString(fmt.Sprintf("Failed to convert buffer_size to int32: %v", err))
 			return 1

@@ -24,5 +24,5 @@ spec:
     spec:
       containers:
         - name: supertuxkart
-          image: us-docker.pkg.dev/agones-images/examples/supertuxkart-example:0.25
+          image: us-docker.pkg.dev/agones-images/examples/supertuxkart-example:0.26
           # imagePullPolicy: Always  # add for development
