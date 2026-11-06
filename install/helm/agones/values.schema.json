@@ -5,6 +5,15 @@
     "agones": {
       "type": "object",
       "properties": {
+        "extraObjects": {
+          "type": "array",
+          "items": {
+            "type": [
+              "object",
+              "string"
+            ]
+          }
+        },
         "featureGates": {
           "type": "string"
         },
