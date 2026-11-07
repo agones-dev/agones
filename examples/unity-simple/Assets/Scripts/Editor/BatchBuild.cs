@@ -15,6 +15,8 @@
 
 using System.IO;
 using UnityEditor;
+using UnityEditor.Build.Reporting;
+using UnityEngine;
 
 namespace AgonesExample.Editor
 {
@@ -33,9 +35,16 @@ namespace AgonesExample.Editor
                 scenes = scenes,
                 locationPathName = dir + "/UnitySimpleServer.x86_64",
                 target = BuildTarget.StandaloneLinux64,
-                options = BuildOptions.EnableHeadlessMode
+                subtarget = (int)StandaloneBuildSubtarget.Server,
+                options = BuildOptions.None
             };
-            BuildPipeline.BuildPlayer(option);
+            BuildReport report = BuildPipeline.BuildPlayer(option);
+
+            // Exit with an error code so command line builds fail on a broken build.
+            if (Application.isBatchMode && report.summary.result != BuildResult.Succeeded)
+            {
+                EditorApplication.Exit(1);
+            }
         }
 
         [MenuItem("Build Tool/Build Client")]
