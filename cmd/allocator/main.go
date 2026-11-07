@@ -78,6 +78,10 @@ const (
 	// at a time can hold the listener open indefinitely (Slowloris). It caps
 	// the headers only, so streaming request bodies are unaffected.
 	readHeaderTimeout = 60 * time.Second
+
+	// drainTimeout bounds how long the servers wait for in-flight requests to finish on shutdown.
+	// terminationGracePeriodSeconds in the Helm chart budgets for it, so keep the two in sync.
+	drainTimeout = 5 * time.Second
 )
 
 const (
@@ -367,16 +371,19 @@ func main() {
 		}
 	}
 
+	// drained tracks the servers until they finish draining after listenCtx is cancelled.
+	var drained sync.WaitGroup
+
 	// If grpc and http use the same port then use a mux.
 	if conf.GRPCPort == conf.HTTPPort {
-		runMux(listenCtx, workerCtx, h, grpcHealth, conf.HTTPPort)
+		runMux(listenCtx, &drained, h, grpcHealth, conf.HTTPPort)
 	} else {
 		// Otherwise, run each on a dedicated port.
 		if validPort(conf.HTTPPort) {
-			runREST(listenCtx, workerCtx, h, conf.HTTPPort)
+			runREST(listenCtx, &drained, h, conf.HTTPPort)
 		}
 		if validPort(conf.GRPCPort) {
-			runGRPC(listenCtx, h, grpcHealth, conf.GRPCPort)
+			runGRPC(listenCtx, &drained, h, grpcHealth, conf.GRPCPort)
 		}
 	}
 
@@ -388,7 +395,10 @@ func main() {
 	// and a cascading graceful shutdown instead of multiple contexts and sleeps.
 	<-listenCtx.Done()
 	logger.Infof("Listen context cancelled")
-	time.Sleep(5 * time.Second)
+	// In-flight requests depend on workerCtx (e.g. the allocation batch loop), so wait for the
+	// servers to drain, which is bounded by drainTimeout, before cancelling it.
+	drained.Wait()
+	logger.Info("Servers drained")
 	cancelWorkerCtx()
 	logger.Infof("Worker context cancelled")
 	time.Sleep(1 * time.Second)
@@ -400,7 +410,7 @@ func validPort(port int) bool {
 	return port >= 0 && port < maxPort
 }
 
-func runMux(listenCtx context.Context, workerCtx context.Context, h *serviceHandler, grpcHealth *grpchealth.Server, httpPort int) {
+func runMux(listenCtx context.Context, drained *sync.WaitGroup, h *serviceHandler, grpcHealth *grpchealth.Server, httpPort int) {
 	logger.Infof("Running the mux handler on port %d", httpPort)
 	grpcServer := grpc.NewServer(h.getMuxServerOptions()...)
 	pb.RegisterAllocationServiceServer(grpcServer, h)
@@ -411,19 +421,20 @@ func runMux(listenCtx context.Context, workerCtx context.Context, h *serviceHand
 		panic(err)
 	}
 
-	runHTTP(listenCtx, workerCtx, h, httpPort, grpcHandlerFunc(grpcServer, mux))
+	// gRPC calls are served through the HTTP server here, so its Shutdown drains them as well.
+	runHTTP(listenCtx, drained, h, httpPort, grpcHandlerFunc(grpcServer, mux))
 }
 
-func runREST(listenCtx context.Context, workerCtx context.Context, h *serviceHandler, httpPort int) {
+func runREST(listenCtx context.Context, drained *sync.WaitGroup, h *serviceHandler, httpPort int) {
 	logger.WithField("port", httpPort).Info("Running the rest handler")
 	mux := runtime.NewServerMux()
 	if err := pb.RegisterAllocationServiceHandlerServer(context.Background(), mux, h); err != nil {
 		panic(err)
 	}
-	runHTTP(listenCtx, workerCtx, h, httpPort, mux)
+	runHTTP(listenCtx, drained, h, httpPort, mux)
 }
 
-func runHTTP(listenCtx context.Context, workerCtx context.Context, h *serviceHandler, httpPort int, handler http.Handler) {
+func runHTTP(listenCtx context.Context, drained *sync.WaitGroup, h *serviceHandler, httpPort int, handler http.Handler) {
 	cfg := &tls.Config{}
 	if !h.tlsDisabled {
 		cfg.GetCertificate = h.getTLSCert
@@ -442,12 +453,17 @@ func runHTTP(listenCtx context.Context, workerCtx context.Context, h *serviceHan
 		ReadHeaderTimeout: readHeaderTimeout,
 	}
 
-	go func() {
-		go func() {
-			<-listenCtx.Done()
-			_ = server.Shutdown(workerCtx)
-		}()
+	drained.Go(func() {
+		<-listenCtx.Done()
+		// listenCtx is already cancelled here, so drop its cancellation and give Shutdown its own deadline.
+		ctx, cancel := context.WithTimeout(context.WithoutCancel(listenCtx), drainTimeout)
+		defer cancel()
+		if err := server.Shutdown(ctx); err != nil {
+			logger.WithError(err).Warn("HTTP/HTTPS server did not drain before the timeout")
+		}
+	})
 
+	go func() {
 		var err error
 		if !h.tlsDisabled {
 			err = server.ListenAndServeTLS("", "")
@@ -455,9 +471,11 @@ func runHTTP(listenCtx context.Context, workerCtx context.Context, h *serviceHan
 			err = server.ListenAndServe()
 		}
 
+		// ErrServerClosed is returned as soon as Shutdown starts, so return and let main
+		// wait on drained rather than exiting here.
 		if stderrors.Is(err, http.ErrServerClosed) {
 			logger.WithError(err).Info("HTTP/HTTPS server closed")
-			os.Exit(0)
+			return
 		}
 		logger.WithError(err).Fatal("Unable to start HTTP/HTTPS listener")
 		os.Exit(1)
@@ -465,7 +483,7 @@ func runHTTP(listenCtx context.Context, workerCtx context.Context, h *serviceHan
 	}()
 }
 
-func runGRPC(ctx context.Context, h *serviceHandler, grpcHealth *grpchealth.Server, grpcPort int) {
+func runGRPC(ctx context.Context, drained *sync.WaitGroup, h *serviceHandler, grpcHealth *grpchealth.Server, grpcPort int) {
 	logger.WithField("port", grpcPort).Info("Running the grpc handler on port")
 	listener, err := (&net.ListenConfig{}).Listen(ctx, "tcp", fmt.Sprintf(":%d", grpcPort))
 	if err != nil {
@@ -477,20 +495,23 @@ func runGRPC(ctx context.Context, h *serviceHandler, grpcHealth *grpchealth.Serv
 	pb.RegisterAllocationServiceServer(grpcServer, h)
 	grpc_health_v1.RegisterHealthServer(grpcServer, grpcHealth)
 
-	go func() {
-		go func() {
-			<-ctx.Done()
-			grpcServer.GracefulStop()
-		}()
+	drained.Go(func() {
+		<-ctx.Done()
+		// Stop makes a GracefulStop that is still waiting on in-flight calls return.
+		forceStop := time.AfterFunc(drainTimeout, grpcServer.Stop)
+		defer forceStop.Stop()
+		grpcServer.GracefulStop()
+	})
 
+	go func() {
 		err := grpcServer.Serve(listener)
 		if err != nil {
 			logger.WithError(err).Fatal("allocation service crashed")
 			os.Exit(1)
 		}
+		// Serve returns once the listener closes, while GracefulStop may still be draining,
+		// so let main wait on drained instead of exiting here.
 		logger.Info("allocation server closed")
-		os.Exit(0)
-
 	}()
 }
 
