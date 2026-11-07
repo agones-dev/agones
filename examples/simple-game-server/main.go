@@ -52,19 +52,19 @@ func main() {
 		port = &ep
 	}
 	if epass := os.Getenv("PASSTHROUGH"); epass != "" {
-		p := strings.ToUpper(epass) == "TRUE"
+		p := strings.EqualFold(epass, "TRUE")
 		passthrough = &p
 	}
 	if eready := os.Getenv("READY"); eready != "" {
-		r := strings.ToUpper(eready) == "TRUE"
+		r := strings.EqualFold(eready, "TRUE")
 		readyOnStart = &r
 	}
 	if eudp := os.Getenv("UDP"); eudp != "" {
-		u := strings.ToUpper(eudp) == "TRUE"
+		u := strings.EqualFold(eudp, "TRUE")
 		udp = &u
 	}
 	if etcp := os.Getenv("TCP"); etcp != "" {
-		t := strings.ToUpper(etcp) == "TRUE"
+		t := strings.EqualFold(etcp, "TRUE")
 		tcp = &t
 	}
 
@@ -84,7 +84,7 @@ func main() {
 
 	log.Print("Starting Health Ping")
 	ctx, cancel := context.WithCancel(context.Background())
-	go doHealth(s, ctx)
+	go doHealth(ctx, s)
 
 	if *passthrough {
 		var gs *coresdk.GameServer
@@ -93,7 +93,7 @@ func main() {
 			log.Fatalf("Could not get gameserver port details: %s", err)
 		}
 
-		p := strconv.FormatInt(int64(gs.Status.Ports[0].Port), 10)
+		p := strconv.FormatInt(int64(gs.GetStatus().GetPorts()[0].GetPort()), 10)
 		port = &p
 	}
 
@@ -150,17 +150,17 @@ func shutdownAfterNAllocations(s *sdk.SDK, readyIterations, shutdownDelaySec int
 	if err != nil {
 		log.Fatalf("Could not get game server: %v", err)
 	}
-	log.Printf("Initial game Server state = %s", gs.Status.State)
+	log.Printf("Initial game Server state = %s", gs.GetStatus().GetState())
 
 	m := sync.Mutex{} // protects the following two variables
-	lastAllocated := gs.ObjectMeta.Annotations["agones.dev/last-allocated"]
+	lastAllocated := gs.GetObjectMeta().GetAnnotations()["agones.dev/last-allocated"]
 	remainingIterations := readyIterations
 
 	if err := s.WatchGameServer(func(gs *coresdk.GameServer) {
 		m.Lock()
 		defer m.Unlock()
-		la := gs.ObjectMeta.Annotations["agones.dev/last-allocated"]
-		log.Printf("Watch Game Server callback fired. State = %s, Last Allocated = %q", gs.Status.State, la)
+		la := gs.GetObjectMeta().GetAnnotations()["agones.dev/last-allocated"]
+		log.Printf("Watch Game Server callback fired. State = %s, Last Allocated = %q", gs.GetStatus().GetState(), la)
 		if lastAllocated != la {
 			log.Println("Game Server Allocated")
 			lastAllocated = la
@@ -185,7 +185,6 @@ func shutdownAfterNAllocations(s *sdk.SDK, readyIterations, shutdownDelaySec int
 				}
 				// The process will exit when Agones removes the pod and the
 				// container receives the SIGTERM signal
-				return
 			}(remainingIterations)
 		}
 	}); err != nil {
@@ -195,7 +194,7 @@ func shutdownAfterNAllocations(s *sdk.SDK, readyIterations, shutdownDelaySec int
 
 func udpListener(port *string, s *sdk.SDK, cancel context.CancelFunc, ready *sync.WaitGroup) {
 	log.Printf("Starting UDP server, listening on port %s", *port)
-	conn, err := net.ListenPacket("udp", ":"+*port)
+	conn, err := (&net.ListenConfig{}).ListenPacket(context.Background(), "udp", ":"+*port)
 	if err != nil {
 		log.Fatalf("Could not start UDP server: %v", err)
 	}
@@ -220,7 +219,7 @@ func udpReadWriteLoop(conn net.PacketConn, cancel context.CancelFunc, s *sdk.SDK
 
 		udpRespond(conn, sender, response)
 
-		if txt == "EXIT" {
+		if txt == exitCommand {
 			exit(s)
 		}
 	}
@@ -235,7 +234,7 @@ func udpRespond(conn net.PacketConn, sender net.Addr, txt string) {
 
 func tcpListener(port *string, s *sdk.SDK, cancel context.CancelFunc, ready *sync.WaitGroup) {
 	log.Printf("Starting TCP server, listening on port %s", *port)
-	ln, err := net.Listen("tcp", ":"+*port)
+	ln, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", ":"+*port)
 	if err != nil {
 		log.Fatalf("Could not start TCP server: %v", err)
 	}
@@ -273,7 +272,7 @@ func tcpHandleCommand(conn net.Conn, txt string, s *sdk.SDK, cancel context.Canc
 
 	tcpRespond(conn, response)
 
-	if response == "EXIT" {
+	if response == exitCommand {
 		exit(s)
 	}
 }
@@ -298,11 +297,11 @@ func readPacket(conn net.PacketConn, b []byte) (net.Addr, string) {
 }
 
 // doHealth sends the regular Health Pings
-func doHealth(sdk *sdk.SDK, ctx context.Context) {
+func doHealth(ctx context.Context, s *sdk.SDK) {
 	tick := time.Tick(2 * time.Second)
 	for {
 		log.Printf("Health Ping")
-		err := sdk.Health()
+		err := s.Health()
 		if err != nil {
 			log.Fatalf("Could not send health ping, %v", err)
 		}
