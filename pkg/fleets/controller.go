@@ -536,7 +536,8 @@ func (c *Controller) rollingUpdateActive(fleet *agonesv1.Fleet, active *agonesv1
 	if err != nil {
 		return 0, c.errs.Wrapf(err, "error parsing MaxSurge value: %s", fleet.ObjectMeta.Name)
 	}
-	surge := int32(r)
+	// Validate caps a percentage MaxSurge at 99% of Spec.Replicas, and an integer one is an int32.
+	surge := int32(r) //nolint:gosec // G115: bounded by Fleet validation, see above.
 
 	// make sure we don't end up with more than the configured max surge
 	maxSurge := surge + fleet.Spec.Replicas
@@ -635,7 +636,7 @@ func (c *Controller) rollingUpdateRest(ctx context.Context, fleet *agonesv1.Flee
 		if gsSet.Status.ShutdownReplicas == 0 {
 			// Wait for new GameServers to become Ready before scaling down Inactive GameServerset
 			// Scale down.
-			scaleDownCount := int32(min(int(gsSet.Spec.Replicas), int(totalScaleDownCount-totalAlreadyScaledDown)))
+			scaleDownCount := min(gsSet.Spec.Replicas, totalScaleDownCount-totalAlreadyScaledDown)
 
 			newReplicasCount := gsSet.Spec.Replicas - scaleDownCount
 			if newReplicasCount > gsSet.Spec.Replicas {
@@ -688,7 +689,7 @@ func (c *Controller) cleanupUnhealthyReplicas(ctx context.Context, rest []*agone
 			continue
 		}
 
-		scaledDownCount := int32(min(int(maxCleanupCount-totalScaledDown), int(gsSet.Spec.Replicas-healthy)))
+		scaledDownCount := min(maxCleanupCount-totalScaledDown, gsSet.Spec.Replicas-healthy)
 		newReplicasCount := gsSet.Spec.Replicas - scaledDownCount
 		if newReplicasCount > gsSet.Spec.Replicas {
 			return nil, 0, c.errs.Errorf("when cleaning up unhealthy replicas, got invalid request to scale down %s/%s %d -> %d", gsSet.Namespace, gsSet.Name, gsSet.Spec.Replicas, newReplicasCount)
