@@ -25,12 +25,16 @@ kubectl get secret allocator-client.default -n ${NAMESPACE} -ojsonpath="{.data.t
 kubectl get secret allocator-client.default -n ${NAMESPACE} -ojsonpath="{.data.tls\.key}" | base64 -d > client.key
 kubectl get secret allocator-tls-ca -n agones-system -ojsonpath='{.data.tls-ca\.crt}' | base64 -d > ca.crt
 
-EXTERNAL_IP=$(kubectl get services agones-allocator -n agones-system -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+EXTERNAL_IP=""
+while [ -z "${EXTERNAL_IP}" ]; do
+  EXTERNAL_IP=$(kubectl get services agones-allocator -n agones-system -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+  [ -z "${EXTERNAL_IP}" ] && sleep 5
+done
 KEY_FILE=${KEY_FILE:-client.key}
 CERT_FILE=${CERT_FILE:-client.crt}
 TLS_CA_FILE=${TLS_CA_FILE:-ca.crt}
 MULTICLUSTER=${MULTICLUSTER:-false}
 
-go run runscenario/runscenario.go --ip ${EXTERNAL_IP} --namespace ${NAMESPACE} \
-  --key ${KEY_FILE} --cert ${CERT_FILE} --cacert ${TLS_CA_FILE} \
-  --scenariosFile ${1}
+go run runscenario/runscenario.go --ip "${EXTERNAL_IP}" --namespace "${NAMESPACE}" \
+  --key "${KEY_FILE}" --cert "${CERT_FILE}" --cacert "${TLS_CA_FILE}" \
+  --scenariosFile "${1}"
