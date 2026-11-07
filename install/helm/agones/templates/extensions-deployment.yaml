@@ -159,6 +159,15 @@ spec:
           value: {{ .Values.agones.extensions.webhooks.port | quote }}
         - name: HTTP_PORT
           value: {{ .Values.agones.extensions.http.port | quote }}
+{{- $featureGates := include "agones.featureGates" . | fromYaml }}
+{{- if $featureGates.ProcessorAllocator }}
+        - name: PROCESSOR_MAX_BATCH_SIZE
+          value: {{ .Values.agones.allocator.processor.maxBatchSize | quote }}
+        - name: PROCESSOR_GRPC_ADDRESS
+          value: {{ .Values.agones.allocator.processor.grpc.address | quote }}
+        - name: PROCESSOR_GRPC_PORT
+          value: {{ .Values.agones.allocator.processor.grpc.port | quote }}
+{{- end }}
 {{- if .Values.agones.extensions.env }}
         {{- toYaml .Values.agones.extensions.env | nindent 8 }}
 {{- end }}

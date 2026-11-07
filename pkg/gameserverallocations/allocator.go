@@ -475,8 +475,13 @@ func (c *Allocator) allocate(ctx context.Context, gsa *allocationv1.GameServerAl
 		return nil, ErrTotalTimeoutExceeded
 	}
 
-	// this pushes the request into the batching process
-	c.pendingRequests <- req
+	// this pushes the request into the batching process, giving up if the context is done while
+	// the queue is full
+	select {
+	case c.pendingRequests <- req:
+	case <-ctx.Done():
+		return nil, ErrTotalTimeoutExceeded
+	}
 
 	select {
 	case res := <-req.response: // wait for the batch to be completed
