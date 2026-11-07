@@ -185,7 +185,7 @@ func main() {
 				logger.WithError(err).Fatalf("Could not run sidecar")
 			}
 		}()
-		sdk.RegisterSDKServer(grpcServer, s)
+		sdk.RegisterSDKServer(grpcServer, sdkserver.NewStableSDKServer(s))
 		sdkalpha.RegisterSDKServer(grpcServer, s)
 		sdkbeta.RegisterSDKServer(grpcServer, s)
 	}
@@ -219,7 +219,7 @@ func registerLocal(grpcServer *grpc.Server, ctlConf config) (func(), error) {
 		return nil, err
 	}
 
-	sdk.RegisterSDKServer(grpcServer, s)
+	sdk.RegisterSDKServer(grpcServer, sdkserver.NewStableSDKServer(s))
 	sdkalpha.RegisterSDKServer(grpcServer, s)
 	sdkbeta.RegisterSDKServer(grpcServer, s)
 
@@ -242,7 +242,7 @@ func registerTestSdkServer(grpcServer *grpc.Server, ctlConf config) (func(), err
 	s.SetExpectedSequence(expectedFuncs)
 	s.SetSdkName(ctlConf.TestSdkName)
 
-	sdk.RegisterSDKServer(grpcServer, s)
+	sdk.RegisterSDKServer(grpcServer, sdkserver.NewStableSDKServer(s))
 	sdkalpha.RegisterSDKServer(grpcServer, s)
 	sdkbeta.RegisterSDKServer(grpcServer, s)
 	return func() {
