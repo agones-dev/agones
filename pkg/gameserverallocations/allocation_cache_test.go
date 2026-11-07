@@ -16,9 +16,12 @@ package gameserverallocations
 
 import (
 	"context"
+	"fmt"
+	"strconv"
 	"testing"
 	"time"
 
+	"agones.dev/agones/pkg/apis"
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
 	allocationv1 "agones.dev/agones/pkg/apis/allocation/v1"
 	"agones.dev/agones/pkg/gameservers"
@@ -30,6 +33,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/watch"
 	k8stesting "k8s.io/client-go/testing"
@@ -577,6 +581,249 @@ func TestAllocatorRunCacheSync(t *testing.T) {
 	// now actually delete it
 	gsWatch.Delete(gs.DeepCopy())
 	assertCacheEntries(0)
+}
+
+func TestAllocationCacheReorderGameServerAfterAllocation(t *testing.T) {
+	t.Parallel()
+
+	newGs := func(i int, node string, state agonesv1.GameServerState) agonesv1.GameServer {
+		name := fmt.Sprintf("gs%d", i)
+		return agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: defaultNs, UID: types.UID(strconv.Itoa(i))},
+			Status: agonesv1.GameServerStatus{NodeName: node, State: state}}
+	}
+	// withPlayers sets the same number of players in the Players status, the "players" counter and the "players" list
+	withPlayers := func(gs agonesv1.GameServer, count int) agonesv1.GameServer {
+		values := make([]string, count)
+		for i := range values {
+			values[i] = fmt.Sprintf("player%d", i)
+		}
+		gs.Status.Players = &agonesv1.PlayerStatus{Count: int64(count), Capacity: 10}
+		gs.Status.Counters = map[string]agonesv1.CounterStatus{"players": {Count: int64(count), Capacity: 10}}
+		gs.Status.Lists = map[string]agonesv1.ListStatus{"players": {Values: values, Capacity: 10}}
+		return gs
+	}
+
+	ready, allocated := agonesv1.GameServerStateReady, agonesv1.GameServerStateAllocated
+	gs0Allocated := newGs(0, "node0", allocated)
+	gs1, gs1Allocated := newGs(1, "node0", ready), newGs(1, "node0", allocated)
+	gs2, gs2Allocated := newGs(2, "node0", ready), newGs(2, "node0", allocated)
+	gs3 := newGs(3, "node1", ready)
+	gs4 := withPlayers(newGs(4, "node1", allocated), 3)
+	gs5, gs5Allocated := withPlayers(newGs(5, "node1", allocated), 2), withPlayers(newGs(5, "node1", allocated), 5)
+	gs6 := withPlayers(newGs(6, "node1", allocated), 1)
+
+	counterPriority := []agonesv1.Priority{{Type: "Counter", Key: "players", Order: "Ascending"}}
+	listPriority := []agonesv1.Priority{{Type: "List", Key: "players", Order: "Descending"}}
+
+	fixtures := map[string]struct {
+		list             []*agonesv1.GameServer
+		priorities       []agonesv1.Priority
+		packingStrategy  apis.SchedulingStrategy
+		gsToReorder      *agonesv1.GameServer
+		gsToReorderIndex int
+		want             []*agonesv1.GameServer
+	}{
+		"packed (no change)": {
+			list:             []*agonesv1.GameServer{&gs0Allocated, &gs1, &gs2, &gs3},
+			gsToReorder:      &gs1Allocated,
+			gsToReorderIndex: 1,
+			want:             []*agonesv1.GameServer{&gs0Allocated, &gs1Allocated, &gs2, &gs3},
+		},
+		"packed": {
+			list:             []*agonesv1.GameServer{&gs0Allocated, &gs1, &gs2, &gs3},
+			gsToReorder:      &gs2Allocated,
+			gsToReorderIndex: 2,
+			want:             []*agonesv1.GameServer{&gs0Allocated, &gs2Allocated, &gs1, &gs3},
+		},
+		"packed (sort by name)": {
+			list:             []*agonesv1.GameServer{&gs0Allocated, &gs2Allocated, &gs1, &gs3},
+			gsToReorder:      &gs1Allocated,
+			gsToReorderIndex: 2,
+			want:             []*agonesv1.GameServer{&gs0Allocated, &gs1Allocated, &gs2Allocated, &gs3},
+		},
+		"packed (all ready)": {
+			list:             []*agonesv1.GameServer{&gs1, &gs2, &gs3},
+			gsToReorder:      &gs1Allocated,
+			gsToReorderIndex: 0,
+			want:             []*agonesv1.GameServer{&gs1Allocated, &gs2, &gs3},
+		},
+		"packed (only one)": {
+			list:             []*agonesv1.GameServer{&gs1},
+			gsToReorder:      &gs1Allocated,
+			gsToReorderIndex: 0,
+			want:             []*agonesv1.GameServer{&gs1Allocated},
+		},
+		"packed (priority counter)": {
+			list:             []*agonesv1.GameServer{&gs4, &gs5, &gs6},
+			priorities:       counterPriority,
+			gsToReorder:      &gs5Allocated,
+			gsToReorderIndex: 1,
+			want:             []*agonesv1.GameServer{&gs5Allocated, &gs4, &gs6},
+		},
+		"packed (priority list)": {
+			list:             []*agonesv1.GameServer{&gs6, &gs5, &gs4},
+			priorities:       listPriority,
+			gsToReorder:      &gs5Allocated,
+			gsToReorderIndex: 1,
+			want:             []*agonesv1.GameServer{&gs6, &gs4, &gs5Allocated},
+		},
+		"distributed (no change)": {
+			list:             []*agonesv1.GameServer{&gs0Allocated, &gs1, &gs2, &gs3},
+			packingStrategy:  apis.Distributed,
+			gsToReorder:      &gs2Allocated,
+			gsToReorderIndex: 2,
+			want:             []*agonesv1.GameServer{&gs0Allocated, &gs1, &gs2Allocated, &gs3},
+		},
+		"distributed (only one)": {
+			list:             []*agonesv1.GameServer{&gs1},
+			packingStrategy:  apis.Distributed,
+			gsToReorder:      &gs1Allocated,
+			gsToReorderIndex: 0,
+			want:             []*agonesv1.GameServer{&gs1Allocated},
+		},
+		"distributed (priority counter)": {
+			list:             []*agonesv1.GameServer{&gs4, &gs5, &gs6},
+			priorities:       counterPriority,
+			packingStrategy:  apis.Distributed,
+			gsToReorder:      &gs5Allocated,
+			gsToReorderIndex: 1,
+			want:             []*agonesv1.GameServer{&gs5Allocated, &gs4, &gs6},
+		},
+		"distributed (priority list)": {
+			list:             []*agonesv1.GameServer{&gs6, &gs5, &gs4},
+			priorities:       listPriority,
+			packingStrategy:  apis.Distributed,
+			gsToReorder:      &gs5Allocated,
+			gsToReorderIndex: 1,
+			want:             []*agonesv1.GameServer{&gs6, &gs4, &gs5Allocated},
+		},
+	}
+
+	for testName, testScenario := range fixtures {
+		t.Run(testName, func(t *testing.T) {
+			cache, m := newFakeAllocationCache()
+
+			items := make([]agonesv1.GameServer, len(testScenario.list))
+			for i, gs := range testScenario.list {
+				items[i] = *gs
+			}
+			m.AgonesClient.AddReactor("list", "gameservers", func(_ k8stesting.Action) (bool, k8sruntime.Object, error) {
+				return true, &agonesv1.GameServerList{Items: items}, nil
+			})
+
+			ctx, cancel := agtesting.StartInformers(m, cache.gameServerSynced)
+			defer cancel()
+
+			err := cache.syncCache()
+			assert.NoError(t, err)
+
+			err = cache.counter.Run(ctx, 0)
+			assert.NoError(t, err)
+
+			strategy := apis.Packed
+			if testScenario.packingStrategy != "" {
+				strategy = testScenario.packingStrategy
+			}
+
+			cache.ReorderGameServerAfterAllocation(
+				testScenario.list,
+				testScenario.gsToReorderIndex, testScenario.gsToReorder,
+				testScenario.priorities, strategy)
+
+			if !assert.Equal(t, testScenario.want, testScenario.list, "reordered list should match expected") {
+				for _, gs := range testScenario.list {
+					t.Logf("%s, ", gs.Name)
+				}
+			}
+		})
+	}
+}
+
+func TestAllocationCacheGetGameServer(t *testing.T) {
+	t.Parallel()
+
+	a, _ := newFakeAllocator()
+	gs := &agonesv1.GameServer{
+		ObjectMeta: metav1.ObjectMeta{Name: "gs1", Namespace: defaultNs, UID: "1", ResourceVersion: "1"},
+		Status:     agonesv1.GameServerStatus{State: agonesv1.GameServerStateReady},
+	}
+
+	_, ok := a.allocationCache.GetGameServer("default/gs1")
+	assert.False(t, ok)
+
+	a.allocationCache.AddGameServer(gs)
+
+	got, ok := a.allocationCache.GetGameServer("default/gs1")
+	require.True(t, ok)
+	assert.Equal(t, gs, got)
+
+	_, ok = a.allocationCache.GetGameServer("default/gs2")
+	assert.False(t, ok)
+}
+
+func TestAllocationCacheRefreshGameServer(t *testing.T) {
+	t.Parallel()
+
+	const key = "default/gs1"
+	now := metav1.Now()
+	newGs := func(resourceVersion string, state agonesv1.GameServerState) *agonesv1.GameServer {
+		return &agonesv1.GameServer{
+			ObjectMeta: metav1.ObjectMeta{Name: "gs1", Namespace: defaultNs, UID: "1", ResourceVersion: resourceVersion},
+			Status:     agonesv1.GameServerStatus{State: state},
+		}
+	}
+
+	testCases := map[string]struct {
+		cached   *agonesv1.GameServer
+		live     *agonesv1.GameServer
+		wantInRV string
+	}{
+		"an allocatable GameServer replaces the cached one": {
+			cached:   newGs("1", agonesv1.GameServerStateAllocated),
+			live:     newGs("2", agonesv1.GameServerStateAllocated),
+			wantInRV: "2",
+		},
+		"an allocatable GameServer is added when not cached": {
+			live:     newGs("2", agonesv1.GameServerStateReady),
+			wantInRV: "2",
+		},
+		"a GameServer that is no longer allocatable is removed": {
+			cached: newGs("1", agonesv1.GameServerStateAllocated),
+			live:   newGs("2", agonesv1.GameServerStateShutdown),
+		},
+		"a GameServer being deleted is removed": {
+			cached: newGs("1", agonesv1.GameServerStateReady),
+			live: func() *agonesv1.GameServer {
+				gs := newGs("2", agonesv1.GameServerStateReady)
+				gs.ObjectMeta.DeletionTimestamp = &now
+				return gs
+			}(),
+		},
+		"a GameServer that is not allocatable and not cached is a no-op": {
+			live: newGs("2", agonesv1.GameServerStateShutdown),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			a, _ := newFakeAllocator()
+			if tc.cached != nil {
+				a.allocationCache.AddGameServer(tc.cached)
+			}
+
+			a.allocationCache.refreshGameServer(tc.live)
+
+			got, ok := a.allocationCache.GetGameServer(key)
+			if tc.wantInRV == "" {
+				assert.False(t, ok)
+				return
+			}
+			require.True(t, ok)
+			assert.Equal(t, tc.wantInRV, got.ObjectMeta.ResourceVersion)
+		})
+	}
 }
 
 func newFakeAllocationCache() (*AllocationCache, agtesting.Mocks) {
