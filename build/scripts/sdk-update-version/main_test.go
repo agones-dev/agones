@@ -124,6 +124,30 @@ func TestUpdateFile(t *testing.T) {
 			"1.2.3",
 			`{"version": "1.2.4"}`,
 		},
+		{
+			"before-pyproject",
+			"before",
+			"sdks/python/pyproject.toml",
+			"version = \"1.2.3-dev\"\ndev = [\n    \"grpcio-tools==1.2.3-dev\",\n]\n",
+			"1.2.3",
+			"version = \"1.2.3\"\ndev = [\n    \"grpcio-tools==1.2.3-dev\",\n]\n",
+		},
+		{
+			"after-pyproject",
+			"after",
+			"sdks/python/pyproject.toml",
+			"version = \"1.2.3\"\ndev = [\n    \"grpcio-tools==1.2.3\",\n]\n",
+			"1.2.3",
+			"version = \"1.3.3-dev\"\ndev = [\n    \"grpcio-tools==1.2.3\",\n]\n",
+		},
+		{
+			"patch-pyproject",
+			"patch",
+			"sdks/python/pyproject.toml",
+			"version = \"1.2.3\"\ndev = [\n    \"grpcio-tools==1.2.3\",\n]\n",
+			"1.2.3",
+			"version = \"1.2.4\"\ndev = [\n    \"grpcio-tools==1.2.3\",\n]\n",
+		},
 	}
 
 	for _, tc := range testCases {

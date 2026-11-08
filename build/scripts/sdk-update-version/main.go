@@ -30,6 +30,10 @@ var version string
 
 const jsonExt string = ".json"
 
+// pyprojectVersionLine matches only the package `version = "..."` line in a pyproject.toml file,
+// so that dependency pins that happen to look like an Agones version (e.g. grpcio-tools) are left untouched.
+var pyprojectVersionLine = regexp.MustCompile(`(?m)^version\s*=\s*"[^"]*"`)
+
 func init() {
 	flag.StringVar(&releaseStage, "release-stage", "", "Specify the release stage ('before', 'after', or 'patch')")
 	flag.StringVar(&version, "version", "", "Specify the initial version")
@@ -80,6 +84,25 @@ func updateFile(filename string, version string) error {
 
 	content := string(fileBytes)
 
+	if filepath.Base(filename) == "pyproject.toml" {
+		// Only update the package version line, not dependency versions.
+		content = pyprojectVersionLine.ReplaceAllStringFunc(content, func(line string) string {
+			return replaceVersion(line, filename, version)
+		})
+	} else {
+		content = replaceVersion(content, filename, version)
+	}
+
+	err = os.WriteFile(filename, []byte(content), 0o644)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// replaceVersion applies the version change for the current release stage to content.
+func replaceVersion(content string, filename string, version string) string {
 	ext := filepath.Ext(filename)
 
 	switch releaseStage {
@@ -118,12 +141,7 @@ func updateFile(filename string, version string) error {
 		log.Fatalf("Invalid release stage. Please specify 'before', 'after', or 'patch'.")
 	}
 
-	err = os.WriteFile(filename, []byte(content), 0o644)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return content
 }
 
 func incrementVersionAfterRelease(version string) string {
