@@ -64,12 +64,11 @@ import (
 type Operation string
 
 const (
-	updateState      Operation     = "updateState"
-	updateLabel      Operation     = "updateLabel"
-	updateAnnotation Operation     = "updateAnnotation"
-	updateCounters   Operation     = "updateCounters"
-	updateLists      Operation     = "updateLists"
-	updatePeriod     time.Duration = time.Second
+	updateState      Operation = "updateState"
+	updateLabel      Operation = "updateLabel"
+	updateAnnotation Operation = "updateAnnotation"
+	updateCounters   Operation = "updateCounters"
+	updateLists      Operation = "updateLists"
 )
 
 // readHeaderTimeout bounds how long a client may take to send its request
