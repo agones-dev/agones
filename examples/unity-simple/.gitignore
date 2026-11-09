@@ -3,6 +3,14 @@
 [Oo]bj/
 [Bb]uild/
 [Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emoryCaptures/
+[Rr]ecordings/
+
+# Auto-generated lighting data
+Assets/Scenes/AgonesUnitySimple/
+Assets/Scenes/AgonesUnitySimple.meta
 Assets/AssetStoreTools*
 
 # Visual Studio cache directory

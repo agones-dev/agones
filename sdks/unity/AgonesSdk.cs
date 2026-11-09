@@ -252,7 +252,7 @@ namespace Agones
                 {
                     callback(gs);
                 }
-                catch (Exception ignore) { } // Ignore callback exceptions
+                catch (Exception) { } // Ignore callback exceptions
             });
         }
 
@@ -416,7 +416,7 @@ namespace Agones
                         var gameServer = new GameServer(dictionary["result"] as Dictionary<string, object>);
                         this.sdk.NotifyWatchUpdates(gameServer);
                     }
-                    catch (Exception ignore) { } // Ignore parse errors
+                    catch (Exception) { } // Ignore parse errors
                     bufferString = bufferString.Substring(newlineIndex + 1);
                 }
 

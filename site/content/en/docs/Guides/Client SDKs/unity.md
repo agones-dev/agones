@@ -56,13 +56,20 @@ If you want a specific release, the dependency can be pinned to that version. Fo
 
 `"com.googleforgames.agones": "https://github.com/agones-dev/agones.git?path=/sdks/unity#v{{< release-version >}}",`
 
+If you have a local copy of the SDK, you can reference it as a local package instead, with a path relative to your
+project's `Packages` folder:
+
+`"com.googleforgames.agones": "file:../path/to/agones/sdks/unity",`
+
+The {{< ghlink href="examples/unity-simple" >}}Unity Simple example{{< /ghlink >}} uses this approach.
+
 ## Download
 
 Download the source {{< ghlink href="sdks/unity" >}}directly from GitHub{{< /ghlink >}}.
 
 ## Prerequisites
 
-- Unity >= 2018.x (.NET 4.x)
+- Unity >= 2021.2 (.NET 4.x)
 
 ## Usage
 

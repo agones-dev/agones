@@ -28,7 +28,6 @@ namespace Tests.Runtime.Agones
 
         private AgonesSdk sdk;
         private AgonesBetaSdk betaSdk;
-        private AgonesAlphaSdk alphaSdk;
 
         [UnitySetUp]
         public IEnumerator UnitySetUp()
@@ -38,11 +37,9 @@ namespace Tests.Runtime.Agones
 
             this.sdk = gameObject.AddComponent<AgonesSdk>();
             this.betaSdk = gameObject.AddComponent<AgonesBetaSdk>();
-            this.alphaSdk = gameObject.AddComponent<AgonesAlphaSdk>();
 
             Assert.IsNotNull(this.sdk);
             Assert.IsNotNull(this.betaSdk);
-            Assert.IsNotNull(this.alphaSdk);
         }
 
         [UnityTest]
