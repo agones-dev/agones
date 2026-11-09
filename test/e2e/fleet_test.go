@@ -597,6 +597,108 @@ func TestFleetRollingUpdate(t *testing.T) {
 	}
 }
 
+// TestFleetRollingUpdateWithBlockedInactiveGameServerSet checks that the Ready GameServers of an inactive
+// GameServerSet are scaled down while an older inactive GameServerSet is held above its target by
+// Allocated GameServers, whatever the order the inactive GameServerSets are listed in.
+func TestFleetRollingUpdateWithBlockedInactiveGameServerSet(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	client := framework.AgonesClient.AgonesV1()
+	log := e2e.TestLogger(t)
+
+	flt := defaultFleet(framework.Namespace)
+	flt.Spec.Replicas = 8
+	flt.Spec.Template.ObjectMeta.Labels = map[string]string{"version": "v1"}
+	flt, err := client.Fleets(framework.Namespace).Create(ctx, flt, metav1.CreateOptions{})
+	require.NoError(t, err)
+	defer client.Fleets(framework.Namespace).Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
+
+	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
+
+	// Allocate half of the Fleet, so the old GameServerSet keeps Allocated GameServers through the rolling updates.
+	const allocated = 4
+	for range allocated {
+		framework.CreateAndApplyAllocation(t, flt)
+	}
+	framework.AssertFleetCondition(t, flt, func(_ *logrus.Entry, fleet *agonesv1.Fleet) bool {
+		return fleet.Status.AllocatedReplicas == allocated
+	})
+
+	selector := labels.SelectorFromSet(labels.Set{agonesv1.FleetNameLabel: flt.ObjectMeta.Name})
+	// returns the GameServerSets of the Fleet by their template version
+	listGameServerSets := func() (map[string]*agonesv1.GameServerSet, error) {
+		list, err := client.GameServerSets(framework.Namespace).List(ctx, metav1.ListOptions{LabelSelector: selector.String()})
+		if err != nil {
+			return nil, err
+		}
+		gsSets := map[string]*agonesv1.GameServerSet{}
+		for i := range list.Items {
+			gsSets[list.Items[i].Spec.Template.ObjectMeta.Labels["version"]] = &list.Items[i]
+		}
+		return gsSets, nil
+	}
+	updateVersion := func(version string) {
+		require.NoError(t, retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			flt, err = client.Fleets(framework.Namespace).Get(ctx, flt.ObjectMeta.GetName(), metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+			fltCopy := flt.DeepCopy()
+			fltCopy.Spec.Template.ObjectMeta.Labels["version"] = version
+			_, err = client.Fleets(framework.Namespace).Update(ctx, fltCopy, metav1.UpdateOptions{})
+			return err
+		}))
+	}
+
+	updateVersion("v2")
+	require.Eventually(t, func() bool {
+		gsSets, err := listGameServerSets()
+		if err != nil {
+			log.WithError(err).Error("Should be able to list")
+			return false
+		}
+		v1, v2 := gsSets["v1"], gsSets["v2"]
+		if v1 == nil || v2 == nil {
+			return false
+		}
+		log.WithField("v1", fmt.Sprintf("%d %+v", v1.Spec.Replicas, v1.Status)).WithField("v2", fmt.Sprintf("%d %+v", v2.Spec.Replicas, v2.Status)).
+			Info("Checking GameServerSets after updating to v2")
+		return v1.Status.Replicas == v1.Status.AllocatedReplicas &&
+			v2.Spec.Replicas >= flt.Spec.Replicas-allocated && v2.Spec.Replicas == v2.Status.Replicas && v2.Spec.Replicas == v2.Status.ReadyReplicas
+	}, 5*time.Minute, time.Second, "v1 should only have Allocated GameServers left, and v2 should be Ready")
+
+	require.NoError(t, retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		gsSets, err := listGameServerSets()
+		if err != nil {
+			return err
+		}
+		v1 := gsSets["v1"]
+		v1.Spec.Replicas = 1
+		_, err = client.GameServerSets(framework.Namespace).Update(ctx, v1, metav1.UpdateOptions{})
+		return err
+	}))
+
+	// v1 stays above its target, so v2 has to be scaled down around it.
+	updateVersion("v3")
+	require.Eventually(t, func() bool {
+		gsSets, err := listGameServerSets()
+		if err != nil {
+			log.WithError(err).Error("Should be able to list")
+			return false
+		}
+		v2, v3 := gsSets["v2"], gsSets["v3"]
+		if v3 == nil {
+			return false
+		}
+		if v2 != nil {
+			log.WithField("v2", fmt.Sprintf("%d %+v", v2.Spec.Replicas, v2.Status)).WithField("v3", fmt.Sprintf("%d %+v", v3.Spec.Replicas, v3.Status)).
+				Info("Checking GameServerSets after updating to v3")
+			return false
+		}
+		return v3.Status.ReadyReplicas >= flt.Spec.Replicas-allocated
+	}, 2*time.Minute, time.Second, "v2 should be scaled down while v1 is held above its target")
+}
+
 func TestUpdateFleetReplicaAndSpec(t *testing.T) {
 	t.Parallel()
 
