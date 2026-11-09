@@ -22,11 +22,7 @@
 package alpha
 
 import (
-	context "context"
-
 	grpc "google.golang.org/grpc"
-	codes "google.golang.org/grpc/codes"
-	status "google.golang.org/grpc/status"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -38,59 +34,6 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type SDKClient interface {
-	// PlayerConnect increases the SDK’s stored player count by one, and appends this playerID to GameServer.Status.Players.IDs.
-	//
-	// GameServer.Status.Players.Count and GameServer.Status.Players.IDs are then set to update the player count and id list a second from now,
-	// unless there is already an update pending, in which case the update joins that batch operation.
-	//
-	// PlayerConnect returns true and adds the playerID to the list of playerIDs if this playerID was not already in the
-	// list of connected playerIDs.
-	//
-	// If the playerID exists within the list of connected playerIDs, PlayerConnect will return false, and the list of
-	// connected playerIDs will be left unchanged.
-	//
-	// An error will be returned if the playerID was not already in the list of connected playerIDs but the player capacity for
-	// the server has been reached. The playerID will not be added to the list of playerIDs.
-	//
-	// Warning: Do not use this method if you are manually managing GameServer.Status.Players.IDs and GameServer.Status.Players.Count
-	// through the Kubernetes API, as indeterminate results will occur.
-	PlayerConnect(ctx context.Context, in *PlayerID, opts ...grpc.CallOption) (*Bool, error)
-	// Decreases the SDK’s stored player count by one, and removes the playerID from GameServer.Status.Players.IDs.
-	//
-	// GameServer.Status.Players.Count and GameServer.Status.Players.IDs are then set to update the player count and id list a second from now,
-	// unless there is already an update pending, in which case the update joins that batch operation.
-	//
-	// PlayerDisconnect will return true and remove the supplied playerID from the list of connected playerIDs if the
-	// playerID value exists within the list.
-	//
-	// If the playerID was not in the list of connected playerIDs, the call will return false, and the connected playerID list
-	// will be left unchanged.
-	//
-	// Warning: Do not use this method if you are manually managing GameServer.status.players.IDs and GameServer.status.players.Count
-	// through the Kubernetes API, as indeterminate results will occur.
-	PlayerDisconnect(ctx context.Context, in *PlayerID, opts ...grpc.CallOption) (*Bool, error)
-	// Update the GameServer.Status.Players.Capacity value with a new capacity.
-	SetPlayerCapacity(ctx context.Context, in *Count, opts ...grpc.CallOption) (*Empty, error)
-	// Retrieves the current player capacity. This is always accurate from what has been set through this SDK,
-	// even if the value has yet to be updated on the GameServer status resource.
-	//
-	// If GameServer.Status.Players.Capacity is set manually through the Kubernetes API, use SDK.GameServer() or SDK.WatchGameServer() instead to view this value.
-	GetPlayerCapacity(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Count, error)
-	// Retrieves the current player count. This is always accurate from what has been set through this SDK,
-	// even if the value has yet to be updated on the GameServer status resource.
-	//
-	// If GameServer.Status.Players.Count is set manually through the Kubernetes API, use SDK.GameServer() or SDK.WatchGameServer() instead to view this value.
-	GetPlayerCount(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Count, error)
-	// Returns if the playerID is currently connected to the GameServer. This is always accurate from what has been set through this SDK,
-	// even if the value has yet to be updated on the GameServer status resource.
-	//
-	// If GameServer.Status.Players.IDs is set manually through the Kubernetes API, use SDK.GameServer() or SDK.WatchGameServer() instead to determine connected status.
-	IsPlayerConnected(ctx context.Context, in *PlayerID, opts ...grpc.CallOption) (*Bool, error)
-	// Returns the list of the currently connected player ids. This is always accurate from what has been set through this SDK,
-	// even if the value has yet to be updated on the GameServer status resource.
-	//
-	// If GameServer.Status.Players.IDs is set manually through the Kubernetes API, use SDK.GameServer() or SDK.WatchGameServer() instead to view this value.
-	GetConnectedPlayers(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*PlayerIDList, error)
 }
 
 type sDKClient struct {
@@ -101,152 +44,14 @@ func NewSDKClient(cc grpc.ClientConnInterface) SDKClient {
 	return &sDKClient{cc}
 }
 
-func (c *sDKClient) PlayerConnect(ctx context.Context, in *PlayerID, opts ...grpc.CallOption) (*Bool, error) {
-	out := new(Bool)
-	err := c.cc.Invoke(ctx, "/agones.dev.sdk.alpha.SDK/PlayerConnect", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *sDKClient) PlayerDisconnect(ctx context.Context, in *PlayerID, opts ...grpc.CallOption) (*Bool, error) {
-	out := new(Bool)
-	err := c.cc.Invoke(ctx, "/agones.dev.sdk.alpha.SDK/PlayerDisconnect", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *sDKClient) SetPlayerCapacity(ctx context.Context, in *Count, opts ...grpc.CallOption) (*Empty, error) {
-	out := new(Empty)
-	err := c.cc.Invoke(ctx, "/agones.dev.sdk.alpha.SDK/SetPlayerCapacity", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *sDKClient) GetPlayerCapacity(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Count, error) {
-	out := new(Count)
-	err := c.cc.Invoke(ctx, "/agones.dev.sdk.alpha.SDK/GetPlayerCapacity", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *sDKClient) GetPlayerCount(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Count, error) {
-	out := new(Count)
-	err := c.cc.Invoke(ctx, "/agones.dev.sdk.alpha.SDK/GetPlayerCount", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *sDKClient) IsPlayerConnected(ctx context.Context, in *PlayerID, opts ...grpc.CallOption) (*Bool, error) {
-	out := new(Bool)
-	err := c.cc.Invoke(ctx, "/agones.dev.sdk.alpha.SDK/IsPlayerConnected", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *sDKClient) GetConnectedPlayers(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*PlayerIDList, error) {
-	out := new(PlayerIDList)
-	err := c.cc.Invoke(ctx, "/agones.dev.sdk.alpha.SDK/GetConnectedPlayers", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // SDKServer is the server API for SDK service.
 // All implementations should embed UnimplementedSDKServer
 // for forward compatibility
 type SDKServer interface {
-	// PlayerConnect increases the SDK’s stored player count by one, and appends this playerID to GameServer.Status.Players.IDs.
-	//
-	// GameServer.Status.Players.Count and GameServer.Status.Players.IDs are then set to update the player count and id list a second from now,
-	// unless there is already an update pending, in which case the update joins that batch operation.
-	//
-	// PlayerConnect returns true and adds the playerID to the list of playerIDs if this playerID was not already in the
-	// list of connected playerIDs.
-	//
-	// If the playerID exists within the list of connected playerIDs, PlayerConnect will return false, and the list of
-	// connected playerIDs will be left unchanged.
-	//
-	// An error will be returned if the playerID was not already in the list of connected playerIDs but the player capacity for
-	// the server has been reached. The playerID will not be added to the list of playerIDs.
-	//
-	// Warning: Do not use this method if you are manually managing GameServer.Status.Players.IDs and GameServer.Status.Players.Count
-	// through the Kubernetes API, as indeterminate results will occur.
-	PlayerConnect(context.Context, *PlayerID) (*Bool, error)
-	// Decreases the SDK’s stored player count by one, and removes the playerID from GameServer.Status.Players.IDs.
-	//
-	// GameServer.Status.Players.Count and GameServer.Status.Players.IDs are then set to update the player count and id list a second from now,
-	// unless there is already an update pending, in which case the update joins that batch operation.
-	//
-	// PlayerDisconnect will return true and remove the supplied playerID from the list of connected playerIDs if the
-	// playerID value exists within the list.
-	//
-	// If the playerID was not in the list of connected playerIDs, the call will return false, and the connected playerID list
-	// will be left unchanged.
-	//
-	// Warning: Do not use this method if you are manually managing GameServer.status.players.IDs and GameServer.status.players.Count
-	// through the Kubernetes API, as indeterminate results will occur.
-	PlayerDisconnect(context.Context, *PlayerID) (*Bool, error)
-	// Update the GameServer.Status.Players.Capacity value with a new capacity.
-	SetPlayerCapacity(context.Context, *Count) (*Empty, error)
-	// Retrieves the current player capacity. This is always accurate from what has been set through this SDK,
-	// even if the value has yet to be updated on the GameServer status resource.
-	//
-	// If GameServer.Status.Players.Capacity is set manually through the Kubernetes API, use SDK.GameServer() or SDK.WatchGameServer() instead to view this value.
-	GetPlayerCapacity(context.Context, *Empty) (*Count, error)
-	// Retrieves the current player count. This is always accurate from what has been set through this SDK,
-	// even if the value has yet to be updated on the GameServer status resource.
-	//
-	// If GameServer.Status.Players.Count is set manually through the Kubernetes API, use SDK.GameServer() or SDK.WatchGameServer() instead to view this value.
-	GetPlayerCount(context.Context, *Empty) (*Count, error)
-	// Returns if the playerID is currently connected to the GameServer. This is always accurate from what has been set through this SDK,
-	// even if the value has yet to be updated on the GameServer status resource.
-	//
-	// If GameServer.Status.Players.IDs is set manually through the Kubernetes API, use SDK.GameServer() or SDK.WatchGameServer() instead to determine connected status.
-	IsPlayerConnected(context.Context, *PlayerID) (*Bool, error)
-	// Returns the list of the currently connected player ids. This is always accurate from what has been set through this SDK,
-	// even if the value has yet to be updated on the GameServer status resource.
-	//
-	// If GameServer.Status.Players.IDs is set manually through the Kubernetes API, use SDK.GameServer() or SDK.WatchGameServer() instead to view this value.
-	GetConnectedPlayers(context.Context, *Empty) (*PlayerIDList, error)
 }
 
 // UnimplementedSDKServer should be embedded to have forward compatible implementations.
 type UnimplementedSDKServer struct {
-}
-
-func (UnimplementedSDKServer) PlayerConnect(context.Context, *PlayerID) (*Bool, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method PlayerConnect not implemented")
-}
-func (UnimplementedSDKServer) PlayerDisconnect(context.Context, *PlayerID) (*Bool, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method PlayerDisconnect not implemented")
-}
-func (UnimplementedSDKServer) SetPlayerCapacity(context.Context, *Count) (*Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SetPlayerCapacity not implemented")
-}
-func (UnimplementedSDKServer) GetPlayerCapacity(context.Context, *Empty) (*Count, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetPlayerCapacity not implemented")
-}
-func (UnimplementedSDKServer) GetPlayerCount(context.Context, *Empty) (*Count, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetPlayerCount not implemented")
-}
-func (UnimplementedSDKServer) IsPlayerConnected(context.Context, *PlayerID) (*Bool, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method IsPlayerConnected not implemented")
-}
-func (UnimplementedSDKServer) GetConnectedPlayers(context.Context, *Empty) (*PlayerIDList, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetConnectedPlayers not implemented")
 }
 
 // UnsafeSDKServer may be embedded to opt out of forward compatibility for this service.
@@ -260,168 +65,13 @@ func RegisterSDKServer(s grpc.ServiceRegistrar, srv SDKServer) {
 	s.RegisterService(&SDK_ServiceDesc, srv)
 }
 
-func _SDK_PlayerConnect_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PlayerID)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SDKServer).PlayerConnect(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/agones.dev.sdk.alpha.SDK/PlayerConnect",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SDKServer).PlayerConnect(ctx, req.(*PlayerID))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SDK_PlayerDisconnect_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PlayerID)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SDKServer).PlayerDisconnect(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/agones.dev.sdk.alpha.SDK/PlayerDisconnect",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SDKServer).PlayerDisconnect(ctx, req.(*PlayerID))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SDK_SetPlayerCapacity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Count)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SDKServer).SetPlayerCapacity(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/agones.dev.sdk.alpha.SDK/SetPlayerCapacity",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SDKServer).SetPlayerCapacity(ctx, req.(*Count))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SDK_GetPlayerCapacity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SDKServer).GetPlayerCapacity(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/agones.dev.sdk.alpha.SDK/GetPlayerCapacity",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SDKServer).GetPlayerCapacity(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SDK_GetPlayerCount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SDKServer).GetPlayerCount(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/agones.dev.sdk.alpha.SDK/GetPlayerCount",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SDKServer).GetPlayerCount(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SDK_IsPlayerConnected_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PlayerID)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SDKServer).IsPlayerConnected(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/agones.dev.sdk.alpha.SDK/IsPlayerConnected",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SDKServer).IsPlayerConnected(ctx, req.(*PlayerID))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SDK_GetConnectedPlayers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SDKServer).GetConnectedPlayers(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/agones.dev.sdk.alpha.SDK/GetConnectedPlayers",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SDKServer).GetConnectedPlayers(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // SDK_ServiceDesc is the grpc.ServiceDesc for SDK service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var SDK_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "agones.dev.sdk.alpha.SDK",
 	HandlerType: (*SDKServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "PlayerConnect",
-			Handler:    _SDK_PlayerConnect_Handler,
-		},
-		{
-			MethodName: "PlayerDisconnect",
-			Handler:    _SDK_PlayerDisconnect_Handler,
-		},
-		{
-			MethodName: "SetPlayerCapacity",
-			Handler:    _SDK_SetPlayerCapacity_Handler,
-		},
-		{
-			MethodName: "GetPlayerCapacity",
-			Handler:    _SDK_GetPlayerCapacity_Handler,
-		},
-		{
-			MethodName: "GetPlayerCount",
-			Handler:    _SDK_GetPlayerCount_Handler,
-		},
-		{
-			MethodName: "IsPlayerConnected",
-			Handler:    _SDK_IsPlayerConnected_Handler,
-		},
-		{
-			MethodName: "GetConnectedPlayers",
-			Handler:    _SDK_GetConnectedPlayers_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "alpha.proto",
+	Methods:     []grpc.MethodDesc{},
+	Streams:     []grpc.StreamDesc{},
+	Metadata:    "alpha.proto",
 }
