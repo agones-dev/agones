@@ -89,11 +89,6 @@ linters:
         # G104 is unhandled errors, which errcheck already reports, and errcheck
         # understands the `//nolint:errcheck` directives already in the tree.
         - G104
-        # G115 is integer overflow on conversion. The Kubernetes API types round
-        # int32 through int constantly, so this fires on ~370 conversions that
-        # are structurally safe. Triaging it is worthwhile but it needs its own
-        # pass -- bundling it here would bury every other gosec finding.
-        - G115
     modernize:
       disable:
         # omitzero would rewrite the json tags on the published CRD API types in

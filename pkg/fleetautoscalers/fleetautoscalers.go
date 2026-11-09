@@ -380,7 +380,7 @@ func applyBufferPolicy(_ *fasState, b *autoscalingv1.BufferPolicy, f *agonesv1.F
 	var replicas int32
 
 	if b.BufferSize.Type == intstr.Int {
-		replicas = f.Status.AllocatedReplicas + int32(b.BufferSize.IntValue())
+		replicas = f.Status.AllocatedReplicas + b.BufferSize.IntVal
 	} else {
 		// the percentage value is a little more complex, as we can't apply
 		// the desired percentage to any current value, but to the future one
@@ -812,7 +812,9 @@ func scaleUp(replicas int32, capacity, count, aggCapacity, availableCapacity, ma
 	// Check to make sure we're not limited (over Max Capacity)
 	limited, _ := isLimited(aggCapacity+(int64(additionalReplicas)*capacity), minCapacity, maxCapacity)
 	if limited {
-		additionalReplicas = int32((maxCapacity - aggCapacity) / capacity)
+		// scaleUp is only called when minCapacity <= aggCapacity <= maxCapacity, so this can only be
+		// limited by MaxCapacity, which puts the result in [0, additionalReplicas).
+		additionalReplicas = int32((maxCapacity - aggCapacity) / capacity) //nolint:gosec // G115: bounded, see above.
 	}
 
 	return replicas + additionalReplicas, limited, nil

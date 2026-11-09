@@ -283,7 +283,7 @@ func (c *Extensions) convertProcessorError(err error, gsa *allocationv1.GameServ
 				TypeMeta: metav1.TypeMeta{Kind: "Status", APIVersion: "v1"},
 				Status:   metav1.StatusFailure,
 				Message:  st.Message(),
-				Code:     int32(code),
+				Code:     int32(code), //nolint:gosec // G115: an HTTP status code.
 			}, code
 		}
 	}
