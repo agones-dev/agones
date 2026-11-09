@@ -54,6 +54,8 @@ agones:
   priorityClassName: agones-system
   cloudProduct: "auto"
   requireDedicatedNodes: false
+  # Extra Kubernetes manifests to deploy with the chart, as objects or YAML strings rendered through tpl.
+  extraObjects: []
   sdkServer:
     requestsRateLimit: 500ms
   controller:
@@ -331,7 +333,7 @@ agones:
         minAvailable: 1
   image:
     registry: us-docker.pkg.dev/agones-images/release
-    tag: 1.62.0-dev
+    tag: 1.63.0-dev
     controller:
       name: agones-controller
       pullPolicy: IfNotPresent

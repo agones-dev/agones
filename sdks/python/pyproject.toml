@@ -18,7 +18,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agones"
-version = "1.57.0"
+version = "1.63.0-dev"
 description = "Game Server SDK for Agones"
 readme = "README.md"
 license = "Apache-2.0"
@@ -45,7 +45,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "grpcio-tools>=1.62.0-dev",
+    "grpcio-tools==1.80.0",
     "pytest>=7.0",
 ]
 

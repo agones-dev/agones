@@ -159,6 +159,14 @@ func TestFleetScaleWithDualAllocations(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	// With RollingUpdateSurge the old Allocated GameServer is covered by the surge instead of a Ready one.
+	expectedNewReady := int32(4)
+	expectedScaledUpReady := int32(2)
+	if runtime.FeatureEnabled(runtime.FeatureRollingUpdateSurge) {
+		expectedNewReady = 5
+		expectedScaledUpReady = 3
+	}
+
 	selector := labels.SelectorFromSet(labels.Set{agonesv1.FleetNameLabel: flt.ObjectMeta.Name})
 	require.Eventually(t, func() bool {
 		gssList, err := framework.AgonesClient.AgonesV1().GameServerSets(framework.Namespace).List(ctx,
@@ -178,8 +186,9 @@ func TestFleetScaleWithDualAllocations(t *testing.T) {
 			return gssList.Items[i].ObjectMeta.CreationTimestamp.Compare(gssList.Items[j].ObjectMeta.CreationTimestamp.Time) == -1
 		})
 
-		// First one will have 1 with one allocated, second one should have 9 ready.
-		if gssList.Items[0].Status.AllocatedReplicas != 1 || gssList.Items[1].Status.ReadyReplicas != 4 {
+		// First one will only have the one allocated, second one should have the rest ready.
+		if gssList.Items[0].Status.Replicas != 1 || gssList.Items[0].Status.AllocatedReplicas != 1 ||
+			gssList.Items[1].Status.ReadyReplicas != expectedNewReady {
 			log.WithField("gss0", fmt.Sprintf("%+v", gssList.Items[0].Status)).WithField("gss1", fmt.Sprintf("%+v", gssList.Items[1].Status)).Info("Checking GameServerSet")
 			return false
 		}
@@ -203,7 +212,7 @@ func TestFleetScaleWithDualAllocations(t *testing.T) {
 	require.NoError(t, err)
 	framework.AssertFleetCondition(t, flt, func(_ *logrus.Entry, fleet *agonesv1.Fleet) bool {
 		log.WithField("fleet", fmt.Sprintf("%+v", fleet.Status)).Info("Checking after scaling back to 5")
-		return fleet.Status.AllocatedReplicas == 3 && fleet.Status.ReadyReplicas == 2
+		return fleet.Status.AllocatedReplicas == 3 && fleet.Status.ReadyReplicas == expectedScaledUpReady
 	})
 }
 
@@ -268,10 +277,13 @@ func TestFleetScaleUpAllocateEditAndScaleDownToZero(t *testing.T) {
 
 	require.NoError(t, err)
 
-	// RollingUpdate has happened due to changing Port, so waiting the complete of the RollingUpdate
-	framework.AssertFleetCondition(t, flt, func(_ *logrus.Entry, fleet *agonesv1.Fleet) bool {
-		return fleet.Status.ReadyReplicas == 4
-	})
+	// RollingUpdate has happened due to changing Port, so waiting the complete of the RollingUpdate.
+	// With RollingUpdateSurge the Allocated GameServer is covered by the surge instead of a Ready one.
+	expectedReady := int32(4)
+	if runtime.FeatureEnabled(runtime.FeatureRollingUpdateSurge) {
+		expectedReady = 5
+	}
+	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(expectedReady))
 
 	// Scale down to zero
 	const scaleDownTarget = 0
@@ -372,7 +384,13 @@ func TestFleetScaleUpEditAndScaleDown(t *testing.T) {
 			} else {
 				flt = scaleFleetSubresource(ctx, t, flt, scaleDownTarget)
 			}
-			framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(0))
+			// With RollingUpdateSurge the surge (1) keeps a Ready GameServer next to the Allocated
+			// one until the Allocated GameServer is deleted.
+			expectedReady := int32(0)
+			if runtime.FeatureEnabled(runtime.FeatureRollingUpdateSurge) {
+				expectedReady = 1
+			}
+			framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(expectedReady))
 
 			// delete the allocated GameServer
 			gp := int64(1)
@@ -830,12 +848,26 @@ func TestUpdateGameServerConfigurationInFleet(t *testing.T) {
 	_, err = framework.AgonesClient.AgonesV1().Fleets(framework.Namespace).Update(ctx, fltCopy, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
-	err = framework.WaitForFleetGameServersCondition(flt, func(gs *agonesv1.GameServer) bool {
-		containerPort := gs.Spec.Ports[0].ContainerPort
-		return (gs.Name == gsa.Status.GameServerName && containerPort == oldPort) ||
-			(gs.Name != gsa.Status.GameServerName && containerPort == newPort)
-	})
-	require.NoError(t, err)
+	// With RollingUpdateSurge the Allocated GameServer is covered by the surge (1), so the new
+	// GameServerSet keeps all the Fleet replicas next to it.
+	expectedCount := int(flt.Spec.Replicas)
+	if runtime.FeatureEnabled(runtime.FeatureRollingUpdateSurge) {
+		expectedCount++
+	}
+	require.Eventually(t, func() bool {
+		list, err := framework.ListGameServersFromFleet(flt)
+		if err != nil || len(list) != expectedCount {
+			return false
+		}
+		for _, gs := range list {
+			containerPort := gs.Spec.Ports[0].ContainerPort
+			if !((gs.Name == gsa.Status.GameServerName && containerPort == oldPort) ||
+				(gs.Name != gsa.Status.GameServerName && containerPort == newPort)) {
+				return false
+			}
+		}
+		return true
+	}, framework.WaitForState, 2*time.Second)
 }
 
 func TestReservedGameServerInFleet(t *testing.T) {
