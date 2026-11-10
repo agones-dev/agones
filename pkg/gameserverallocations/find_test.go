@@ -96,7 +96,7 @@ func TestFindGameServerForAllocationPacked(t *testing.T) {
 				require.Equal(t, agonesv1.GameServerStateReady, *gsa.Spec.Selectors[0].GameServerState)
 
 				gs, index, err := findGameServerForAllocation(gsa, list)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				require.NotNil(t, gs)
 				assert.Equal(t, "node1", gs.Status.NodeName)
 				assert.Equal(t, "gs1", gs.ObjectMeta.Name)
@@ -108,7 +108,7 @@ func TestFindGameServerForAllocationPacked(t *testing.T) {
 				assert.Len(t, list, 4)
 
 				gs, index, err = findGameServerForAllocation(gsa, list)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				require.NotNil(t, gs)
 
 				assert.Equal(t, "node2", gs.Status.NodeName)
@@ -122,7 +122,7 @@ func TestFindGameServerForAllocationPacked(t *testing.T) {
 				gsa.Spec.Selectors[0].GameServerState = &allocated
 
 				gs, index, err = findGameServerForAllocation(gsa, list)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				require.NotNil(t, gs)
 				assert.Equal(t, "node1", gs.Status.NodeName)
 				// either is valid
@@ -133,7 +133,7 @@ func TestFindGameServerForAllocationPacked(t *testing.T) {
 				// finally, we have nothing left
 				list = nil
 				gs, _, err = findGameServerForAllocation(gsa, list)
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Equal(t, ErrNoGameServer, err)
 				assert.Nil(t, gs)
 			},
@@ -151,7 +151,7 @@ func TestFindGameServerForAllocationPacked(t *testing.T) {
 				assert.Len(t, list, 6)
 
 				gs, index, err := findGameServerForAllocation(twoLabelsGsa, list)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, "node1", gs.Status.NodeName)
 				assert.Equal(t, "gs1", gs.ObjectMeta.Name)
 				assert.Equal(t, gs, list[index])
@@ -159,7 +159,7 @@ func TestFindGameServerForAllocationPacked(t *testing.T) {
 
 				list = append(list[:index], list[index+1:]...)
 				gs, index, err = findGameServerForAllocation(twoLabelsGsa, list)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, "node2", gs.Status.NodeName)
 				assert.Equal(t, "gs4", gs.ObjectMeta.Name)
 				assert.Equal(t, gs, list[index])
@@ -167,7 +167,7 @@ func TestFindGameServerForAllocationPacked(t *testing.T) {
 
 				list = append(list[:index], list[index+1:]...)
 				gs, index, err = findGameServerForAllocation(twoLabelsGsa, list)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, "node1", gs.Status.NodeName)
 				assert.Contains(t, []string{"gs3", "gs5", "gs6"}, gs.ObjectMeta.Name)
 				assert.Equal(t, gs, list[index])
@@ -189,7 +189,7 @@ func TestFindGameServerForAllocationPacked(t *testing.T) {
 				assert.Len(t, list, 8)
 
 				gs, index, err := findGameServerForAllocation(gsa, list)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, "node2", gs.Status.NodeName)
 				assert.Equal(t, gs, list[index])
 				assert.Equal(t, agonesv1.GameServerStateReady, gs.Status.State)
@@ -224,10 +224,10 @@ func TestFindGameServerForAllocationPacked(t *testing.T) {
 
 			// This call initializes the cache
 			err := c.syncCache()
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			err = c.counter.Run(ctx, 0)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			list := c.ListSortedGameServers(v.gsa)
 			v.test(t, list)
@@ -281,16 +281,16 @@ func TestFindGameServerForAllocationDistributed(t *testing.T) {
 
 	// This call initializes the cache
 	err := c.syncCache()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = c.counter.Run(ctx, 0)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	list := c.ListSortedGameServers(gsa)
 	assert.Len(t, list, 6)
 
 	gs, index, err := findGameServerForAllocation(gsa, list)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, gs, list[index])
 	assert.Equal(t, agonesv1.GameServerStateReady, gs.Status.State)
 
@@ -298,7 +298,7 @@ func TestFindGameServerForAllocationDistributed(t *testing.T) {
 	// we should get a different result in 10 tries, so we can see we get some randomness.
 	for range 10 {
 		gs, index, err = findGameServerForAllocation(gsa, list)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, gs, list[index])
 		assert.Equal(t, agonesv1.GameServerStateReady, gs.Status.State)
 

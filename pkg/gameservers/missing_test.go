@@ -143,7 +143,7 @@ func TestMissingPodControllerSyncGameServer(t *testing.T) {
 			gs.ApplyDefaults()
 
 			pod, err := gs.Pod(agtesting.FakeAPIHooks{})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			gs, pod = v.setup(gs, pod)
 			m.AgonesClient.AddReactor("list", "gameservers", func(_ k8stesting.Action) (bool, runtime.Object, error) {
@@ -171,7 +171,7 @@ func TestMissingPodControllerSyncGameServer(t *testing.T) {
 			defer cancel()
 
 			err = c.syncGameServer(ctx, "default/test")
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, v.expected.updated, updated, "updated state")
 			v.expected.postTests(t, m)
 		})

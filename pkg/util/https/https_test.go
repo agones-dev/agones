@@ -22,11 +22,12 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLogRequestRedactsSensitiveHeaders(t *testing.T) {
 	r, err := http.NewRequest(http.MethodPost, "/apis/allocation.agones.dev/v1/namespaces/default/gameserverallocations", nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	r.Header.Set("Authorization", "Bearer super-secret-token")
 	r.Header.Set("X-Api-Key", "another-secret-value")
 	r.Header.Set("Content-Type", "application/json")
@@ -43,7 +44,7 @@ func TestLogRequestRedactsSensitiveHeaders(t *testing.T) {
 func TestFourZeroFour(t *testing.T) {
 	b := bytes.NewBuffer(nil)
 	r, err := http.NewRequest(http.MethodGet, "/", b)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	w := httptest.NewRecorder()
 
 	l := logrus.WithField("source", "test")

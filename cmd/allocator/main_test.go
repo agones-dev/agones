@@ -26,6 +26,7 @@ import (
 	allocationv1 "agones.dev/agones/pkg/apis/allocation/v1"
 	"agones.dev/agones/pkg/util/errors"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	corev1 "k8s.io/api/core/v1"
@@ -87,22 +88,22 @@ func TestAllocateHandlerReturnsError(t *testing.T) {
 func TestGetTlsCert(t *testing.T) {
 	t.Parallel()
 	cert1, err := tls.X509KeyPair(serverCert1, serverKey1)
-	assert.NoError(t, err, "expected (serverCert1, serverKey1) to create a cert")
+	require.NoError(t, err, "expected (serverCert1, serverKey1) to create a cert")
 
 	cert2, err := tls.X509KeyPair(serverCert2, serverKey2)
-	assert.NoError(t, err, "expected (serverCert2, serverKey2) to create a cert")
+	require.NoError(t, err, "expected (serverCert2, serverKey2) to create a cert")
 
 	h := serviceHandler{
 		tlsCert: &cert1,
 	}
 
 	retrievedCert1, err := h.getTLSCert(nil)
-	assert.NoError(t, err, "expected getTlsCert() to not fail")
+	require.NoError(t, err, "expected getTlsCert() to not fail")
 	assert.Equal(t, cert1.Certificate, retrievedCert1.Certificate, "expected the retrieved cert to be equal to the original one")
 
 	h.tlsCert = &cert2
 	retrievedCert2, err := h.getTLSCert(nil)
-	assert.NoError(t, err, "expected getTlsCert() to not fail")
+	require.NoError(t, err, "expected getTlsCert() to not fail")
 	assert.Equal(t, cert2.Certificate, retrievedCert2.Certificate, "expected the retrieved cert to be equal to the original one")
 }
 
@@ -127,9 +128,7 @@ func TestHandlingStatus(t *testing.T) {
 
 	request := &pb.AllocationRequest{}
 	_, err := h.Allocate(context.Background(), request)
-	if !assert.Error(t, err, "expecting failure") {
-		return
-	}
+	require.Error(t, err, "expecting failure")
 
 	st, ok := status.FromError(err)
 	if !ok {
@@ -150,9 +149,7 @@ func TestBadReturnType(t *testing.T) {
 
 	request := &pb.AllocationRequest{}
 	_, err := h.Allocate(context.Background(), request)
-	if !assert.Error(t, err, "expecting failure") {
-		return
-	}
+	require.Error(t, err, "expecting failure")
 
 	st, ok := status.FromError(err)
 	if !ok {

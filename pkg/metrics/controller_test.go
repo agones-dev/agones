@@ -743,9 +743,9 @@ func TestCalcDuration(t *testing.T) {
 			// Test case 3 depends on key eviction in test case 2
 			duration, err := c.calcDuration(tc.gs1, tc.gs2)
 			if tc.expected.err != nil {
-				assert.EqualError(t, err, tc.expected.err.Error(), "We should receive an error, metric should not be measured")
+				require.EqualError(t, err, tc.expected.err.Error(), "We should receive an error, metric should not be measured")
 			} else {
-				assert.NoError(t, err, "Unable to caculate duration of a particular state")
+				require.NoError(t, err, "Unable to caculate duration of a particular state")
 			}
 			assert.InDelta(t, tc.expected.duration, duration, 0.0001, "Time diff should be calculated properly")
 		})

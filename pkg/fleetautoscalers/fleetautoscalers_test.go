@@ -226,7 +226,7 @@ func TestComputeDesiredFleetSize(t *testing.T) {
 			if tc.expected.err != "" && assert.Error(t, err) {
 				assert.ErrorContains(t, err, tc.expected.err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, tc.expected.replicas, replicas)
 				assert.Equal(t, tc.expected.limited, limited)
 			}
@@ -376,7 +376,7 @@ func TestApplyBufferPolicy(t *testing.T) {
 			if tc.expected.err != "" && assert.Error(t, err) {
 				assert.ErrorContains(t, err, tc.expected.err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, tc.expected.replicas, replicas)
 				assert.Equal(t, tc.expected.limited, limited)
 			}
@@ -691,7 +691,7 @@ func TestApplyWebhookPolicyWithMetadata(t *testing.T) {
 	}
 	replicas, limited, err := applyWebhookPolicy(context.Background(), &fasState{}, webhookPolicy, fleet, &fasLog)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.False(t, limited)
 	assert.Equal(t, fixedReplicas, replicas)
 }
@@ -959,10 +959,10 @@ func TestBuildURLFromConfiguration(t *testing.T) {
 			url, err := buildURLFromConfiguration(tc.state, tc.config)
 
 			if tc.expected.err != "" {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Contains(t, err.Error(), tc.expected.err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.NotNil(t, url)
 				assert.Equal(t, tc.expected.url, url.String())
 
@@ -1703,7 +1703,7 @@ func TestApplyCounterPolicy(t *testing.T) {
 			if tc.want.wantErr {
 				assert.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, tc.want.replicas, replicas)
 				assert.Equal(t, tc.want.limited, limited)
 			}
@@ -2385,7 +2385,7 @@ func TestApplyListPolicy(t *testing.T) {
 			if tc.want.wantErr {
 				assert.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, tc.want.replicas, replicas)
 				assert.Equal(t, tc.want.limited, limited)
 			}
@@ -2532,7 +2532,7 @@ func TestApplyListPolicyFlapping(t *testing.T) {
 			lister := informer.GameServers().Lister().GameServers("default")
 
 			replicas, limited, err := applyCounterOrListPolicy(nil, lp, tc.fleet, lister, nc)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, tc.want.limited, limited)
 			assert.Equal(t, tc.want.replicas, replicas)
 		})
@@ -2751,7 +2751,7 @@ func TestApplySchedulePolicy(t *testing.T) {
 			if tc.want.wantErr {
 				assert.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, tc.want.replicas, replicas)
 				assert.Equal(t, tc.want.limited, limited)
 			}
@@ -2941,7 +2941,7 @@ func TestApplyChainPolicy(t *testing.T) {
 			if tc.want.wantErr {
 				assert.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, tc.want.replicas, replicas)
 				assert.Equal(t, tc.want.limited, limited)
 			}

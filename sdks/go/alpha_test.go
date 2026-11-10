@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -27,7 +28,7 @@ func TestNewAlpha(t *testing.T) {
 	// grpc.NewClient doesn't dial immediately, so this doesn't require a
 	// running server (sdk.go's NewSDK uses the same pattern).
 	conn, err := grpc.NewClient("localhost:9357", grpc.WithTransportCredentials(insecure.NewCredentials()))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer conn.Close() //nolint:errcheck
 
 	a := newAlpha(conn)

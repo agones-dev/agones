@@ -861,7 +861,7 @@ func TestControllerSyncUnhealthyGameServers(t *testing.T) {
 		defer cancel()
 
 		err := c.deleteGameServers(ctx, gsSet, []*agonesv1.GameServer{gs1, gs2, gs3})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		assert.Equal(t, 3, updatedCount, "Updates should have occurred")
 	})
@@ -910,7 +910,7 @@ func TestSyncMoreGameServers(t *testing.T) {
 		defer cancel()
 
 		err := c.addMoreGameServers(ctx, gsSet, expected)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, expected, count)
 		agtesting.AssertEventContains(t, m.FakeRecorder.Events, "SuccessfulCreate")
 	})
@@ -959,7 +959,7 @@ func TestControllerSyncGameServerSetStatus(t *testing.T) {
 
 		list := []*agonesv1.GameServer{{Status: agonesv1.GameServerStatus{State: agonesv1.GameServerStateReady}}}
 		err := c.syncGameServerSetStatus(context.Background(), gsSet, list)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, updated)
 	})
 
@@ -991,7 +991,7 @@ func TestControllerSyncGameServerSetStatus(t *testing.T) {
 			{Status: agonesv1.GameServerStatus{State: agonesv1.GameServerStateAllocated}},
 		}
 		err := c.syncGameServerSetStatus(context.Background(), gsSet, list)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, updated)
 	})
 }

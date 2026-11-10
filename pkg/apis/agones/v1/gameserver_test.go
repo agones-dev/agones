@@ -402,7 +402,7 @@ func TestGameServerApplyDefaults(t *testing.T) {
 	for name, test := range data {
 		t.Run(name, func(t *testing.T) {
 			err := runtime.ParseFeatures(test.featureFlags)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			test.gameServer.ApplyDefaults()
 
@@ -1476,7 +1476,7 @@ func TestGameServerValidateFeatures(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
 			err := runtime.ParseFeatures(tc.feature)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			errs := tc.gs.Validate(fakeAPIHooks{})
 			assert.ElementsMatch(t, tc.want, errs, "ErrorList check")
@@ -1490,7 +1490,7 @@ func TestGameServerPodNoErrors(t *testing.T) {
 	fixture.ApplyDefaults()
 
 	pod, err := fixture.Pod(fakeAPIHooks{})
-	assert.NoError(t, err, "Pod should not return an error")
+	require.NoError(t, err, "Pod should not return an error")
 	assert.Equal(t, fixture.ObjectMeta.Name, pod.ObjectMeta.Name)
 	assert.Equal(t, fixture.ObjectMeta.Name, pod.Spec.Hostname)
 	assert.Equal(t, fixture.ObjectMeta.Namespace, pod.ObjectMeta.Namespace)
@@ -1565,7 +1565,7 @@ func TestGameServerPodWithSidecarNoErrors(t *testing.T) {
 	sidecar := corev1.Container{Name: "sidecar", Image: "container/sidecar"}
 	fixture.Spec.Template.Spec.ServiceAccountName = "other-agones-sdk"
 	pod, err := fixture.Pod(fakeAPIHooks{}, sidecar)
-	assert.NoError(t, err, "Pod should not return an error")
+	require.NoError(t, err, "Pod should not return an error")
 	assert.Equal(t, fixture.ObjectMeta.Name, pod.ObjectMeta.Name)
 	assert.Len(t, pod.Spec.Containers, 2, "Should have two containers")
 	assert.Equal(t, "other-agones-sdk", pod.Spec.ServiceAccountName)
@@ -1586,7 +1586,7 @@ func TestGameServerPodWithInitSidecarNoErrors(t *testing.T) {
 	sidecar := corev1.Container{Name: "sidecar", Image: "container/sidecar"}
 	fixture.Spec.Template.Spec.ServiceAccountName = "other-agones-sdk"
 	pod, err := fixture.Pod(fakeAPIHooks{}, sidecar)
-	assert.NoError(t, err, "Pod should not return an error")
+	require.NoError(t, err, "Pod should not return an error")
 	assert.Equal(t, fixture.ObjectMeta.Name, pod.ObjectMeta.Name)
 	assert.Len(t, pod.Spec.Containers, 1, "Should have one containers")
 	assert.Equal(t, "other-agones-sdk", pod.Spec.ServiceAccountName)
@@ -1643,7 +1643,7 @@ func TestGameServerPodWithMultiplePortAllocations(t *testing.T) {
 	fixture.ApplyDefaults()
 
 	pod, err := fixture.Pod(fakeAPIHooks{})
-	assert.NoError(t, err, "Pod should not return an error")
+	require.NoError(t, err, "Pod should not return an error")
 	assert.Equal(t, fixture.ObjectMeta.Name, pod.ObjectMeta.Name)
 	assert.Equal(t, fixture.ObjectMeta.Namespace, pod.ObjectMeta.Namespace)
 	assert.Equal(t, "gameserver", pod.ObjectMeta.Labels[agones.GroupName+"/role"])
@@ -1732,12 +1732,12 @@ func TestGameServerDisableServiceAccount(t *testing.T) {
 
 	gs.ApplyDefaults()
 	pod, err := gs.Pod(fakeAPIHooks{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, pod.Spec.Containers, 1)
 	assert.Empty(t, pod.Spec.Containers[0].VolumeMounts)
 
 	err = gs.DisableServiceAccount(pod)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, pod.Spec.Containers, 1)
 	assert.Len(t, pod.Spec.Containers[0].VolumeMounts, 1)
 	assert.Equal(t, "/var/run/secrets/kubernetes.io/serviceaccount", pod.Spec.Containers[0].VolumeMounts[0].MountPath)
@@ -1780,13 +1780,13 @@ func TestGameServerPassthroughPortAnnotation(t *testing.T) {
 
 	gs.ApplyDefaults()
 	pod, err := gs.Pod(fakeAPIHooks{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, pod.Spec.Containers, 4)
 	assert.Empty(t, pod.Spec.Containers[0].VolumeMounts)
 	assert.Equal(t, pod.ObjectMeta.Annotations[PassthroughPortAssignmentAnnotation], passthroughContainerPortMap)
 
 	err = gs.DisableServiceAccount(pod)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, pod.Spec.Containers, 4)
 	assert.Len(t, pod.Spec.Containers[0].VolumeMounts, 1)
 	assert.Equal(t, "/var/run/secrets/kubernetes.io/serviceaccount", pod.Spec.Containers[0].VolumeMounts[0].MountPath)
@@ -1834,7 +1834,7 @@ func TestGameServerPatch(t *testing.T) {
 	delta.Spec.Container = "bear"
 
 	patch, err := fixture.Patch(delta)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Contains(t, string(patch), `{"op":"replace","path":"/spec/container","value":"bear"}`)
 	assert.Contains(t, string(patch), `{"op":"test","path":"/metadata/resourceVersion","value":"1234"}`)
@@ -1979,7 +1979,7 @@ func TestGameServerApplyToPodContainer(t *testing.T) {
 			})
 
 			if tc.expected.err != "" && assert.Error(t, result) {
-				assert.ErrorContains(t, result, tc.expected.err)
+				require.ErrorContains(t, result, tc.expected.err)
 			}
 			assert.Equal(t, tc.expected.tty, pod.Spec.Containers[0].TTY)
 			assert.False(t, pod.Spec.Containers[1].TTY)
