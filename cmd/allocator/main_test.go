@@ -25,7 +25,9 @@ import (
 	pb "agones.dev/agones/pkg/allocation/go"
 	allocationv1 "agones.dev/agones/pkg/apis/allocation/v1"
 	"agones.dev/agones/pkg/util/errors"
+	"agones.dev/agones/pkg/util/runtime"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	corev1 "k8s.io/api/core/v1"
@@ -137,6 +139,44 @@ func TestHandlingStatus(t *testing.T) {
 	}
 	assert.Equal(t, 422, int(st.Code()))
 	assert.Contains(t, st.Message(), errorMessage)
+}
+
+type failingProcessorClient struct {
+	t *testing.T
+}
+
+func (failingProcessorClient) Run(_ context.Context) error {
+	return nil
+}
+
+func (f failingProcessorClient) Allocate(_ context.Context, _ *pb.AllocationRequest) (*pb.AllocationResponse, error) {
+	f.t.Error("processor client should not be called for an invalid request")
+	return nil, nil
+}
+
+// Not parallel: it changes feature gates that the parallel tests in this package read.
+func TestProcessorHandlingInvalidRequest(t *testing.T) {
+	runtime.FeatureTestMutex.Lock()
+	defer runtime.FeatureTestMutex.Unlock()
+	require.NoError(t, runtime.ParseFeatures(string(runtime.FeatureProcessorAllocator)+"=true"))
+	defer func() {
+		require.NoError(t, runtime.ParseFeatures(""))
+	}()
+
+	h := serviceHandler{processorClient: failingProcessorClient{t: t}}
+
+	request := &pb.AllocationRequest{
+		Metadata: &pb.MetaPatch{
+			Labels: map[string]string{"not a valid label key": "value"},
+		},
+	}
+	_, err := h.Allocate(context.Background(), request)
+	require.Error(t, err)
+
+	st, ok := status.FromError(err)
+	require.True(t, ok, "expecting status error: %v", err)
+	assert.Equal(t, codes.InvalidArgument, st.Code())
+	assert.Contains(t, st.Message(), "GameServerAllocation")
 }
 
 func TestBadReturnType(t *testing.T) {
