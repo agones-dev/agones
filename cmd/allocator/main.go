@@ -793,7 +793,7 @@ func (h *serviceHandler) Allocate(ctx context.Context, in *pb.AllocationRequest)
 			kind := allocationv1.SchemeGroupVersion.WithKind("GameServerAllocation").GroupKind()
 			statusErr := k8serrors.NewInvalid(kind, gsa.Name, errs)
 			s := &statusErr.ErrStatus
-			return nil, status.Error(codes.Code(s.Code), s.Message) //nolint:gosec // G115: s.Code is an HTTP status, never negative.
+			return nil, status.Error(processor.GRPCCodeFromHTTPStatus(int(s.Code)), s.Message)
 		}
 
 		resp, err := h.processorClient.Allocate(ctx, in)
