@@ -17,6 +17,7 @@ package gameservers
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -429,15 +430,17 @@ func TestHealthControllerSyncGameServer(t *testing.T) {
 
 			got := false
 			updated := false
+			// Build the Pod here rather than in the reactor: the informer calls the reactor from its
+			// own goroutine, where require cannot stop the test.
+			pods := []corev1.Pod{}
+			if test.podStatus != nil {
+				pod, err := gs.Pod(agtesting.FakeAPIHooks{})
+				require.NoError(t, err)
+				pod.Status = *test.podStatus
+				pods = append(pods, *pod)
+			}
 			m.KubeClient.AddReactor("list", "pods", func(_ k8stesting.Action) (bool, runtime.Object, error) {
-				list := &corev1.PodList{Items: []corev1.Pod{}}
-				if test.podStatus != nil {
-					pod, err := gs.Pod(agtesting.FakeAPIHooks{})
-					require.NoError(t, err)
-					pod.Status = *test.podStatus
-					list.Items = append(list.Items, *pod)
-				}
-				return true, list, nil
+				return true, &corev1.PodList{Items: slices.Clone(pods)}, nil
 			})
 			m.AgonesClient.AddReactor("list", "gameservers", func(_ k8stesting.Action) (bool, runtime.Object, error) {
 				got = true

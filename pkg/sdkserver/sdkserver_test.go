@@ -55,21 +55,32 @@ const defaultTestListMaxCapacity = int64(1000)
 
 // patchGameServer is a helper function for the AddReactor "patch" that creates and applies a patch
 // to a gameserver. Returns a patched copy and does not modify the original game server.
+// The SDKServer's worker goroutine calls the reactors, where require cannot stop the test, so a
+// failure is recorded with t.Errorf instead.
 func patchGameServer(t *testing.T, action k8stesting.Action, gs *agonesv1.GameServer) *agonesv1.GameServer {
 	t.Helper()
-	pa := action.(k8stesting.PatchAction)
-	patchJSON := pa.GetPatch()
-	patch, err := jsonpatch.DecodePatch(patchJSON)
-	require.NoError(t, err)
 	gsCopy := gs.DeepCopy()
-	gsJSON, err := json.Marshal(gsCopy)
-	require.NoError(t, err)
-	patchedGs, err := patch.Apply(gsJSON)
-	require.NoError(t, err)
-	err = json.Unmarshal(patchedGs, &gsCopy)
-	assert.NoError(t, err)
-
+	if err := applyPatch(action.(k8stesting.PatchAction).GetPatch(), gsCopy); err != nil {
+		t.Errorf("could not apply patch to GameServer: %v", err)
+	}
 	return gsCopy
+}
+
+// applyPatch applies a JSON patch to gs in place.
+func applyPatch(patchJSON []byte, gs *agonesv1.GameServer) error {
+	patch, err := jsonpatch.DecodePatch(patchJSON)
+	if err != nil {
+		return err
+	}
+	gsJSON, err := json.Marshal(gs)
+	if err != nil {
+		return err
+	}
+	patchedGs, err := patch.Apply(gsJSON)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(patchedGs, gs)
 }
 
 func TestSidecarRun(t *testing.T) {
@@ -87,12 +98,12 @@ func TestSidecarRun(t *testing.T) {
 	}
 
 	fixtures := map[string]struct {
-		f        func(*SDKServer, context.Context)
+		f        func(*testing.T, *SDKServer, context.Context)
 		clock    clock.WithTickerAndDelayedExecution
 		expected expected
 	}{
 		"ready": {
-			f: func(sc *SDKServer, ctx context.Context) {
+			f: func(_ *testing.T, sc *SDKServer, ctx context.Context) {
 				sc.Ready(ctx, &sdk.Empty{}) //nolint:errcheck
 			},
 			expected: expected{
@@ -101,7 +112,7 @@ func TestSidecarRun(t *testing.T) {
 			},
 		},
 		"shutdown": {
-			f: func(sc *SDKServer, ctx context.Context) {
+			f: func(_ *testing.T, sc *SDKServer, ctx context.Context) {
 				sc.Shutdown(ctx, &sdk.Empty{}) //nolint:errcheck
 			},
 			expected: expected{
@@ -110,7 +121,7 @@ func TestSidecarRun(t *testing.T) {
 			},
 		},
 		"unhealthy": {
-			f: func(sc *SDKServer, _ context.Context) {
+			f: func(_ *testing.T, sc *SDKServer, _ context.Context) {
 				time.Sleep(1 * time.Second)
 				sc.checkHealthUpdateState() // normally invoked from health check loop
 				time.Sleep(2 * time.Second) // exceed 1s timeout
@@ -122,7 +133,7 @@ func TestSidecarRun(t *testing.T) {
 			},
 		},
 		"label": {
-			f: func(sc *SDKServer, ctx context.Context) {
+			f: func(t *testing.T, sc *SDKServer, ctx context.Context) {
 				_, err := sc.SetLabel(ctx, &sdk.KeyValue{Key: "foo", Value: "value-foo"})
 				require.NoError(t, err)
 				_, err = sc.SetLabel(ctx, &sdk.KeyValue{Key: "bar", Value: "value-bar"})
@@ -135,7 +146,7 @@ func TestSidecarRun(t *testing.T) {
 			},
 		},
 		"annotation": {
-			f: func(sc *SDKServer, ctx context.Context) {
+			f: func(t *testing.T, sc *SDKServer, ctx context.Context) {
 				_, err := sc.SetAnnotation(ctx, &sdk.KeyValue{Key: "test-1", Value: "annotation-1"})
 				require.NoError(t, err)
 				_, err = sc.SetAnnotation(ctx, &sdk.KeyValue{Key: "test-2", Value: "annotation-2"})
@@ -148,7 +159,7 @@ func TestSidecarRun(t *testing.T) {
 			},
 		},
 		"allocated": {
-			f: func(sc *SDKServer, ctx context.Context) {
+			f: func(t *testing.T, sc *SDKServer, ctx context.Context) {
 				_, err := sc.Allocate(ctx, &sdk.Empty{})
 				assert.NoError(t, err)
 			},
@@ -162,7 +173,7 @@ func TestSidecarRun(t *testing.T) {
 			},
 		},
 		"reserved": {
-			f: func(sc *SDKServer, ctx context.Context) {
+			f: func(t *testing.T, sc *SDKServer, ctx context.Context) {
 				_, err := sc.Reserve(ctx, &sdk.Duration{Seconds: 10})
 				assert.NoError(t, err)
 			},
@@ -234,7 +245,7 @@ func TestSidecarRun(t *testing.T) {
 				err := sc.Run(ctx)
 				assert.NoError(t, err)
 			})
-			v.f(sc, ctx)
+			v.f(t, sc, ctx)
 
 			select {
 			case <-done:
