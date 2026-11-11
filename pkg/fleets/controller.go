@@ -735,6 +735,8 @@ func (c *Controller) updateFleetStatus(ctx context.Context, fleet *agonesv1.Flee
 
 	fCopy.Status.Counters = make(map[string]agonesv1.AggregatedCounterStatus)
 	fCopy.Status.Lists = make(map[string]agonesv1.AggregatedListStatus)
+	// clear any player status left over from when PlayerTracking aggregation was enabled
+	fCopy.Status.Players = nil
 
 	for _, gsSet := range list {
 		fCopy.Status.Replicas += gsSet.Status.Replicas
@@ -745,19 +747,6 @@ func (c *Controller) updateFleetStatus(ctx context.Context, fleet *agonesv1.Flee
 		fCopy.Status.Lists = mergeLists(fCopy.Status.Lists, gsSet.Status.Lists)
 
 	}
-	if runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		// to make this code simpler, while the feature gate is in place,
-		// we will loop around the gsSet list twice.
-		fCopy.Status.Players = &agonesv1.AggregatedPlayerStatus{}
-		// TODO: integrate this extra loop into the above for loop when PlayerTracking moves to GA
-		for _, gsSet := range list {
-			if gsSet.Status.Players != nil {
-				fCopy.Status.Players.Count += gsSet.Status.Players.Count
-				fCopy.Status.Players.Capacity += gsSet.Status.Players.Capacity
-			}
-		}
-	}
-
 	allocs := c.allocs.get(fleet.ObjectMeta.Namespace, fleet.ObjectMeta.Name)
 	fCopy.Status.Allocations += allocs
 
