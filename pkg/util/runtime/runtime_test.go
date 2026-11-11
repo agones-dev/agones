@@ -21,7 +21,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/util/runtime"
 )
 
@@ -38,7 +38,7 @@ func TestHandleError(t *testing.T) {
 		},
 	}
 	HandleError(nil, nil)
-	assert.NoError(t, result, "No Errors for now")
+	require.NoError(t, result, "No Errors for now")
 
 	err := errors.New("test")
 	// test nil logger

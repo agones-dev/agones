@@ -174,10 +174,10 @@ func TestAllocationCacheListSortedGameServers(t *testing.T) {
 
 			// This call initializes the cache
 			err := cache.syncCache()
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			err = cache.counter.Run(ctx, 0)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			list := cache.ListSortedGameServers(v.gsa)
 
@@ -465,10 +465,10 @@ func TestListSortedGameServersPriorities(t *testing.T) {
 
 			// This call initializes the cache
 			err := cache.syncCache()
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			err = cache.counter.Run(ctx, 0)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			got := cache.ListSortedGameServersPriorities(testScenario.gsa)
 

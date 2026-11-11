@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 )
 
@@ -31,7 +32,7 @@ func TestRegisterTestSdkServer(t *testing.T) {
 	ctlConf := parseEnvFlags()
 	grpcServer := grpc.NewServer()
 	_, err := registerTestSdkServer(grpcServer, ctlConf)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	ctx := t.Context()
 	ctx.Done()
 	ctlConf.LocalFile = "@@"

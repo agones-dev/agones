@@ -45,7 +45,7 @@ func TestRegisterPrometheusExporter(t *testing.T) {
 	registry := prometheus.NewRegistry()
 
 	handler, err := RegisterPrometheusExporter(registry)
-	assert.NoError(t, err, "RegisterPrometheusExporter should not return an error")
+	require.NoError(t, err, "RegisterPrometheusExporter should not return an error")
 	assert.NotNil(t, handler, "Handler should not be nil")
 
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "/metrics", nil)

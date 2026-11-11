@@ -1329,9 +1329,9 @@ func TestSortKey(t *testing.T) {
 	for test, testScenario := range testScenarios {
 		t.Run(test, func(t *testing.T) {
 			key1, err := testScenario.gsa1.SortKey()
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			key2, err := testScenario.gsa2.SortKey()
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			if testScenario.wantEqual {
 				assert.Equal(t, key1, key2)

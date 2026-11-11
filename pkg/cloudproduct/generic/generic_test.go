@@ -21,6 +21,7 @@ import (
 	"agones.dev/agones/pkg/apis/agones"
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -71,7 +72,7 @@ func TestGameServerPodAutoscalerAnnotations(t *testing.T) {
 				}}
 			}
 			pod, err := gs.Pod(&generic{})
-			assert.NoError(t, err, "Pod should not return an error")
+			require.NoError(t, err, "Pod should not return an error")
 			assert.Equal(t, gs.ObjectMeta.Name, pod.ObjectMeta.Name)
 			assert.Equal(t, gs.ObjectMeta.Namespace, pod.ObjectMeta.Namespace)
 			assert.Equal(t, agonesv1.GameServerLabelRole, pod.ObjectMeta.Labels[agonesv1.RoleLabel])

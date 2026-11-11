@@ -17,6 +17,7 @@ package gameservers
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -296,7 +297,7 @@ func TestHealthControllerSkipUnhealthyGameContainer(t *testing.T) {
 			gs := &agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: defaultNs}, Spec: newSingleContainerSpec()}
 			gs.ApplyDefaults()
 			pod, err := gs.Pod(agtesting.FakeAPIHooks{})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			v.setup(gs, pod)
 
@@ -309,7 +310,7 @@ func TestHealthControllerSkipUnhealthyGameContainer(t *testing.T) {
 			if len(v.expected.err) > 0 {
 				require.ErrorContains(t, err, v.expected.err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			assert.Equal(t, v.expected.result, result)
 		})
@@ -429,15 +430,17 @@ func TestHealthControllerSyncGameServer(t *testing.T) {
 
 			got := false
 			updated := false
+			// Build the Pod here rather than in the reactor: the informer calls the reactor from its
+			// own goroutine, where require cannot stop the test.
+			pods := []corev1.Pod{}
+			if test.podStatus != nil {
+				pod, err := gs.Pod(agtesting.FakeAPIHooks{})
+				require.NoError(t, err)
+				pod.Status = *test.podStatus
+				pods = append(pods, *pod)
+			}
 			m.KubeClient.AddReactor("list", "pods", func(_ k8stesting.Action) (bool, runtime.Object, error) {
-				list := &corev1.PodList{Items: []corev1.Pod{}}
-				if test.podStatus != nil {
-					pod, err := gs.Pod(agtesting.FakeAPIHooks{})
-					assert.NoError(t, err)
-					pod.Status = *test.podStatus
-					list.Items = append(list.Items, *pod)
-				}
-				return true, list, nil
+				return true, &corev1.PodList{Items: slices.Clone(pods)}, nil
 			})
 			m.AgonesClient.AddReactor("list", "gameservers", func(_ k8stesting.Action) (bool, runtime.Object, error) {
 				got = true
@@ -455,7 +458,7 @@ func TestHealthControllerSyncGameServer(t *testing.T) {
 			defer cancel()
 
 			err := hc.syncGameServer(ctx, "default/test")
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.True(t, got, "GameServers Should be got!")
 
 			assert.Equal(t, test.expected.updated, updated, "updated test")
@@ -614,7 +617,7 @@ func TestHealthControllerRunNoSideCar(t *testing.T) {
 	err = wait.PollUntilContextTimeout(context.Background(), time.Second, 10*time.Second, true, func(_ context.Context) (bool, error) {
 		return hc.workerqueue.RunCount() == 1, nil
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	pod.Status.ContainerStatuses = []corev1.ContainerStatus{{Name: gs.Spec.Container, State: corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{}}}}
 	// gate
@@ -705,7 +708,7 @@ func TestHealthControllerRunWithSideCar(t *testing.T) {
 	err = wait.PollUntilContextTimeout(context.Background(), time.Second, 10*time.Second, true, func(_ context.Context) (bool, error) {
 		return hc.workerqueue.RunCount() == 1, nil
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	pod.Status = corev1.PodStatus{Phase: corev1.PodFailed}
 	// gate

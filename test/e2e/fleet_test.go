@@ -100,7 +100,7 @@ func TestFleetStrategyValidation(t *testing.T) {
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
 
 	flt, err = client.Fleets(framework.Namespace).Get(ctx, flt.ObjectMeta.GetName(), metav1.GetOptions{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// func to check that we receive an expected error
 	verifyErr := func(err error) {
 		require.Error(t, err)
@@ -527,7 +527,7 @@ func TestFleetRollingUpdate(t *testing.T) {
 				}
 				return len(gssList.Items) == 2, nil
 			})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			// Check that total number of gameservers in the system does not exceed the RollingUpdate
 			// parameters (creating no more than maxSurge, deleting maxUnavailable servers at a time)
 			// Wait for old GSSet to be deleted
@@ -573,7 +573,7 @@ func TestFleetRollingUpdate(t *testing.T) {
 				return len(gssList.Items) == 1, nil
 			})
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			// Stop cycling Allocations.
 			// The AssertFleetConditions below will wait until the Allocation cycling has
@@ -988,7 +988,7 @@ func TestReservedGameServerInFleet(t *testing.T) {
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
 
 	gsList, err := framework.ListGameServersFromFleet(flt)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Len(t, gsList, int(flt.Spec.Replicas))
 
@@ -996,7 +996,7 @@ func TestReservedGameServerInFleet(t *testing.T) {
 	gsCopy := gsList[0].DeepCopy()
 	gsCopy.Status.State = agonesv1.GameServerStateReserved
 	_, err = client.GameServers(framework.Namespace).Update(ctx, gsCopy, metav1.UpdateOptions{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// make sure counts are correct
 	framework.AssertFleetCondition(t, flt, func(_ *logrus.Entry, fleet *agonesv1.Fleet) bool {
@@ -1049,7 +1049,7 @@ func TestFleetGSSpecValidation(t *testing.T) {
 		}
 	flt.Spec.Template.Spec.Container = "testing"
 	_, err := client.Fleets(framework.Namespace).Create(ctx, flt, metav1.CreateOptions{})
-	assert.Error(t, err)
+	require.Error(t, err)
 	var statusErr *k8serrors.StatusError
 	ok := errors.As(err, &statusErr)
 	assert.True(t, ok)
@@ -1062,7 +1062,7 @@ func TestFleetGSSpecValidation(t *testing.T) {
 
 	flt.Spec.Template.Spec.Container = ""
 	_, err = client.Fleets(framework.Namespace).Create(ctx, flt, metav1.CreateOptions{})
-	assert.Error(t, err)
+	require.Error(t, err)
 	ok = errors.As(err, &statusErr)
 	assert.True(t, ok)
 	if assert.Len(t, statusErr.Status().Details.Causes, 2) {
@@ -1084,7 +1084,7 @@ func TestFleetGSSpecValidation(t *testing.T) {
 	fltPort.Spec.Template.Spec.Ports = []agonesv1.GameServerPort{{Name: "Dyn", HostPort: 5555, PortPolicy: agonesv1.Dynamic, ContainerPort: 5555}}
 
 	_, err = client.Fleets(framework.Namespace).Create(ctx, fltPort, metav1.CreateOptions{})
-	assert.Error(t, err)
+	require.Error(t, err)
 	ok = errors.As(err, &statusErr)
 	assert.True(t, ok)
 	assert.Len(t, statusErr.Status().Details.Causes, 1)
@@ -1443,13 +1443,13 @@ func TestFleetWithZeroReplicas(t *testing.T) {
 	flt := defaultFleet(framework.Namespace)
 	flt.Spec.Replicas = 0
 	flt, err := client.Fleets(framework.Namespace).Create(ctx, flt, metav1.CreateOptions{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// can't think of a better way to wait for a bit before checking.
 	time.Sleep(time.Second)
 
 	list, err := framework.ListGameServersFromFleet(flt)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Empty(t, list)
 }
 
@@ -1468,7 +1468,7 @@ func TestFleetWithLongLabelsAnnotations(t *testing.T) {
 	flt.Spec.Template.ObjectMeta.Labels = make(map[string]string)
 	flt.Spec.Template.ObjectMeta.Labels["label"] = longName
 	_, err := client.Fleets(framework.Namespace).Create(ctx, flt, metav1.CreateOptions{})
-	assert.Error(t, err)
+	require.Error(t, err)
 	var statusErr *k8serrors.StatusError
 	ok := errors.As(err, &statusErr)
 	assert.True(t, ok)
@@ -1481,7 +1481,7 @@ func TestFleetWithLongLabelsAnnotations(t *testing.T) {
 	flt.Spec.Template.ObjectMeta.Annotations = make(map[string]string)
 	flt.Spec.Template.ObjectMeta.Annotations[longName] = normalLengthName
 	_, err = client.Fleets(framework.Namespace).Create(ctx, flt, metav1.CreateOptions{})
-	assert.Error(t, err)
+	require.Error(t, err)
 	ok = errors.As(err, &statusErr)
 	assert.True(t, ok)
 	assert.Len(t, statusErr.Status().Details.Causes, 1)
@@ -1504,7 +1504,7 @@ func TestFleetWithLongLabelsAnnotations(t *testing.T) {
 	goodFlt.Spec.Template.ObjectMeta.Annotations = make(map[string]string)
 	goodFlt.Spec.Template.ObjectMeta.Annotations[longName] = normalLengthName
 	_, err = client.Fleets(framework.Namespace).Update(ctx, goodFlt, metav1.UpdateOptions{})
-	assert.Error(t, err)
+	require.Error(t, err)
 	ok = errors.As(err, &statusErr)
 	assert.True(t, ok)
 	require.Len(t, statusErr.Status().Details.Causes, 1)
@@ -1535,7 +1535,7 @@ func TestFleetRecreateGameServers(t *testing.T) {
 
 			for _, gs := range list.Items {
 				pod, err := podClient.Get(ctx, gs.ObjectMeta.Name, metav1.GetOptions{})
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				assert.True(t, metav1.IsControlledBy(pod, &gs))
 
@@ -1588,7 +1588,7 @@ func TestFleetRecreateGameServers(t *testing.T) {
 			framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
 
 			list, err := listGameServers(ctx, flt, client)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			var gameservers []agonesv1.GameServer
 			for _, gs := range list.Items {
 				if gs.Status.State != agonesv1.GameServerStateShutdown {
@@ -1612,7 +1612,7 @@ func TestFleetRecreateGameServers(t *testing.T) {
 
 					return false, err
 				})
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 
 			framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
@@ -1659,7 +1659,7 @@ func TestFleetResourceValidation(t *testing.T) {
 	containers[1].Resources.Requests[corev1.ResourceMemory] = mi128
 
 	_, err := client.Fleets(framework.Namespace).Create(ctx, flt.DeepCopy(), metav1.CreateOptions{})
-	assert.Error(t, err)
+	require.Error(t, err)
 	var statusErr *k8serrors.StatusError
 	ok := errors.As(err, &statusErr)
 	assert.True(t, ok)
@@ -1669,7 +1669,7 @@ func TestFleetResourceValidation(t *testing.T) {
 
 	containers[0].Resources.Limits[corev1.ResourceCPU] = resource.MustParse("-50m")
 	_, err = client.Fleets(framework.Namespace).Create(ctx, flt.DeepCopy(), metav1.CreateOptions{})
-	assert.Error(t, err)
+	require.Error(t, err)
 	ok = errors.As(err, &statusErr)
 	assert.True(t, ok)
 
@@ -1734,7 +1734,7 @@ func TestFleetAggregatedCounterStatus(t *testing.T) {
 	})
 
 	list, err := framework.ListGameServersFromFleet(flt)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	totalCapacity := 0
 	totalCount := 0
 	allocatedCapacity := 0
@@ -1820,7 +1820,7 @@ func TestFleetAggregatedListStatus(t *testing.T) {
 	})
 
 	list, err := framework.ListGameServersFromFleet(flt)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	totalCapacity := 0
 	totalCount := 0
 	allocatedCapacity := 0
