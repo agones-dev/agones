@@ -55,7 +55,7 @@ func findGameServerForAllocation(gsa *allocationv1.GameServerAllocation, list []
 			for i := range l {
 				indices[i] = i
 			}
-			rand.Shuffle(l, func(i, j int) {
+			rand.Shuffle(l, func(i, j int) { //nolint:gosec // G404: only spreads allocations across GameServers, not security-sensitive.
 				indices[i], indices[j] = indices[j], indices[i]
 			})
 
