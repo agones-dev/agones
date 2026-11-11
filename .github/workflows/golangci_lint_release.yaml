@@ -1,0 +1,49 @@
+---
+name: golangci-lint Release Watch
+on:
+  schedule:
+    - cron: 0 0 * * 1
+  workflow_dispatch: {}
+permissions: {}
+jobs:
+  check_release:
+    name: Open an issue when a new golangci-lint release is out
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Compare the pinned golangci-lint version with the latest release
+        id: versions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          semver='^v[0-9]+\.[0-9]+\.[0-9]+$'
+          pinned=$(grep -oP 'golangci-lint/v[0-9]+/cmd/golangci-lint@\Kv[0-9]+\.[0-9]+\.[0-9]+' build/build-image/Dockerfile || true)
+          latest=$(gh api repos/golangci/golangci-lint/releases/latest --jq .tag_name || true)
+          if ! [[ $pinned =~ $semver && $latest =~ $semver ]]; then
+            echo "::error::could not read versions: pinned='$pinned' latest='$latest'"
+            exit 1
+          fi
+          newest=$(printf '%s\n' "$pinned" "$latest" | sort -V | tail -n1)
+          echo "pinned=$pinned latest=$latest"
+          {
+            echo "pinned=$pinned"
+            echo "latest=$latest"
+            echo "outdated=$([[ $newest != "$pinned" ]] && echo true || echo false)"
+          } >> "$GITHUB_OUTPUT"
+      # update_existing: false skips creating the issue when one with the same title already exists,
+      # and search_existing: all includes closed issues, so each release gets at most one issue.
+      - if: steps.versions.outputs.outdated == 'true'
+        uses: JasonEtco/create-an-issue@1b14a70e4d8dc185e5cc76d3bec9eab20257b2c5  # v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PINNED_VERSION: ${{ steps.versions.outputs.pinned }}
+          LATEST_VERSION: ${{ steps.versions.outputs.latest }}
+        with:
+          filename: .github/ISSUE_TEMPLATE/golangci_lint_upgrade.md
+          update_existing: false
+          search_existing: all

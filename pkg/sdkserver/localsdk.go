@@ -159,10 +159,6 @@ func NewLocalSDKServer(filePath string, testSdkName string, listMaxCapacity int6
 			l.logger.WithError(err).WithField("filePath", filePath).Error("error adding watcher")
 		}
 	}
-	if runtime.FeatureEnabled(runtime.FeaturePlayerTracking) && l.gs.GetStatus().GetPlayers() == nil {
-		l.gs.Status.Players = &sdk.GameServer_Status_PlayerStatus{}
-	}
-
 	if l.gs.Status.Counters == nil {
 		l.gs.Status.Counters = make(map[string]*sdk.GameServer_Status_CounterStatus)
 	}

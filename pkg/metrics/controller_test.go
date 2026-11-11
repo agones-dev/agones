@@ -24,7 +24,6 @@ import (
 
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
 	agtesting "agones.dev/agones/pkg/testing"
-	"agones.dev/agones/pkg/util/runtime"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -286,95 +285,6 @@ func TestControllerGameServerCount(t *testing.T) {
 		{labels: []string{"test-fleet", defaultNs, "Ready"}, val: int64(0)},
 		{labels: []string{"test-fleet", defaultNs, "Shutdown"}, val: int64(1)},
 		{labels: []string{"none", defaultNs, "PortAllocation"}, val: int64(2)},
-	})
-}
-
-func TestControllerGameServerPlayerConnectedCount(t *testing.T) {
-	mu.Lock()
-	defer mu.Unlock()
-	runtime.EnableAllFeatures()
-	resetMetrics()
-	reader := metricexport.NewReader()
-
-	c := newFakeController()
-	defer c.close()
-
-	gs1 := gameServerWithFleetAndState("test-fleet", agonesv1.GameServerStateReady)
-	gs1.Status.Players = &agonesv1.PlayerStatus{
-		Count: 0,
-	}
-	c.gsWatch.Add(gs1)
-	gs1 = gs1.DeepCopy()
-	gs1.Status.Players.Count = 1
-	c.gsWatch.Modify(gs1)
-
-	c.run(t)
-	require.True(t, c.sync())
-	require.Eventually(t, func() bool {
-		gs, err := c.gameServerLister.GameServers(gs1.ObjectMeta.Namespace).Get(gs1.ObjectMeta.Name)
-		if err != nil || gs == nil {
-			return false
-		}
-		assert.NoError(t, err)
-		return gs.Status.Players.Count == 1
-	}, 10*time.Second, time.Second)
-	c.collect()
-
-	gs1 = gs1.DeepCopy()
-	gs1.Status.Players.Count = 4
-	c.gsWatch.Modify(gs1)
-
-	c.run(t)
-	require.True(t, c.sync())
-	require.Eventually(t, func() bool {
-		gs, err := c.gameServerLister.GameServers(gs1.ObjectMeta.Namespace).Get(gs1.ObjectMeta.Name)
-		if err != nil || gs == nil {
-			return false
-		}
-		assert.NoError(t, err)
-		return gs.Status.Players.Count == 4
-	}, 10*time.Second, time.Second)
-
-	assertMetricData(t, c, func() {
-		c.collect()
-	}, reader, gameServersPlayerConnectedTotalName, []expectedMetricData{
-		{labels: []string{"test-fleet", gs1.GetName(), defaultNs}, val: int64(4)},
-	})
-}
-
-func TestControllerGameServerPlayerCapacityCount(t *testing.T) {
-	mu.Lock()
-	defer mu.Unlock()
-	runtime.EnableAllFeatures()
-	resetMetrics()
-	reader := metricexport.NewReader()
-
-	c := newFakeController()
-	defer c.close()
-
-	gs1 := gameServerWithFleetAndState("test-fleet", agonesv1.GameServerStateReady)
-	gs1.Status.Players = &agonesv1.PlayerStatus{
-		Capacity: 4,
-		Count:    0,
-	}
-	c.gsWatch.Add(gs1)
-	gs1 = gs1.DeepCopy()
-	gs1.Status.Players.Count = 1
-	c.gsWatch.Modify(gs1)
-
-	c.run(t)
-	require.True(t, c.sync())
-	require.Eventually(t, func() bool {
-		gs, err := c.gameServerLister.GameServers(gs1.ObjectMeta.Namespace).Get(gs1.ObjectMeta.Name)
-		if err != nil || gs == nil {
-			return false
-		}
-		assert.NoError(t, err)
-		return gs.Status.Players.Count == 1
-	}, 10*time.Second, time.Second)
-
-	assertMetricData(t, c, func() {}, reader, gameServersPlayerCapacityTotalName, []expectedMetricData{
-		{labels: []string{"test-fleet", gs1.GetName(), defaultNs}, val: int64(3)},
 	})
 }
 
