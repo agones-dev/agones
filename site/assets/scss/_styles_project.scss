@@ -62,7 +62,12 @@
   min-height: $agones-navbar-height + $td-navbar__main-min-height-mobile;
 
   @include media-breakpoint-up(md) {
-    top: $survey-banner-height;
     min-height: $agones-navbar-height;
+  }
+}
+
+.survey-banner + .td-navbar {
+  @include media-breakpoint-up(md) {
+    top: $survey-banner-height;
   }
 }
