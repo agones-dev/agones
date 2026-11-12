@@ -20,6 +20,7 @@ import (
 
 	"agones.dev/agones/pkg/util/runtime"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -321,7 +322,7 @@ func TestFleetAutoscalerCounterValidateUpdate(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			err := runtime.ParseFeatures(tc.featureFlags)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			causes := tc.fas.Validate()
 
@@ -438,7 +439,7 @@ func TestFleetAutoscalerListValidateUpdate(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			err := runtime.ParseFeatures(tc.featureFlags)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			causes := tc.fas.Validate()
 
@@ -512,7 +513,7 @@ func TestFleetAutoscalerScheduleValidateUpdate(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			err := runtime.ParseFeatures(tc.featureFlags)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			causes := tc.fas.Validate()
 
@@ -598,7 +599,7 @@ func TestFleetAutoscalerChainValidateUpdate(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			err := runtime.ParseFeatures(tc.featureFlags)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			causes := tc.fas.Validate()
 
@@ -669,7 +670,7 @@ func TestFleetAutoscalerWasmValidateUpdate(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			err := runtime.ParseFeatures(tc.featureFlags)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			causes := tc.fas.Validate()
 

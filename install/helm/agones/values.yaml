@@ -54,6 +54,8 @@ agones:
   priorityClassName: agones-system
   cloudProduct: "auto"
   requireDedicatedNodes: false
+  # Extra Kubernetes manifests to deploy with the chart, as objects or YAML strings rendered through tpl.
+  extraObjects: []
   sdkServer:
     requestsRateLimit: 500ms
   controller:

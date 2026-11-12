@@ -27,17 +27,17 @@ type mockLister struct {
 	err    error
 }
 
-func (m mockLister) List(prefix string) (string, error) {
+func (m mockLister) List(_ string) (string, error) {
 	return m.output, m.err
 }
 
 func TestGetPreviousVersion(t *testing.T) {
 	testCases := []struct {
-		name         string
-		version      string
-		mockLister   mockLister
-		expected     string
-		expectErr    bool
+		name       string
+		version    string
+		mockLister mockLister
+		expected   string
+		expectErr  bool
 	}{
 		{
 			name:    "Minor Release - gsutil success",
@@ -67,11 +67,11 @@ func TestGetPreviousVersion(t *testing.T) {
 			expectErr:  false,
 		},
 		{
-			name:      "Major Release - error",
-			version:   "2.0.0",
+			name:       "Major Release - error",
+			version:    "2.0.0",
 			mockLister: mockLister{},
-			expected:  "",
-			expectErr: true,
+			expected:   "",
+			expectErr:  true,
 		},
 	}
 
@@ -96,10 +96,10 @@ func TestGetPreviousVersion(t *testing.T) {
 
 func TestGetLatestVersionFromGsutil(t *testing.T) {
 	testCases := []struct {
-		name          string
-		gsutilOutput  string
-		major, minor  uint64
-		expected      semver.Version
+		name         string
+		gsutilOutput string
+		major, minor uint64
+		expected     semver.Version
 	}{
 		{
 			name:         "No versions found",

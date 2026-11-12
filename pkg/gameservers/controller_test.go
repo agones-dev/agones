@@ -142,10 +142,10 @@ func TestControllerSyncGameServer(t *testing.T) {
 		defer cancel()
 
 		err := c.portAllocator.Run(ctx)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		err = c.syncGameServer(ctx, "default/test")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 3, updateCount, "update reactor should fire thrice")
 		assert.True(t, podCreated, "pod should be created")
 	})
@@ -241,10 +241,10 @@ func TestControllerSyncGameServerWithInitSidecar(t *testing.T) {
 		defer cancel()
 
 		err := c.portAllocator.Run(ctx)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		err = c.syncGameServer(ctx, "default/test")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 3, updateCount, "update reactor should fire thrice")
 		assert.True(t, podCreated, "pod should be created")
 	})
@@ -276,7 +276,7 @@ func runReconcileDeleteGameServer(t *testing.T, fixture *agonesv1.GameServer) {
 	agonesWatch.Delete(fixture)
 
 	err := c.syncGameServer(ctx, "default/test")
-	assert.NoError(t, err, "Shouldn't be an error from syncGameServer: %+v", err)
+	require.NoError(t, err, "Shouldn't be an error from syncGameServer: %+v", err)
 	assert.False(t, podAction, "Nothing should happen to a Pod")
 }
 
@@ -330,10 +330,10 @@ func TestControllerSyncGameServerWithDevIP(t *testing.T) {
 		defer cancel()
 
 		err := c.portAllocator.Run(ctx)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		err = c.syncGameServer(ctx, "default/test")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 1, updateCount, "update reactor should fire once")
 	})
 
@@ -364,10 +364,10 @@ func TestControllerSyncGameServerWithDevIP(t *testing.T) {
 		defer cancel()
 
 		err := c.portAllocator.Run(ctx)
-		assert.NoError(t, err, "should not error")
+		require.NoError(t, err, "should not error")
 
 		err = c.syncGameServer(ctx, "default/test")
-		assert.NoError(t, err, "should not error")
+		require.NoError(t, err, "should not error")
 		assert.Equal(t, 1, updateCount, "update reactor should fire once")
 	})
 
@@ -421,7 +421,7 @@ func TestControllerWatchGameServers(t *testing.T) {
 	fixture := agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "default"}, Spec: newSingleContainerSpec()}
 	fixture.ApplyDefaults()
 	pod, err := fixture.Pod(agtesting.FakeAPIHooks{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	pod.ObjectMeta.Name = pod.ObjectMeta.GenerateName + "-pod"
 
 	gsWatch := watch.NewFake()
@@ -506,7 +506,7 @@ func TestControllerWatchGameServers(t *testing.T) {
 
 	// add an unscheduled game pod
 	pod, err = fixture.Pod(agtesting.FakeAPIHooks{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	pod.ObjectMeta.Name = pod.ObjectMeta.GenerateName + "-pod2"
 	podWatch.Add(pod)
 	noStateChange(podSynced)
@@ -571,7 +571,7 @@ func TestControllerCreationMutationHandler(t *testing.T) {
 
 			result, err := ext.creationMutationHandler(review)
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			if tc.expected.nilPatch {
 				require.Nil(t, result.Response.PatchType)
 			} else {
@@ -716,7 +716,7 @@ func TestControllerCreationMutationHandlerPod(t *testing.T) {
 		}
 
 		result, err := ext.creationMutationHandlerPod(review)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		patch := &jsonpatch.ByPath{}
 		err = json.Unmarshal(result.Response.Patch, patch)
 		found := false
@@ -745,7 +745,7 @@ func TestControllerSyncGameServerDeletionTimestamp(t *testing.T) {
 			Spec: newSingleContainerSpec()}
 		fixture.ApplyDefaults()
 		pod, err := fixture.Pod(agtesting.FakeAPIHooks{})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		deleted := false
 		mocks.KubeClient.AddReactor("list", "pods", func(_ k8stesting.Action) (bool, runtime.Object, error) {
@@ -762,7 +762,7 @@ func TestControllerSyncGameServerDeletionTimestamp(t *testing.T) {
 		defer cancel()
 
 		result, err := c.syncGameServerDeletionTimestamp(ctx, fixture)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, deleted, "pod should be deleted")
 		assert.Equal(t, fixture, result)
 		agtesting.AssertEventContains(t, mocks.FakeRecorder.Events, fmt.Sprintf("%s %s %s", corev1.EventTypeNormal,
@@ -776,7 +776,7 @@ func TestControllerSyncGameServerDeletionTimestamp(t *testing.T) {
 			Spec: newSingleContainerSpec()}
 		fixture.ApplyDefaults()
 		pod, err := fixture.Pod(agtesting.FakeAPIHooks{})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		mocks.KubeClient.AddReactor("list", "pods", func(_ k8stesting.Action) (bool, runtime.Object, error) {
 			return true, &corev1.PodList{Items: []corev1.Pod{*pod}}, nil
@@ -814,7 +814,7 @@ func TestControllerSyncGameServerDeletionTimestamp(t *testing.T) {
 		defer cancel()
 
 		result, err := c.syncGameServerDeletionTimestamp(ctx, fixture)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, updated, "gameserver should be updated, to remove the finaliser")
 		assert.Equal(t, fixture.ObjectMeta.Name, result.ObjectMeta.Name)
 		assert.Empty(t, result.ObjectMeta.Finalizers)
@@ -845,7 +845,7 @@ func TestControllerSyncGameServerDeletionTimestamp(t *testing.T) {
 		defer cancel()
 
 		result, err := c.syncGameServerDeletionTimestamp(ctx, fixture)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, updated, "gameserver should be updated, to remove the finaliser")
 		assert.Equal(t, fixture.ObjectMeta.Name, result.ObjectMeta.Name)
 		assert.Empty(t, result.ObjectMeta.Finalizers)
@@ -1026,7 +1026,7 @@ func TestControllerSyncGameServerCreatingState(t *testing.T) {
 
 		gs, err := c.syncGameServerCreatingState(ctx, fixture)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, podCreated, "Pod should have been created")
 
 		assert.Equal(t, agonesv1.GameServerStateStarting, gs.Status.State)
@@ -1069,7 +1069,7 @@ func TestControllerSyncGameServerCreatingState(t *testing.T) {
 
 		gs, err := c.syncGameServerCreatingState(ctx, fixture)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, podCreated, "Pod should have been created")
 
 		assert.Equal(t, agonesv1.GameServerStateStarting, gs.Status.State)
@@ -1111,7 +1111,7 @@ func TestControllerSyncGameServerCreatingState(t *testing.T) {
 
 		gs, err := c.syncGameServerCreatingState(ctx, fixture)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, podCreated, "Pod should have been created")
 
 		assert.Equal(t, agonesv1.GameServerStateStarting, gs.Status.State)
@@ -1146,7 +1146,7 @@ func TestControllerSyncGameServerCreatingState(t *testing.T) {
 
 		gs, err := c.syncGameServerCreatingState(ctx, fixture)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, podCreated, "Pod should have been created")
 
 		assert.Equal(t, agonesv1.GameServerStateStarting, gs.Status.State)
@@ -1189,7 +1189,7 @@ func TestControllerSyncGameServerCreatingState(t *testing.T) {
 		podCreated := false
 		gsUpdated := false
 		pod, err := fixture.Pod(agtesting.FakeAPIHooks{})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		m.KubeClient.AddReactor("list", "pods", func(_ k8stesting.Action) (bool, runtime.Object, error) {
 			return true, &corev1.PodList{Items: []corev1.Pod{*pod}}, nil
@@ -1210,7 +1210,7 @@ func TestControllerSyncGameServerCreatingState(t *testing.T) {
 		defer cancel()
 
 		gs, err := c.syncGameServerCreatingState(ctx, fixture)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, agonesv1.GameServerStateStarting, gs.Status.State)
 		assert.False(t, podCreated, "Pod should not have been created")
 		assert.True(t, gsUpdated, "GameServer should have been updated")
@@ -1238,7 +1238,7 @@ func TestControllerSyncGameServerCreatingState(t *testing.T) {
 		defer cancel()
 
 		gs, err := c.syncGameServerCreatingState(ctx, fixture)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		assert.True(t, podCreated, "attempt should have been made to create a pod")
 		assert.True(t, gsUpdated, "GameServer should be updated")
@@ -1275,7 +1275,7 @@ func TestControllerSyncGameServerStartingState(t *testing.T) {
 		gsFixture := newFixture()
 		gsFixture.ApplyDefaults()
 		pod, err := gsFixture.Pod(agtesting.FakeAPIHooks{})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		pod.Spec.NodeName = nodeFixtureName
 		pod.Status.PodIPs = []corev1.PodIP{{IP: ipv6Fixture}}
 		gsUpdated := false
@@ -1702,7 +1702,7 @@ func TestControllerCreateGameServerPod(t *testing.T) {
 		})
 
 		_, err := c.createGameServerPod(context.Background(), fixture)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, created)
 	})
 
@@ -2160,7 +2160,7 @@ func TestControllerSyncGameServerShutdownState(t *testing.T) {
 		defer cancel()
 
 		err := c.syncGameServerShutdownState(ctx, gsFixture)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, checkDeleted, "GameServer should be deleted")
 		assert.Contains(t, <-mocks.FakeRecorder.Events, "Deletion started")
 	})
@@ -2227,7 +2227,7 @@ func TestControllerGameServerPod(t *testing.T) {
 			return len(list) > 0
 		}, time.Second, 100*time.Millisecond)
 		_, err := c.gameServerPod(gs)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.True(t, k8serrors.IsNotFound(err))
 	})
 
@@ -2256,7 +2256,7 @@ func TestControllerGameServerPod(t *testing.T) {
 			return len(list) == 0
 		}, 5*time.Second, time.Second)
 		_, err = c.gameServerPod(gs)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.True(t, k8serrors.IsNotFound(err))
 	})
 
@@ -2274,7 +2274,7 @@ func TestControllerGameServerPod(t *testing.T) {
 		assert.NotNil(t, pod)
 
 		_, err = c.gameServerPod(gs)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.True(t, k8serrors.IsNotFound(err))
 	})
 
@@ -2307,7 +2307,7 @@ func TestControllerAddGameServerHealthCheck(t *testing.T) {
 	require.NoError(t, err)
 	err = c.addGameServerHealthCheck(fixture, pod)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, pod.Spec.Containers, 1)
 	probe := pod.Spec.Containers[0].LivenessProbe
 	require.NotNil(t, probe)

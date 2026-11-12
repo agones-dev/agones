@@ -1,1 +1,2 @@
-m_EditorVersion: 2018.4.12f1
+m_EditorVersion: 6000.6.7f1
+m_EditorVersionWithRevision: 6000.6.7f1 (b22767f04f04)

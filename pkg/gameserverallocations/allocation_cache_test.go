@@ -50,10 +50,6 @@ func TestAllocationCacheListSortedGameServers(t *testing.T) {
 		Status: agonesv1.GameServerStatus{NodeName: "node2", State: agonesv1.GameServerStateReady}}
 	gs5 := agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "gs5", Namespace: defaultNs, UID: "5"},
 		Status: agonesv1.GameServerStatus{NodeName: "node1", State: agonesv1.GameServerStateReady,
-			Players: &agonesv1.PlayerStatus{
-				Count:    0,
-				Capacity: 10,
-			},
 			Counters: map[string]agonesv1.CounterStatus{
 				"players": {
 					Count:    4,
@@ -62,10 +58,7 @@ func TestAllocationCacheListSortedGameServers(t *testing.T) {
 			}},
 	}
 	gs6 := agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "gs6", Namespace: defaultNs, UID: "6"},
-		Status: agonesv1.GameServerStatus{NodeName: "node1", State: agonesv1.GameServerStateReady, Players: &agonesv1.PlayerStatus{
-			Count:    2,
-			Capacity: 10,
-		},
+		Status: agonesv1.GameServerStatus{NodeName: "node1", State: agonesv1.GameServerStateReady,
 			Counters: map[string]agonesv1.CounterStatus{
 				"players": {
 					Count:    14,
@@ -174,10 +167,10 @@ func TestAllocationCacheListSortedGameServers(t *testing.T) {
 
 			// This call initializes the cache
 			err := cache.syncCache()
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			err = cache.counter.Run(ctx, 0)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			list := cache.ListSortedGameServers(v.gsa)
 
@@ -465,10 +458,10 @@ func TestListSortedGameServersPriorities(t *testing.T) {
 
 			// This call initializes the cache
 			err := cache.syncCache()
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			err = cache.counter.Run(ctx, 0)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			got := cache.ListSortedGameServersPriorities(testScenario.gsa)
 

@@ -45,16 +45,16 @@ func TestGameServerUnhealthyAfterDeletingPodWhileControllerDown(t *testing.T) {
 	defer gsClient.Delete(ctx, readyGs.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 	pod, err := podClient.Get(ctx, readyGs.ObjectMeta.Name, metav1.GetOptions{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, metav1.IsControlledBy(pod, readyGs))
 
 	err = deleteAgonesControllerPods(ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = podClient.Delete(ctx, pod.ObjectMeta.Name, metav1.DeleteOptions{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	_, err = framework.WaitForGameServerState(t, readyGs, agonesv1.GameServerStateUnhealthy, 3*time.Minute)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	logger.Info("waiting for Agones controller to come back to running")
 	assert.NoError(t, waitForAgonesControllerRunning(ctx, -1))
 }

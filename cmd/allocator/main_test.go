@@ -25,7 +25,9 @@ import (
 	pb "agones.dev/agones/pkg/allocation/go"
 	allocationv1 "agones.dev/agones/pkg/apis/allocation/v1"
 	"agones.dev/agones/pkg/util/errors"
+	"agones.dev/agones/pkg/util/runtime"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	corev1 "k8s.io/api/core/v1"
@@ -87,22 +89,22 @@ func TestAllocateHandlerReturnsError(t *testing.T) {
 func TestGetTlsCert(t *testing.T) {
 	t.Parallel()
 	cert1, err := tls.X509KeyPair(serverCert1, serverKey1)
-	assert.NoError(t, err, "expected (serverCert1, serverKey1) to create a cert")
+	require.NoError(t, err, "expected (serverCert1, serverKey1) to create a cert")
 
 	cert2, err := tls.X509KeyPair(serverCert2, serverKey2)
-	assert.NoError(t, err, "expected (serverCert2, serverKey2) to create a cert")
+	require.NoError(t, err, "expected (serverCert2, serverKey2) to create a cert")
 
 	h := serviceHandler{
 		tlsCert: &cert1,
 	}
 
 	retrievedCert1, err := h.getTLSCert(nil)
-	assert.NoError(t, err, "expected getTlsCert() to not fail")
+	require.NoError(t, err, "expected getTlsCert() to not fail")
 	assert.Equal(t, cert1.Certificate, retrievedCert1.Certificate, "expected the retrieved cert to be equal to the original one")
 
 	h.tlsCert = &cert2
 	retrievedCert2, err := h.getTLSCert(nil)
-	assert.NoError(t, err, "expected getTlsCert() to not fail")
+	require.NoError(t, err, "expected getTlsCert() to not fail")
 	assert.Equal(t, cert2.Certificate, retrievedCert2.Certificate, "expected the retrieved cert to be equal to the original one")
 }
 
@@ -127,9 +129,7 @@ func TestHandlingStatus(t *testing.T) {
 
 	request := &pb.AllocationRequest{}
 	_, err := h.Allocate(context.Background(), request)
-	if !assert.Error(t, err, "expecting failure") {
-		return
-	}
+	require.Error(t, err, "expecting failure")
 
 	st, ok := status.FromError(err)
 	if !ok {
@@ -137,6 +137,44 @@ func TestHandlingStatus(t *testing.T) {
 	}
 	assert.Equal(t, 422, int(st.Code()))
 	assert.Contains(t, st.Message(), errorMessage)
+}
+
+type failingProcessorClient struct {
+	t *testing.T
+}
+
+func (failingProcessorClient) Run(_ context.Context) error {
+	return nil
+}
+
+func (f failingProcessorClient) Allocate(_ context.Context, _ *pb.AllocationRequest) (*pb.AllocationResponse, error) {
+	f.t.Error("processor client should not be called for an invalid request")
+	return nil, nil
+}
+
+// Not parallel: it changes feature gates that the parallel tests in this package read.
+func TestProcessorHandlingInvalidRequest(t *testing.T) {
+	runtime.FeatureTestMutex.Lock()
+	defer runtime.FeatureTestMutex.Unlock()
+	require.NoError(t, runtime.ParseFeatures(string(runtime.FeatureProcessorAllocator)+"=true"))
+	defer func() {
+		require.NoError(t, runtime.ParseFeatures(""))
+	}()
+
+	h := serviceHandler{processorClient: failingProcessorClient{t: t}}
+
+	request := &pb.AllocationRequest{
+		Metadata: &pb.MetaPatch{
+			Labels: map[string]string{"not a valid label key": "value"},
+		},
+	}
+	_, err := h.Allocate(context.Background(), request)
+	require.Error(t, err)
+
+	st, ok := status.FromError(err)
+	require.True(t, ok, "expecting status error: %v", err)
+	assert.Equal(t, codes.InvalidArgument, st.Code())
+	assert.Contains(t, st.Message(), "GameServerAllocation")
 }
 
 func TestBadReturnType(t *testing.T) {
@@ -150,9 +188,7 @@ func TestBadReturnType(t *testing.T) {
 
 	request := &pb.AllocationRequest{}
 	_, err := h.Allocate(context.Background(), request)
-	if !assert.Error(t, err, "expecting failure") {
-		return
-	}
+	require.Error(t, err, "expecting failure")
 
 	st, ok := status.FromError(err)
 	if !ok {

@@ -24,6 +24,7 @@ import (
 	"agones.dev/agones/pkg/sdk"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/metadata"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
@@ -42,7 +43,7 @@ func testHTTPHealth(t *testing.T, url string, expectedResponse string, expectedS
 		if resp != nil {
 			defer resp.Body.Close() //nolint:errcheck
 			body, err := io.ReadAll(resp.Body)
-			assert.NoError(t, err, "(%s) read response error should be nil: %v", url, err)
+			require.NoError(t, err, "(%s) read response error should be nil: %v", url, err)
 			assert.Equal(t, expectedStatus, resp.StatusCode, "url: %s", url)
 			assert.Equal(t, []byte(expectedResponse), body, "(%s) response body should be '%s'", url, expectedResponse)
 		}
