@@ -1,4 +1,8 @@
 {{ $cover := .HasShortcode "blocks/cover" }}
+<div class="survey-banner">
+	<span class="survey-banner__text">📋 The <strong>Annual Agones Survey</strong> is open until 15 February 2027. Help us understand how we can improve Agones!</span>
+	<a class="survey-banner__link" href="https://docs.google.com/forms/d/e/1FAIpQLSevqtMpB7BlRfOMT1KUyJLAuE_mTWBunMvg1yb0zbdgHYZduw/viewform?usp=dialog">Take the survey</a>
+</div>
 <nav class="js-navbar-scroll navbar navbar-expand-lg {{ if not $cover }} nav-shadow {{ end }} flex-column flex-md-row td-navbar" data-bs-theme="auto">
 
 	<a id="agones-top" {{ if $cover }} style="display: none;" {{end}} class="navbar-brand" href="{{ .Site.Home.RelPermalink }}">
