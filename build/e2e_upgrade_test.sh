@@ -84,7 +84,7 @@ sed "s/\${DevVersion}/${DevVersion}/" versionMap.yaml > "${tmpdir}"/versionMap.y
 trap 'echo Cleaning up any remaining running pids: $(jobs -p) ; kill $(jobs -p) 2> /dev/null || :' EXIT SIGTERM
 
 cloudProducts=("generic" "gke-autopilot")
-declare -A versionsAndRegions=( [1.33]=us-central1 [1.32]=us-west1 [1.31]=us-east1 )
+declare -A versionsAndRegions=( [1.37]=us-east1 [1.36]=us-east4 [1.35]=us-west1 )
 
 for cloudProduct in "${cloudProducts[@]}"
 do

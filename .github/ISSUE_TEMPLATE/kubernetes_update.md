@@ -96,8 +96,8 @@ List of items to do for upgrading to {version_1} {version_2} {version_3}
           oldest supported K8s version in `cloudbuild.yaml` `submit-e2e-test-cloud-build` step
     - [ ] Update the `featureWithGateByVersion` variable to add the new supported version and remove
           the oldest supported K8s version in `cloudbuild.yaml` `submit-e2e-test-cloud-build` step
-    - [ ] Update the `versionsAndRegions` variable to add the new supported version and remove the
-          oldest supported K8s version in `cloudbuild.yaml` `submit-upgrade-test-cloud-build` step
+    - [ ] Update the `versionsAndRegions` variable in `build/e2e_upgrade_test.sh` to add the new
+          supported version and remove the oldest supported K8s version.
     - [ ] Update the `test/upgrade/versionMap.yaml` `k8sToAgonesVersions` to add the new Kubernetes
           version. For example:
       ```
