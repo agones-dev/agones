@@ -22,6 +22,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestFeatures(t *testing.T) {
@@ -43,19 +44,19 @@ func TestFeatures(t *testing.T) {
 
 	t.Run("Empty query string", func(t *testing.T) {
 		err := ParseFeatures("")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, FeatureEnabled(FeatureExample))
 		assert.Equal(t, "Example=true&Test=false", EncodeFeatures())
 	})
 
 	t.Run("query string", func(t *testing.T) {
 		err := ParseFeatures("Example=0&Test=1")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.False(t, FeatureEnabled(FeatureExample))
 		assert.True(t, FeatureEnabled(Feature("Test")))
 		assert.Equal(t, "Example=false&Test=true", EncodeFeatures())
 		err = ParseFeatures(EncodeFeatures())
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.False(t, FeatureEnabled(FeatureExample))
 		assert.True(t, FeatureEnabled(Feature("Test")))
 	})
@@ -70,7 +71,7 @@ func TestFeatures(t *testing.T) {
 		// ancestor has called t.Parallel, and TestFeatures does. Concurrent
 		// feature-gate mutation is held off by FeatureTestMutex instead.
 		//nolint:usetesting // see above
-		assert.NoError(t, os.Setenv("FEATURE_GATES", "Test=true"))
+		require.NoError(t, os.Setenv("FEATURE_GATES", "Test=true"))
 
 		FeaturesBindFlags()
 		pflag.Parse()
@@ -99,7 +100,7 @@ func TestEnableAllFeatures(t *testing.T) {
 	}
 
 	err := ParseFeatures("Example=0&Test=0")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.False(t, FeatureEnabled("Example"))
 	assert.False(t, FeatureEnabled("Test"))
 

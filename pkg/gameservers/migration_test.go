@@ -185,7 +185,7 @@ func TestMigrationControllerSyncGameServer(t *testing.T) {
 			defer cancel()
 
 			err = c.syncGameServer(ctx, "default/test")
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, v.expected.updated, updated)
 			v.expected.postTests(t, m)
 		})

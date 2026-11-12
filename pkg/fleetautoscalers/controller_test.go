@@ -159,7 +159,7 @@ func TestControllerCreationMutationHandler(t *testing.T) {
 
 			result, err := ext.mutationHandler(review)
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			if tc.expected.nilPatch {
 				require.Nil(t, result.Response.PatchType)
 			} else {
@@ -196,10 +196,10 @@ func TestControllerCreationValidationHandler(t *testing.T) {
 		defer cancel()
 
 		review, err := newAdmissionReview(*fas)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		result, err := ext.validationHandler(review)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, result.Response.Allowed, "%#v", result.Response)
 	})
 
@@ -214,10 +214,10 @@ func TestControllerCreationValidationHandler(t *testing.T) {
 		defer cancel()
 
 		review, err := newAdmissionReview(*fas)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		result, err := ext.validationHandler(review)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.False(t, result.Response.Allowed, "%#v", result.Response)
 		assert.Equal(t, metav1.StatusFailure, result.Response.Result.Status)
 		assert.Equal(t, metav1.StatusReasonInvalid, result.Response.Result.Reason)
@@ -228,7 +228,7 @@ func TestControllerCreationValidationHandler(t *testing.T) {
 		ext := newFakeExtensions()
 
 		review, err := newInvalidAdmissionReview()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		_, err = ext.validationHandler(review)
 
@@ -249,10 +249,10 @@ func TestWebhookControllerCreationValidationHandler(t *testing.T) {
 		defer cancel()
 
 		review, err := newAdmissionReview(*fas)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		result, err := ext.validationHandler(review)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, result.Response.Allowed, "%#v", result.Response)
 	})
 
@@ -267,10 +267,10 @@ func TestWebhookControllerCreationValidationHandler(t *testing.T) {
 		defer cancel()
 
 		review, err := newAdmissionReview(*fas)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		result, err := ext.validationHandler(review)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.False(t, result.Response.Allowed, "%#v", result.Response)
 		assert.Equal(t, metav1.StatusFailure, result.Response.Result.Status)
 		assert.Equal(t, metav1.StatusReasonInvalid, result.Response.Result.Reason)
@@ -318,7 +318,7 @@ func TestControllerSyncFleetAutoscaler(t *testing.T) {
 		fleetAutoscalerThreadEventually(t, c, fas)
 
 		err := c.syncFleetAutoscaler(ctx, "default/fas-1")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		agtesting.AssertNoEvent(t, m.FakeRecorder.Events)
 	})
 
@@ -370,7 +370,7 @@ func TestControllerSyncFleetAutoscaler(t *testing.T) {
 		fleetAutoscalerThreadEventually(t, c, fas)
 
 		err := c.syncFleetAutoscaler(ctx, "default/fas-1")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, fUpdated, "fleet should have been updated")
 		assert.True(t, fasUpdated, "fleetautoscaler should have been updated")
 		agtesting.AssertEventContains(t, m.FakeRecorder.Events, "AutoScalingFleet")
@@ -430,7 +430,7 @@ func TestControllerSyncFleetAutoscaler(t *testing.T) {
 		fleetAutoscalerThreadEventually(t, c, fas)
 
 		err := c.syncFleetAutoscaler(ctx, "default/fas-1")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, fUpdated, "fleet should have been updated")
 		assert.True(t, fasUpdated, "fleetautoscaler should have been updated")
 		agtesting.AssertEventContains(t, m.FakeRecorder.Events, "AutoScalingFleet")
@@ -479,7 +479,7 @@ func TestControllerSyncFleetAutoscaler(t *testing.T) {
 		fleetAutoscalerThreadEventually(t, c, fas)
 
 		err := c.syncFleetAutoscaler(ctx, "default/fas-1")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		agtesting.AssertNoEvent(t, m.FakeRecorder.Events)
 	})
 
@@ -532,7 +532,7 @@ func TestControllerSyncFleetAutoscaler(t *testing.T) {
 		fleetAutoscalerThreadEventually(t, c, fas)
 
 		err := c.syncFleetAutoscaler(ctx, "default/fas-1")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, fUpdated, "fleet should have been updated")
 		assert.True(t, fasUpdated, "fleetautoscaler should have been updated")
 		agtesting.AssertEventContains(t, m.FakeRecorder.Events, "AutoScalingFleet")
@@ -577,7 +577,7 @@ func TestControllerSyncFleetAutoscaler(t *testing.T) {
 		fleetAutoscalerThreadEventually(t, c, fas)
 
 		err := c.syncFleetAutoscaler(ctx, "default/fas-1")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		agtesting.AssertNoEvent(t, m.FakeRecorder.Events)
 	})
 
@@ -612,7 +612,7 @@ func TestControllerSyncFleetAutoscaler(t *testing.T) {
 		fleetAutoscalerThreadEventually(t, c, fas)
 
 		err := c.syncFleetAutoscaler(ctx, fas.ObjectMeta.Name)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		agtesting.AssertNoEvent(t, m.FakeRecorder.Events)
 	})
 
@@ -642,7 +642,7 @@ func TestControllerSyncFleetAutoscaler(t *testing.T) {
 		fleetAutoscalerThreadEventually(t, c, fas)
 
 		err := c.syncFleetAutoscaler(ctx, "default/fas-1")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, updated)
 
 		agtesting.AssertEventContains(t, m.FakeRecorder.Events, "FailedGetFleet")
@@ -818,7 +818,7 @@ func TestControllerScaleFleet(t *testing.T) {
 		})
 
 		err := c.scaleFleet(context.Background(), fas, f, replicas)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, update, "Fleet should be updated")
 		agtesting.AssertEventContains(t, m.FakeRecorder.Events, "ScalingFleet")
 	})
@@ -851,7 +851,7 @@ func TestControllerScaleFleet(t *testing.T) {
 		})
 
 		err := c.scaleFleet(context.Background(), fas, f, replicas)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		agtesting.AssertNoEvent(t, m.FakeRecorder.Events)
 	})
 }
@@ -882,7 +882,7 @@ func TestControllerUpdateStatus(t *testing.T) {
 		defer cancel()
 
 		err := c.updateStatus(ctx, fas, 10, 20, true, false, fas.Spec.Policy.Type)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, fasUpdated)
 		agtesting.AssertNoEvent(t, m.FakeRecorder.Events)
 	})
@@ -907,7 +907,7 @@ func TestControllerUpdateStatus(t *testing.T) {
 		defer cancel()
 
 		err := c.updateStatus(ctx, fas, fas.Status.CurrentReplicas, fas.Status.DesiredReplicas, false, fas.Status.ScalingLimited, fas.Spec.Policy.Type)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		agtesting.AssertNoEvent(t, m.FakeRecorder.Events)
 	})
 
@@ -934,7 +934,7 @@ func TestControllerUpdateStatus(t *testing.T) {
 		fas, _ := defaultFixtures()
 
 		err := c.updateStatus(context.Background(), fas, 10, 20, true, true, fas.Spec.Policy.Type)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		agtesting.AssertEventContains(t, m.FakeRecorder.Events, "ScalingLimited")
 	})
 
@@ -943,7 +943,7 @@ func TestControllerUpdateStatus(t *testing.T) {
 		fas, _ := defaultFixtures()
 
 		err := c.updateStatus(context.Background(), fas, 1, 3, true, true, fas.Spec.Policy.Type)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		agtesting.AssertEventContains(t, m.FakeRecorder.Events, "limited to minimum size of 3")
 	})
 
@@ -952,7 +952,7 @@ func TestControllerUpdateStatus(t *testing.T) {
 		fas, _ := defaultFixtures()
 
 		err := c.updateStatus(context.Background(), fas, 12, 10, true, true, fas.Spec.Policy.Type)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		agtesting.AssertEventContains(t, m.FakeRecorder.Events, "limited to maximum size of 10")
 	})
 }
@@ -984,7 +984,7 @@ func TestControllerUpdateStatusUnableToScale(t *testing.T) {
 		defer cancel()
 
 		err := c.updateStatusUnableToScale(ctx, fas)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, fasUpdated)
 		agtesting.AssertNoEvent(t, m.FakeRecorder.Events)
 	})
@@ -1028,7 +1028,7 @@ func TestControllerUpdateStatusUnableToScale(t *testing.T) {
 		defer cancel()
 
 		err := c.updateStatusUnableToScale(ctx, fas)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		agtesting.AssertNoEvent(t, m.FakeRecorder.Events)
 	})
 }

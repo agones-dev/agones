@@ -31,7 +31,8 @@ func (c *Controller) rollingUpdateActiveSurge(fleet *agonesv1.Fleet, active *ago
 	if err != nil {
 		return 0, c.errs.Wrapf(err, "error parsing MaxSurge value: %s", fleet.ObjectMeta.Name)
 	}
-	surge := int32(r)
+	// Validate caps a percentage MaxSurge at 99% of Spec.Replicas, and an integer one is an int32.
+	surge := int32(r) //nolint:gosec // G115: bounded by Fleet validation, see above.
 
 	// count the GameServers an inactive GameServerSet is still creating (Spec above Status) as well
 	// as those it cannot remove because they are Allocated (Status above Spec).

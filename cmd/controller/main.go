@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -400,9 +401,17 @@ func parseEnvFlags() config {
 	if err != nil {
 		logger.WithError(err).Fatalf("could not parse %s", additionalPortRangesFlag)
 	}
+	minPort, err := parsePort(minPortFlag, viper.GetInt64(minPortFlag))
+	if err != nil {
+		logger.WithError(err).Fatalf("could not parse %s", minPortFlag)
+	}
+	maxPort, err := parsePort(maxPortFlag, viper.GetInt64(maxPortFlag))
+	if err != nil {
+		logger.WithError(err).Fatalf("could not parse %s", maxPortFlag)
+	}
 	portRanges[agonesv1.DefaultPortRange] = portallocator.PortRange{
-		MinPort: int32(viper.GetInt64(minPortFlag)),
-		MaxPort: int32(viper.GetInt64(maxPortFlag)),
+		MinPort: minPort,
+		MaxPort: maxPort,
 	}
 
 	return config{
@@ -439,6 +448,15 @@ func parseEnvFlags() config {
 		PodNamespace:                   viper.GetString(podNamespace),
 		LeaderElection:                 viper.GetBool(leaderElectionFlag),
 	}
+}
+
+// parsePort narrows the value of a port flag to int32, rejecting anything outside the port range
+// rather than letting it wrap. Zero is let through so that validate reports it as unset.
+func parsePort(name string, p int64) (int32, error) {
+	if p < 0 || p > math.MaxUint16 {
+		return 0, errs.Errorf("%s must be between 0 and %d, got %d", name, math.MaxUint16, p)
+	}
+	return int32(p), nil
 }
 
 func parsePortRanges(s string) (map[string]portallocator.PortRange, error) {

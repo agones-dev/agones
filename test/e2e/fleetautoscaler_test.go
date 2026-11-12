@@ -89,14 +89,14 @@ func TestAutoscalerBasicFunctions(t *testing.T) {
 
 	// patch the autoscaler to increase MinReplicas and watch the fleet scale up
 	fas, err = patchFleetAutoscaler(ctx, fas, intstr.FromInt32(bufferSize), bufferSize+2, fas.Spec.Policy.Buffer.MaxReplicas)
-	assert.NoError(t, err, "could not patch fleetautoscaler")
+	require.NoError(t, err, "could not patch fleetautoscaler")
 
 	// min replicas is now higher than buffer size, will scale to that level
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(fas.Spec.Policy.Buffer.MinReplicas))
 
 	// patch the autoscaler to remove MinReplicas and watch the fleet scale down to bufferSize
 	fas, err = patchFleetAutoscaler(ctx, fas, intstr.FromInt32(bufferSize), 0, fas.Spec.Policy.Buffer.MaxReplicas)
-	assert.NoError(t, err, "could not patch fleetautoscaler")
+	require.NoError(t, err, "could not patch fleetautoscaler")
 
 	bufferSize = int32(fas.Spec.Policy.Buffer.BufferSize.IntValue())
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(bufferSize))
@@ -490,7 +490,7 @@ func TestAutoscalerWebhook(t *testing.T) {
 		}
 		return found, nil
 	})
-	assert.NoError(t, err, "Received unexpected error")
+	require.NoError(t, err, "Received unexpected error")
 	assert.True(t, found, "Expected error was not received")
 }
 
@@ -556,7 +556,7 @@ func TestFleetAutoscalerTLSWebhook(t *testing.T) {
 		_, err := framework.KubeClient.CoreV1().Services(defaultNS).Get(ctx, svc.ObjectMeta.Name, metav1.GetOptions{})
 		return k8serrors.IsNotFound(err), nil
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	svc, err = framework.KubeClient.CoreV1().Services(defaultNS).Create(ctx, svc.DeepCopy(), metav1.CreateOptions{})
 	if assert.NoError(t, err) {
@@ -705,7 +705,7 @@ func defaultAutoscalerWebhook(namespace string, fixedReplicasEnabled string) (*c
 			Containers: []corev1.Container{
 				{
 					Name:            "webhook",
-					Image:           framework.ExampleImage("autoscaler-webhook", "0.23"),
+					Image:           framework.ExampleImage("autoscaler-webhook", "0.24"),
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Ports: []corev1.ContainerPort{{
 						ContainerPort: 8000,
@@ -999,7 +999,7 @@ func TestCounterAutoscaler(t *testing.T) {
 				assert.Error(t, err)
 				return
 			}
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(testCase.wantReplicas))
 			fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
@@ -1081,7 +1081,7 @@ func TestCounterAutoscalerWithNoReplicas(t *testing.T) {
 				assert.Error(t, err)
 				return
 			}
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(testCase.wantReplicas))
 			fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
@@ -1181,7 +1181,7 @@ func TestCounterAutoscalerAllocated(t *testing.T) {
 			}
 
 			fas, err := fleetautoscalers.Create(ctx, counterFas, metav1.CreateOptions{})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			defer fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 			framework.AssertFleetCondition(t, flt, func(_ *logrus.Entry, fleet *agonesv1.Fleet) bool {
@@ -1329,7 +1329,7 @@ func TestCounterAutoscalerAllocatedMultipleNamespaces(t *testing.T) {
 			}
 
 			fasA, err := fleetautoscalers.FleetAutoscalers(namespaceA).Create(ctx, counterFasA, metav1.CreateOptions{})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			defer fleetautoscalers.FleetAutoscalers(namespaceA).Delete(ctx, fasA.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 			counterFasB := &autoscalingv1.FleetAutoscaler{
@@ -1350,7 +1350,7 @@ func TestCounterAutoscalerAllocatedMultipleNamespaces(t *testing.T) {
 			}
 
 			fasB, err := fleetautoscalers.FleetAutoscalers(namespaceB).Create(ctx, counterFasB, metav1.CreateOptions{})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			defer fleetautoscalers.FleetAutoscalers(namespaceB).Delete(ctx, fasB.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 			// Ensure there is no warning / error on creation, ensure the currentReplicas > 0  for A and B
@@ -1543,7 +1543,7 @@ func TestListAutoscaler(t *testing.T) {
 				assert.Error(t, err)
 				return
 			}
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(testCase.wantReplicas))
 			fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
@@ -1625,7 +1625,7 @@ func TestListAutoscalerWithNoReplicas(t *testing.T) {
 				assert.Error(t, err)
 				return
 			}
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(testCase.wantReplicas))
 			fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
@@ -1743,7 +1743,7 @@ func TestListAutoscalerAllocated(t *testing.T) {
 			}
 
 			fas, err := fleetautoscalers.Create(ctx, listFas, metav1.CreateOptions{})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			defer fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 			framework.AssertFleetCondition(t, flt, func(_ *logrus.Entry, fleet *agonesv1.Fleet) bool {
@@ -1935,7 +1935,7 @@ func TestChainAutoscaler(t *testing.T) {
 	// 1st Schedule Inactive, 2nd Schedule Active - 30 seconds (Fallthrough)
 	chainAutoscaler := defaultAutoscalerChain(t, flt)
 	fas, err := fleetautoscalers.Create(ctx, chainAutoscaler, metav1.CreateOptions{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Verify only the second schedule ran
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(4))
@@ -1965,7 +1965,7 @@ func TestChainAutoscaler(t *testing.T) {
 	chainAutoscaler.Spec.Policy.Chain[1].Schedule.ActivePeriod.Duration = "5m"
 
 	fas, err = fleetautoscalers.Create(ctx, chainAutoscaler, metav1.CreateOptions{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Verify the first schedule has been applied
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(10))

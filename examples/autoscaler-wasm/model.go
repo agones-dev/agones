@@ -37,6 +37,14 @@ type AggregatedListStatus struct {
 
 // FleetStatus is the status of a Fleet
 type FleetStatus struct {
+	// (Beta, CountsAndLists feature flag) Counters provides aggregated Counter capacity and Counter
+	// count for this Fleet.
+	// +optional
+	Counters map[string]AggregatedCounterStatus `json:"counters,omitempty"`
+	// (Beta, CountsAndLists feature flag) Lists provides aggregated List capacityv and List values
+	// for this Fleet.
+	// +optional
+	Lists map[string]AggregatedListStatus `json:"lists,omitempty"`
 	// Replicas the total number of current GameServer replicas
 	Replicas int32 `json:"replicas"`
 	// ReadyReplicas are the number of Ready GameServer replicas
@@ -46,14 +54,6 @@ type FleetStatus struct {
 	ReservedReplicas int32 `json:"reservedReplicas"`
 	// AllocatedReplicas are the number of Allocated GameServer replicas
 	AllocatedReplicas int32 `json:"allocatedReplicas"`
-	// (Beta, CountsAndLists feature flag) Counters provides aggregated Counter capacity and Counter
-	// count for this Fleet.
-	// +optional
-	Counters map[string]AggregatedCounterStatus `json:"counters,omitempty"`
-	// (Beta, CountsAndLists feature flag) Lists provides aggregated List capacityv and List values
-	// for this Fleet.
-	// +optional
-	Lists map[string]AggregatedListStatus `json:"lists,omitempty"`
 }
 
 // FleetAutoscalerPolicyType is the policy for autoscaling
@@ -71,12 +71,12 @@ type FleetAutoscaleRequest struct {
 	Name string `json:"name"`
 	// Namespace is the namespace associated with the request (if any).
 	Namespace string `json:"namespace"`
-	// The Fleet's status values
-	Status FleetStatus `json:"status"`
 	// Standard map labels; More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels.
 	Labels map[string]string `json:"labels,omitempty"`
 	// Standard map annotations; More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations.
 	Annotations map[string]string `json:"annotations,omitempty"`
+	// The Fleet's status values
+	Status FleetStatus `json:"status"`
 }
 
 // FleetAutoscaleResponse defines the response of webhook autoscaler endpoint

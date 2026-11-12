@@ -15,6 +15,7 @@
 package main
 
 import (
+	"math"
 	"strings"
 	"testing"
 
@@ -61,6 +62,23 @@ func TestParseSidecarSecurityContext(t *testing.T) {
 		_, err := parseSidecarSecurityContext(`{"runAsUser":`, 1000)
 		require.Error(t, err)
 	})
+}
+
+func TestParsePort(t *testing.T) {
+	t.Parallel()
+
+	for _, p := range []int64{0, 1, 7000, math.MaxUint16} {
+		got, err := parsePort("min-port", p)
+		require.NoError(t, err, p)
+		assert.Equal(t, int32(p), got)
+	}
+
+	// Values that int32 would have silently wrapped into a valid-looking port.
+	for _, p := range []int64{-1, math.MaxUint16 + 1, math.MaxUint32 + 7001} {
+		_, err := parsePort("min-port", p)
+		require.Error(t, err, p)
+		assert.Contains(t, err.Error(), "min-port")
+	}
 }
 
 func TestControllerConfigValidation(t *testing.T) {

@@ -33,7 +33,7 @@ func TestGameServerCreationAfterDeletingOneExtensionsPod(t *testing.T) {
 	logger := e2eframework.TestLogger(t)
 	ctx := context.Background()
 
-	assert.NoError(t, waitForAgonesExtensionsRunning(ctx))
+	require.NoError(t, waitForAgonesExtensionsRunning(ctx))
 
 	list, err := getAgonesExtensionsPods(ctx)
 	logger.Infof("Length of pod list is %v", len(list.Items))
@@ -72,7 +72,7 @@ func TestGameServerCreationRightAfterDeletingOneExtensionsPod(t *testing.T) {
 	logger := e2eframework.TestLogger(t)
 	ctx := context.Background()
 
-	assert.NoError(t, waitForAgonesExtensionsRunning(ctx))
+	require.NoError(t, waitForAgonesExtensionsRunning(ctx))
 
 	list, err := getAgonesExtensionsPods(ctx)
 	logger.Infof("Length of pod list is %v", len(list.Items))

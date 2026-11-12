@@ -17,9 +17,12 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
+	"maps"
 	"net/http"
 	"os"
 	"os/exec"
@@ -31,7 +34,10 @@ import (
 	"github.com/itchyny/json2yaml"
 )
 
+const proxyURL = "http://127.0.0.1:8001"
+
 func main() {
+	ctx := context.Background()
 	tmpDir := "../../tmp"
 
 	if _, err := os.Stat(tmpDir); err == nil {
@@ -46,62 +52,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Check if kubectl proxy is running
-	_, err = exec.Command("pgrep", "-f", "kubectl proxy").Output()
-	if err == nil {
-		// If running, terminate it
-		errTerminate := exec.Command("pkill", "-f", "kubectl proxy").Run()
-		if errTerminate != nil {
-			log.Fatalf("Failed to terminate existing kubectl proxy: %v", errTerminate)
-		}
-		time.Sleep(3 * time.Second)
-	}
+	cmd := startKubectlProxy(ctx)
 
-	// Start the kubectl proxy.
-	cmd := exec.Command("kubectl", "proxy")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	if err := cmd.Start(); err != nil {
-		log.Fatalf("Failed to start kubectl proxy: %v", err)
-	}
-
-	maxRetries := 10
-	retryCount := 0
-	for retryCount < maxRetries {
-		time.Sleep(1 * time.Second)
-		resp, err := http.Get("http://127.0.0.1:8001/")
-		if err == nil && resp.StatusCode == 200 {
-			break
-		}
-		retryCount++
-	}
-
-	if retryCount == maxRetries {
-		log.Fatalf("kubectl proxy not ready after waiting for %d seconds", maxRetries)
-	}
-
-	// Sleep for 5 seconds to ensure proxy is ready
-	time.Sleep(5 * time.Second)
-
-	// Make an HTTP request to fetch the OpenAPI JSON.
-	resp, err := http.Get("http://127.0.0.1:8001/openapi/v2")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	// Create a file to store the OpenAPI JSON in the `tmp` directory.
+	// Fetch the OpenAPI JSON into the `tmp` directory.
 	openapiFile := filepath.Join(tmpDir, "openapi.json")
-	file, err := os.Create(openapiFile)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-
-	// Copy the HTTP response body to the file.
-	_, err = io.Copy(file, resp.Body)
-	if err != nil {
+	if err := downloadOpenAPI(ctx, openapiFile); err != nil {
 		log.Fatal(err)
 	}
 
@@ -112,14 +67,7 @@ func main() {
 	}
 
 	// Read the modified OpenAPI JSON file.
-	file, err = os.Open(openapiFile)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-
-	var openAPI map[string]interface{}
-	err = json.NewDecoder(file).Decode(&openAPI)
+	openAPI, err := readOpenAPI(openapiFile)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -142,7 +90,7 @@ func main() {
 	}
 
 	origDir := filepath.Join(tmpDir, "orig")
-	err = os.Mkdir(origDir, 0755)
+	err = os.Mkdir(origDir, 0o755)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -187,33 +135,123 @@ func main() {
 		jsonToHelmYaml(tmpDir, filename)
 	}
 
-	cmd.Process.Signal(os.Interrupt)
-	time.Sleep(1 * time.Second)
-	err = cmd.Wait()
-	if err != nil {
-		// Check if the error is due to the process being interrupted
-		if exitError, ok := err.(*exec.ExitError); ok {
-			if status, ok := exitError.Sys().(syscall.WaitStatus); ok {
-				if status.Signaled() && status.Signal() == syscall.SIGINT {
-					log.Println("kubectl proxy has been gracefully shutdown")
-					return
-				}
-			}
-		}
-		log.Fatalf("Failed to gracefully shutdown kubectl proxy: %v", err)
-	}
-
+	stopKubectlProxy(cmd)
 }
 
-func removeFields(filename string) error {
-	file, err := os.Open(filename)
+// startKubectlProxy stops any kubectl proxy that is already running, then starts
+// a new one and waits for it to serve requests.
+func startKubectlProxy(ctx context.Context) *exec.Cmd {
+	// Check if kubectl proxy is running
+	if _, err := exec.CommandContext(ctx, "pgrep", "-f", "kubectl proxy").Output(); err == nil {
+		// If running, terminate it
+		if err := exec.CommandContext(ctx, "pkill", "-f", "kubectl proxy").Run(); err != nil {
+			log.Fatalf("Failed to terminate existing kubectl proxy: %v", err)
+		}
+		time.Sleep(3 * time.Second)
+	}
+
+	// Start the kubectl proxy.
+	cmd := exec.CommandContext(ctx, "kubectl", "proxy")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Start(); err != nil {
+		log.Fatalf("Failed to start kubectl proxy: %v", err)
+	}
+
+	maxRetries := 10
+	ready := false
+	for range maxRetries {
+		time.Sleep(1 * time.Second)
+		if proxyReady(ctx) {
+			ready = true
+			break
+		}
+	}
+
+	if !ready {
+		log.Fatalf("kubectl proxy not ready after waiting for %d seconds", maxRetries)
+	}
+
+	// Sleep for 5 seconds to ensure proxy is ready
+	time.Sleep(5 * time.Second)
+
+	return cmd
+}
+
+// proxyReady reports whether the kubectl proxy answers with 200 OK.
+func proxyReady(ctx context.Context) bool {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, proxyURL+"/", nil)
+	if err != nil {
+		return false
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close() //nolint:errcheck
+	return resp.StatusCode == http.StatusOK
+}
+
+// downloadOpenAPI saves the cluster's OpenAPI v2 spec, fetched through the
+// kubectl proxy, to path.
+func downloadOpenAPI(ctx context.Context, path string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, proxyURL+"/openapi/v2", nil)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close() //nolint:errcheck
 
-	var openAPI map[string]interface{}
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(file, resp.Body)
+	return errors.Join(err, file.Close())
+}
+
+// readOpenAPI decodes the OpenAPI JSON at path.
+func readOpenAPI(path string) (map[string]any, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close() //nolint:errcheck
+
+	var openAPI map[string]any
 	err = json.NewDecoder(file).Decode(&openAPI)
+	return openAPI, err
+}
+
+// stopKubectlProxy interrupts the kubectl proxy and waits for it to exit.
+func stopKubectlProxy(cmd *exec.Cmd) {
+	if err := cmd.Process.Signal(os.Interrupt); err != nil {
+		log.Printf("Failed to interrupt kubectl proxy: %v", err)
+	}
+	time.Sleep(1 * time.Second)
+	err := cmd.Wait()
+	if err == nil {
+		return
+	}
+	// Check if the error is due to the process being interrupted
+	exitError := &exec.ExitError{}
+	if errors.As(err, &exitError) {
+		if status, ok := exitError.Sys().(syscall.WaitStatus); ok {
+			if status.Signaled() && status.Signal() == syscall.SIGINT {
+				log.Println("kubectl proxy has been gracefully shutdown")
+				return
+			}
+		}
+	}
+	log.Fatalf("Failed to gracefully shutdown kubectl proxy: %v", err)
+}
+
+func removeFields(filename string) error {
+	openAPI, err := readOpenAPI(filename)
 	if err != nil {
 		return err
 	}
@@ -227,41 +265,35 @@ func removeFields(filename string) error {
 
 	removeKeysRecursively(openAPI, keysToRemove)
 
-	file, err = os.Create(filename)
+	file, err := os.Create(filename)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
-
 	err = json.NewEncoder(file).Encode(openAPI)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return errors.Join(err, file.Close())
 }
 
-func removeKeysRecursively(obj interface{}, keysToRemove []string) {
+func removeKeysRecursively(obj any, keysToRemove []string) {
 	switch v := obj.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		for _, key := range keysToRemove {
 			delete(v, key)
 		}
 		for _, value := range v {
 			removeKeysRecursively(value, keysToRemove)
 		}
-	case []interface{}:
+	case []any:
 		for _, item := range v {
 			removeKeysRecursively(item, keysToRemove)
 		}
 	}
 }
 
-func doExpand(key, tmpDir string, openapi map[string]interface{}) {
+func doExpand(key, tmpDir string, openapi map[string]any) {
 	log.Println("Processing", key)
 
 	// Extract and save the definitions
-	definitions, ok := openapi["definitions"].(map[string]interface{})
+	definitions, ok := openapi["definitions"].(map[string]any)
 	if !ok {
 		log.Println("Error: 'definitions' is not a map[string]interface{} type")
 		return
@@ -273,7 +305,7 @@ func doExpand(key, tmpDir string, openapi map[string]interface{}) {
 		return
 	}
 
-	sectionMap, ok := section.(map[string]interface{})
+	sectionMap, ok := section.(map[string]any)
 	if !ok {
 		log.Printf("Error: section for key '%s' is not a map[string]interface{} type\n", key)
 		return
@@ -304,9 +336,9 @@ func doExpand(key, tmpDir string, openapi map[string]interface{}) {
 	}
 }
 
-func searchForRefs(obj interface{}, refs *[]string) error {
+func searchForRefs(obj any, refs *[]string) error {
 	switch v := obj.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		if ref, ok := v["$ref"]; ok {
 			refStr := ref.(string)
 			refStr = strings.TrimPrefix(refStr, "#/definitions/")
@@ -319,7 +351,7 @@ func searchForRefs(obj interface{}, refs *[]string) error {
 				return err
 			}
 		}
-	case []interface{}:
+	case []any:
 		for _, item := range v {
 			err := searchForRefs(item, refs)
 			if err != nil {
@@ -331,7 +363,7 @@ func searchForRefs(obj interface{}, refs *[]string) error {
 }
 
 func makeCreationTimestampNullable(filePath string) error {
-	var obj map[string]interface{}
+	var obj map[string]any
 
 	data, err := os.ReadFile(filePath)
 	if err != nil {
@@ -342,8 +374,8 @@ func makeCreationTimestampNullable(filePath string) error {
 		return err
 	}
 
-	if properties, ok := obj["properties"].(map[string]interface{}); ok {
-		if timestamp, ok := properties["creationTimestamp"].(map[string]interface{}); ok {
+	if properties, ok := obj["properties"].(map[string]any); ok {
+		if timestamp, ok := properties["creationTimestamp"].(map[string]any); ok {
 			timestamp["nullable"] = true
 		}
 	}
@@ -357,7 +389,7 @@ func makeCreationTimestampNullable(filePath string) error {
 }
 
 func modifyIntOrString(filePath string) error {
-	var obj map[string]interface{}
+	var obj map[string]any
 
 	data, err := os.ReadFile(filePath)
 	if err != nil {
@@ -472,7 +504,7 @@ func jsonToHelmYaml(tmpDir, filename string) {
 {{- end }}
 `
 
-	outputPath := filepath.Join("../../../install/helm/agones/templates/crds/k8s", "_"+filename+".yaml")
+	outputPath := filepath.Join("..", "..", "..", "install", "helm", "agones", "templates", "crds", "k8s", "_"+filename+".yaml")
 	if err := os.WriteFile(outputPath, []byte(finalContent), 0o644); err != nil {
 		log.Fatalf("Failed to write to file %s: %s", outputPath, err)
 	}
@@ -495,7 +527,7 @@ func modifyJSONFiles(tmpDir string) error {
 			return err
 		}
 
-		var jsonData map[string]interface{}
+		var jsonData map[string]any
 		err = json.Unmarshal(content, &jsonData)
 		if err != nil {
 			log.Printf("Error parsing JSON from %s. Content:\n%s", f, string(content))
@@ -503,54 +535,53 @@ func modifyJSONFiles(tmpDir string) error {
 		}
 
 		// Recursive function to resolve references.
-		var resolveRef func(data map[string]interface{}) error
-		resolveRef = func(data map[string]interface{}) error {
+		var resolveRef func(data map[string]any) error
+		resolveRef = func(data map[string]any) error {
 			for _, value := range data {
-				switch v := value.(type) {
-				case map[string]interface{}:
-					ref, ok := v["$ref"].(string)
-					if ok {
-						parts := strings.Split(ref, "/")
-						refName := parts[len(parts)-1]
-						refContent, cached := fileCache[refName]
-						if !cached {
-							for _, file := range jsonFiles {
-								if strings.HasSuffix(file, refName+".json") {
-									refContent, err = os.ReadFile(file)
-									if err != nil {
-										return err
-									}
-									fileCache[refName] = refContent
-									break
+				v, isMap := value.(map[string]any)
+				if !isMap {
+					continue
+				}
+				ref, ok := v["$ref"].(string)
+				if ok {
+					parts := strings.Split(ref, "/")
+					refName := parts[len(parts)-1]
+					refContent, cached := fileCache[refName]
+					if !cached {
+						for _, file := range jsonFiles {
+							if strings.HasSuffix(file, refName+".json") {
+								refContent, err = os.ReadFile(file)
+								if err != nil {
+									return err
 								}
+								fileCache[refName] = refContent
+								break
 							}
 						}
-						var refData map[string]interface{}
-						err := json.Unmarshal(refContent, &refData)
-						if err != nil {
-							return err
-						}
+					}
+					var refData map[string]any
+					err := json.Unmarshal(refContent, &refData)
+					if err != nil {
+						return err
+					}
 
-						delete(refData, "description")
+					delete(refData, "description")
 
-						// Merge refData into v rather than replacing v.
-						for refKey, refValue := range refData {
-							v[refKey] = refValue
-						}
+					// Merge refData into v rather than replacing v.
+					maps.Copy(v, refData)
 
-						delete(v, "$ref") // remove $ref key after merging
+					delete(v, "$ref") // remove $ref key after merging
 
-						// Recursive call to resolve references within this reference.
-						err = resolveRef(refData)
-						if err != nil {
-							return err
-						}
-					} else {
-						// Recursive call to check nested maps.
-						err := resolveRef(v)
-						if err != nil {
-							return err
-						}
+					// Recursive call to resolve references within this reference.
+					err = resolveRef(refData)
+					if err != nil {
+						return err
+					}
+				} else {
+					// Recursive call to check nested maps.
+					err := resolveRef(v)
+					if err != nil {
+						return err
 					}
 				}
 			}
