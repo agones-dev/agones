@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -37,17 +38,6 @@ import (
 	"k8s.io/utils/clock"
 	testclocks "k8s.io/utils/clock/testing"
 )
-
-// newTestHandler creates a Handler with a mock allocator.
-func newTestHandler(_ context.Context, allocFunc func(context.Context, *allocationv1.GameServerAllocation) (k8sruntime.Object, error)) *Handler {
-	return &Handler{
-		allocator:                 &mockAllocator{allocateFunc: allocFunc},
-		clients:                   make(map[string]allocationpb.Processor_StreamBatchesServer),
-		grpcUnallocatedStatusCode: codes.ResourceExhausted,
-		pullInterval:              100 * time.Millisecond,
-		clock:                     clock.RealClock{},
-	}
-}
 
 func TestAddClient(t *testing.T) {
 	t.Parallel()
@@ -79,8 +69,8 @@ func TestAddClient(t *testing.T) {
 			t.Parallel()
 
 			h := &Handler{}
-			h.clients = make(map[string]allocationpb.Processor_StreamBatchesServer)
-			stream := newMockServerStream(context.Background())
+			h.clients = make(map[string]*clientStream)
+			stream := newClientStream("client-1", newMockServerStream(t.Context()))
 
 			for _, id := range tc.clientIDs {
 				h.addClient(id, stream)
@@ -127,20 +117,38 @@ func TestRemoveClient(t *testing.T) {
 			t.Parallel()
 
 			h := &Handler{
-				clients: make(map[string]allocationpb.Processor_StreamBatchesServer),
+				clients: make(map[string]*clientStream),
 			}
-			stream := newMockServerStream(context.Background())
+			stream := newClientStream("client-1", newMockServerStream(t.Context()))
 			for _, id := range tc.initialIDs {
 				h.addClient(id, stream)
 			}
 
-			h.removeClient(tc.removeID)
+			h.removeClient(tc.removeID, stream)
 
 			h.mu.RLock()
 			defer h.mu.RUnlock()
 			assert.Len(t, h.clients, tc.wantLen)
 		})
 	}
+
+	t.Run("removing a stale stream keeps the stream the client reconnected with", func(t *testing.T) {
+		t.Parallel()
+
+		h := &Handler{
+			clients: make(map[string]*clientStream),
+		}
+		stale := newClientStream("client-1", newMockServerStream(t.Context()))
+		current := newClientStream("client-1", newMockServerStream(t.Context()))
+		h.addClient("client-1", stale)
+		h.addClient("client-1", current)
+
+		h.removeClient("client-1", stale)
+
+		h.mu.RLock()
+		defer h.mu.RUnlock()
+		assert.Same(t, current, h.clients["client-1"])
+	})
 }
 
 func TestProcessAllocation(t *testing.T) {
@@ -491,6 +499,52 @@ func TestSubmitBatch(t *testing.T) {
 	}
 }
 
+func TestReceiveClientID(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		messages     []*allocationpb.ProcessorMessage
+		wantClientID string
+		wantErr      error
+	}{
+		{
+			name:         "client ID is taken from the first message",
+			messages:     []*allocationpb.ProcessorMessage{{ClientId: "client-1"}, {ClientId: "client-2"}},
+			wantClientID: "client-1",
+		},
+		{
+			name:     "empty client ID is rejected",
+			messages: []*allocationpb.ProcessorMessage{{}},
+			wantErr:  status.Error(codes.InvalidArgument, "clientID is required"),
+		},
+		{
+			name:    "receive error is returned",
+			wantErr: io.EOF,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			stream := newMockServerStream(t.Context())
+			for _, msg := range tc.messages {
+				stream.recvChan <- msg
+			}
+			close(stream.recvChan)
+
+			clientID, err := receiveClientID(stream)
+			if tc.wantErr != nil {
+				require.ErrorIs(t, err, tc.wantErr)
+			} else {
+				require.NoError(t, err)
+			}
+			assert.Equal(t, tc.wantClientID, clientID)
+		})
+	}
+}
+
 func TestStreamBatches(t *testing.T) {
 	t.Parallel()
 
@@ -605,7 +659,7 @@ func TestStreamBatches(t *testing.T) {
 				close(stream.recvChan)
 			}()
 
-			err := h.StreamBatches(stream)
+			err := receive(t, runStreamBatches(h, stream))
 
 			if tc.wantErr {
 				require.Error(t, err)
@@ -639,17 +693,14 @@ func TestStartPullRequestTicker(t *testing.T) {
 	tests := []struct {
 		name        string
 		clientCount int
-		wantPulls   bool
 	}{
 		{
 			name:        "sends pull to connected clients",
 			clientCount: 2,
-			wantPulls:   true,
 		},
 		{
 			name:        "no clients means no pulls sent",
 			clientCount: 0,
-			wantPulls:   false,
 		},
 	}
 
@@ -659,54 +710,212 @@ func TestStartPullRequestTicker(t *testing.T) {
 
 			ctx := t.Context()
 
-			fc := testclocks.NewFakeClock(time.Now())
-			h := newTestHandler(ctx, nil)
-			h.clock = fc
+			h, fc := newPullingTestHandler(t)
 
 			streams := make([]*mockServerStream, tc.clientCount)
-			for i := 0; i < tc.clientCount; i++ {
+			for i := range streams {
 				streams[i] = newMockServerStream(ctx)
-				h.addClient(fmt.Sprintf("client-%d", i), streams[i])
+				streams[i].recvChan <- &allocationpb.ProcessorMessage{ClientId: fmt.Sprintf("client-%d", i)}
+				runStreamBatches(h, streams[i])
 			}
+			waitForClients(t, h, tc.clientCount)
 
-			h.StartPullRequestTicker(ctx)
-			require.Eventually(t, fc.HasWaiters, time.Second, time.Millisecond, "ticker goroutine should register")
-
-			if tc.wantPulls {
-				fc.Step(h.pullInterval)
-				for i, stream := range streams {
-					select {
-					case msg := <-stream.sendChan:
-						assert.NotNil(t, msg.GetPull(), "client-%d should receive a pull message", i)
-					case <-time.After(time.Second):
-						t.Errorf("client-%d did not receive a pull within timeout", i)
-					}
-				}
-			} else {
-				fc.Step(h.pullInterval)
-				h.mu.RLock()
-				assert.Empty(t, h.clients, "no clients should appear")
-				h.mu.RUnlock()
+			// every client is pulled on the same tick
+			fc.Step(h.pullInterval)
+			for i, stream := range streams {
+				msg := receive(t, stream.sendChan)
+				assert.NotNil(t, msg.GetPull(), "client-%d should receive a pull message", i)
+				assert.Equal(t, fmt.Sprintf("client-%d", i), msg.GetClientId())
 			}
 		})
 	}
 }
 
-func TestStartPullRequestTickerRemovesFailingClient(t *testing.T) {
+func TestStartPullRequestTickerSlowClientDoesNotDelayOthers(t *testing.T) {
+	t.Parallel()
+
+	h, fc := newPullingTestHandler(t)
+	slowCtx, disconnectSlow := context.WithCancel(t.Context())
+	slow := newControlledSendStream(slowCtx)
+	slow.recvChan <- &allocationpb.ProcessorMessage{ClientId: "slow"}
+	slowDone := runStreamBatches(h, slow)
+	fast := newMockServerStream(t.Context())
+	fast.recvChan <- &allocationpb.ProcessorMessage{ClientId: "fast"}
+	runStreamBatches(h, fast)
+	waitForClients(t, h, 2)
+
+	// the slow client never reads its first pull request
+	fc.Step(h.pullInterval)
+	require.NotNil(t, nextSend(t, slow).message.GetPull())
+	assert.NotNil(t, receive(t, fast.sendChan).GetPull())
+
+	// the slow client has a pull request waiting from the second tick, yet the fast client is still pulled on every tick
+	for range 3 {
+		fc.Step(h.pullInterval)
+		assert.NotNil(t, receive(t, fast.sendChan).GetPull())
+	}
+
+	// once the slow client is gone, its handler returns and it is unregistered
+	disconnectSlow()
+	require.ErrorIs(t, receive(t, slowDone), context.Canceled)
+	waitForClients(t, h, 1)
+}
+
+func TestStreamBatchesBlockedBatchDoesNotDelayOthers(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
 
-	h := newTestHandler(ctx, nil)
-	h.addClient("failing-client", &failingSendStream{
-		mockServerStream: *newMockServerStream(ctx),
+	release := make(chan struct{})
+	h := newTestHandler(ctx, func(_ context.Context, gsa *allocationv1.GameServerAllocation) (k8sruntime.Object, error) {
+		if gsa.Namespace == "slow" {
+			<-release
+		}
+		return allocatedGSA(), nil
 	})
+	stream := newMockServerStream(ctx)
+	stream.recvChan <- &allocationpb.ProcessorMessage{ClientId: "client-1"}
+	stream.recvChan <- batchMessage("slow")
+	stream.recvChan <- batchMessage("fast")
+	runStreamBatches(h, stream)
 
-	h.sendPullRequestsToClients()
+	// the slow batch is still allocating, yet the fast one is answered
+	assert.Equal(t, "fast", receive(t, stream.sendChan).GetBatchResponse().GetBatchId())
 
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	assert.Empty(t, h.clients, "failing client should be removed after a failed send")
+	close(release)
+	assert.Equal(t, "slow", receive(t, stream.sendChan).GetBatchResponse().GetBatchId())
+}
+
+func TestStreamBatchesBatchTimeout(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+
+	// as the allocator does, wait for the allocation until the context of the batch is done
+	h := newTestHandler(ctx, func(ctx context.Context, _ *allocationv1.GameServerAllocation) (k8sruntime.Object, error) {
+		<-ctx.Done()
+		return nil, status.FromContextError(ctx.Err()).Err()
+	})
+	h.batchTimeout = 50 * time.Millisecond
+	stream := newMockServerStream(ctx)
+	stream.recvChan <- &allocationpb.ProcessorMessage{ClientId: "client-1"}
+	stream.recvChan <- batchMessage("b-1")
+	// the client has closed its side, and the handler still returns once the timeout ends the batch
+	close(stream.recvChan)
+	done := runStreamBatches(h, stream)
+
+	response := receive(t, stream.sendChan).GetBatchResponse()
+	assert.Equal(t, "b-1", response.GetBatchId())
+	require.Len(t, response.GetResponses(), 1)
+	assert.Equal(t, int32(codes.DeadlineExceeded), response.GetResponses()[0].GetError().GetCode())
+	require.ErrorIs(t, receive(t, done), io.EOF)
+}
+
+func TestStreamBatchesClientGoneCancelsBatches(t *testing.T) {
+	t.Parallel()
+
+	ctx, disconnect := context.WithCancel(t.Context())
+	allocating := make(chan struct{})
+	h := newTestHandler(t.Context(), func(ctx context.Context, _ *allocationv1.GameServerAllocation) (k8sruntime.Object, error) {
+		close(allocating)
+		<-ctx.Done()
+		return nil, status.FromContextError(ctx.Err()).Err()
+	})
+	stream := newMockServerStream(ctx)
+	stream.recvChan <- &allocationpb.ProcessorMessage{ClientId: "client-1"}
+	stream.recvChan <- batchMessage("b-1")
+	done := runStreamBatches(h, stream)
+	receive(t, allocating)
+
+	// the client goes away mid-allocation, long before the batch timeout; the handler waits for its
+	// batches, so it can only return once the batch is cancelled
+	disconnect()
+	require.ErrorIs(t, receive(t, done), context.Canceled)
+}
+
+func TestStreamBatchesSerialisesSends(t *testing.T) {
+	t.Parallel()
+
+	h := newTestHandler(t.Context(), func(context.Context, *allocationv1.GameServerAllocation) (k8sruntime.Object, error) {
+		return allocatedGSA(), nil
+	})
+	stream := newControlledSendStream(t.Context())
+	stream.recvChan <- &allocationpb.ProcessorMessage{ClientId: "client-1"}
+	stream.recvChan <- batchMessage("b-1")
+	stream.recvChan <- batchMessage("b-2")
+	runStreamBatches(h, stream)
+
+	// the client is slow to read the first response, while the other response and a pull request wait for their turn
+	held := nextSend(t, stream)
+	go h.sendPullRequestsToClients()
+	assert.Never(t, func() bool { return len(stream.sends) > 0 }, 50*time.Millisecond, 5*time.Millisecond,
+		"a send must not start while another one is in progress")
+
+	// once it is read, the other response and the pull request are sent
+	close(held.release)
+	for range 2 {
+		close(nextSend(t, stream).release)
+	}
+}
+
+func TestStreamBatchesWaitsForResponsesBeforeReturning(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+
+	h := newTestHandler(ctx, func(context.Context, *allocationv1.GameServerAllocation) (k8sruntime.Object, error) {
+		return allocatedGSA(), nil
+	})
+	stream := newControlledSendStream(ctx)
+	stream.recvChan <- &allocationpb.ProcessorMessage{ClientId: "client-1"}
+	stream.recvChan <- batchMessage("b-1")
+	close(stream.recvChan)
+	done := runStreamBatches(h, stream)
+
+	// the receive side is over, but the response is still held in Send
+	held := nextSend(t, stream)
+	assert.Equal(t, "b-1", held.message.GetBatchResponse().GetBatchId())
+	assert.Never(t, func() bool { return len(done) > 0 }, 50*time.Millisecond, 5*time.Millisecond,
+		"handler returned while a response was still being sent")
+
+	close(held.release)
+	require.ErrorIs(t, receive(t, done), io.EOF)
+}
+
+// newTestHandler creates a Handler with a mock allocator.
+func newTestHandler(_ context.Context, allocFunc func(context.Context, *allocationv1.GameServerAllocation) (k8sruntime.Object, error)) *Handler {
+	return &Handler{
+		allocator:                 &mockAllocator{allocateFunc: allocFunc},
+		clients:                   make(map[string]*clientStream),
+		grpcUnallocatedStatusCode: codes.ResourceExhausted,
+		batchTimeout:              batchProcessingTimeout,
+		pullInterval:              100 * time.Millisecond,
+		clock:                     clock.RealClock{},
+	}
+}
+
+// newPullingTestHandler creates a Handler whose pull request ticker is started, and ticks
+// each time the returned clock is stepped by the pull interval.
+func newPullingTestHandler(t *testing.T) (*Handler, *testclocks.FakeClock) {
+	t.Helper()
+
+	h := newTestHandler(t.Context(), nil)
+	fc := testclocks.NewFakeClock(time.Now())
+	h.clock = fc
+	h.StartPullRequestTicker(t.Context())
+	require.Eventually(t, fc.HasWaiters, 5*time.Second, time.Millisecond, "ticker goroutine should register")
+	return h, fc
+}
+
+// waitForClients waits for the given number of clients to be registered.
+func waitForClients(t *testing.T, h *Handler, count int) {
+	t.Helper()
+
+	require.Eventually(t, func() bool {
+		h.mu.RLock()
+		defer h.mu.RUnlock()
+		return len(h.clients) == count
+	}, 5*time.Second, time.Millisecond, "%d clients should be registered", count)
 }
 
 type mockAllocator struct {
@@ -759,10 +968,101 @@ func (m *mockServerStream) Context() context.Context     { return m.ctx }
 func (m *mockServerStream) SendMsg(any) error            { return nil }
 func (m *mockServerStream) RecvMsg(any) error            { return nil }
 
+var errSendFailed = errors.New("send failed")
+
+// failingSendStream is a stream that cannot be written to, and counts the attempts to do so
 type failingSendStream struct {
-	mockServerStream
+	*mockServerStream
+	sends atomic.Int32
 }
 
 func (f *failingSendStream) Send(_ *allocationpb.ProcessorMessage) error {
-	return errors.New("send failed")
+	f.sends.Add(1)
+	return errSendFailed
+}
+
+// sendCall is a Send in progress on a controlledSendStream
+type sendCall struct {
+	message *allocationpb.ProcessorMessage
+	// release lets the Send return, as if the client had read the message
+	release chan struct{}
+}
+
+// controlledSendStream holds every Send until the test releases it
+type controlledSendStream struct {
+	*mockServerStream
+	sends chan sendCall
+}
+
+func newControlledSendStream(ctx context.Context) *controlledSendStream {
+	return &controlledSendStream{
+		mockServerStream: newMockServerStream(ctx),
+		sends:            make(chan sendCall, 10),
+	}
+}
+
+func (s *controlledSendStream) Send(msg *allocationpb.ProcessorMessage) error {
+	call := sendCall{message: msg, release: make(chan struct{})}
+	select {
+	case s.sends <- call:
+	case <-s.ctx.Done():
+		return s.ctx.Err()
+	}
+	select {
+	case <-call.release:
+		return nil
+	case <-s.ctx.Done():
+		return s.ctx.Err()
+	}
+}
+
+// nextSend waits for the next Send to start on the stream
+func nextSend(t *testing.T, stream *controlledSendStream) sendCall {
+	t.Helper()
+	return receive(t, stream.sends)
+}
+
+// receive waits for the next value from the channel, and fails the test if it does not arrive within 5 seconds
+func receive[T any](t *testing.T, ch <-chan T) T {
+	t.Helper()
+
+	select {
+	case value := <-ch:
+		return value
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for channel value")
+		var zero T
+		return zero
+	}
+}
+
+func allocatedGSA() k8sruntime.Object {
+	return &allocationv1.GameServerAllocation{
+		Status: allocationv1.GameServerAllocationStatus{
+			State:          allocationv1.GameServerAllocationAllocated,
+			GameServerName: "gs-1",
+		},
+	}
+}
+
+// batchMessage builds a single request batch, whose namespace is the batch ID.
+func batchMessage(batchID string) *allocationpb.ProcessorMessage {
+	return &allocationpb.ProcessorMessage{
+		ClientId: "client-1",
+		Payload: &allocationpb.ProcessorMessage_BatchRequest{
+			BatchRequest: &allocationpb.BatchRequest{
+				BatchId: batchID,
+				Requests: []*allocationpb.RequestWrapper{
+					{RequestId: "r-" + batchID, Request: &allocationpb.AllocationRequest{Namespace: batchID}},
+				},
+			},
+		},
+	}
+}
+
+// runStreamBatches runs StreamBatches in the background and returns a channel with its result
+func runStreamBatches(h *Handler, stream allocationpb.Processor_StreamBatchesServer) <-chan error {
+	done := make(chan error, 1)
+	go func() { done <- h.StreamBatches(stream) }()
+	return done
 }
