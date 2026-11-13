@@ -13,3 +13,61 @@
 // limitations under the License.
 
 @import "darkmode-overrides";
+.survey-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem 1rem;
+  padding: 0.5rem 1rem;
+  background-color: $secondary;
+  color: $white;
+  text-align: center;
+
+  &__link {
+    padding: 0.125rem 0.75rem;
+    border-radius: 1rem;
+    background-color: $white;
+    color: $secondary;
+    font-weight: $font-weight-bold;
+    text-decoration: none;
+    white-space: nowrap;
+
+    &:hover,
+    &:focus {
+      color: $secondary;
+      text-decoration: underline;
+    }
+  }
+
+  @include media-breakpoint-up(md) {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 33;
+    height: $survey-banner-height;
+    padding-block: 0;
+    flex-wrap: nowrap;
+
+    &__text {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+  }
+}
+
+.td-navbar {
+  min-height: $agones-navbar-height + $td-navbar__main-min-height-mobile;
+
+  @include media-breakpoint-up(md) {
+    min-height: $agones-navbar-height;
+  }
+}
+
+.survey-banner + .td-navbar {
+  @include media-breakpoint-up(md) {
+    top: $survey-banner-height;
+  }
+}
