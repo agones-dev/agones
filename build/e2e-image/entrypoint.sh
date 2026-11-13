@@ -20,6 +20,7 @@ TEST_CLUSTER_NAME=$3
 TEST_CLUSTER_LOCATION=$4
 REGISTRY=$5
 GS_TEST_IMAGE=$6
+EXAMPLE_IMAGE_TAG=$7
 
 echo $FEATURES
 export SHELL="/bin/bash"
@@ -34,5 +35,5 @@ fi
 gcloud container clusters get-credentials $TEST_CLUSTER_NAME \
         --zone=${TEST_CLUSTER_LOCATION} --project=agones-images
 
-echo /root/e2e.sh "${FEATURES}" "${CLOUD_PRODUCT}" "${REGISTRY}" "${GS_TEST_IMAGE}"
-/root/e2e.sh "${FEATURES}" "${CLOUD_PRODUCT}" "${REGISTRY}" "${GS_TEST_IMAGE}"
+echo /root/e2e.sh "${FEATURES}" "${CLOUD_PRODUCT}" "${REGISTRY}" "${GS_TEST_IMAGE}" "${EXAMPLE_IMAGE_TAG}"
+/root/e2e.sh "${FEATURES}" "${CLOUD_PRODUCT}" "${REGISTRY}" "${GS_TEST_IMAGE}" "${EXAMPLE_IMAGE_TAG}"

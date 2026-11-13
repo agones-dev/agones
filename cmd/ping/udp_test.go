@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/clock"
 	testclocks "k8s.io/utils/clock/testing"
@@ -43,7 +44,7 @@ func TestUDPServerVisit(t *testing.T) {
 
 	fc := testclocks.NewFakeClock(time.Now())
 	u, err := defaultFixture(fc)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer u.close()
 
 	// gate
@@ -75,7 +76,7 @@ func TestUDPServerCleanup(t *testing.T) {
 
 	fc := testclocks.NewFakeClock(time.Now())
 	u, err := defaultFixture(fc)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer u.close()
 
 	// gate
@@ -102,15 +103,15 @@ func TestUDPServerHealth(t *testing.T) {
 
 	fc := testclocks.NewFakeClock(time.Now())
 	u, err := defaultFixture(fc)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer u.close()
 
-	assert.Error(t, u.Health())
+	require.Error(t, u.Health())
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	u.run(ctx)
-	assert.NoError(t, u.Health())
+	require.NoError(t, u.Health())
 
 	cancel()
 

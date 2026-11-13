@@ -16,8 +16,8 @@
 // Run:
 //  terraform apply -var project="<YOUR_GCP_ProjectID>"
 
-// The performance test cluster is hosted in project `agones-e2e-1`, i.e:
-//  terraform apply -var project="agones-e2e-1"
+// The performance test cluster is hosted in project `agones-images`, i.e:
+//  terraform apply -var project="agones-images"
 
 // # GCS bucket for holding the Terraform state of the performance test Terraform config.
 

@@ -45,7 +45,7 @@ func TestRegisterPrometheusExporter(t *testing.T) {
 	registry := prometheus.NewRegistry()
 
 	handler, err := RegisterPrometheusExporter(registry)
-	assert.NoError(t, err, "RegisterPrometheusExporter should not return an error")
+	require.NoError(t, err, "RegisterPrometheusExporter should not return an error")
 	assert.NotNil(t, handler, "Handler should not be nil")
 
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "/metrics", nil)
@@ -97,7 +97,6 @@ func TestMetrics_Endpoint_ExposesAllMetrics(t *testing.T) {
 		setupFleet,
 		setupFleetAutoScalers,
 		setupFleetWithCountersAndLists,
-		setupGameServerPlayerConnect,
 		setupGameServerStateDuration,
 		setupGameServerAllocation,
 	}
@@ -250,28 +249,6 @@ func setupFleetWithCountersAndLists(_ *testing.T, ctrl *fakeController) {
 		},
 	}
 	ctrl.fleetWatch.Modify(flt)
-	ctrl.collect()
-}
-
-func setupGameServerPlayerConnect(t *testing.T, ctrl *fakeController) {
-	t.Helper()
-	gs := gameServerWithFleetAndState("test-fleet", agonesv1.GameServerStateReady)
-	gs.Status.Players = &agonesv1.PlayerStatus{
-		Count: 0,
-	}
-	ctrl.gsWatch.Add(gs)
-	gs = gs.DeepCopy()
-	gs.Status.Players.Count = 1
-	ctrl.gsWatch.Modify(gs)
-
-	require.Eventually(t, func() bool {
-		gs, err := ctrl.gameServerLister.GameServers(gs.ObjectMeta.Namespace).Get(gs.ObjectMeta.Name)
-		if gs == nil || err != nil {
-			return false
-		}
-		assert.NoError(t, err)
-		return gs.Status.Players.Count == 1
-	}, 5*time.Second, time.Second)
 	ctrl.collect()
 }
 

@@ -43,13 +43,13 @@ func TestLocal(t *testing.T) {
 	ctx := context.Background()
 	e := &sdk.Empty{}
 	l, err := NewLocalSDKServer("", "", defaultTestListMaxCapacity)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	_, err = l.Ready(ctx, e)
-	assert.NoError(t, err, "Ready should not error")
+	require.NoError(t, err, "Ready should not error")
 
 	_, err = l.Shutdown(ctx, e)
-	assert.NoError(t, err, "Shutdown should not error")
+	require.NoError(t, err, "Shutdown should not error")
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -67,7 +67,7 @@ func TestLocal(t *testing.T) {
 	wg.Wait()
 
 	gs, err := l.GetGameServer(ctx, e)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	defaultGameServer := defaultGs()
 	// do this to adjust for any time differences.
@@ -83,7 +83,7 @@ func TestLocal(t *testing.T) {
 
 func TestLocalSDKWithTestMode(t *testing.T) {
 	l, err := NewLocalSDKServer("", "", defaultTestListMaxCapacity)
-	assert.NoError(t, err, "Should be able to create local SDK server")
+	require.NoError(t, err, "Should be able to create local SDK server")
 	a := []string{"ready", "allocate", "setlabel", "setannotation", "gameserver", "health", "shutdown", "watch"}
 	b := []string{"ready", "health", "ready", "watch", "allocate", "gameserver", "setlabel", "setannotation", "health", "health", "shutdown"}
 	assert.True(t, l.EqualSets(a, a))
@@ -105,13 +105,13 @@ func TestLocalSDKWithGameServer(t *testing.T) {
 
 	fixture := &agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "stuff"}}
 	path, err := gsToTmpFile(fixture.DeepCopy())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	l, err := NewLocalSDKServer(path, "", defaultTestListMaxCapacity)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	gs, err := l.GetGameServer(ctx, e)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, fixture.ObjectMeta.Name, gs.GetObjectMeta().GetName())
 }
@@ -127,13 +127,13 @@ func TestLocalSDKWithLogLevel(t *testing.T) {
 		},
 	}
 	path, err := gsToTmpFile(fixture.DeepCopy())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	l, err := NewLocalSDKServer(path, "test", defaultTestListMaxCapacity)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	_, err = l.GetGameServer(ctx, e)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Check if the LocalSDKServer's logger.LogLevel equal fixture's
 	assert.Equal(t, string(fixture.Spec.SdkServer.LogLevel), l.logger.Logger.Level.String())
@@ -162,10 +162,10 @@ func TestLocalSDKServerSetLabel(t *testing.T) {
 			ctx := context.Background()
 			e := &sdk.Empty{}
 			path, err := gsToTmpFile(v.gs)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			l, err := NewLocalSDKServer(path, "", defaultTestListMaxCapacity)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			kv := &sdk.KeyValue{Key: "foo", Value: "bar"}
 
 			stream := newGameServerMockStream()
@@ -186,13 +186,13 @@ func TestLocalSDKServerSetLabel(t *testing.T) {
 
 				return ret, nil
 			})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			_, err = l.SetLabel(ctx, kv)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			gs, err := l.GetGameServer(ctx, e)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, "bar", gs.GetObjectMeta().GetLabels()[metadataPrefix+"foo"])
 
 			assertWatchUpdate(t, stream, "bar", func(gs *sdk.GameServer) any {
@@ -228,10 +228,10 @@ func TestLocalSDKServerSetAnnotation(t *testing.T) {
 			ctx := context.Background()
 			e := &sdk.Empty{}
 			path, err := gsToTmpFile(v.gs)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			l, err := NewLocalSDKServer(path, "", defaultTestListMaxCapacity)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			kv := &sdk.KeyValue{Key: "bar", Value: "foo"}
 
@@ -253,13 +253,13 @@ func TestLocalSDKServerSetAnnotation(t *testing.T) {
 
 				return ret, nil
 			})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			_, err = l.SetAnnotation(ctx, kv)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			gs, err := l.GetGameServer(ctx, e)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, "foo", gs.GetObjectMeta().GetAnnotations()[metadataPrefix+"bar"])
 
 			assertWatchUpdate(t, stream, "foo", func(gs *sdk.GameServer) any {
@@ -277,11 +277,11 @@ func TestLocalSDKServerWatchGameServer(t *testing.T) {
 
 	fixture := &agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "stuff"}}
 	path, err := gsToTmpFile(fixture)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	e := &sdk.Empty{}
 	l, err := NewLocalSDKServer(path, "", defaultTestListMaxCapacity)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	stream := newGameServerMockStream()
 	go func() {
@@ -299,15 +299,15 @@ func TestLocalSDKServerWatchGameServer(t *testing.T) {
 		})
 		return found, nil
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assertNoWatchUpdate(t, stream)
 	fixture.ObjectMeta.Annotations = map[string]string{"foo": "bar"}
 	j, err := json.Marshal(fixture)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = os.WriteFile(path, j, os.ModeDevice)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assertWatchUpdate(t, stream, "bar", func(gs *sdk.GameServer) any {
 		return gs.GetObjectMeta().GetAnnotations()["foo"]
@@ -328,9 +328,9 @@ func TestLocalSDKServerGetCounter(t *testing.T) {
 	}
 
 	path, err := gsToTmpFile(fixture)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	l, err := NewLocalSDKServer(path, "", defaultTestListMaxCapacity)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	stream := newGameServerMockStream()
 	go func() {
@@ -348,7 +348,7 @@ func TestLocalSDKServerGetCounter(t *testing.T) {
 		})
 		return found, nil
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	testScenarios := map[string]struct {
 		name    string
@@ -370,7 +370,7 @@ func TestLocalSDKServerGetCounter(t *testing.T) {
 			got, err := l.GetCounter(context.Background(), &beta.GetCounterRequest{Name: testScenario.name})
 			// Check tests expecting non-errors
 			if testScenario.want != nil {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				if diff := cmp.Diff(testScenario.want, got, protocmp.Transform()); diff != "" {
 					t.Errorf("Unexpected difference:\n%v", diff)
 				}
@@ -400,9 +400,9 @@ func TestLocalSDKServerUpdateCounter(t *testing.T) {
 	}
 
 	path, err := gsToTmpFile(fixture)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	l, err := NewLocalSDKServer(path, "", defaultTestListMaxCapacity)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	stream := newGameServerMockStream()
 	go func() {
@@ -420,7 +420,7 @@ func TestLocalSDKServerUpdateCounter(t *testing.T) {
 		})
 		return found, nil
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	testScenarios := map[string]struct {
 		updateRequest *beta.UpdateCounterRequest
@@ -518,7 +518,7 @@ func TestLocalSDKServerUpdateCounter(t *testing.T) {
 			got, err := l.UpdateCounter(context.Background(), testScenario.updateRequest)
 			// Check tests expecting non-errors
 			if testScenario.want != nil {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				if diff := cmp.Diff(testScenario.want, got, protocmp.Transform()); diff != "" {
 					t.Errorf("Unexpected difference:\n%v", diff)
 				}
@@ -544,9 +544,9 @@ func TestLocalSDKServerGetList(t *testing.T) {
 	}
 
 	path, err := gsToTmpFile(fixture)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	l, err := NewLocalSDKServer(path, "", defaultTestListMaxCapacity)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	stream := newGameServerMockStream()
 	go func() {
@@ -564,7 +564,7 @@ func TestLocalSDKServerGetList(t *testing.T) {
 		})
 		return found, nil
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	testScenarios := map[string]struct {
 		name    string
@@ -586,7 +586,7 @@ func TestLocalSDKServerGetList(t *testing.T) {
 			got, err := l.GetList(context.Background(), &beta.GetListRequest{Name: testScenario.name})
 			// Check tests expecting non-errors
 			if testScenario.want != nil {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				if diff := cmp.Diff(testScenario.want, got, protocmp.Transform()); diff != "" {
 					t.Errorf("Unexpected difference:\n%v", diff)
 				}
@@ -617,9 +617,9 @@ func TestLocalSDKServerUpdateList(t *testing.T) {
 	}
 
 	path, err := gsToTmpFile(fixture)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	l, err := NewLocalSDKServer(path, "", defaultTestListMaxCapacity)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	stream := newGameServerMockStream()
 	go func() {
@@ -637,7 +637,7 @@ func TestLocalSDKServerUpdateList(t *testing.T) {
 		})
 		return found, nil
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	testScenarios := map[string]struct {
 		updateRequest *beta.UpdateListRequest
@@ -782,7 +782,7 @@ func TestLocalSDKServerUpdateList(t *testing.T) {
 			got, err := l.UpdateList(context.Background(), testScenario.updateRequest)
 			// Check tests expecting non-errors
 			if testScenario.want != nil {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				if diff := cmp.Diff(testScenario.want, got, protocmp.Transform()); diff != "" {
 					t.Errorf("Unexpected difference:\n%v", diff)
 				}
@@ -809,9 +809,9 @@ func TestLocalSDKServerAddListValue(t *testing.T) {
 	}
 
 	path, err := gsToTmpFile(fixture)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	l, err := NewLocalSDKServer(path, "", defaultTestListMaxCapacity)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	stream := newGameServerMockStream()
 	go func() {
@@ -829,7 +829,7 @@ func TestLocalSDKServerAddListValue(t *testing.T) {
 		})
 		return found, nil
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	testScenarios := map[string]struct {
 		addRequest *beta.AddListValueRequest
@@ -870,7 +870,7 @@ func TestLocalSDKServerAddListValue(t *testing.T) {
 			got, err := l.AddListValue(context.Background(), testScenario.addRequest)
 			// Check tests expecting non-errors
 			if testScenario.want != nil {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				if diff := cmp.Diff(testScenario.want, got, protocmp.Transform()); diff != "" {
 					t.Errorf("Unexpected difference:\n%v", diff)
 				}
@@ -897,9 +897,9 @@ func TestLocalSDKServerRemoveListValue(t *testing.T) {
 	}
 
 	path, err := gsToTmpFile(fixture)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	l, err := NewLocalSDKServer(path, "", defaultTestListMaxCapacity)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	stream := newGameServerMockStream()
 	go func() {
@@ -917,7 +917,7 @@ func TestLocalSDKServerRemoveListValue(t *testing.T) {
 		})
 		return found, nil
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	testScenarios := map[string]struct {
 		removeRequest *beta.RemoveListValueRequest
@@ -951,7 +951,7 @@ func TestLocalSDKServerRemoveListValue(t *testing.T) {
 			got, err := l.RemoveListValue(context.Background(), testScenario.removeRequest)
 			// Check tests expecting non-errors
 			if testScenario.want != nil {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				if diff := cmp.Diff(testScenario.want, got, protocmp.Transform()); diff != "" {
 					t.Errorf("Unexpected difference:\n%v", diff)
 				}
@@ -968,37 +968,37 @@ func TestLocalSDKServerRemoveListValue(t *testing.T) {
 func TestLocalSDKServerStateUpdates(t *testing.T) {
 	t.Parallel()
 	l, err := NewLocalSDKServer("", "", defaultTestListMaxCapacity)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	ctx := context.Background()
 	e := &sdk.Empty{}
 	_, err = l.Ready(ctx, e)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	gs, err := l.GetGameServer(ctx, e)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, gs.GetStatus().GetState(), string(agonesv1.GameServerStateReady))
 
 	seconds := &sdk.Duration{Seconds: 2}
 	_, err = l.Reserve(ctx, seconds)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	gs, err = l.GetGameServer(ctx, e)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, gs.GetStatus().GetState(), string(agonesv1.GameServerStateReserved))
 
 	_, err = l.Allocate(ctx, e)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	gs, err = l.GetGameServer(ctx, e)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, gs.GetStatus().GetState(), string(agonesv1.GameServerStateAllocated))
 
 	_, err = l.Shutdown(ctx, e)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	gs, err = l.GetGameServer(ctx, e)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, gs.GetStatus().GetState(), string(agonesv1.GameServerStateShutdown))
 }
 
@@ -1007,7 +1007,7 @@ func TestSDKConformanceFunctionality(t *testing.T) {
 	t.Parallel()
 
 	l, err := NewLocalSDKServer("", "", defaultTestListMaxCapacity)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	l.testMode = true
 	l.recordRequest("")
 	l.gs = &sdk.GameServer{ObjectMeta: &sdk.GameServer_ObjectMeta{Name: "empty"}}

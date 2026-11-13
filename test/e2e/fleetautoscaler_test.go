@@ -88,15 +88,15 @@ func TestAutoscalerBasicFunctions(t *testing.T) {
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(bufferSize))
 
 	// patch the autoscaler to increase MinReplicas and watch the fleet scale up
-	fas, err = patchFleetAutoscaler(ctx, fas, intstr.FromInt(int(bufferSize)), bufferSize+2, fas.Spec.Policy.Buffer.MaxReplicas)
-	assert.NoError(t, err, "could not patch fleetautoscaler")
+	fas, err = patchFleetAutoscaler(ctx, fas, intstr.FromInt32(bufferSize), bufferSize+2, fas.Spec.Policy.Buffer.MaxReplicas)
+	require.NoError(t, err, "could not patch fleetautoscaler")
 
 	// min replicas is now higher than buffer size, will scale to that level
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(fas.Spec.Policy.Buffer.MinReplicas))
 
 	// patch the autoscaler to remove MinReplicas and watch the fleet scale down to bufferSize
-	fas, err = patchFleetAutoscaler(ctx, fas, intstr.FromInt(int(bufferSize)), 0, fas.Spec.Policy.Buffer.MaxReplicas)
-	assert.NoError(t, err, "could not patch fleetautoscaler")
+	fas, err = patchFleetAutoscaler(ctx, fas, intstr.FromInt32(bufferSize), 0, fas.Spec.Policy.Buffer.MaxReplicas)
+	require.NoError(t, err, "could not patch fleetautoscaler")
 
 	bufferSize = int32(fas.Spec.Policy.Buffer.BufferSize.IntValue())
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(bufferSize))
@@ -127,7 +127,7 @@ func TestAutoscalerBasicFunctions(t *testing.T) {
 	})
 
 	// patch autoscaler to a maxReplicas count equal to current replicas count
-	_, err = patchFleetAutoscaler(ctx, fas, intstr.FromInt(1), 1, 1)
+	_, err = patchFleetAutoscaler(ctx, fas, intstr.FromInt32(1), 1, 1)
 	require.NoError(t, err, "could not patch fleetautoscaler")
 
 	// check that we are not able to scale
@@ -171,7 +171,7 @@ func TestFleetAutoscalerDefaultSyncInterval(t *testing.T) {
 			Policy: autoscalingv1.FleetAutoscalerPolicy{
 				Type: autoscalingv1.BufferPolicyType,
 				Buffer: &autoscalingv1.BufferPolicy{
-					BufferSize:  intstr.FromInt(3),
+					BufferSize:  intstr.FromInt32(3),
 					MaxReplicas: 10,
 				},
 			},
@@ -202,8 +202,8 @@ func TestFleetAutoScalerRollingUpdate(t *testing.T) {
 	fleets := stable.Fleets(framework.Namespace)
 	flt := defaultFleet(framework.Namespace)
 	flt.Spec.Replicas = 2
-	maxSurge := 1
-	rollingUpdateCount := intstr.FromInt(maxSurge)
+	maxSurge := int32(1)
+	rollingUpdateCount := intstr.FromInt32(maxSurge)
 
 	flt.Spec.Strategy.RollingUpdate = &appsv1.RollingUpdateDeployment{}
 	// Set both MaxSurge and MaxUnavaible to 1
@@ -219,14 +219,14 @@ func TestFleetAutoScalerRollingUpdate(t *testing.T) {
 	fleetautoscalers := framework.AgonesClient.AutoscalingV1().FleetAutoscalers(framework.Namespace)
 
 	// Create FleetAutoScaler with 7 Buffer and MinReplicas
-	targetScale := 7
+	targetScale := int32(7)
 	fas := defaultFleetAutoscaler(flt, framework.Namespace)
-	fas.Spec.Policy.Buffer.BufferSize = intstr.FromInt(targetScale)
-	fas.Spec.Policy.Buffer.MinReplicas = int32(targetScale)
+	fas.Spec.Policy.Buffer.BufferSize = intstr.FromInt32(targetScale)
+	fas.Spec.Policy.Buffer.MinReplicas = targetScale
 	fas, err = fleetautoscalers.Create(ctx, fas, metav1.CreateOptions{})
 	require.NoError(t, err)
 	defer fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
-	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(int32(targetScale)))
+	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(targetScale))
 
 	// get the Status of the fleetautoscaler
 	fas, err = framework.AgonesClient.AutoscalingV1().FleetAutoscalers(fas.ObjectMeta.Namespace).Get(ctx, fas.Name, metav1.GetOptions{})
@@ -302,7 +302,7 @@ func TestAutoscalerStressCreate(t *testing.T) {
 		bufferSize := r.Int31n(5)
 		minReplicas := r.Int31n(5)
 		maxReplicas := r.Int31n(8)
-		fas.Spec.Policy.Buffer.BufferSize = intstr.FromInt(int(bufferSize))
+		fas.Spec.Policy.Buffer.BufferSize = intstr.FromInt32(bufferSize)
 		fas.Spec.Policy.Buffer.MinReplicas = minReplicas
 		fas.Spec.Policy.Buffer.MaxReplicas = maxReplicas
 
@@ -372,7 +372,7 @@ func defaultFleetAutoscaler(f *agonesv1.Fleet, namespace string) *autoscalingv1.
 			Policy: autoscalingv1.FleetAutoscalerPolicy{
 				Type: autoscalingv1.BufferPolicyType,
 				Buffer: &autoscalingv1.BufferPolicy{
-					BufferSize:  intstr.FromInt(3),
+					BufferSize:  intstr.FromInt32(3),
 					MaxReplicas: 10,
 				},
 			},
@@ -490,7 +490,7 @@ func TestAutoscalerWebhook(t *testing.T) {
 		}
 		return found, nil
 	})
-	assert.NoError(t, err, "Received unexpected error")
+	require.NoError(t, err, "Received unexpected error")
 	assert.True(t, found, "Expected error was not received")
 }
 
@@ -556,7 +556,7 @@ func TestFleetAutoscalerTLSWebhook(t *testing.T) {
 		_, err := framework.KubeClient.CoreV1().Services(defaultNS).Get(ctx, svc.ObjectMeta.Name, metav1.GetOptions{})
 		return k8serrors.IsNotFound(err), nil
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	svc, err = framework.KubeClient.CoreV1().Services(defaultNS).Create(ctx, svc.DeepCopy(), metav1.CreateOptions{})
 	if assert.NoError(t, err) {
@@ -705,7 +705,7 @@ func defaultAutoscalerWebhook(namespace string, fixedReplicasEnabled string) (*c
 			Containers: []corev1.Container{
 				{
 					Name:            "webhook",
-					Image:           "us-docker.pkg.dev/agones-images/examples/autoscaler-webhook:0.23",
+					Image:           framework.ExampleImage("autoscaler-webhook", "0.24"),
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Ports: []corev1.ContainerPort{{
 						ContainerPort: 8000,
@@ -911,8 +911,8 @@ func TestCounterAutoscaler(t *testing.T) {
 			fas: counterFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.Counter = &autoscalingv1.CounterPolicy{
 					Key:         "players",
-					BufferSize:  intstr.FromInt(5), // Buffer refers to the available capacity (AggregateCapacity - AggregateCount)
-					MinCapacity: 10,                // Min and MaxCapacity refer to the total capacity aggregated across the fleet, NOT the available capacity
+					BufferSize:  intstr.FromInt32(5), // Buffer refers to the available capacity (AggregateCapacity - AggregateCount)
+					MinCapacity: 10,                  // Min and MaxCapacity refer to the total capacity aggregated across the fleet, NOT the available capacity
 					MaxCapacity: 100,
 				}
 			}),
@@ -923,7 +923,7 @@ func TestCounterAutoscaler(t *testing.T) {
 			fas: counterFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.Counter = &autoscalingv1.CounterPolicy{
 					Key:         "players",
-					BufferSize:  intstr.FromInt(25),
+					BufferSize:  intstr.FromInt32(25),
 					MinCapacity: 25,
 					MaxCapacity: 100,
 				}
@@ -935,7 +935,7 @@ func TestCounterAutoscaler(t *testing.T) {
 			fas: counterFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.Counter = &autoscalingv1.CounterPolicy{
 					Key:         "sessions",
-					BufferSize:  intstr.FromInt(5),
+					BufferSize:  intstr.FromInt32(5),
 					MinCapacity: 0,
 					MaxCapacity: 5,
 				}
@@ -947,7 +947,7 @@ func TestCounterAutoscaler(t *testing.T) {
 			fas: counterFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.Counter = &autoscalingv1.CounterPolicy{
 					Key:         "sessions",
-					BufferSize:  intstr.FromInt(1),
+					BufferSize:  intstr.FromInt32(1),
 					MinCapacity: 30,
 					MaxCapacity: 100,
 				}
@@ -959,7 +959,7 @@ func TestCounterAutoscaler(t *testing.T) {
 			fas: counterFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.Counter = &autoscalingv1.CounterPolicy{
 					Key:         "players",
-					BufferSize:  intstr.FromInt(10),
+					BufferSize:  intstr.FromInt32(10),
 					MinCapacity: 10,
 					MaxCapacity: 30,
 				}
@@ -971,7 +971,7 @@ func TestCounterAutoscaler(t *testing.T) {
 			fas: counterFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.Counter = &autoscalingv1.CounterPolicy{
 					Key:         "sessions",
-					BufferSize:  intstr.FromInt(5),
+					BufferSize:  intstr.FromInt32(5),
 					MinCapacity: 15,
 					MaxCapacity: 100,
 				}
@@ -983,7 +983,7 @@ func TestCounterAutoscaler(t *testing.T) {
 			fas: counterFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.Counter = &autoscalingv1.CounterPolicy{
 					Key:         "players",
-					BufferSize:  intstr.FromInt(25),
+					BufferSize:  intstr.FromInt32(25),
 					MinCapacity: 10,
 					MaxCapacity: 100,
 				}
@@ -999,7 +999,7 @@ func TestCounterAutoscaler(t *testing.T) {
 				assert.Error(t, err)
 				return
 			}
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(testCase.wantReplicas))
 			fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
@@ -1064,7 +1064,7 @@ func TestCounterAutoscalerWithNoReplicas(t *testing.T) {
 			fas: counterFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.Counter = &autoscalingv1.CounterPolicy{
 					Key:         "games",
-					BufferSize:  intstr.FromInt(3),
+					BufferSize:  intstr.FromInt32(3),
 					MinCapacity: 16,
 					MaxCapacity: 100,
 				}
@@ -1081,7 +1081,7 @@ func TestCounterAutoscalerWithNoReplicas(t *testing.T) {
 				assert.Error(t, err)
 				return
 			}
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(testCase.wantReplicas))
 			fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
@@ -1181,7 +1181,7 @@ func TestCounterAutoscalerAllocated(t *testing.T) {
 			}
 
 			fas, err := fleetautoscalers.Create(ctx, counterFas, metav1.CreateOptions{})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			defer fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 			framework.AssertFleetCondition(t, flt, func(_ *logrus.Entry, fleet *agonesv1.Fleet) bool {
@@ -1329,7 +1329,7 @@ func TestCounterAutoscalerAllocatedMultipleNamespaces(t *testing.T) {
 			}
 
 			fasA, err := fleetautoscalers.FleetAutoscalers(namespaceA).Create(ctx, counterFasA, metav1.CreateOptions{})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			defer fleetautoscalers.FleetAutoscalers(namespaceA).Delete(ctx, fasA.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 			counterFasB := &autoscalingv1.FleetAutoscaler{
@@ -1350,7 +1350,7 @@ func TestCounterAutoscalerAllocatedMultipleNamespaces(t *testing.T) {
 			}
 
 			fasB, err := fleetautoscalers.FleetAutoscalers(namespaceB).Create(ctx, counterFasB, metav1.CreateOptions{})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			defer fleetautoscalers.FleetAutoscalers(namespaceB).Delete(ctx, fasB.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 			// Ensure there is no warning / error on creation, ensure the currentReplicas > 0  for A and B
@@ -1442,7 +1442,7 @@ func TestListAutoscaler(t *testing.T) {
 			fas: listFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.List = &autoscalingv1.ListPolicy{
 					Key:         "games",
-					BufferSize:  intstr.FromInt(2),
+					BufferSize:  intstr.FromInt32(2),
 					MinCapacity: 0,
 					MaxCapacity: 3,
 				}
@@ -1454,7 +1454,7 @@ func TestListAutoscaler(t *testing.T) {
 			fas: listFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.List = &autoscalingv1.ListPolicy{
 					Key:         "games",
-					BufferSize:  intstr.FromInt(3),
+					BufferSize:  intstr.FromInt32(3),
 					MinCapacity: 0,
 					MaxCapacity: 5,
 				}
@@ -1478,7 +1478,7 @@ func TestListAutoscaler(t *testing.T) {
 			fas: listFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.List = &autoscalingv1.ListPolicy{
 					Key:         "games",
-					BufferSize:  intstr.FromInt(3),
+					BufferSize:  intstr.FromInt32(3),
 					MinCapacity: 16,
 					MaxCapacity: 100,
 				}
@@ -1490,7 +1490,7 @@ func TestListAutoscaler(t *testing.T) {
 			fas: listFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.List = &autoscalingv1.ListPolicy{
 					Key:         "games",
-					BufferSize:  intstr.FromInt(1),
+					BufferSize:  intstr.FromInt32(1),
 					MinCapacity: 10,
 					MaxCapacity: 100,
 				}
@@ -1502,7 +1502,7 @@ func TestListAutoscaler(t *testing.T) {
 			fas: listFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.List = &autoscalingv1.ListPolicy{
 					Key:         "games",
-					BufferSize:  intstr.FromInt(15),
+					BufferSize:  intstr.FromInt32(15),
 					MinCapacity: 5,
 					MaxCapacity: 25,
 				}
@@ -1514,7 +1514,7 @@ func TestListAutoscaler(t *testing.T) {
 			fas: listFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.List = &autoscalingv1.ListPolicy{
 					Key:         "games",
-					BufferSize:  intstr.FromInt(15),
+					BufferSize:  intstr.FromInt32(15),
 					MinCapacity: 15,
 					MaxCapacity: 100,
 				}
@@ -1526,7 +1526,7 @@ func TestListAutoscaler(t *testing.T) {
 			fas: listFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.List = &autoscalingv1.ListPolicy{
 					Key:         "games",
-					BufferSize:  intstr.FromInt(15),
+					BufferSize:  intstr.FromInt32(15),
 					MinCapacity: 15,
 					MaxCapacity: 25,
 				}
@@ -1543,7 +1543,7 @@ func TestListAutoscaler(t *testing.T) {
 				assert.Error(t, err)
 				return
 			}
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(testCase.wantReplicas))
 			fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
@@ -1608,7 +1608,7 @@ func TestListAutoscalerWithNoReplicas(t *testing.T) {
 			fas: listFas(func(fap *autoscalingv1.FleetAutoscalerPolicy) {
 				fap.List = &autoscalingv1.ListPolicy{
 					Key:         "games",
-					BufferSize:  intstr.FromInt(3),
+					BufferSize:  intstr.FromInt32(3),
 					MinCapacity: 16,
 					MaxCapacity: 100,
 				}
@@ -1625,7 +1625,7 @@ func TestListAutoscalerWithNoReplicas(t *testing.T) {
 				assert.Error(t, err)
 				return
 			}
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(testCase.wantReplicas))
 			fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
@@ -1687,7 +1687,7 @@ func TestListAutoscalerAllocated(t *testing.T) {
 		"Scales Down to Number of Game Servers Allocated": {
 			fas: autoscalingv1.ListPolicy{
 				Key:         "gamers",
-				BufferSize:  intstr.FromInt(2),
+				BufferSize:  intstr.FromInt32(2),
 				MinCapacity: 6,
 				MaxCapacity: 60,
 			},
@@ -1743,7 +1743,7 @@ func TestListAutoscalerAllocated(t *testing.T) {
 			}
 
 			fas, err := fleetautoscalers.Create(ctx, listFas, metav1.CreateOptions{})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			defer fleetautoscalers.Delete(ctx, fas.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 			framework.AssertFleetCondition(t, flt, func(_ *logrus.Entry, fleet *agonesv1.Fleet) bool {
@@ -1785,7 +1785,7 @@ func TestListAutoscalerWithSDKMethods(t *testing.T) {
 		"Scale Up to Buffer": {
 			fas: autoscalingv1.ListPolicy{
 				Key:         "sessions",
-				BufferSize:  intstr.FromInt(10),
+				BufferSize:  intstr.FromInt32(10),
 				MinCapacity: 12,
 				MaxCapacity: 400,
 			},
@@ -1799,7 +1799,7 @@ func TestListAutoscalerWithSDKMethods(t *testing.T) {
 		"Scale Down to Buffer": {
 			fas: autoscalingv1.ListPolicy{
 				Key:         "sessions",
-				BufferSize:  intstr.FromInt(3),
+				BufferSize:  intstr.FromInt32(3),
 				MinCapacity: 3,
 				MaxCapacity: 400,
 			},
@@ -1935,7 +1935,7 @@ func TestChainAutoscaler(t *testing.T) {
 	// 1st Schedule Inactive, 2nd Schedule Active - 30 seconds (Fallthrough)
 	chainAutoscaler := defaultAutoscalerChain(t, flt)
 	fas, err := fleetautoscalers.Create(ctx, chainAutoscaler, metav1.CreateOptions{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Verify only the second schedule ran
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(4))
@@ -1965,7 +1965,7 @@ func TestChainAutoscaler(t *testing.T) {
 	chainAutoscaler.Spec.Policy.Chain[1].Schedule.ActivePeriod.Duration = "5m"
 
 	fas, err = fleetautoscalers.Create(ctx, chainAutoscaler, metav1.CreateOptions{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Verify the first schedule has been applied
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(10))
@@ -2223,7 +2223,7 @@ func defaultAutoscalerSchedule(t *testing.T, f *agonesv1.Fleet) *autoscalingv1.F
 					Policy: autoscalingv1.FleetAutoscalerPolicy{
 						Type: autoscalingv1.BufferPolicyType,
 						Buffer: &autoscalingv1.BufferPolicy{
-							BufferSize:  intstr.FromInt(5),
+							BufferSize:  intstr.FromInt32(5),
 							MinReplicas: 5,
 							MaxReplicas: 12,
 						},
@@ -2270,7 +2270,7 @@ func defaultAutoscalerChain(t *testing.T, f *agonesv1.Fleet) *autoscalingv1.Flee
 								Policy: autoscalingv1.FleetAutoscalerPolicy{
 									Type: autoscalingv1.BufferPolicyType,
 									Buffer: &autoscalingv1.BufferPolicy{
-										BufferSize:  intstr.FromInt(10),
+										BufferSize:  intstr.FromInt32(10),
 										MinReplicas: 10,
 										MaxReplicas: 20,
 									},
@@ -2295,7 +2295,7 @@ func defaultAutoscalerChain(t *testing.T, f *agonesv1.Fleet) *autoscalingv1.Flee
 								Policy: autoscalingv1.FleetAutoscalerPolicy{
 									Type: autoscalingv1.BufferPolicyType,
 									Buffer: &autoscalingv1.BufferPolicy{
-										BufferSize:  intstr.FromInt(4),
+										BufferSize:  intstr.FromInt32(4),
 										MinReplicas: 3,
 										MaxReplicas: 7,
 									},

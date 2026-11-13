@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 
 	"agones.dev/agones/pkg/sdk/beta"
@@ -74,39 +75,39 @@ func TestBetaGetAndUpdateCounter(t *testing.T) {
 
 	t.Run("Set Counter and Set Capacity", func(t *testing.T) {
 		count, err := b.GetCounterCount("sessions")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, sessions.GetCount(), count)
 
 		capacity, err := b.GetCounterCapacity("sessions")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, sessions.GetCapacity(), capacity)
 
 		wantCapacity := int64(25)
 		err = b.SetCounterCapacity("sessions", wantCapacity)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		capacity, err = b.GetCounterCapacity("sessions")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, wantCapacity, capacity)
 
 		wantCount := int64(10)
 		err = b.SetCounterCount("sessions", wantCount)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		count, err = b.GetCounterCount("sessions")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, wantCount, count)
 	})
 
 	t.Run("Get and Set Non-Defined Counter", func(t *testing.T) {
 		_, err := b.GetCounterCount("secessions")
-		assert.Error(t, err)
+		require.Error(t, err)
 
 		_, err = b.GetCounterCapacity("secessions")
-		assert.Error(t, err)
+		require.Error(t, err)
 
 		err = b.SetCounterCapacity("secessions", int64(100))
-		assert.Error(t, err)
+		require.Error(t, err)
 
 		err = b.SetCounterCount("secessions", int64(0))
 		assert.Error(t, err)
@@ -115,56 +116,56 @@ func TestBetaGetAndUpdateCounter(t *testing.T) {
 	//nolint:dupl // testing DecrementCounter and IncrementCounter are not duplicates.
 	t.Run("Decrement Counter Fails then Success", func(t *testing.T) {
 		count, err := b.GetCounterCount("games")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, games.GetCount(), count)
 
 		err = b.DecrementCounter("games", 21)
-		assert.Error(t, err)
+		require.Error(t, err)
 
 		count, err = b.GetCounterCount("games")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, games.GetCount(), count)
 
 		err = b.DecrementCounter("games", -12)
-		assert.Error(t, err)
+		require.Error(t, err)
 
 		count, err = b.GetCounterCount("games")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, games.GetCount(), count)
 
 		err = b.DecrementCounter("games", 12)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		count, err = b.GetCounterCount("games")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, int64(0), count)
 	})
 
 	//nolint:dupl // testing DecrementCounter and IncrementCounter are not duplicates.
 	t.Run("Increment Counter Fails then Success", func(t *testing.T) {
 		count, err := b.GetCounterCount("gamers")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, gamers.GetCount(), count)
 
 		err = b.IncrementCounter("gamers", 250)
-		assert.Error(t, err)
+		require.Error(t, err)
 
 		count, err = b.GetCounterCount("gamers")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, gamers.GetCount(), count)
 
 		err = b.IncrementCounter("gamers", -237)
-		assert.Error(t, err)
+		require.Error(t, err)
 
 		count, err = b.GetCounterCount("gamers")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, gamers.GetCount(), count)
 
 		err = b.IncrementCounter("gamers", 237)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		count, err = b.GetCounterCount("gamers")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, int64(500), count)
 	})
 
@@ -216,67 +217,67 @@ func TestBetaGetAndUpdateList(t *testing.T) {
 
 	t.Run("Get and Set List Capacity", func(t *testing.T) {
 		capacity, err := b.GetListCapacity("foo")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, foo.GetCapacity(), capacity)
 
 		wantCapacity := int64(5)
 		err = b.SetListCapacity("foo", wantCapacity)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		capacity, err = b.GetListCapacity("foo")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, wantCapacity, capacity)
 	})
 
 	t.Run("Get List Length, Get List Values, ListContains, and Append List Value", func(t *testing.T) {
 		length, err := b.GetListLength("bar")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, len(bar.GetValues()), length)
 
 		values, err := b.GetListValues("bar")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, bar.GetValues(), values)
 
 		err = b.AppendListValue("bar", "ghi")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		length, err = b.GetListLength("bar")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, len(bar.GetValues())+1, length)
 
 		wantValues := []string{"abc", "def", "ghi"}
 		values, err = b.GetListValues("bar")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, wantValues, values)
 
 		contains, err := b.ListContains("bar", "ghi")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, contains)
 	})
 
 	t.Run("Get List Length, Get List Values, ListContains, and Delete List Value", func(t *testing.T) {
 		length, err := b.GetListLength("baz")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, len(baz.GetValues()), length)
 
 		values, err := b.GetListValues("baz")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, baz.GetValues(), values)
 
 		err = b.DeleteListValue("baz", "456")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		length, err = b.GetListLength("baz")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, len(baz.GetValues())-1, length)
 
 		wantValues := []string{"123", "789"}
 		values, err = b.GetListValues("baz")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, wantValues, values)
 
 		contains, err := b.ListContains("baz", "456")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.False(t, contains)
 	})
 

@@ -192,7 +192,7 @@ func fleetAutoScaler(fleetName string, fasName string) *autoscalingv1.FleetAutos
 				Buffer: &autoscalingv1.BufferPolicy{
 					MaxReplicas: 30,
 					MinReplicas: 10,
-					BufferSize:  intstr.FromInt(11),
+					BufferSize:  intstr.FromInt32(11),
 				},
 			},
 			Sync: &autoscalingv1.FleetAutoscalerSync{

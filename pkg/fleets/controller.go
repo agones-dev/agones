@@ -421,6 +421,10 @@ func (c *Controller) applyDeploymentStrategy(ctx context.Context, fleet *agonesv
 		return fleet.Spec.Replicas, nil
 	}
 
+	if runtime.FeatureEnabled(runtime.FeatureRollingUpdateSurge) && fleet.Spec.Strategy.Type == appsv1.RollingUpdateDeploymentStrategyType {
+		return c.rollingUpdateDeployment(ctx, fleet, active, rest)
+	}
+
 	// if we do have `rest` but all their spec.replicas is zero, we can just do subtraction against whatever is allocated in `rest`.
 	if agonesv1.SumGameServerSets(rest, func(gsSet *agonesv1.GameServerSet) int32 {
 		return gsSet.Spec.Replicas
@@ -428,8 +432,7 @@ func (c *Controller) applyDeploymentStrategy(ctx context.Context, fleet *agonesv
 		blocked := agonesv1.SumGameServerSets(rest, func(gsSet *agonesv1.GameServerSet) int32 {
 			return gsSet.Status.ReservedReplicas + gsSet.Status.AllocatedReplicas
 		})
-		replicas := max(fleet.Spec.Replicas-blocked, 0)
-		return replicas, nil
+		return max(fleet.Spec.Replicas-blocked, 0), nil
 	}
 
 	switch fleet.Spec.Strategy.Type {
@@ -499,6 +502,10 @@ func (c *Controller) rollingUpdateDeployment(ctx context.Context, fleet *agonesv
 // rollingUpdateActive applies the rolling update to the active GameServerSet
 // and returns what its replica value should be set to
 func (c *Controller) rollingUpdateActive(fleet *agonesv1.Fleet, active *agonesv1.GameServerSet, rest []*agonesv1.GameServerSet) (int32, error) {
+	if runtime.FeatureEnabled(runtime.FeatureRollingUpdateSurge) {
+		return c.rollingUpdateActiveSurge(fleet, active, rest)
+	}
+
 	replicas := active.Spec.Replicas
 	// always leave room for Allocated GameServers
 	sumAllocated := agonesv1.SumGameServerSets(rest, func(gsSet *agonesv1.GameServerSet) int32 {
@@ -525,11 +532,12 @@ func (c *Controller) rollingUpdateActive(fleet *agonesv1.Fleet, active *agonesv1
 		return fleet.LowerBoundReplicas(fleet.Spec.Replicas - sumAllocated), nil
 	}
 
-	r, err := intstr.GetValueFromIntOrPercent(fleet.Spec.Strategy.RollingUpdate.MaxSurge, int(fleet.Spec.Replicas), true)
+	r, err := intstr.GetScaledValueFromIntOrPercent(fleet.Spec.Strategy.RollingUpdate.MaxSurge, int(fleet.Spec.Replicas), true)
 	if err != nil {
 		return 0, c.errs.Wrapf(err, "error parsing MaxSurge value: %s", fleet.ObjectMeta.Name)
 	}
-	surge := int32(r)
+	// Validate caps a percentage MaxSurge at 99% of Spec.Replicas, and an integer one is an int32.
+	surge := int32(r) //nolint:gosec // G115: bounded by Fleet validation, see above.
 
 	// make sure we don't end up with more than the configured max surge
 	maxSurge := surge + fleet.Spec.Replicas
@@ -552,16 +560,157 @@ func (c *Controller) rollingUpdateActive(fleet *agonesv1.Fleet, active *agonesv1
 	return replicas, nil
 }
 
-func (c *Controller) rollingUpdateRestFixedOnReady(ctx context.Context, fleet *agonesv1.Fleet, active *agonesv1.GameServerSet, rest []*agonesv1.GameServerSet) error {
+// rollingUpdateRest applies the rolling update to the inactive GameServerSets
+func (c *Controller) rollingUpdateRest(ctx context.Context, fleet *agonesv1.Fleet, active *agonesv1.GameServerSet, rest []*agonesv1.GameServerSet) error {
 	if len(rest) == 0 {
 		return nil
 	}
-	return c.rollingUpdateRestFixedOnReadyRollingUpdateFix(ctx, fleet, active, rest)
+
+	// Look at Kubernetes Deployment util ResolveFenceposts() function
+	r, err := intstr.GetScaledValueFromIntOrPercent(fleet.Spec.Strategy.RollingUpdate.MaxUnavailable, int(fleet.Status.ReadyReplicas), false)
+	if err != nil {
+		return c.errs.Wrapf(err, "error parsing MaxUnavailable value: %s", fleet.ObjectMeta.Name)
+	}
+	if r == 0 {
+		r = 1
+	}
+	if r > int(fleet.Spec.Replicas) {
+		r = int(fleet.Spec.Replicas)
+	}
+	unavailable := int32(r)
+
+	totalAlreadyScaledDown := int32(0)
+
+	// Check if we can scale down.
+	allGSS := rest
+	allGSS = append(allGSS, active)
+	readyReplicasCount := agonesv1.SumGameServerSets(allGSS, func(gsSet *agonesv1.GameServerSet) int32 {
+		return gsSet.Status.ReadyReplicas
+	})
+	minAvailable := min(fleet.Status.ReadyReplicas-unavailable, fleet.Spec.Replicas)
+
+	// Check if we are ready to scale down
+	newGSSUnavailablePodCount := active.Spec.Replicas - active.Status.ReadyReplicas - active.Status.ReservedReplicas -
+		active.Status.AllocatedReplicas - active.Status.ShutdownReplicas
+	maxScaledDown := readyReplicasCount - minAvailable - newGSSUnavailablePodCount
+
+	if maxScaledDown <= 0 {
+		return nil
+	}
+	rest, _, err = c.cleanupUnhealthyReplicas(ctx, rest, fleet, maxScaledDown)
+	if err != nil {
+		loggerForFleet(fleet, c.baseLogger).WithField("fleet", fleet.ObjectMeta.Name).WithField("maxScaledDown", maxScaledDown).
+			Debug("Can not cleanup Unhealth Replicas")
+		// There could be the case when GameServerSet would be updated from another place, say Status or Spec would be updated
+		// We don't want to propagate such errors further
+		// And this set in sync with reconcileOldReplicaSets() Kubernetes code
+		return nil //nolint:nilerr // deliberate: see comment above.
+	}
+	// Resulting value is readyReplicasCount + unavailable - fleet.Spec.Replicas
+	totalScaleDownCount := readyReplicasCount - minAvailable
+	if readyReplicasCount <= minAvailable {
+		// Cannot scale down.
+		return nil
+	}
+	for _, gsSet := range rest {
+		if totalAlreadyScaledDown >= totalScaleDownCount {
+			// No further scaling required.
+			break
+		}
+
+		// Crucial fix if we are using wrong configuration of a fleet,
+		// that would lead to Status.Replicas being 0 but number of GameServers would be in a Scheduled or Unhealthy state.
+		// Compare with scaleDownOldReplicaSetsForRollingUpdate() for loop.
+		// if the Spec.Replicas are less than or equal to 0, then that means we are done
+		// scaling this GameServerSet down, and can therefore exit/move to the next one.
+		if gsSet.Spec.Replicas <= 0 {
+			continue
+		}
+
+		// If the Spec.Replicas does not equal the Status.Replicas for this GameServerSet, this means
+		// that the rolling down process is currently ongoing, and we should therefore exit so we can wait for it to finish
+		if gsSet.Spec.Replicas != gsSet.Status.Replicas {
+			if gsSet.Status.Replicas > gsSet.Spec.Replicas &&
+				gsSet.Status.Replicas == gsSet.Status.AllocatedReplicas+gsSet.Status.ReservedReplicas {
+				continue
+			}
+			break
+		}
+		gsSetCopy := gsSet.DeepCopy()
+		if gsSet.Status.ShutdownReplicas == 0 {
+			// Wait for new GameServers to become Ready before scaling down Inactive GameServerset
+			// Scale down.
+			scaleDownCount := min(gsSet.Spec.Replicas, totalScaleDownCount-totalAlreadyScaledDown)
+
+			newReplicasCount := gsSet.Spec.Replicas - scaleDownCount
+			if newReplicasCount > gsSet.Spec.Replicas {
+				return c.errs.Errorf("when scaling down old GameServerSet, got invalid request to scale down %s/%s %d -> %d", gsSet.Namespace, gsSet.Name, gsSet.Spec.Replicas, newReplicasCount)
+			}
+
+			switch {
+			case gsSet.Status.Replicas == gsSet.Status.AllocatedReplicas:
+				gsSetCopy.Spec.Replicas = 0
+			case newReplicasCount == gsSet.Spec.Replicas:
+				// No updates on GameServerSet
+				continue
+			default:
+				gsSetCopy.Spec.Replicas = newReplicasCount
+			}
+			loggerForFleet(fleet, c.baseLogger).WithField("gameserverset", gsSet.ObjectMeta.Name).WithField("replicas", gsSetCopy.Spec.Replicas).
+				Debug("applying rolling update to inactive gameserverset")
+
+			if _, err := c.gameServerSetGetter.GameServerSets(gsSetCopy.ObjectMeta.Namespace).Update(ctx, gsSetCopy, metav1.UpdateOptions{}); err != nil {
+				return c.errs.Wrapf(err, "error updating gameserverset %s", gsSetCopy.ObjectMeta.Name)
+			}
+			c.recorder.Eventf(fleet, corev1.EventTypeNormal, "ScalingGameServerSet",
+				"Scaling inactive GameServerSet %s from %d to %d", gsSetCopy.ObjectMeta.Name, gsSet.Spec.Replicas, gsSetCopy.Spec.Replicas)
+
+			totalAlreadyScaledDown += scaleDownCount
+		}
+	}
+	return nil
 }
 
-// rollingUpdateRest applies the rolling update to the inactive GameServerSets
-func (c *Controller) rollingUpdateRest(ctx context.Context, fleet *agonesv1.Fleet, active *agonesv1.GameServerSet, rest []*agonesv1.GameServerSet) error {
-	return c.rollingUpdateRestFixedOnReady(ctx, fleet, active, rest)
+// cleanupUnhealthyReplicas scales down the unhealthy replicas of the inactive GameServerSets,
+// up to maxCleanupCount in total
+func (c *Controller) cleanupUnhealthyReplicas(ctx context.Context, rest []*agonesv1.GameServerSet,
+	fleet *agonesv1.Fleet, maxCleanupCount int32) ([]*agonesv1.GameServerSet, int32, error) {
+
+	// Safely scale down all old GameServerSets with unhealthy replicas.
+	totalScaledDown := int32(0)
+	for i, gsSet := range rest {
+		healthy := gsSet.Status.ReadyReplicas + gsSet.Status.AllocatedReplicas + gsSet.Status.ReservedReplicas
+
+		if totalScaledDown >= maxCleanupCount {
+			break
+		}
+		if gsSet.Spec.Replicas == 0 {
+			// cannot scale down this replica set.
+			continue
+		}
+		if gsSet.Spec.Replicas <= healthy {
+			// no unhealthy replicas found, no scaling required.
+			continue
+		}
+
+		scaledDownCount := min(maxCleanupCount-totalScaledDown, gsSet.Spec.Replicas-healthy)
+		newReplicasCount := gsSet.Spec.Replicas - scaledDownCount
+		if newReplicasCount > gsSet.Spec.Replicas {
+			return nil, 0, c.errs.Errorf("when cleaning up unhealthy replicas, got invalid request to scale down %s/%s %d -> %d", gsSet.Namespace, gsSet.Name, gsSet.Spec.Replicas, newReplicasCount)
+		}
+
+		gsSetCopy := gsSet.DeepCopy()
+		gsSetCopy.Spec.Replicas = newReplicasCount
+		totalScaledDown += scaledDownCount
+		if _, err := c.gameServerSetGetter.GameServerSets(gsSetCopy.ObjectMeta.Namespace).Update(ctx, gsSetCopy, metav1.UpdateOptions{}); err != nil {
+			return nil, totalScaledDown, c.errs.Wrapf(err, "error updating gameserverset %s", gsSetCopy.ObjectMeta.Name)
+		}
+		c.recorder.Eventf(fleet, corev1.EventTypeNormal, "ScalingGameServerSet",
+			"Scaling inactive GameServerSet %s from %d to %d", gsSetCopy.ObjectMeta.Name, gsSet.Spec.Replicas, gsSetCopy.Spec.Replicas)
+
+		rest[i] = gsSetCopy
+	}
+	return rest, totalScaledDown, nil
 }
 
 // updateFleetStatus gets the GameServerSets for this Fleet and then
@@ -596,19 +745,6 @@ func (c *Controller) updateFleetStatus(ctx context.Context, fleet *agonesv1.Flee
 		fCopy.Status.Lists = mergeLists(fCopy.Status.Lists, gsSet.Status.Lists)
 
 	}
-	if runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		// to make this code simpler, while the feature gate is in place,
-		// we will loop around the gsSet list twice.
-		fCopy.Status.Players = &agonesv1.AggregatedPlayerStatus{}
-		// TODO: integrate this extra loop into the above for loop when PlayerTracking moves to GA
-		for _, gsSet := range list {
-			if gsSet.Status.Players != nil {
-				fCopy.Status.Players.Count += gsSet.Status.Players.Count
-				fCopy.Status.Players.Capacity += gsSet.Status.Players.Capacity
-			}
-		}
-	}
-
 	allocs := c.allocs.get(fleet.ObjectMeta.Namespace, fleet.ObjectMeta.Name)
 	fCopy.Status.Allocations += allocs
 

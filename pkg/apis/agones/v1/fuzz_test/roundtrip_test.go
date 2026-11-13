@@ -8,7 +8,7 @@ import (
 	allocationv1 "agones.dev/agones/pkg/apis/allocation/v1"
 	autoscalingv1 "agones.dev/agones/pkg/apis/autoscaling/v1"
 	multiclusterv1 "agones.dev/agones/pkg/apis/multicluster/v1"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/apitesting/fuzzer"
 	"k8s.io/apimachinery/pkg/api/apitesting/roundtrip"
 	genericfuzzer "k8s.io/apimachinery/pkg/apis/meta/fuzzer"
@@ -29,7 +29,7 @@ func TestRoundTripTypes(t *testing.T) {
 	}
 	seed := rand.Int63()
 	localFuzzer := fuzzer.FuzzerFor(genericfuzzer.Funcs, rand.NewSource(seed), codecs)
-	assert.NoError(t, localSchemeBuilder.AddToScheme(scheme))
+	require.NoError(t, localSchemeBuilder.AddToScheme(scheme))
 
 	var globalNonRoundTrippableTypes = sets.NewString(
 		"ExportOptions",

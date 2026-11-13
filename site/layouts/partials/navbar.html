@@ -1,4 +1,10 @@
 {{ $cover := .HasShortcode "blocks/cover" }}
+{{ if ne (getenv "HUGO_ENV") "snapshot" -}}
+<div class="survey-banner">
+	<span class="survey-banner__text">📋 The <strong>Annual Agones Survey</strong> is open until 15 February 2027. Help us understand how we can improve Agones!</span>
+	<a class="survey-banner__link" href="https://docs.google.com/forms/d/e/1FAIpQLSevqtMpB7BlRfOMT1KUyJLAuE_mTWBunMvg1yb0zbdgHYZduw/viewform?usp=dialog">Take the survey</a>
+</div>
+{{ end -}}
 <nav class="js-navbar-scroll navbar navbar-expand-lg {{ if not $cover }} nav-shadow {{ end }} flex-column flex-md-row td-navbar" data-bs-theme="auto">
 
 	<a id="agones-top" {{ if $cover }} style="display: none;" {{end}} class="navbar-brand" href="{{ .Site.Home.RelPermalink }}">
@@ -27,6 +33,7 @@
 				<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
 					<a class="dropdown-item" href="https://development.agones.dev">Development</a>
 					<a class="dropdown-item" href="https://agones.dev">{{ .Site.Params.release_version }}</a>
+					<a class="dropdown-item" href="https://1-61-0.agones.dev">1.61.0</a>
 					<a class="dropdown-item" href="https://1-60-0.agones.dev">1.60.0</a>
 					<a class="dropdown-item" href="https://1-59-0.agones.dev">1.59.0</a>
 					<a class="dropdown-item" href="https://1-58-0.agones.dev">1.58.0</a>
@@ -44,7 +51,6 @@
 					<a class="dropdown-item" href="https://1-46-0.agones.dev">1.46.0</a>
 					<a class="dropdown-item" href="https://1-45-0.agones.dev">1.45.0</a>
 					<a class="dropdown-item" href="https://1-44-0.agones.dev">1.44.0</a>
-					<a class="dropdown-item" href="https://1-43-0.agones.dev">1.43.0</a>
 				</div>
 			</li>
 			{{- $darkMode := partialCached "dark-mode-config.html" "dark-mode-global" -}}

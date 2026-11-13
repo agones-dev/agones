@@ -185,7 +185,7 @@ func main() {
 				logger.WithError(err).Fatalf("Could not run sidecar")
 			}
 		}()
-		sdk.RegisterSDKServer(grpcServer, s)
+		sdk.RegisterSDKServer(grpcServer, sdkserver.NewStableSDKServer(s))
 		sdkalpha.RegisterSDKServer(grpcServer, s)
 		sdkbeta.RegisterSDKServer(grpcServer, s)
 	}
@@ -219,7 +219,7 @@ func registerLocal(grpcServer *grpc.Server, ctlConf config) (func(), error) {
 		return nil, err
 	}
 
-	sdk.RegisterSDKServer(grpcServer, s)
+	sdk.RegisterSDKServer(grpcServer, sdkserver.NewStableSDKServer(s))
 	sdkalpha.RegisterSDKServer(grpcServer, s)
 	sdkbeta.RegisterSDKServer(grpcServer, s)
 
@@ -242,7 +242,7 @@ func registerTestSdkServer(grpcServer *grpc.Server, ctlConf config) (func(), err
 	s.SetExpectedSequence(expectedFuncs)
 	s.SetSdkName(ctlConf.TestSdkName)
 
-	sdk.RegisterSDKServer(grpcServer, s)
+	sdk.RegisterSDKServer(grpcServer, sdkserver.NewStableSDKServer(s))
 	sdkalpha.RegisterSDKServer(grpcServer, s)
 	sdkbeta.RegisterSDKServer(grpcServer, s)
 	return func() {
@@ -274,9 +274,8 @@ func runGateway(ctx context.Context, grpcEndpoint string, mux *gwruntime.ServeMu
 		logger.WithError(err).Fatal("Could not register sdk grpc-gateway")
 	}
 
-	if err := sdkalpha.RegisterSDKHandler(ctx, mux, conn); err != nil {
-		logger.WithError(err).Fatal("Could not register alpha sdk grpc-gateway")
-	}
+	// sdkalpha.RegisterSDKHandler is generated only once the alpha SDK service
+	// has RPCs with HTTP bindings; register it here when that happens.
 
 	if err := sdkbeta.RegisterSDKHandler(ctx, mux, conn); err != nil {
 		logger.WithError(err).Fatal("Could not register beta sdk grpc-gateway")

@@ -26,6 +26,7 @@ import (
 	"github.com/heptiolabs/healthcheck"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 )
@@ -86,7 +87,7 @@ func TestWorkerQueueHealthy(t *testing.T) {
 
 		return false, nil
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	close(done) // Ensure the handler no longer blocks.
 	cancel()    // Stop the worker queue.
@@ -126,13 +127,13 @@ func TestWorkQueueHealthCheck(t *testing.T) {
 		logrus.WithField("runcount", rc).Info("Checking run count before liveness check")
 		return rc == workersCount, nil
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	f := func(t *testing.T, url string, status int) {
 		// sometimes the http server takes a bit to start up
 		err := wait.PollUntilContextTimeout(context.Background(), time.Second, 5*time.Second, true, func(_ context.Context) (done bool, err error) {
 			resp, err := http.Get(url)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			defer resp.Body.Close() //nolint:errcheck
 
 			if status != resp.StatusCode {
@@ -140,7 +141,7 @@ func TestWorkQueueHealthCheck(t *testing.T) {
 			}
 
 			body, err := io.ReadAll(resp.Body)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, status, resp.StatusCode)
 			assert.Equal(t, []byte("{}\n"), body)
 
@@ -160,10 +161,10 @@ func TestWorkQueueHealthCheck(t *testing.T) {
 		logrus.WithField("runcount", rc).Info("Checking run count")
 		return rc == 0, nil
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// gate
-	assert.Error(t, wq.Healthy())
+	require.Error(t, wq.Healthy())
 	f(t, url, http.StatusServiceUnavailable)
 }
 
@@ -202,7 +203,7 @@ func TestDebugError(t *testing.T) {
 
 	err = NewTraceError(err)
 	assert.True(t, isTraceError(err))
-	assert.EqualError(t, err, "not a debug error")
+	require.EqualError(t, err, "not a debug error")
 
 	err = NewTraceError(nil)
 	assert.True(t, isTraceError(err))

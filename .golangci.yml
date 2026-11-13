@@ -89,11 +89,6 @@ linters:
         # G104 is unhandled errors, which errcheck already reports, and errcheck
         # understands the `//nolint:errcheck` directives already in the tree.
         - G104
-        # G115 is integer overflow on conversion. The Kubernetes API types round
-        # int32 through int constantly, so this fires on ~370 conversions that
-        # are structurally safe. Triaging it is worthwhile but it needs its own
-        # pass -- bundling it here would bury every other gosec finding.
-        - G115
     modernize:
       disable:
         # omitzero would rewrite the json tags on the published CRD API types in
@@ -109,14 +104,6 @@ linters:
       # Deliberately off: turning it on would demand a written justification on
       # every existing directive in one change.
       require-explanation: false
-    testifylint:
-      disable:
-        # require-error wants every assert.NoError that guards later statements
-        # rewritten as require.NoError. It is right about most of them, but it
-        # is ~330 call sites and changing whether a test aborts or continues is
-        # a behavioural change per site, not a mechanical one. Worth doing
-        # deliberately rather than as a side effect of turning the linter on.
-        - require-error
     govet:
       disable-all: false
       enable-all: true
@@ -126,6 +113,7 @@ linters:
     staticcheck:
       # This repeats the upstream default list, plus QF1008. Overriding `checks`
       # replaces the default wholesale, so the defaults must be restated.
+      # `all` includes SA1019, which reports use of deprecated identifiers.
       checks:
         - all
         - -ST1000

@@ -27,6 +27,7 @@ import (
 	"agones.dev/agones/pkg/util/errors"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
@@ -74,9 +75,12 @@ func NewSDK() (*SDK, error) {
 	// Block for at least 30 seconds.
 	ctx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
 	defer cancel()
-	//nolint:staticcheck
-	conn, err := grpc.DialContext(ctx, addr, grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
+		return s, s.errs.Wrapf(err, "could not connect to %s", addr)
+	}
+	if err := waitForReady(ctx, conn); err != nil {
+		_ = conn.Close()
 		return s, s.errs.Wrapf(err, "could not connect to %s", addr)
 	}
 	s.client = sdk.NewSDKClient(conn)
@@ -84,6 +88,32 @@ func NewSDK() (*SDK, error) {
 	s.alpha = newAlpha(conn)
 	s.beta = newBeta(conn)
 	return s, s.errs.Wrap(err, "could not set up health check")
+}
+
+// connectivityWaiter is the part of *grpc.ClientConn that waitForReady uses.
+type connectivityWaiter interface {
+	Connect()
+	GetState() connectivity.State
+	WaitForStateChange(ctx context.Context, sourceState connectivity.State) bool
+}
+
+// waitForReady blocks until conn is connected or ctx is done, which is what
+// the deprecated grpc.WithBlock dial option did. Like that option, it
+// reconnects whenever the connection falls back to Idle, since no RPC is
+// in flight yet to trigger one.
+func waitForReady(ctx context.Context, conn connectivityWaiter) error {
+	for {
+		state := conn.GetState()
+		switch state {
+		case connectivity.Ready:
+			return nil
+		case connectivity.Idle:
+			conn.Connect()
+		}
+		if !conn.WaitForStateChange(ctx, state) {
+			return ctx.Err()
+		}
+	}
 }
 
 // Alpha returns the Alpha SDK.

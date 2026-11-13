@@ -373,14 +373,14 @@ func applyWebhookPolicy(ctx context.Context, state *fasState, w *autoscalingv1.U
 		return faResp.Response.Replicas, false, nil
 	}
 
-	return f.Status.Replicas, false, nil
+	return f.Spec.Replicas, false, nil
 }
 
 func applyBufferPolicy(_ *fasState, b *autoscalingv1.BufferPolicy, f *agonesv1.Fleet, fasLog *FasLogger) (int32, bool, error) {
 	var replicas int32
 
 	if b.BufferSize.Type == intstr.Int {
-		replicas = f.Status.AllocatedReplicas + int32(b.BufferSize.IntValue())
+		replicas = f.Status.AllocatedReplicas + b.BufferSize.IntVal
 	} else {
 		// the percentage value is a little more complex, as we can't apply
 		// the desired percentage to any current value, but to the future one
@@ -389,7 +389,7 @@ func applyBufferPolicy(_ *fasState, b *autoscalingv1.BufferPolicy, f *agonesv1.F
 		// Right now there are 20%, so we must increase the fleet until we reach 30%
 		// To compute the new size, we start from the other end: if ready must be 30%
 		// it means that allocated must be 70% and adjust the fleet size to make that true.
-		bufferPercent, err := intstr.GetValueFromIntOrPercent(&b.BufferSize, 100, true)
+		bufferPercent, err := intstr.GetScaledValueFromIntOrPercent(&b.BufferSize, 100, true)
 		if err != nil {
 			return 0, false, err
 		}
@@ -514,7 +514,7 @@ func applyCounterOrListPolicy(c *autoscalingv1.CounterPolicy, l *autoscalingv1.L
 		buffer = int64(bufferSize.IntValue())
 	// Desired replicas based on BufferSize specified as a percent (i.e. 5%)
 	case intstr.String:
-		bufferPercent, err := intstr.GetValueFromIntOrPercent(&bufferSize, 100, isCounter)
+		bufferPercent, err := intstr.GetScaledValueFromIntOrPercent(&bufferSize, 100, isCounter)
 		if err != nil {
 			return 0, false, err
 		}
@@ -812,7 +812,9 @@ func scaleUp(replicas int32, capacity, count, aggCapacity, availableCapacity, ma
 	// Check to make sure we're not limited (over Max Capacity)
 	limited, _ := isLimited(aggCapacity+(int64(additionalReplicas)*capacity), minCapacity, maxCapacity)
 	if limited {
-		additionalReplicas = int32((maxCapacity - aggCapacity) / capacity)
+		// scaleUp is only called when minCapacity <= aggCapacity <= maxCapacity, so this can only be
+		// limited by MaxCapacity, which puts the result in [0, additionalReplicas).
+		additionalReplicas = int32((maxCapacity - aggCapacity) / capacity) //nolint:gosec // G115: bounded, see above.
 	}
 
 	return replicas + additionalReplicas, limited, nil

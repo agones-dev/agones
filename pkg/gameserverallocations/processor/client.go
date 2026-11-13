@@ -413,7 +413,9 @@ func (p *client) handleBatchResponse(batchResp *allocationpb.BatchResponse) {
 				errorCount++
 				responseProcessed = true
 
-				code := codes.Code(result.Error.GetCode())
+				// The processor encodes a codes.Code as int32 (see handler.go); a negative value from a
+				// misbehaving peer just becomes an unknown code, which gRPC already handles.
+				code := codes.Code(result.Error.GetCode()) //nolint:gosec // G115: see above.
 				msg := result.Error.GetMessage()
 
 				p.logger.WithFields(logrus.Fields{

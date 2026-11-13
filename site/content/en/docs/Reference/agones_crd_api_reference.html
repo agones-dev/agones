@@ -3,7 +3,7 @@ title="Agones Kubernetes API"
 description="Detailed list of Agones Custom Resource Definitions available"
 +++
 
-{{% feature expiryVersion="1.62.0" %}}
+{{% feature expiryVersion="1.63.0" %}}
 <p>Packages:</p>
 <ul>
 <li>
@@ -4120,26 +4120,22 @@ GameServers</p>
 </tr><tr><td><p>&#34;Chain&#34;</p></td>
 <td><p>[Stage:Beta]
 [FeatureFlag:ScheduledAutoscaler]
-ChainPolicyType is for Chain based fleet autoscaling
-nolint:revive // Linter contains comment doesn&rsquo;t start with ChainPolicyType</p>
+ChainPolicyType is for Chain based fleet autoscaling</p>
 </td>
 </tr><tr><td><p>&#34;Counter&#34;</p></td>
 <td><p>[Stage:Beta]
 [FeatureFlag:CountsAndLists]
-CounterPolicyType is for Counter based fleet autoscaling
-nolint:revive // Linter contains comment doesn&rsquo;t start with CounterPolicyType</p>
+CounterPolicyType is for Counter based fleet autoscaling</p>
 </td>
 </tr><tr><td><p>&#34;List&#34;</p></td>
 <td><p>[Stage:Beta]
 [FeatureFlag:CountsAndLists]
-ListPolicyType is for List based fleet autoscaling
-nolint:revive // Linter contains comment doesn&rsquo;t start with ListPolicyType</p>
+ListPolicyType is for List based fleet autoscaling</p>
 </td>
 </tr><tr><td><p>&#34;Schedule&#34;</p></td>
 <td><p>[Stage:Beta]
 [FeatureFlag:ScheduledAutoscaler]
-SchedulePolicyType is for Schedule based fleet autoscaling
-nolint:revive // Linter contains comment doesn&rsquo;t start with SchedulePolicyType</p>
+SchedulePolicyType is for Schedule based fleet autoscaling</p>
 </td>
 </tr><tr><td><p>&#34;Wasm&#34;</p></td>
 <td><p>WasmPolicyType is for WebAssembly based fleet autoscaling
@@ -4972,7 +4968,7 @@ ClusterConnectionInfo
 Generated with <code>gen-crd-api-reference-docs</code>.
 </em></p>
 {{% /feature %}}
-{{% feature publishVersion="1.62.0" %}}
+{{% feature publishVersion="1.63.0" %}}
 <p>Packages:</p>
 <ul>
 <li>
@@ -5296,20 +5292,6 @@ Kubernetes core/v1.PodTemplateSpec
 </tr>
 <tr>
 <td>
-<code>players</code><br/>
-<em>
-<a href="#agones.dev/v1.PlayersSpec">
-PlayersSpec
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>(Alpha, PlayerTracking feature flag) Players provides the configuration for player tracking features.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>counters</code><br/>
 <em>
 <a href="#agones.dev/v1.CounterStatus">
@@ -5615,46 +5597,6 @@ int64
 <td>
 </td>
 </tr>
-<tr>
-<td>
-<code>count</code><br/>
-<em>
-int64
-</em>
-</td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
-<code>capacity</code><br/>
-<em>
-int64
-</em>
-</td>
-<td>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="agones.dev/v1.AggregatedPlayerStatus">AggregatedPlayerStatus
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#agones.dev/v1.FleetStatus">FleetStatus</a>, 
-<a href="#agones.dev/v1.GameServerSetStatus">GameServerSetStatus</a>)
-</p>
-<p>
-<p>AggregatedPlayerStatus stores total player tracking values</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
 <tr>
 <td>
 <code>count</code><br/>
@@ -6009,22 +5951,6 @@ int64
 </tr>
 <tr>
 <td>
-<code>players</code><br/>
-<em>
-<a href="#agones.dev/v1.AggregatedPlayerStatus">
-AggregatedPlayerStatus
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>[Stage:Alpha]
-[FeatureFlag:PlayerTracking]
-Players are the current total player capacity and count for this Fleet</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>counters</code><br/>
 <em>
 <a href="#agones.dev/v1.AggregatedCounterStatus">
@@ -6329,22 +6255,6 @@ int32
 </tr>
 <tr>
 <td>
-<code>players</code><br/>
-<em>
-<a href="#agones.dev/v1.AggregatedPlayerStatus">
-AggregatedPlayerStatus
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>[Stage:Alpha]
-[FeatureFlag:PlayerTracking]
-Players is the current total player capacity and count for this GameServerSet</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>counters</code><br/>
 <em>
 <a href="#agones.dev/v1.AggregatedCounterStatus">
@@ -6466,20 +6376,6 @@ Kubernetes core/v1.PodTemplateSpec
 </td>
 <td>
 <p>Template describes the Pod that will be created for the GameServer</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>players</code><br/>
-<em>
-<a href="#agones.dev/v1.PlayersSpec">
-PlayersSpec
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>(Alpha, PlayerTracking feature flag) Players provides the configuration for player tracking features.</p>
 </td>
 </tr>
 <tr>
@@ -6673,21 +6569,6 @@ Kubernetes meta/v1.Time
 </em>
 </td>
 <td>
-</td>
-</tr>
-<tr>
-<td>
-<code>players</code><br/>
-<em>
-<a href="#agones.dev/v1.PlayerStatus">
-PlayerStatus
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>[Stage:Alpha]
-[FeatureFlag:PlayerTracking]</p>
 </td>
 </tr>
 <tr>
@@ -6896,20 +6777,6 @@ Kubernetes core/v1.PodTemplateSpec
 </tr>
 <tr>
 <td>
-<code>players</code><br/>
-<em>
-<a href="#agones.dev/v1.PlayersSpec">
-PlayersSpec
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>(Alpha, PlayerTracking feature flag) Players provides the configuration for player tracking features.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>counters</code><br/>
 <em>
 <a href="#agones.dev/v1.CounterStatus">
@@ -7055,84 +6922,6 @@ int64
 <code>values</code><br/>
 <em>
 []string
-</em>
-</td>
-<td>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="agones.dev/v1.PlayerStatus">PlayerStatus
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#agones.dev/v1.GameServerStatus">GameServerStatus</a>)
-</p>
-<p>
-<p>PlayerStatus stores the current player capacity values</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>count</code><br/>
-<em>
-int64
-</em>
-</td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
-<code>capacity</code><br/>
-<em>
-int64
-</em>
-</td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
-<code>ids</code><br/>
-<em>
-[]string
-</em>
-</td>
-<td>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="agones.dev/v1.PlayersSpec">PlayersSpec
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#agones.dev/v1.GameServerSpec">GameServerSpec</a>)
-</p>
-<p>
-<p>PlayersSpec tracks the initial player capacity</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>initialCapacity</code><br/>
-<em>
-int64
 </em>
 </td>
 <td>

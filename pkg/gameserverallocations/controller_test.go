@@ -125,7 +125,7 @@ func TestControllerAllocator(t *testing.T) {
 			if len(gsa.Spec.Selectors) != 0 {
 				require.Equal(t, gsa.Spec.Selectors[0].LabelSelector, ret.Spec.Selectors[0].LabelSelector)
 			} else {
-				//nolint:staticcheck
+				//nolint:staticcheck // SA1019: covers the deprecated Required field
 				require.Equal(t, gsa.Spec.Required.LabelSelector, ret.Spec.Selectors[0].LabelSelector)
 			}
 
@@ -144,10 +144,10 @@ func TestControllerAllocator(t *testing.T) {
 		c, _ := newFakeController()
 		r, err := http.NewRequest(http.MethodGet, "/", nil)
 		rec := httptest.NewRecorder()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		err = c.processAllocationRequest(context.Background(), rec, r, "default")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		assert.Equal(t, http.StatusMethodNotAllowed, rec.Code)
 	})
@@ -160,19 +160,19 @@ func TestControllerAllocator(t *testing.T) {
 			}}
 		buf := bytes.NewBuffer(nil)
 		err := json.NewEncoder(buf).Encode(gsa)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		r, err := http.NewRequest(http.MethodPost, "/", buf)
 		r.Header.Set("Content-Type", k8sruntime.ContentTypeJSON)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		rec := httptest.NewRecorder()
 		err = c.processAllocationRequest(context.Background(), rec, r, "default")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		assert.Equal(t, http.StatusUnprocessableEntity, rec.Code)
 
 		s := &metav1.Status{}
 		err = json.NewDecoder(rec.Body).Decode(s)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		assert.Equal(t, metav1.StatusReasonInvalid, s.Reason)
 	})
@@ -190,14 +190,12 @@ func TestAllocationApiResource(t *testing.T) {
 	client := ts.Client()
 
 	resp, err := client.Get(ts.URL + "/apis/" + allocationv1.SchemeGroupVersion.String())
-	if !assert.NoError(t, err) {
-		assert.FailNow(t, err.Error())
-	}
+	require.NoError(t, err)
 	defer resp.Body.Close() //nolint:errcheck
 
 	list := &metav1.APIResourceList{}
 	err = json.NewDecoder(resp.Body).Decode(list)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	if assert.Len(t, list.APIResources, 1) {
 		assert.Equal(t, "gameserverallocation", list.APIResources[0].SingularName)
@@ -247,7 +245,7 @@ func TestMultiClusterAllocationFromLocal(t *testing.T) {
 		err := wait.PollUntilContextTimeout(context.Background(), time.Second, 10*time.Second, true, func(_ context.Context) (done bool, err error) {
 			return c.allocator.allocationCache.workerqueue.RunCount() == 1, nil
 		})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		gsa := &allocationv1.GameServerAllocation{
 			ObjectMeta: metav1.ObjectMeta{
@@ -295,7 +293,7 @@ func TestMultiClusterAllocationFromLocal(t *testing.T) {
 		err := wait.PollUntilContextTimeout(context.Background(), time.Second, 10*time.Second, true, func(_ context.Context) (done bool, err error) {
 			return c.allocator.allocationCache.workerqueue.RunCount() == 1, nil
 		})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		gsa := &allocationv1.GameServerAllocation{
 			ObjectMeta: metav1.ObjectMeta{
@@ -355,7 +353,7 @@ func TestMultiClusterAllocationFromLocal(t *testing.T) {
 		err := wait.PollUntilContextTimeout(context.Background(), time.Second, 10*time.Second, true, func(_ context.Context) (done bool, err error) {
 			return c.allocator.allocationCache.workerqueue.RunCount() == 1, nil
 		})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		gsa := &allocationv1.GameServerAllocation{
 			ObjectMeta: metav1.ObjectMeta{
@@ -376,7 +374,7 @@ func TestMultiClusterAllocationFromLocal(t *testing.T) {
 		}
 
 		ret, err := executeAllocation(gsa, c)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, gsa.Spec.Selectors[0].LabelSelector, ret.Spec.Selectors[0].LabelSelector)
 		assert.Equal(t, gsa.Namespace, ret.Namespace)
 		expectedState := allocationv1.GameServerAllocationUnAllocated
@@ -429,10 +427,10 @@ func TestMultiClusterAllocationFromRemote(t *testing.T) {
 
 		// This call initializes the cache
 		err := c.allocator.allocationCache.syncCache()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		err = c.allocator.allocationCache.counter.Run(ctx, 0)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		gsa := &allocationv1.GameServerAllocation{
 			ObjectMeta: metav1.ObjectMeta{
@@ -532,10 +530,10 @@ func TestMultiClusterAllocationFromRemote(t *testing.T) {
 
 		// This call initializes the cache
 		err := c.allocator.allocationCache.syncCache()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		err = c.allocator.allocationCache.counter.Run(ctx, 0)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		gsa := &allocationv1.GameServerAllocation{
 			ObjectMeta: metav1.ObjectMeta{
@@ -611,10 +609,10 @@ func TestMultiClusterAllocationFromRemote(t *testing.T) {
 
 		// This call initializes the cache
 		err := c.allocator.allocationCache.syncCache()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		err = c.allocator.allocationCache.counter.Run(ctx, 0)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		gsa := &allocationv1.GameServerAllocation{
 			ObjectMeta: metav1.ObjectMeta{
@@ -678,10 +676,10 @@ func TestMultiClusterAllocationFromRemote(t *testing.T) {
 
 		// This call initializes the cache
 		err := c.allocator.allocationCache.syncCache()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		err = c.allocator.allocationCache.counter.Run(ctx, 0)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		gsa := &allocationv1.GameServerAllocation{
 			ObjectMeta: metav1.ObjectMeta{
@@ -697,7 +695,7 @@ func TestMultiClusterAllocationFromRemote(t *testing.T) {
 		}
 
 		_, err = executeAllocation(gsa, c)
-		assert.Error(t, err)
+		require.Error(t, err)
 		st, ok := status.FromError(err)
 		assert.True(t, ok)
 		assert.Equal(t, codes.DeadlineExceeded, st.Code())
@@ -751,10 +749,10 @@ func TestMultiClusterAllocationFromRemote(t *testing.T) {
 
 		// This call initializes the cache
 		err := c.allocator.allocationCache.syncCache()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		err = c.allocator.allocationCache.counter.Run(ctx, 0)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		gsa := &allocationv1.GameServerAllocation{
 			ObjectMeta: metav1.ObjectMeta{
@@ -770,7 +768,7 @@ func TestMultiClusterAllocationFromRemote(t *testing.T) {
 		}
 
 		_, err = executeAllocation(gsa, c)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 2, calls)
 	})
 }

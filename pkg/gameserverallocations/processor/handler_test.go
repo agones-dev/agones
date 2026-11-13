@@ -662,9 +662,9 @@ func TestStreamBatches(t *testing.T) {
 			err := receive(t, runStreamBatches(h, stream))
 
 			if tc.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 
 			h.mu.RLock()

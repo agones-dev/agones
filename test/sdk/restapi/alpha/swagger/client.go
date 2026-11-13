@@ -58,8 +58,6 @@ type APIClient struct {
 	common service // Reuse a single struct instead of allocating one for each service on the heap.
 
 	// API Services
-
-	SDKApi *SDKApiService
 }
 
 type service struct {
@@ -78,7 +76,6 @@ func NewAPIClient(cfg *Configuration) *APIClient {
 	c.common.client = c
 
 	// API Services
-	c.SDKApi = (*SDKApiService)(&c.common)
 
 	return c
 }

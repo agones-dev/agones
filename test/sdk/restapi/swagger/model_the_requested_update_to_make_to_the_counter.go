@@ -23,8 +23,8 @@
  */
 package swagger
 
-type StatusPlayerStatus struct {
+type TheRequestedUpdateToMakeToTheCounter struct {
 	Count string `json:"count,omitempty"`
 	Capacity string `json:"capacity,omitempty"`
-	Ids []string `json:"ids,omitempty"`
+	CountDiff string `json:"countDiff,omitempty"`
 }

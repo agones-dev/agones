@@ -108,9 +108,7 @@ func GetAllocatorEndpoint(ctx context.Context, t *testing.T, framework *e2e.Fram
 	t.Helper()
 	kubeCore := framework.KubeClient.CoreV1()
 	svc, err := kubeCore.Services(agonesSystemNamespace).Get(ctx, allocatorServiceName, metav1.GetOptions{})
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 	if !assert.NotNil(t, svc.Status.LoadBalancer) {
 		t.FailNow()
 	}
@@ -308,9 +306,7 @@ func GetAllocatorClient(ctx context.Context, t *testing.T, framework *e2e.Framew
 	tlsCA := RefreshAllocatorTLSCerts(ctx, t, ip, framework)
 
 	flt, err := CreateFleet(ctx, framework.Namespace, framework)
-	if !assert.NoError(t, err) {
-		return nil, err
-	}
+	require.NoError(t, err)
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
 
 	dialOpts, err := CreateRemoteClusterDialOptions(ctx, allocatorClientSecretNamespace, allocatorClientSecretName, tlsCA, framework)

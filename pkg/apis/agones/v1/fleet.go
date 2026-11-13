@@ -97,11 +97,6 @@ type FleetStatus struct {
 	AllocatedReplicas int32 `json:"allocatedReplicas"`
 	// Allocations is a counter of the number of allocations observed.
 	Allocations int64 `json:"allocations"`
-	// [Stage:Alpha]
-	// [FeatureFlag:PlayerTracking]
-	// Players are the current total player capacity and count for this Fleet
-	// +optional
-	Players *AggregatedPlayerStatus `json:"players,omitempty"`
 	// (Beta, CountsAndLists feature flag) Counters provides aggregated Counter capacity and Counter
 	// count for this Fleet.
 	// +optional
@@ -190,7 +185,7 @@ func (f *Fleet) GetGameServerSpec() *GameServerSpec {
 
 func (f *Fleet) validateRollingUpdate(value *intstr.IntOrString, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	r, err := intstr.GetValueFromIntOrPercent(value, 100, true)
+	r, err := intstr.GetScaledValueFromIntOrPercent(value, 100, true)
 	if value.Type == intstr.String {
 		if err != nil || r < 1 || r > 99 {
 			allErrs = append(allErrs, field.Invalid(fldPath, value, "must be between 1% and 99%"))

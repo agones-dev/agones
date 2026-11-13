@@ -5,9 +5,11 @@ This is a very simple "unity server" that doesn't do much other than show how th
 ## Prerequisites
 This example is working on
 ```
-Unity Editor: Unity 2018.4.2f1 or later
-OS: Windows 10 Pro or MacOS
+Unity Editor: Unity 6000.6.7f1 or later
+OS: Windows, macOS or Linux
 ```
+
+Building the server requires the **Linux Dedicated Server Build Support** module for the Unity Editor.
 
 ## Running a Server
 There are a few steps.
@@ -15,14 +17,17 @@ There are a few steps.
 ### Install and configure Agones on Kubernetes
 Check out [these instructions](https://agones.dev/site/docs/installation/).
 
-### Building a Server
-* Open this folder with UnityEditor.
-* Click on the `Build Tool/Build Server` menu item in the menu bar.
-  * The Builds are created in a `Builds/Server` Folder.
-
-### Building a Docker Image and Running it
+### Building a Server and Docker Image
+`make build-image` builds the server with the `unity` CLI (installed with Unity Hub) and then builds the Docker image:
 ```
 $ make build-image
+```
+
+To build only the server, run `make build-server`, or open this folder with the Unity Editor and click on the
+`Build Tool/Build Server` menu item in the menu bar. The builds are created in a `Builds/Server` folder.
+
+### Running the Server
+```
 $ kubectl create -f gameserver.yaml
 ```
 
@@ -47,10 +52,10 @@ $ kubectl create -f gameserver.yaml
   When a Server receives a text, it will send back "Echo : $text" as an echo.
   And an SDK API will be executed in a Server by the following rules.
 
-    | Sending Text(Client) | SDK API(Server) |
-    | ---- | ---- |
-    | Allocate | Allocate() |
-    | Label $1 $2 | SetLabel($1, $2) |
-    | Annotation $1 $2 | SetAnnotation($1, $2) |
-    | Shutdown | Shutdown() |
-    | GameServer | GameServer() |
+    | Sending Text(Client) | SDK API(Server)       |
+    |----------------------|-----------------------|
+    | Allocate             | Allocate()            |
+    | Label $1 $2          | SetLabel($1, $2)      |
+    | Annotation $1 $2     | SetAnnotation($1, $2) |
+    | Shutdown             | Shutdown()            |
+    | GameServer           | GameServer()          |

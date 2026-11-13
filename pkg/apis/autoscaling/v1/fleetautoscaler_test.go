@@ -20,6 +20,7 @@ import (
 
 	"agones.dev/agones/pkg/util/runtime"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -30,7 +31,7 @@ func TestFleetAutoscalerValidateUpdate(t *testing.T) {
 
 	t.Run("bad buffer size", func(t *testing.T) {
 		fas := defaultFixture()
-		fas.Spec.Policy.Buffer.BufferSize = intstr.FromInt(0)
+		fas.Spec.Policy.Buffer.BufferSize = intstr.FromInt32(0)
 		causes := fas.Validate()
 
 		assert.Len(t, causes, 1)
@@ -250,7 +251,7 @@ func TestFleetAutoscalerCounterValidateUpdate(t *testing.T) {
 		},
 		"bufferSize size too small": {
 			fas: modifiedFAS(func(fap *FleetAutoscalerPolicy) {
-				fap.Counter.BufferSize = intstr.FromInt(0)
+				fap.Counter.BufferSize = intstr.FromInt32(0)
 			}),
 			featureFlags: string(runtime.FeatureCountsAndLists) + "=true",
 			wantLength:   1,
@@ -321,7 +322,7 @@ func TestFleetAutoscalerCounterValidateUpdate(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			err := runtime.ParseFeatures(tc.featureFlags)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			causes := tc.fas.Validate()
 
@@ -367,7 +368,7 @@ func TestFleetAutoscalerListValidateUpdate(t *testing.T) {
 		},
 		"bufferSize size too small": {
 			fas: modifiedFAS(func(fap *FleetAutoscalerPolicy) {
-				fap.List.BufferSize = intstr.FromInt(0)
+				fap.List.BufferSize = intstr.FromInt32(0)
 			}),
 			featureFlags: string(runtime.FeatureCountsAndLists) + "=true",
 			wantLength:   1,
@@ -438,7 +439,7 @@ func TestFleetAutoscalerListValidateUpdate(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			err := runtime.ParseFeatures(tc.featureFlags)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			causes := tc.fas.Validate()
 
@@ -512,7 +513,7 @@ func TestFleetAutoscalerScheduleValidateUpdate(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			err := runtime.ParseFeatures(tc.featureFlags)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			causes := tc.fas.Validate()
 
@@ -570,7 +571,7 @@ func TestFleetAutoscalerChainValidateUpdate(t *testing.T) {
 							FleetAutoscalerPolicy: FleetAutoscalerPolicy{
 								Type: BufferPolicyType,
 								Buffer: &BufferPolicy{
-									BufferSize:  intstr.FromInt(5),
+									BufferSize:  intstr.FromInt32(5),
 									MaxReplicas: 10,
 								},
 							},
@@ -598,7 +599,7 @@ func TestFleetAutoscalerChainValidateUpdate(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			err := runtime.ParseFeatures(tc.featureFlags)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			causes := tc.fas.Validate()
 
@@ -669,7 +670,7 @@ func TestFleetAutoscalerWasmValidateUpdate(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			err := runtime.ParseFeatures(tc.featureFlags)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			causes := tc.fas.Validate()
 
@@ -741,7 +742,7 @@ func customFixture(t FleetAutoscalerPolicyType) *FleetAutoscaler {
 			Policy: FleetAutoscalerPolicy{
 				Type: BufferPolicyType,
 				Buffer: &BufferPolicy{
-					BufferSize:  intstr.FromInt(5),
+					BufferSize:  intstr.FromInt32(5),
 					MaxReplicas: 10,
 				},
 			},
@@ -770,14 +771,14 @@ func customFixture(t FleetAutoscalerPolicyType) *FleetAutoscaler {
 		res.Spec.Policy.Type = CounterPolicyType
 		res.Spec.Policy.Buffer = nil
 		res.Spec.Policy.Counter = &CounterPolicy{
-			BufferSize:  intstr.FromInt(5),
+			BufferSize:  intstr.FromInt32(5),
 			MaxCapacity: 10,
 		}
 	case ListPolicyType:
 		res.Spec.Policy.Type = ListPolicyType
 		res.Spec.Policy.Buffer = nil
 		res.Spec.Policy.List = &ListPolicy{
-			BufferSize:  intstr.FromInt(5),
+			BufferSize:  intstr.FromInt32(5),
 			MaxCapacity: 10,
 		}
 	case SchedulePolicyType:
@@ -796,7 +797,7 @@ func customFixture(t FleetAutoscalerPolicyType) *FleetAutoscaler {
 			Policy: FleetAutoscalerPolicy{
 				Type: BufferPolicyType,
 				Buffer: &BufferPolicy{
-					BufferSize:  intstr.FromInt(5),
+					BufferSize:  intstr.FromInt32(5),
 					MaxReplicas: 10,
 				},
 			},

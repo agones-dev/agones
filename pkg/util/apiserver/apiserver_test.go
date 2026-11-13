@@ -95,7 +95,7 @@ func TestAPIServerAddAPIResourceCRDHandler(t *testing.T) {
 	path := ts.URL + "/apis/allocation.agones.dev/v1/namespaces/default/gameserverallocations"
 
 	resp, err := client.Get(path)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.True(t, handled, "not handled!")
 	defer resp.Body.Close() //nolint:errcheck
@@ -103,7 +103,7 @@ func TestAPIServerAddAPIResourceCRDHandler(t *testing.T) {
 	handled = false
 	path = ts.URL + "/apis/allocation.agones.dev/v1/namespaces/default/gameserverallZZZZions"
 	resp, err = client.Get(path)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 	assert.False(t, handled, "not handled!")
 	defer resp.Body.Close() //nolint:errcheck
@@ -131,15 +131,13 @@ func TestAPIServerAddAPIResourceDiscovery(t *testing.T) {
 		if resp != nil {
 			defer resp.Body.Close() //nolint:errcheck
 		}
-		if !assert.NoError(t, err) {
-			assert.FailNow(t, "should not error")
-		}
+		require.NoError(t, err, "should not error")
 		assert.Equal(t, k8sruntime.ContentTypeJSON, resp.Header.Get("Content-Type"))
 
 		// default is json
 		list := &metav1.APIResourceList{}
 		err = json.NewDecoder(resp.Body).Decode(list)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		assert.Equal(t, "v1", list.TypeMeta.APIVersion)
 		assert.Equal(t, "APIResourceList", list.TypeMeta.Kind)
@@ -149,11 +147,11 @@ func TestAPIServerAddAPIResourceDiscovery(t *testing.T) {
 
 	t.Run("Accept */*", func(t *testing.T) {
 		request, err := http.NewRequest(http.MethodGet, path, nil)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		request.Header.Set("Accept", "*/*")
 		resp, err := client.Do(request)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		if resp != nil {
 			defer resp.Body.Close() //nolint:errcheck
 		}
@@ -161,7 +159,7 @@ func TestAPIServerAddAPIResourceDiscovery(t *testing.T) {
 
 		list := &metav1.APIResourceList{}
 		err = json.NewDecoder(resp.Body).Decode(list)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		assert.Equal(t, "v1", list.TypeMeta.APIVersion)
 		assert.Equal(t, "APIResourceList", list.TypeMeta.Kind)
@@ -171,11 +169,11 @@ func TestAPIServerAddAPIResourceDiscovery(t *testing.T) {
 
 	t.Run("Accept Protobuf, */*", func(t *testing.T) {
 		request, err := http.NewRequest(http.MethodGet, path, nil)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		request.Header.Set("Accept", "application/vnd.kubernetes.protobuf, */*")
 		resp, err := client.Do(request)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		if resp != nil {
 			defer resp.Body.Close() //nolint:errcheck
 		}
@@ -183,14 +181,14 @@ func TestAPIServerAddAPIResourceDiscovery(t *testing.T) {
 
 		list := &metav1.APIResourceList{}
 		b, err := io.ReadAll(resp.Body)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		info, ok := k8sruntime.SerializerInfoForMediaType(Codecs.SupportedMediaTypes(), "application/vnd.kubernetes.protobuf")
 		assert.True(t, ok)
 
 		gvk := unversionedVersion.WithKind("APIResourceList")
 		_, _, err = info.Serializer.Decode(b, &gvk, list)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		assert.Equal(t, "v1", list.TypeMeta.APIVersion)
 		assert.Equal(t, "APIResourceList", list.TypeMeta.Kind)
@@ -220,11 +218,11 @@ func TestAPIServerAddAPIResourceDiscoveryParallel(t *testing.T) {
 				client := ts.Client()
 				path := ts.URL + "/apis/allocation.agones.dev/v1"
 				request, err := http.NewRequest(http.MethodGet, path, nil)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				request.Header.Set("Accept", "*/*")
 				resp, err := client.Do(request)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				if resp != nil {
 					defer resp.Body.Close() //nolint:errcheck
 				}
@@ -232,7 +230,7 @@ func TestAPIServerAddAPIResourceDiscoveryParallel(t *testing.T) {
 
 				list := &metav1.APIResourceList{}
 				err = json.NewDecoder(resp.Body).Decode(list)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				assert.Equal(t, "v1", list.TypeMeta.APIVersion)
 				assert.Equal(t, "APIResourceList", list.TypeMeta.Kind)
@@ -286,9 +284,9 @@ func TestSplitNameSpaceResource(t *testing.T) {
 		t.Run(test.path, func(t *testing.T) {
 			n, r, err := splitNameSpaceResource(test.path)
 			if test.expected.isError {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 
 			assert.Equal(t, test.expected.namespace, n)

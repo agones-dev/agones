@@ -179,21 +179,21 @@ func TestAllocatorAllocatePriority(t *testing.T) {
 		ctx := context.Background()
 		// priority should be node1, then node2
 		gs1, err := a.allocate(ctx, gas)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, n1, gs1.Status.NodeName)
 
 		gs2, err := a.allocate(ctx, gas)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, n1, gs2.Status.NodeName)
 		assert.NotEqual(t, gs1.ObjectMeta.Name, gs2.ObjectMeta.Name)
 
 		gs3, err := a.allocate(ctx, gas)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, n1, gs3.Status.NodeName)
 		assert.NotContains(t, []string{gs1.ObjectMeta.Name, gs2.ObjectMeta.Name}, gs3.ObjectMeta.Name)
 
 		gs4, err := a.allocate(ctx, gas)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, n2, gs4.Status.NodeName)
 		assert.NotContains(t, []string{gs1.ObjectMeta.Name, gs2.ObjectMeta.Name, gs3.ObjectMeta.Name}, gs4.ObjectMeta.Name)
 
@@ -211,18 +211,18 @@ func TestAllocatorAllocatePriority(t *testing.T) {
 		ctx := context.Background()
 
 		gs1, err := a.allocate(ctx, gas)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		gs2, err := a.allocate(ctx, gas)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotEqual(t, gs1.ObjectMeta.Name, gs2.ObjectMeta.Name)
 
 		gs3, err := a.allocate(ctx, gas)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotContains(t, []string{gs1.ObjectMeta.Name, gs2.ObjectMeta.Name}, gs3.ObjectMeta.Name)
 
 		gs4, err := a.allocate(ctx, gas)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotContains(t, []string{gs1.ObjectMeta.Name, gs2.ObjectMeta.Name, gs3.ObjectMeta.Name}, gs4.ObjectMeta.Name)
 
 		// should have none left
@@ -251,14 +251,14 @@ func TestAllocatorApplyAllocationToGameServer(t *testing.T) {
 	)
 
 	gs, err := allocator.applyAllocationToGameServer(ctx, allocationv1.MetaPatch{}, &agonesv1.GameServer{}, &allocationv1.GameServerAllocation{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, agonesv1.GameServerStateAllocated, gs.Status.State)
 	assert.NotNil(t, gs.ObjectMeta.Annotations["agones.dev/last-allocated"])
 	var ts time.Time
-	assert.NoError(t, ts.UnmarshalText([]byte(gs.ObjectMeta.Annotations[LastAllocatedAnnotationKey])))
+	require.NoError(t, ts.UnmarshalText([]byte(gs.ObjectMeta.Annotations[LastAllocatedAnnotationKey])))
 
 	gs, err = allocator.applyAllocationToGameServer(ctx, allocationv1.MetaPatch{Labels: map[string]string{"foo": "bar"}}, &agonesv1.GameServer{}, &allocationv1.GameServerAllocation{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, agonesv1.GameServerStateAllocated, gs.Status.State)
 	assert.Equal(t, "bar", gs.ObjectMeta.Labels["foo"])
 	assert.NotNil(t, gs.ObjectMeta.Annotations["agones.dev/last-allocated"])
@@ -266,7 +266,7 @@ func TestAllocatorApplyAllocationToGameServer(t *testing.T) {
 	gs, err = allocator.applyAllocationToGameServer(ctx,
 		allocationv1.MetaPatch{Labels: map[string]string{"foo": "bar"}, Annotations: map[string]string{"bar": "foo"}},
 		&agonesv1.GameServer{}, &allocationv1.GameServerAllocation{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, agonesv1.GameServerStateAllocated, gs.Status.State)
 	assert.Equal(t, "bar", gs.ObjectMeta.Labels["foo"])
 	assert.Equal(t, "foo", gs.ObjectMeta.Annotations["bar"])
@@ -399,7 +399,7 @@ func TestAllocatorApplyAllocationToGameServerCountsListsActions(t *testing.T) {
 	for test, testScenario := range testScenarios {
 		t.Run(test, func(t *testing.T) {
 			foundGs, err := allocator.applyAllocationToGameServer(ctx, mp, testScenario.gs, testScenario.gsa)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			for counter, counterStatus := range testScenario.wantCounters {
 				if gsCounter, ok := foundGs.Status.Counters[counter]; ok {
 					assert.Equal(t, counterStatus, gsCounter)
@@ -523,10 +523,10 @@ func TestAllocatorRunLocalAllocations(t *testing.T) {
 
 		// This call initializes the cache
 		err := a.allocationCache.syncCache()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		err = a.allocationCache.counter.Run(ctx, 0)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		gsa := &allocationv1.GameServerAllocation{
 			ObjectMeta: metav1.ObjectMeta{
@@ -550,7 +550,7 @@ func TestAllocatorRunLocalAllocations(t *testing.T) {
 		go a.ListenAndAllocate(ctx, 3)
 
 		res1 := <-j1.response
-		assert.NoError(t, res1.err)
+		require.NoError(t, res1.err)
 		assert.NotNil(t, res1.gs)
 
 		// since we gave gsList[0] a different nodename, it should always come first
@@ -558,13 +558,13 @@ func TestAllocatorRunLocalAllocations(t *testing.T) {
 		assert.Equal(t, agonesv1.GameServerStateAllocated, res1.gs.Status.State)
 
 		res2 := <-j2.response
-		assert.NoError(t, res2.err)
+		require.NoError(t, res2.err)
 		assert.NotNil(t, res2.gs)
 		assert.NotEqual(t, res1.gs.ObjectMeta.Name, res2.gs.ObjectMeta.Name)
 		assert.Equal(t, agonesv1.GameServerStateAllocated, res2.gs.Status.State)
 
 		res3 := <-j3.response
-		assert.NoError(t, res3.err)
+		require.NoError(t, res3.err)
 		assert.NotNil(t, res3.gs)
 		assert.Equal(t, agonesv1.GameServerStateAllocated, res3.gs.Status.State)
 		assert.NotEqual(t, res1.gs.ObjectMeta.Name, res3.gs.ObjectMeta.Name)
@@ -580,10 +580,10 @@ func TestAllocatorRunLocalAllocations(t *testing.T) {
 
 		// This call initializes the cache
 		err := a.allocationCache.syncCache()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		err = a.allocationCache.counter.Run(ctx, 0)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		gsa := &allocationv1.GameServerAllocation{
 			ObjectMeta: metav1.ObjectMeta{
@@ -603,7 +603,7 @@ func TestAllocatorRunLocalAllocations(t *testing.T) {
 
 		res1 := <-j1.response
 		assert.Nil(t, res1.gs)
-		assert.Error(t, res1.err)
+		require.Error(t, res1.err)
 		assert.Equal(t, ErrNoGameServer, res1.err)
 	})
 
@@ -614,10 +614,10 @@ func TestAllocatorRunLocalAllocations(t *testing.T) {
 
 		// This call initializes the cache
 		err := a.allocationCache.syncCache()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		err = a.allocationCache.counter.Run(ctx, 0)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		gsa := &allocationv1.GameServerAllocation{
 			ObjectMeta: metav1.ObjectMeta{
@@ -639,7 +639,7 @@ func TestAllocatorRunLocalAllocations(t *testing.T) {
 
 		res1 := <-j1.response
 		assert.Nil(t, res1.gs)
-		assert.Error(t, res1.err)
+		require.Error(t, res1.err)
 		assert.Equal(t, ErrTotalTimeoutExceeded, res1.err)
 	})
 }
@@ -709,10 +709,10 @@ func TestAllocatorRunLocalAllocationsCountsAndLists(t *testing.T) {
 
 	// This call initializes the cache
 	err := a.allocationCache.syncCache()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = a.allocationCache.counter.Run(ctx, 0)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	READY := agonesv1.GameServerStateReady
 
@@ -811,7 +811,7 @@ func TestAllocatorRunLocalAllocationsCountsAndLists(t *testing.T) {
 	go a.ListenAndAllocate(ctx, 5)
 
 	res1 := <-j1.response
-	assert.NoError(t, res1.err)
+	require.NoError(t, res1.err)
 	assert.NotNil(t, res1.gs)
 	assert.Equal(t, agonesv1.GameServerStateAllocated, res1.gs.Status.State)
 	assert.Equal(t, gs1.ObjectMeta.Name, res1.gs.ObjectMeta.Name)
@@ -819,7 +819,7 @@ func TestAllocatorRunLocalAllocationsCountsAndLists(t *testing.T) {
 	assert.Equal(t, gs1.Status.Counters["foo"].Capacity, res1.gs.Status.Counters["foo"].Capacity)
 
 	res2 := <-j2.response
-	assert.NoError(t, res2.err)
+	require.NoError(t, res2.err)
 	assert.NotNil(t, res2.gs)
 	assert.Equal(t, agonesv1.GameServerStateAllocated, res2.gs.Status.State)
 	assert.Equal(t, gs3.ObjectMeta.Name, res2.gs.ObjectMeta.Name)
@@ -827,7 +827,7 @@ func TestAllocatorRunLocalAllocationsCountsAndLists(t *testing.T) {
 	assert.Equal(t, gs3.Status.Counters["foo"].Capacity, res2.gs.Status.Counters["foo"].Capacity)
 
 	res3 := <-j3.response
-	assert.NoError(t, res3.err)
+	require.NoError(t, res3.err)
 	assert.NotNil(t, res3.gs)
 	assert.Equal(t, agonesv1.GameServerStateAllocated, res3.gs.Status.State)
 	assert.Equal(t, gs2.ObjectMeta.Name, res3.gs.ObjectMeta.Name)
@@ -835,7 +835,7 @@ func TestAllocatorRunLocalAllocationsCountsAndLists(t *testing.T) {
 	assert.Equal(t, gs2.Status.Counters["foo"].Capacity, res3.gs.Status.Counters["foo"].Capacity)
 
 	res4 := <-j4.response
-	assert.NoError(t, res4.err)
+	require.NoError(t, res4.err)
 	assert.NotNil(t, res4.gs)
 	assert.Equal(t, agonesv1.GameServerStateAllocated, res4.gs.Status.State)
 	assert.Equal(t, gs4.ObjectMeta.Name, res4.gs.ObjectMeta.Name)
@@ -843,7 +843,7 @@ func TestAllocatorRunLocalAllocationsCountsAndLists(t *testing.T) {
 	assert.Equal(t, gs4.Status.Lists["foo"].Capacity, res4.gs.Status.Lists["foo"].Capacity)
 
 	res5 := <-j5.response
-	assert.NoError(t, res5.err)
+	require.NoError(t, res5.err)
 	assert.NotNil(t, res5.gs)
 	assert.Equal(t, agonesv1.GameServerStateAllocated, res5.gs.Status.State)
 	assert.Equal(t, gs6.ObjectMeta.Name, res5.gs.ObjectMeta.Name)
@@ -851,7 +851,7 @@ func TestAllocatorRunLocalAllocationsCountsAndLists(t *testing.T) {
 	assert.Equal(t, gs6.Status.Lists["foo"].Capacity, res5.gs.Status.Lists["foo"].Capacity)
 
 	res6 := <-j6.response
-	assert.NoError(t, res6.err)
+	require.NoError(t, res6.err)
 	assert.NotNil(t, res6.gs)
 	assert.Equal(t, agonesv1.GameServerStateAllocated, res6.gs.Status.State)
 	assert.Equal(t, gs5.ObjectMeta.Name, res6.gs.ObjectMeta.Name)
@@ -898,7 +898,7 @@ func TestControllerAllocationUpdateWorkers(t *testing.T) {
 		r = <-r.request.response
 
 		assert.True(t, updated)
-		assert.NoError(t, r.err)
+		require.NoError(t, r.err)
 		assert.Equal(t, gs1.ObjectMeta.Name, r.gs.ObjectMeta.Name)
 		assert.Equal(t, agonesv1.GameServerStateAllocated, r.gs.Status.State)
 
@@ -931,7 +931,7 @@ func TestControllerAllocationUpdateWorkers(t *testing.T) {
 		r = <-r.request.response
 
 		assert.True(t, updated)
-		assert.NoError(t, r.err)
+		require.NoError(t, r.err)
 		assert.Equal(t, gs2.ObjectMeta.Name, r.gs.ObjectMeta.Name)
 		assert.Equal(t, agonesv1.GameServerStateAllocated, r.gs.Status.State)
 
@@ -946,7 +946,7 @@ func TestControllerAllocationUpdateWorkers(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{Name: "gs1"},
 		}
 		key, err := cache.MetaNamespaceKeyFunc(gs1)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		_, ok := a.allocationCache.cache.Load(key)
 		assert.False(t, ok)
@@ -980,7 +980,7 @@ func TestControllerAllocationUpdateWorkers(t *testing.T) {
 		r = <-r.request.response
 
 		assert.True(t, updated)
-		assert.EqualError(t, r.err, ErrGameServerUpdateConflict.Error())
+		require.EqualError(t, r.err, ErrGameServerUpdateConflict.Error())
 		assert.Equal(t, gs1, r.gs)
 		agtesting.AssertNoEvent(t, m.FakeRecorder.Events)
 
@@ -1000,7 +1000,7 @@ func TestAllocatorCreateRestClientError(t *testing.T) {
 			SecretName: "secret-name",
 		}
 		_, err := a.createRemoteClusterDialOption(defaultNs, connectionInfo)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "secret-name")
 	})
 	t.Run("Missing cert", func(t *testing.T) {
@@ -1027,7 +1027,7 @@ func TestAllocatorCreateRestClientError(t *testing.T) {
 			SecretName: "secret-name",
 		}
 		_, err := a.createRemoteClusterDialOption(defaultNs, connectionInfo)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "missing client certificate key pair in secret secret-name")
 	})
 	t.Run("Bad client cert", func(t *testing.T) {
@@ -1055,7 +1055,7 @@ func TestAllocatorCreateRestClientError(t *testing.T) {
 			SecretName: "secret-name",
 		}
 		_, err := a.createRemoteClusterDialOption(defaultNs, connectionInfo)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to find any PEM data in certificate input")
 	})
 	t.Run("Bad CA cert", func(t *testing.T) {
@@ -1074,7 +1074,7 @@ func TestAllocatorCreateRestClientError(t *testing.T) {
 			ServerCA:   []byte("XXX"),
 		}
 		_, err := a.createRemoteClusterDialOption(defaultNs, connectionInfo)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "PEM format")
 	})
 	t.Run("Bad client CA cert", func(t *testing.T) {

@@ -20,8 +20,10 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/metadata"
 
 	"agones.dev/agones/pkg/sdk"
@@ -42,29 +44,29 @@ func TestSDK(t *testing.T) {
 	assert.False(t, sm.hm.healthy)
 
 	err := s.Ready()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, sm.ready)
 	assert.False(t, sm.shutdown)
 
 	err = s.Reserve(12 * time.Second)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.EqualValues(t, 12, sm.reserved.GetSeconds())
 
 	err = s.Health()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, sm.hm.healthy)
 
 	err = s.Allocate()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, sm.allocated)
 
 	err = s.Shutdown()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, sm.ready)
 	assert.True(t, sm.shutdown)
 
 	gs, err := s.GameServer()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, gs)
 }
 
@@ -85,7 +87,7 @@ func TestSDKWatchGameServer(t *testing.T) {
 		assert.Equal(t, fixture.GetObjectMeta().GetName(), gs.GetObjectMeta().GetName())
 		updated <- struct{}{}
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	sm.wm.msgs <- fixture
 
@@ -108,7 +110,7 @@ func TestSDKSetLabel(t *testing.T) {
 
 	expected := "bar"
 	err := s.SetLabel("foo", expected)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expected, sm.labels["agones.dev/sdk-foo"])
 }
 
@@ -124,7 +126,7 @@ func TestSDKSetAnnotation(t *testing.T) {
 
 	expected := "bar"
 	err := s.SetAnnotation("foo", expected)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expected, sm.annotations["agones.dev/sdk-foo"])
 }
 
@@ -133,6 +135,8 @@ var _ sdk.SDK_HealthClient = &healthMock{}
 var _ sdk.SDK_WatchGameServerClient = &watchMock{}
 
 type sdkMock struct {
+	// embedded so the mock satisfies the Counter and List methods, which these tests do not call
+	sdk.SDKClient
 	ready       bool
 	shutdown    bool
 	allocated   bool
@@ -252,4 +256,54 @@ func (*watchMock) SendMsg(_ any) error {
 
 func (*watchMock) RecvMsg(_ any) error {
 	panic("implement me")
+}
+
+func TestWaitForReady(t *testing.T) {
+	t.Run("reconnects when Connecting falls back to Idle", func(t *testing.T) {
+		conn := &fakeConnectivity{state: connectivity.Idle, next: []connectivity.State{connectivity.Idle, connectivity.Ready}}
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		require.NoError(t, waitForReady(ctx, conn))
+		assert.Equal(t, 2, conn.connects)
+	})
+
+	t.Run("returns the context error if never Ready", func(t *testing.T) {
+		conn := &fakeConnectivity{state: connectivity.Idle}
+		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+		defer cancel()
+
+		assert.ErrorIs(t, waitForReady(ctx, conn), context.DeadlineExceeded)
+	})
+}
+
+// fakeConnectivity only leaves Idle when Connect is called, as a real
+// *grpc.ClientConn does. From Connecting it moves to each state in next.
+type fakeConnectivity struct {
+	state    connectivity.State
+	next     []connectivity.State
+	connects int
+}
+
+func (f *fakeConnectivity) Connect() {
+	f.connects++
+	if f.state == connectivity.Idle {
+		f.state = connectivity.Connecting
+	}
+}
+
+func (f *fakeConnectivity) GetState() connectivity.State {
+	return f.state
+}
+
+func (f *fakeConnectivity) WaitForStateChange(ctx context.Context, sourceState connectivity.State) bool {
+	if f.state != sourceState {
+		return true
+	}
+	if f.state == connectivity.Connecting && len(f.next) > 0 {
+		f.state, f.next = f.next[0], f.next[1:]
+		return true
+	}
+	<-ctx.Done()
+	return false
 }

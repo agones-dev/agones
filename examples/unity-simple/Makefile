@@ -28,7 +28,7 @@ REPOSITORY = us-docker.pkg.dev/agones-images/examples
 
 mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
 project_path := $(dir $(mkfile_path))
-version := 0.3
+version := 0.4
 server_tag = $(REPOSITORY)/unity-simple-server:$(version)
 
 #   _____                    _
@@ -38,7 +38,12 @@ server_tag = $(REPOSITORY)/unity-simple-server:$(version)
 #    |_|\__,_|_|  \__, |\___|\__|___/
 #                 |___/
 
-build-image:
+# build the Linux dedicated server with the Unity CLI
+build-server:
+	unity build $(project_path) --target StandaloneLinux64 \
+		--execute-method AgonesExample.Editor.BatchBuild.BuildServer
+
+build-image: build-server
 	docker build $(project_path) --tag=$(server_tag)
 
 # check if hosted on Google Artifact Registry
