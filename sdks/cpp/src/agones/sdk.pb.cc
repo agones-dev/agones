@@ -64,8 +64,6 @@ PROTOBUF_CONSTINIT ::google::protobuf::internal::ReflectionData
         {&::_pbi::kDescriptorMethods, &::descriptor_table_sdk_2eproto, /* tracker*/ nullptr,},
         // ::agones::dev::sdk::GameServer_Status_Port
         {&::_pbi::kDescriptorMethods, &::descriptor_table_sdk_2eproto, /* tracker*/ nullptr,},
-        // ::agones::dev::sdk::GameServer_Status_PlayerStatus
-        {&::_pbi::kDescriptorMethods, &::descriptor_table_sdk_2eproto, /* tracker*/ nullptr,},
         // ::agones::dev::sdk::GameServer_Status_CounterStatus
         {&::_pbi::kDescriptorMethods, &::descriptor_table_sdk_2eproto, /* tracker*/ nullptr,},
         // ::agones::dev::sdk::GameServer_Status_ListStatus

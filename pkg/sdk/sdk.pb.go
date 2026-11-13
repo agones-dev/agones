@@ -959,9 +959,6 @@ type GameServer_Status struct {
 	Address   string                       `protobuf:"bytes,2,opt,name=address,proto3" json:"address,omitempty"`
 	Addresses []*GameServer_Status_Address `protobuf:"bytes,7,rep,name=addresses,proto3" json:"addresses,omitempty"`
 	Ports     []*GameServer_Status_Port    `protobuf:"bytes,3,rep,name=ports,proto3" json:"ports,omitempty"`
-	// [Stage:Alpha]
-	// [FeatureFlag:PlayerTracking]
-	Players *GameServer_Status_PlayerStatus `protobuf:"bytes,4,opt,name=players,proto3" json:"players,omitempty"`
 	// [Stage:Beta]
 	// [FeatureFlag:CountsAndLists]
 	Counters map[string]*GameServer_Status_CounterStatus `protobuf:"bytes,5,rep,name=counters,proto3" json:"counters,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
@@ -1026,13 +1023,6 @@ func (x *GameServer_Status) GetAddresses() []*GameServer_Status_Address {
 func (x *GameServer_Status) GetPorts() []*GameServer_Status_Port {
 	if x != nil {
 		return x.Ports
-	}
-	return nil
-}
-
-func (x *GameServer_Status) GetPlayers() *GameServer_Status_PlayerStatus {
-	if x != nil {
-		return x.Players
 	}
 	return nil
 }
@@ -1337,7 +1327,7 @@ func (x *GameServer_Status_CounterStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GameServer_Status_CounterStatus.ProtoReflect.Descriptor instead.
 func (*GameServer_Status_CounterStatus) Descriptor() ([]byte, []int) {
-	return file_sdk_proto_rawDescGZIP(), []int{3, 2, 3}
+	return file_sdk_proto_rawDescGZIP(), []int{3, 2, 2}
 }
 
 func (x *GameServer_Status_CounterStatus) GetCount() int64 {
@@ -1394,7 +1384,7 @@ func (x *GameServer_Status_ListStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GameServer_Status_ListStatus.ProtoReflect.Descriptor instead.
 func (*GameServer_Status_ListStatus) Descriptor() ([]byte, []int) {
-	return file_sdk_proto_rawDescGZIP(), []int{3, 2, 4}
+	return file_sdk_proto_rawDescGZIP(), []int{3, 2, 3}
 }
 
 func (x *GameServer_Status_ListStatus) GetCapacity() int64 {
