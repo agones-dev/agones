@@ -69,9 +69,6 @@ const (
 	////////////////
 	// Alpha features
 
-	// FeaturePlayerTracking is a feature flag to enable/disable player tracking features.
-	FeaturePlayerTracking Feature = "PlayerTracking"
-
 	// FeatureRollingUpdateSurge is a feature flag to apply maxSurge on top of the Fleet replicas during a
 	// rolling update, even when the inactive GameServerSets hold Allocated GameServers.
 	FeatureRollingUpdateSurge Feature = "RollingUpdateSurge"
@@ -164,7 +161,6 @@ var (
 		FeatureSidecarContainers:                true,
 
 		// Alpha features
-		FeaturePlayerTracking:     false,
 		FeatureRollingUpdateSurge: false,
 		FeatureWasmAutoscaler:     false,
 

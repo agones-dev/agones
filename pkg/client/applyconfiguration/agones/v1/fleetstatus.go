@@ -34,10 +34,6 @@ type FleetStatusApplyConfiguration struct {
 	AllocatedReplicas *int32 `json:"allocatedReplicas,omitempty"`
 	// Allocations is a counter of the number of allocations observed.
 	Allocations *int64 `json:"allocations,omitempty"`
-	// [Stage:Alpha]
-	// [FeatureFlag:PlayerTracking]
-	// Players are the current total player capacity and count for this Fleet
-	Players *AggregatedPlayerStatusApplyConfiguration `json:"players,omitempty"`
 	// (Beta, CountsAndLists feature flag) Counters provides aggregated Counter capacity and Counter
 	// count for this Fleet.
 	Counters map[string]AggregatedCounterStatusApplyConfiguration `json:"counters,omitempty"`
@@ -89,14 +85,6 @@ func (b *FleetStatusApplyConfiguration) WithAllocatedReplicas(value int32) *Flee
 // If called multiple times, the Allocations field is set to the value of the last call.
 func (b *FleetStatusApplyConfiguration) WithAllocations(value int64) *FleetStatusApplyConfiguration {
 	b.Allocations = &value
-	return b
-}
-
-// WithPlayers sets the Players field in the declarative configuration to the given value
-// and returns the receiver, so that objects can be built by chaining "With" function invocations.
-// If called multiple times, the Players field is set to the value of the last call.
-func (b *FleetStatusApplyConfiguration) WithPlayers(value *AggregatedPlayerStatusApplyConfiguration) *FleetStatusApplyConfiguration {
-	b.Players = value
 	return b
 }
 

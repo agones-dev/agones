@@ -228,9 +228,6 @@ type GameServerSpec struct {
 	SdkServer SdkServer `json:"sdkServer,omitempty"`
 	// Template describes the Pod that will be created for the GameServer
 	Template corev1.PodTemplateSpec `json:"template"`
-	// (Alpha, PlayerTracking feature flag) Players provides the configuration for player tracking features.
-	// +optional
-	Players *PlayersSpec `json:"players,omitempty"`
 	// (Beta, CountsAndLists feature flag) Counters provides the configuration for tracking of int64 values against a GameServer.
 	// Keys must be declared at GameServer creation time.
 	// +optional
@@ -244,11 +241,6 @@ type GameServerSpec struct {
 	// +optional
 	Eviction *Eviction `json:"eviction,omitempty"`
 	// immutableReplicas is present in gameservers.agones.dev but omitted here (it's always 1).
-}
-
-// PlayersSpec tracks the initial player capacity
-type PlayersSpec struct {
-	InitialCapacity int64 `json:"initialCapacity,omitempty"`
 }
 
 // Eviction specifies the eviction tolerance of the GameServer
@@ -321,10 +313,6 @@ type GameServerStatus struct {
 	Addresses     []corev1.NodeAddress `json:"addresses"`
 	NodeName      string               `json:"nodeName"`
 	ReservedUntil *metav1.Time         `json:"reservedUntil"`
-	// [Stage:Alpha]
-	// [FeatureFlag:PlayerTracking]
-	// +optional
-	Players *PlayerStatus `json:"players"`
 	// (Beta, CountsAndLists feature flag) Counters and Lists provides the configuration for generic tracking features.
 	// +optional
 	Counters map[string]CounterStatus `json:"counters,omitempty"`
@@ -341,13 +329,6 @@ type GameServerStatus struct {
 type GameServerStatusPort struct {
 	Name string `json:"name,omitempty"`
 	Port int32  `json:"port"`
-}
-
-// PlayerStatus stores the current player capacity values
-type PlayerStatus struct {
-	Count    int64    `json:"count"`
-	Capacity int64    `json:"capacity"`
-	IDs      []string `json:"ids"`
 }
 
 // CounterStatus stores the current counter values and maximum capacity
@@ -431,17 +412,6 @@ func (gs *GameServer) applyStatusDefaults() {
 		}
 	}
 
-	if runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		// set value if enabled, otherwise very easy to accidentally panic
-		// when gs.Status.Players is nil
-		if gs.Status.Players == nil {
-			gs.Status.Players = &PlayerStatus{}
-		}
-		if gs.Spec.Players != nil {
-			gs.Status.Players.Capacity = gs.Spec.Players.InitialCapacity
-		}
-	}
-
 	gs.applyEvictionStatus()
 	gs.applyCountsListsStatus()
 }
@@ -510,23 +480,11 @@ func (gs *GameServer) applyCountsListsStatus() {
 	}
 }
 
-// validateFeatureGates checks if fields are set when the associated feature gate is not set.
-func (gss *GameServerSpec) validateFeatureGates(fldPath *field.Path) field.ErrorList {
-	var allErrs field.ErrorList
-	if !runtime.FeatureEnabled(runtime.FeaturePlayerTracking) {
-		if gss.Players != nil {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("players"), fmt.Sprintf("Value cannot be set unless feature flag %s is enabled", runtime.FeaturePlayerTracking)))
-		}
-	}
-
-	return allErrs
-}
-
 // Validate validates the GameServerSpec configuration.
 // devAddress is a specific IP address used for local Gameservers, for fleets "" is used
 // If a GameServer Spec is invalid there will be > 0 values in the returned array
 func (gss *GameServerSpec) Validate(apiHooks APIHooks, devAddress string, fldPath *field.Path) field.ErrorList {
-	allErrs := gss.validateFeatureGates(fldPath)
+	var allErrs field.ErrorList
 	if len(devAddress) > 0 {
 		// verify that the value is a valid IP address.
 		if net.ParseIP(devAddress) == nil {
