@@ -34,8 +34,6 @@ const (
 	gameServersCountName                    = "gameservers_count"
 	gameServersTotalName                    = "gameservers_total"
 	gameServersAllocationsTotalName         = "gameservers_allocations_total"
-	gameServersPlayerConnectedTotalName     = "gameserver_player_connected_total"
-	gameServersPlayerCapacityTotalName      = "gameserver_player_capacity_total"
 	nodeCountName                           = "nodes_count"
 	gameServersNodeCountName                = "gameservers_node_count"
 	gameServerStateDurationName             = "gameserver_state_duration"
@@ -46,7 +44,7 @@ var (
 	fleetAutoscalerViews = []string{fleetAutoscalerBufferLimitName, fleetAutoscalterBufferSizeName, fleetAutoscalerCurrentReplicaCountName,
 		fleetAutoscalersDesiredReplicaCountName, fleetAutoscalersAbleToScaleName, fleetAutoscalersLimitedName}
 	// fleetViews are metric views associated with Fleets
-	fleetViews = append([]string{fleetRolloutPercent, fleetReplicaCountName, gameServersCountName, gameServersTotalName, gameServersPlayerConnectedTotalName, gameServersPlayerCapacityTotalName, gameServerStateDurationName, fleetCountersName, fleetListsName}, fleetAutoscalerViews...)
+	fleetViews = append([]string{fleetRolloutPercent, fleetReplicaCountName, gameServersCountName, gameServersTotalName, gameServerStateDurationName, fleetCountersName, fleetListsName}, fleetAutoscalerViews...)
 
 	stateDurationSeconds            = []float64{0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384}
 	fleetRolloutPercentStats        = stats.Int64("fleets/rollout_percent", "The current fleet rollout percentage", "1")
@@ -62,8 +60,6 @@ var (
 	gameServerCountStats            = stats.Int64("gameservers/count", "The count of gameservers", "1")
 	gameServerTotalStats            = stats.Int64("gameservers/total", "The total of gameservers", "1")
 	gameServerAllocationsTotalStats = stats.Int64("gameservers/allocations_total", "The total of gameserver allocations", "1")
-	gameServerPlayerConnectedTotal  = stats.Int64("gameservers/player_connected", "The total number of players connected to gameservers", "1")
-	gameServerPlayerCapacityTotal   = stats.Int64("gameservers/player_capacity", "The available player capacity for gameservers", "1")
 	nodesCountStats                 = stats.Int64("nodes/count", "The count of nodes in the cluster", "1")
 	gsPerNodesCountStats            = stats.Int64("gameservers_node/count", "The count of gameservers per node in the cluster", "1")
 	gsStateDurationSec              = stats.Float64("gameservers_state/duration", "The duration of gameservers to be in a particular state", stats.UnitSeconds)
@@ -159,20 +155,6 @@ var (
 			Description: "The total of gameserver allocations",
 			Aggregation: view.Count(),
 			TagKeys:     []tag.Key{keyFleetName, keyNamespace},
-		},
-		{
-			Name:        gameServersPlayerConnectedTotalName,
-			Measure:     gameServerPlayerConnectedTotal,
-			Description: "The current amount of players connected in gameservers",
-			Aggregation: view.LastValue(),
-			TagKeys:     []tag.Key{keyFleetName, keyName, keyNamespace},
-		},
-		{
-			Name:        gameServersPlayerCapacityTotalName,
-			Measure:     gameServerPlayerCapacityTotal,
-			Description: "The available player capacity per gameserver",
-			Aggregation: view.LastValue(),
-			TagKeys:     []tag.Key{keyFleetName, keyName, keyNamespace},
 		},
 		{
 			Name:        nodeCountName,

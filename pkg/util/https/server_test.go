@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type testServer struct {
@@ -48,16 +49,16 @@ func TestServerRun(t *testing.T) {
 	ctx := t.Context()
 
 	err := s.Run(ctx, 0)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	client := ts.server.Client()
 	resp, err := client.Get(ts.server.URL + "/test")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer resp.Body.Close() //nolint:errcheck
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 
 	resp, err = client.Get(ts.server.URL + "/")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer resp.Body.Close() //nolint:errcheck
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }

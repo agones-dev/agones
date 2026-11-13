@@ -17,6 +17,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -28,32 +29,62 @@ import (
 	sdk "agones.dev/agones/sdks/go"
 )
 
+// Commands the game server accepts, as the first word of a message.
+const (
+	exitCommand               = "EXIT"
+	unhealthyCommand          = "UNHEALTHY"
+	gameserverCommand         = "GAMESERVER"
+	readyCommand              = "READY"
+	allocateCommand           = "ALLOCATE"
+	reserveCommand            = "RESERVE"
+	watchCommand              = "WATCH"
+	labelCommand              = "LABEL"
+	crashCommand              = "CRASH"
+	annotationCommand         = "ANNOTATION"
+	getCounterCountCommand    = "GET_COUNTER_COUNT"
+	incrementCounterCommand   = "INCREMENT_COUNTER"
+	decrementCounterCommand   = "DECREMENT_COUNTER"
+	setCounterCountCommand    = "SET_COUNTER_COUNT"
+	getCounterCapacityCommand = "GET_COUNTER_CAPACITY"
+	setCounterCapacityCommand = "SET_COUNTER_CAPACITY"
+	getListCapacityCommand    = "GET_LIST_CAPACITY"
+	setListCapacityCommand    = "SET_LIST_CAPACITY"
+	listContainsCommand       = "LIST_CONTAINS"
+	getListLengthCommand      = "GET_LIST_LENGTH"
+	getListValuesCommand      = "GET_LIST_VALUES"
+	appendListValueCommand    = "APPEND_LIST_VALUE"
+	deleteListValueCommand    = "DELETE_LIST_VALUE"
+)
+
+// successResponse is the reply to a command that succeeded.
+const successResponse = "SUCCESS\n"
+
 type responseHandler func(s *sdk.SDK, parts []string, cancel ...context.CancelFunc) (response string, addACK bool, responseError error)
 
 var responseMap = map[string]responseHandler{
-	"EXIT":                 handleExit,
-	"UNHEALTHY":            handleUnhealthy,
-	"GAMESERVER":           handleGameServer,
-	"READY":                handleReady,
-	"ALLOCATE":             handleAllocate,
-	"RESERVE":              handleReserve,
-	"WATCH":                handleWatch,
-	"LABEL":                handleLabel,
-	"CRASH":                handleCrash,
-	"ANNOTATION":           handleAnnotation,
-	"GET_COUNTER_COUNT":    handleGetCounterCount,
-	"INCREMENT_COUNTER":    handleIncrementCounter,
-	"DECREMENT_COUNTER":    handleDecrementCounter,
-	"SET_COUNTER_COUNT":    handleSetCounterCount,
-	"GET_COUNTER_CAPACITY": handleGetCounterCapacity,
-	"SET_COUNTER_CAPACITY": handleSetCounterCapacity,
-	"GET_LIST_CAPACITY":    handleGetListCapacity,
-	"SET_LIST_CAPACITY":    handleSetListCapacity,
-	"LIST_CONTAINS":        handleListContains,
-	"GET_LIST_LENGTH":      handleGetListLength,
-	"GET_LIST_VALUES":      handleGetListValues,
-	"APPEND_LIST_VALUE":    handleAppendListValue,
-	"DELETE_LIST_VALUE":    handleDeleteListValue,
+	exitCommand:               handleExit,
+	unhealthyCommand:          handleUnhealthy,
+	gameserverCommand:         handleGameServer,
+	readyCommand:              handleReady,
+	allocateCommand:           handleAllocate,
+	reserveCommand:            handleReserve,
+	watchCommand:              handleWatch,
+	labelCommand:              handleLabel,
+	crashCommand:              handleCrash,
+	annotationCommand:         handleAnnotation,
+	getCounterCountCommand:    handleGetCounterCount,
+	incrementCounterCommand:   handleIncrementCounter,
+	decrementCounterCommand:   handleDecrementCounter,
+	setCounterCountCommand:    handleSetCounterCount,
+	getCounterCapacityCommand: handleGetCounterCapacity,
+	setCounterCapacityCommand: handleSetCounterCapacity,
+	getListCapacityCommand:    handleGetListCapacity,
+	setListCapacityCommand:    handleSetListCapacity,
+	listContainsCommand:       handleListContains,
+	getListLengthCommand:      handleGetListLength,
+	getListValuesCommand:      handleGetListValues,
+	appendListValueCommand:    handleAppendListValue,
+	deleteListValueCommand:    handleDeleteListValue,
 }
 
 func handleResponse(txt string, s *sdk.SDK, cancel context.CancelFunc) (response string, addACK bool, responseError error) {
@@ -66,20 +97,20 @@ func handleResponse(txt string, s *sdk.SDK, cancel context.CancelFunc) (response
 	if !exists {
 		return response, addACK, responseError
 	}
-	if parts[0] == "UNHEALTHY" {
+	if parts[0] == unhealthyCommand {
 		return handler(s, parts, cancel)
 	}
 
 	return handler(s, parts)
 }
 
-func handleExit(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (response string, addACK bool, responseError error) {
+func handleExit(_ *sdk.SDK, parts []string, _ ...context.CancelFunc) (response string, addACK bool, responseError error) {
 	// handle elsewhere, as we respond before exiting
 	response, addACK = defaultReply(parts)
 	return
 }
 
-func handleUnhealthy(s *sdk.SDK, parts []string, cancel ...context.CancelFunc) (response string, addACK bool, responseError error) {
+func handleUnhealthy(_ *sdk.SDK, parts []string, cancel ...context.CancelFunc) (response string, addACK bool, responseError error) {
 	response, addACK = defaultReply(parts)
 	if len(cancel) > 0 {
 		cancel[0]() // Invoke cancel function if provided
@@ -88,7 +119,7 @@ func handleUnhealthy(s *sdk.SDK, parts []string, cancel ...context.CancelFunc) (
 }
 
 // handleGameServer returns the GameServer name
-func handleGameServer(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (response string, addACK bool, responseError error) {
+func handleGameServer(s *sdk.SDK, _ []string, _ ...context.CancelFunc) (response string, addACK bool, responseError error) {
 	gs, err := s.GameServer()
 	if err != nil {
 		log.Fatalf("Could not retrieve GameServer: %v", err)
@@ -99,7 +130,7 @@ func handleGameServer(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (resp
 		log.Fatalf("error mashalling GameServer to JSON: %v", err)
 	}
 	log.Printf("GameServer: %s \n", string(j))
-	response = "NAME: " + gs.ObjectMeta.Name + "\n"
+	response = "NAME: " + gs.GetObjectMeta().GetName() + "\n"
 	addACK = false
 	return
 }
@@ -129,20 +160,19 @@ func handleReserve(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (respons
 	response, addACK = defaultReply(parts)
 	if len(parts) != 2 {
 		response = "Invalid RESERVE, should have 1 argument"
-		responseError = fmt.Errorf("Invalid RESERVE, should have 1 argument")
+		responseError = errors.New("invalid RESERVE, should have 1 argument")
 		addACK = false
 		return
 	}
-	if dur, err := time.ParseDuration(parts[1]); err != nil {
+	dur, err := time.ParseDuration(parts[1])
+	if err != nil {
 		response = fmt.Sprintf("%s\n", err)
 		responseError = err
 		addACK = false
 		return
-	} else {
-		err := s.Reserve(dur)
-		if err != nil {
-			log.Fatalf("could not reserve gameserver: %v", err)
-		}
+	}
+	if err := s.Reserve(dur); err != nil {
+		log.Fatalf("could not reserve gameserver: %v", err)
 	}
 	return
 }
@@ -174,12 +204,12 @@ func handleLabel(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (response 
 		setLabel(s, parts[1], parts[2])
 	default:
 		response = "Invalid LABEL command, must use zero or 2 arguments"
-		responseError = fmt.Errorf("Invalid LABEL command, must use zero or 2 arguments")
+		responseError = errors.New("invalid LABEL command, must use zero or 2 arguments")
 	}
 	return
 }
 
-func handleCrash(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (response string, addACK bool, responseError error) {
+func handleCrash(_ *sdk.SDK, parts []string, _ ...context.CancelFunc) (response string, addACK bool, responseError error) {
 	log.Print("Crashing.")
 	exitCode := 1
 	if len(parts) > 1 {
@@ -201,7 +231,7 @@ func handleAnnotation(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (resp
 		setAnnotation(s, parts[1], parts[2])
 	default:
 		response = "Invalid ANNOTATION command, must use zero or 2 arguments"
-		responseError = fmt.Errorf("Invalid ANNOTATION command, must use zero or 2 arguments")
+		responseError = errors.New("invalid ANNOTATION command, must use zero or 2 arguments")
 	}
 	return
 }
@@ -210,7 +240,7 @@ func handleAnnotation(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (resp
 func handleGetCounterCount(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (response string, addACK bool, responseError error) {
 	if len(parts) < 2 {
 		response = "Invalid GET_COUNTER_COUNT, should have 1 argument"
-		responseError = fmt.Errorf("Invalid GET_COUNTER_COUNT, should have 1 argument")
+		responseError = errors.New("invalid GET_COUNTER_COUNT, should have 1 argument")
 		return
 	}
 	log.Printf("Retrieving Counter %s Count", parts[1])
@@ -229,12 +259,12 @@ func handleGetCounterCount(s *sdk.SDK, parts []string, _ ...context.CancelFunc) 
 func handleIncrementCounter(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (response string, addACK bool, responseError error) {
 	if len(parts) < 3 {
 		response = "Invalid INCREMENT_COUNTER, should have 2 arguments"
-		responseError = fmt.Errorf("Invalid INCREMENT_COUNTER, should have 2 arguments")
+		responseError = errors.New("invalid INCREMENT_COUNTER, should have 2 arguments")
 		return
 	}
 	amountInt, err := strconv.ParseInt(parts[2], 10, 64)
 	if err != nil {
-		response, responseError = err.Error(), fmt.Errorf("Could not increment Counter %s by unparseable amount %s: %s", parts[1], parts[2], err)
+		response, responseError = err.Error(), fmt.Errorf("could not increment Counter %s by unparseable amount %s: %w", parts[1], parts[2], err)
 		return
 	}
 	log.Printf("Incrementing Counter %s Count by amount %d", parts[1], amountInt)
@@ -244,7 +274,7 @@ func handleIncrementCounter(s *sdk.SDK, parts []string, _ ...context.CancelFunc)
 		response, responseError = err.Error(), err
 		return
 	}
-	response, responseError = "SUCCESS\n", nil
+	response, responseError = successResponse, nil
 	return
 }
 
@@ -252,12 +282,12 @@ func handleIncrementCounter(s *sdk.SDK, parts []string, _ ...context.CancelFunc)
 func handleDecrementCounter(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (response string, addACK bool, responseError error) {
 	if len(parts) < 3 {
 		response = "Invalid DECREMENT_COUNTER, should have 2 arguments"
-		responseError = fmt.Errorf("Invalid DECREMENT_COUNTER, should have 2 arguments")
+		responseError = errors.New("invalid DECREMENT_COUNTER, should have 2 arguments")
 		return
 	}
 	amountInt, err := strconv.ParseInt(parts[2], 10, 64)
 	if err != nil {
-		response, responseError = err.Error(), fmt.Errorf("could not decrement Counter %s by unparseable amount %s: %s", parts[1], parts[2], err)
+		response, responseError = err.Error(), fmt.Errorf("could not decrement Counter %s by unparseable amount %s: %w", parts[1], parts[2], err)
 		return
 	}
 	log.Printf("Decrementing Counter %s Count by amount %d", parts[1], amountInt)
@@ -267,7 +297,7 @@ func handleDecrementCounter(s *sdk.SDK, parts []string, _ ...context.CancelFunc)
 		response, responseError = err.Error(), err
 		return
 	}
-	response, responseError = "SUCCESS\n", nil
+	response, responseError = successResponse, nil
 	return
 }
 
@@ -275,12 +305,12 @@ func handleDecrementCounter(s *sdk.SDK, parts []string, _ ...context.CancelFunc)
 func handleSetCounterCount(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (response string, addACK bool, responseError error) {
 	if len(parts) < 3 {
 		response = "Invalid SET_COUNTER_COUNT, should have 2 arguments"
-		responseError = fmt.Errorf("Invalid SET_COUNTER_COUNT, should have 2 arguments")
+		responseError = errors.New("invalid SET_COUNTER_COUNT, should have 2 arguments")
 		return
 	}
 	amountInt, err := strconv.ParseInt(parts[2], 10, 64)
 	if err != nil {
-		response, responseError = err.Error(), fmt.Errorf("could not set Counter %s to unparseable amount %s: %s", parts[1], parts[2], err)
+		response, responseError = err.Error(), fmt.Errorf("could not set Counter %s to unparseable amount %s: %w", parts[1], parts[2], err)
 		return
 	}
 	log.Printf("Setting Counter %s Count to amount %d", parts[1], amountInt)
@@ -290,7 +320,7 @@ func handleSetCounterCount(s *sdk.SDK, parts []string, _ ...context.CancelFunc) 
 		response, responseError = err.Error(), err
 		return
 	}
-	response, responseError = "SUCCESS\n", nil
+	response, responseError = successResponse, nil
 	return
 }
 
@@ -298,7 +328,7 @@ func handleSetCounterCount(s *sdk.SDK, parts []string, _ ...context.CancelFunc) 
 func handleGetCounterCapacity(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (response string, addACK bool, responseError error) {
 	if len(parts) < 2 {
 		response = "Invalid GET_COUNTER_CAPACITY, should have 1 argument"
-		responseError = fmt.Errorf("Invalid GET_COUNTER_CAPACITY, should have 1 argument")
+		responseError = errors.New("invalid GET_COUNTER_CAPACITY, should have 1 argument")
 		return
 	}
 	log.Printf("Retrieving Counter %s Capacity", parts[1])
@@ -316,12 +346,12 @@ func handleGetCounterCapacity(s *sdk.SDK, parts []string, _ ...context.CancelFun
 func handleSetCounterCapacity(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (response string, addACK bool, responseError error) {
 	if len(parts) < 3 {
 		response = "Invalid SET_COUNTER_CAPACITY, should have 2 arguments"
-		responseError = fmt.Errorf("Invalid SET_COUNTER_CAPACITY, should have 2 arguments")
+		responseError = errors.New("invalid SET_COUNTER_CAPACITY, should have 2 arguments")
 		return
 	}
 	amountInt, err := strconv.ParseInt(parts[2], 10, 64)
 	if err != nil {
-		response, responseError = err.Error(), fmt.Errorf("could not set Counter %s to unparseable amount %s: %s", parts[1], parts[2], err)
+		response, responseError = err.Error(), fmt.Errorf("could not set Counter %s to unparseable amount %s: %w", parts[1], parts[2], err)
 		return
 	}
 	log.Printf("Setting Counter %s Capacity to amount %d", parts[1], amountInt)
@@ -331,7 +361,7 @@ func handleSetCounterCapacity(s *sdk.SDK, parts []string, _ ...context.CancelFun
 		response, responseError = err.Error(), err
 		return
 	}
-	response, responseError = "SUCCESS\n", nil
+	response, responseError = successResponse, nil
 	return
 }
 
@@ -339,7 +369,7 @@ func handleSetCounterCapacity(s *sdk.SDK, parts []string, _ ...context.CancelFun
 func handleGetListCapacity(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (response string, addACK bool, responseError error) {
 	if len(parts) < 2 {
 		response = "Invalid GET_LIST_CAPACITY, should have 1 argument"
-		responseError = fmt.Errorf("Invalid GET_LIST_CAPACITY, should have 1 argument")
+		responseError = errors.New("invalid GET_LIST_CAPACITY, should have 1 argument")
 		return
 	}
 	log.Printf("Retrieving List %s Capacity", parts[1])
@@ -357,12 +387,12 @@ func handleGetListCapacity(s *sdk.SDK, parts []string, _ ...context.CancelFunc) 
 func handleSetListCapacity(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (response string, addACK bool, responseError error) {
 	if len(parts) < 3 {
 		response = "Invalid SET_LIST_CAPACITY, should have 2 arguments"
-		responseError = fmt.Errorf("Invalid SET_LIST_CAPACITY, should have 2 arguments")
+		responseError = errors.New("invalid SET_LIST_CAPACITY, should have 2 arguments")
 		return
 	}
 	amountInt, err := strconv.ParseInt(parts[2], 10, 64)
 	if err != nil {
-		response, responseError = err.Error(), fmt.Errorf("could not set List %s to unparseable amount %s: %s", parts[1], parts[2], err)
+		response, responseError = err.Error(), fmt.Errorf("could not set List %s to unparseable amount %s: %w", parts[1], parts[2], err)
 		return
 	}
 	log.Printf("Setting List %s Capacity to amount %d", parts[1], amountInt)
@@ -372,7 +402,7 @@ func handleSetListCapacity(s *sdk.SDK, parts []string, _ ...context.CancelFunc) 
 		response, responseError = err.Error(), err
 		return
 	}
-	response, responseError = "SUCCESS\n", nil
+	response, responseError = successResponse, nil
 	return
 }
 
@@ -380,7 +410,7 @@ func handleSetListCapacity(s *sdk.SDK, parts []string, _ ...context.CancelFunc) 
 func handleListContains(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (response string, addACK bool, responseError error) {
 	if len(parts) < 3 {
 		response = "Invalid LIST_CONTAINS, should have 2 arguments"
-		responseError = fmt.Errorf("Invalid LIST_CONTAINS, should have 2 arguments")
+		responseError = errors.New("invalid LIST_CONTAINS, should have 2 arguments")
 		return
 	}
 	log.Printf("Getting List %s contains value %s", parts[1], parts[2])
@@ -398,7 +428,7 @@ func handleListContains(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (re
 func handleGetListLength(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (response string, addACK bool, responseError error) {
 	if len(parts) < 2 {
 		response = "Invalid GET_LIST_LENGTH, should have 1 argument"
-		responseError = fmt.Errorf("Invalid GET_LIST_LENGTH, should have 1 argument")
+		responseError = errors.New("invalid GET_LIST_LENGTH, should have 1 argument")
 		return
 	}
 	log.Printf("Getting List %s length", parts[1])
@@ -416,7 +446,7 @@ func handleGetListLength(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (r
 func handleGetListValues(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (response string, addACK bool, responseError error) {
 	if len(parts) < 2 {
 		response = "Invalid GET_LIST_VALUES, should have 1 argument"
-		responseError = fmt.Errorf("Invalid GET_LIST_VALUES, should have 1 argument")
+		responseError = errors.New("invalid GET_LIST_VALUES, should have 1 argument")
 		return
 	}
 	log.Printf("Getting List %s values", parts[1])
@@ -438,7 +468,7 @@ func handleGetListValues(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (r
 func handleAppendListValue(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (response string, addACK bool, responseError error) {
 	if len(parts) < 3 {
 		response = "Invalid APPEND_LIST_VALUE, should have 2 arguments"
-		responseError = fmt.Errorf("Invalid APPEND_LIST_VALUE, should have 2 arguments")
+		responseError = errors.New("invalid APPEND_LIST_VALUE, should have 2 arguments")
 		return
 	}
 	log.Printf("Appending Value %s to List %s", parts[2], parts[1])
@@ -448,7 +478,7 @@ func handleAppendListValue(s *sdk.SDK, parts []string, _ ...context.CancelFunc) 
 		response, responseError = err.Error(), err
 		return
 	}
-	response, responseError = "SUCCESS\n", nil
+	response, responseError = successResponse, nil
 	return
 }
 
@@ -456,7 +486,7 @@ func handleAppendListValue(s *sdk.SDK, parts []string, _ ...context.CancelFunc) 
 func handleDeleteListValue(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (response string, addACK bool, responseError error) {
 	if len(parts) < 3 {
 		response = "Invalid DELETE_LIST_VALUE, should have 2 arguments"
-		responseError = fmt.Errorf("Invalid DELETE_LIST_VALUE, should have 2 arguments")
+		responseError = errors.New("invalid DELETE_LIST_VALUE, should have 2 arguments")
 		return
 	}
 	log.Printf("Deleting Value %s from List %s", parts[2], parts[1])
@@ -466,7 +496,7 @@ func handleDeleteListValue(s *sdk.SDK, parts []string, _ ...context.CancelFunc) 
 		response, responseError = err.Error(), err
 		return
 	}
-	response, responseError = "SUCCESS\n", nil
+	response, responseError = successResponse, nil
 	return
 }
 

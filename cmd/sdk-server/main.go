@@ -274,9 +274,8 @@ func runGateway(ctx context.Context, grpcEndpoint string, mux *gwruntime.ServeMu
 		logger.WithError(err).Fatal("Could not register sdk grpc-gateway")
 	}
 
-	if err := sdkalpha.RegisterSDKHandler(ctx, mux, conn); err != nil {
-		logger.WithError(err).Fatal("Could not register alpha sdk grpc-gateway")
-	}
+	// sdkalpha.RegisterSDKHandler is generated only once the alpha SDK service
+	// has RPCs with HTTP bindings; register it here when that happens.
 
 	if err := sdkbeta.RegisterSDKHandler(ctx, mux, conn); err != nil {
 		logger.WithError(err).Fatal("Could not register beta sdk grpc-gateway")

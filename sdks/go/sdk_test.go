@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
@@ -43,29 +44,29 @@ func TestSDK(t *testing.T) {
 	assert.False(t, sm.hm.healthy)
 
 	err := s.Ready()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, sm.ready)
 	assert.False(t, sm.shutdown)
 
 	err = s.Reserve(12 * time.Second)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.EqualValues(t, 12, sm.reserved.GetSeconds())
 
 	err = s.Health()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, sm.hm.healthy)
 
 	err = s.Allocate()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, sm.allocated)
 
 	err = s.Shutdown()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, sm.ready)
 	assert.True(t, sm.shutdown)
 
 	gs, err := s.GameServer()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, gs)
 }
 
@@ -86,7 +87,7 @@ func TestSDKWatchGameServer(t *testing.T) {
 		assert.Equal(t, fixture.GetObjectMeta().GetName(), gs.GetObjectMeta().GetName())
 		updated <- struct{}{}
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	sm.wm.msgs <- fixture
 
@@ -109,7 +110,7 @@ func TestSDKSetLabel(t *testing.T) {
 
 	expected := "bar"
 	err := s.SetLabel("foo", expected)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expected, sm.labels["agones.dev/sdk-foo"])
 }
 
@@ -125,7 +126,7 @@ func TestSDKSetAnnotation(t *testing.T) {
 
 	expected := "bar"
 	err := s.SetAnnotation("foo", expected)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expected, sm.annotations["agones.dev/sdk-foo"])
 }
 
@@ -261,7 +262,7 @@ func TestWaitForReady(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		assert.NoError(t, waitForReady(ctx, conn))
+		require.NoError(t, waitForReady(ctx, conn))
 		assert.Equal(t, 2, conn.connects)
 	})
 

@@ -233,9 +233,7 @@ func TestSDKSetAnnotation(t *testing.T) {
 
 	logrus.WithField("annotations", gs.ObjectMeta.Annotations).Info("annotation information")
 
-	if !assert.NoError(t, err) {
-		assert.FailNow(t, "error waiting on annotation to be set")
-	}
+	require.NoError(t, err, "error waiting on annotation to be set")
 	assert.NotEmpty(t, gs.ObjectMeta.Annotations[annotation])
 	assert.NotEmpty(t, gs.ObjectMeta.Annotations[agonesv1.VersionAnnotation])
 }
@@ -402,15 +400,13 @@ func TestGameServerRestartBeforeReadyCrash(t *testing.T) {
 		}
 		return false
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// check that the GameServer is not in an unhealthy state. If it does happen, it should happen pretty quick.
 	// We wait an extra 5s to close the kubelet race in #2445.
 	newGs, err = framework.WaitForGameServerState(t, newGs, agonesv1.GameServerStateUnhealthy, 10*time.Second)
 	// should be an error, as the state should not occur
-	if !assert.Error(t, err) {
-		assert.FailNow(t, "GameServer should not be Unhealthy")
-	}
+	require.Error(t, err, "GameServer should not be Unhealthy")
 	assert.Contains(t, err.Error(), "waiting for GameServer")
 
 	// ping READY until it doesn't fail anymore - since it may take a while
@@ -424,7 +420,7 @@ func TestGameServerRestartBeforeReadyCrash(t *testing.T) {
 		}
 		return false
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// now crash, should be unhealthy, since it's after being Ready
 	logger.Info("crashing again, should be unhealthy")
@@ -520,7 +516,11 @@ func TestGameServerUnhealthyAfterReadyCrash(t *testing.T) {
 			var writeErr error
 			func() {
 				conn, err := net.Dial("udp", address)
-				assert.NoError(t, err)
+				//nolint:testifylint // require-error: require cannot stop the test from this goroutine, so record the failure and stop sending.
+				if !assert.NoError(t, err) {
+					writeErr = err
+					return
+				}
 				defer conn.Close() //nolint:errcheck
 				_, writeErr = conn.Write([]byte("CRASH"))
 			}()
@@ -1443,7 +1443,7 @@ func TestGameServerResourceValidation(t *testing.T) {
 	gsClient := framework.AgonesClient.AgonesV1().GameServers(framework.Namespace)
 
 	_, err := gsClient.Create(ctx, gs.DeepCopy(), metav1.CreateOptions{})
-	assert.Error(t, err)
+	require.Error(t, err)
 	var statusErr *k8serrors.StatusError
 	ok := errors.As(err, &statusErr)
 	assert.True(t, ok)
@@ -1453,7 +1453,7 @@ func TestGameServerResourceValidation(t *testing.T) {
 
 	gs.Spec.Template.Spec.Containers[0].Resources.Requests[corev1.ResourceCPU] = resource.MustParse("-50m")
 	_, err = gsClient.Create(ctx, gs.DeepCopy(), metav1.CreateOptions{})
-	assert.Error(t, err)
+	require.Error(t, err)
 	ok = errors.As(err, &statusErr)
 	assert.True(t, ok)
 	assert.Len(t, statusErr.Status().Details.Causes, 2)

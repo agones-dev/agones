@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const thisPkg = "agones.dev/agones/pkg/util/errors"
@@ -97,30 +98,30 @@ func TestPackageFromFunc(t *testing.T) {
 
 func TestNew(t *testing.T) {
 	pkg := FromPackage()
-	assert.EqualError(t, pkg.New("no capacity"), thisPkg+": no capacity")
+	require.EqualError(t, pkg.New("no capacity"), thisPkg+": no capacity")
 
 	str := FromStruct(&testStruct{})
-	assert.EqualError(t, str.New("no capacity"), thisPkg+".testStruct: no capacity")
+	require.EqualError(t, str.New("no capacity"), thisPkg+".testStruct: no capacity")
 
 	var zero Errors
-	assert.EqualError(t, zero.New("no capacity"), "no capacity")
+	require.EqualError(t, zero.New("no capacity"), "no capacity")
 
 	// the constructors return *Errors, so the result is usable inline
-	assert.EqualError(t, FromPackage().New("no capacity"), thisPkg+": no capacity")
+	require.EqualError(t, FromPackage().New("no capacity"), thisPkg+": no capacity")
 	assert.EqualError(t, FromStruct(&testStruct{}).New("no capacity"), thisPkg+".testStruct: no capacity")
 }
 
 func TestErrorf(t *testing.T) {
 	pkg := FromPackage()
-	assert.EqualError(t, pkg.Errorf("no capacity on %s", "node-1"), thisPkg+": no capacity on node-1")
+	require.EqualError(t, pkg.Errorf("no capacity on %s", "node-1"), thisPkg+": no capacity on node-1")
 
 	str := FromStruct(&testStruct{})
-	assert.EqualError(t, str.Errorf("no capacity on %s", "node-1"), thisPkg+".testStruct: no capacity on node-1")
+	require.EqualError(t, str.Errorf("no capacity on %s", "node-1"), thisPkg+".testStruct: no capacity on node-1")
 
 	// a caller supplied %w still wraps
 	sentinel := errors.New("boom")
 	err := pkg.Errorf("no capacity: %w", sentinel)
-	assert.EqualError(t, err, thisPkg+": no capacity: boom")
+	require.EqualError(t, err, thisPkg+": no capacity: boom")
 	assert.ErrorIs(t, err, sentinel)
 }
 
@@ -129,13 +130,13 @@ func TestWrap(t *testing.T) {
 
 	pkg := FromPackage()
 	err := pkg.Wrap(sentinel, "no capacity")
-	assert.EqualError(t, err, thisPkg+": no capacity: boom")
-	assert.ErrorIs(t, err, sentinel)
+	require.EqualError(t, err, thisPkg+": no capacity: boom")
+	require.ErrorIs(t, err, sentinel)
 
 	str := FromStruct(&testStruct{})
 	err = str.Wrap(sentinel, "no capacity")
-	assert.EqualError(t, err, thisPkg+".testStruct: no capacity: boom")
-	assert.ErrorIs(t, err, sentinel)
+	require.EqualError(t, err, thisPkg+".testStruct: no capacity: boom")
+	require.ErrorIs(t, err, sentinel)
 
 	// matches github.com/pkg/errors.Wrap: nil in, nil out
 	assert.NoError(t, pkg.Wrap(nil, "no capacity"))
@@ -146,13 +147,13 @@ func TestWrapf(t *testing.T) {
 
 	pkg := FromPackage()
 	err := pkg.Wrapf(sentinel, "no capacity on %s", "node-1")
-	assert.EqualError(t, err, thisPkg+": no capacity on node-1: boom")
-	assert.ErrorIs(t, err, sentinel)
+	require.EqualError(t, err, thisPkg+": no capacity on node-1: boom")
+	require.ErrorIs(t, err, sentinel)
 
 	str := FromStruct(&testStruct{})
 	err = str.Wrapf(sentinel, "no capacity on %s", "node-1")
-	assert.EqualError(t, err, thisPkg+".testStruct: no capacity on node-1: boom")
-	assert.ErrorIs(t, err, sentinel)
+	require.EqualError(t, err, thisPkg+".testStruct: no capacity on node-1: boom")
+	require.ErrorIs(t, err, sentinel)
 
 	assert.NoError(t, pkg.Wrapf(nil, "no capacity on %s", "node-1"))
 }

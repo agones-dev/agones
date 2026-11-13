@@ -948,9 +948,7 @@ func TestMultiClusterAllocationOnLocalCluster(t *testing.T) {
 
 			namespace := fmt.Sprintf("gsa-multicluster-local-%s", uuid.NewUUID())
 			err := framework.CreateNamespace(namespace)
-			if !assert.NoError(t, err) {
-				return
-			}
+			require.NoError(t, err)
 			defer func() {
 				if derr := framework.DeleteNamespace(namespace); derr != nil {
 					t.Error(derr)
@@ -985,9 +983,7 @@ func TestMultiClusterAllocationOnLocalCluster(t *testing.T) {
 				},
 			}
 			resp, err := framework.AgonesClient.MulticlusterV1().GameServerAllocationPolicies(fleet.ObjectMeta.Namespace).Create(ctx, mca, metav1.CreateOptions{})
-			if !assert.NoError(t, err) {
-				assert.FailNowf(t, "GameServerAllocationPolicies(%v).Create(ctx, %v, metav1.CreateOptions{})", fleet.ObjectMeta.Namespace, mca)
-			}
+			require.NoError(t, err, "GameServerAllocationPolicies(%v).Create(ctx, %v, metav1.CreateOptions{})", fleet.ObjectMeta.Namespace, mca)
 			assert.Equal(t, mca.Spec, resp.Spec)
 
 			// Allocation Policy #2: another cluster with desired label, but lower priority.
@@ -1245,9 +1241,7 @@ func TestGameServerAllocationPreferredSelection(t *testing.T) {
 	// delete the preferred gameserver, and then let's try allocating again, make sure it goes back to the
 	// preferred one
 	err = gameServers.Delete(ctx, gsa1.Status.GameServerName, metav1.DeleteOptions{})
-	if !assert.NoError(t, err) {
-		assert.FailNow(t, "could not delete gameserver")
-	}
+	require.NoError(t, err, "could not delete gameserver")
 
 	// wait until the game server is deleted
 	err = wait.PollUntilContextTimeout(context.Background(), time.Second, 5*time.Minute, true, func(ctx context.Context) (bool, error) {
@@ -1259,7 +1253,7 @@ func TestGameServerAllocationPreferredSelection(t *testing.T) {
 
 		return false, err
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// now wait for another one to come along
 	framework.AssertFleetCondition(t, preferred, e2e.FleetReadyCount(preferred.Spec.Replicas))

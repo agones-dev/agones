@@ -186,7 +186,7 @@ func TestPortRangeAllocatorAllocate(t *testing.T) {
 		_, allocationErr := pa.Allocate(gsCopy)
 		require.NoError(t, allocationErr)
 		assert.Nil(t, gsCopy.Spec.Ports)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, 12, countTotalAllocatedPorts(pa))
 	})
 
@@ -553,7 +553,7 @@ func TestPortRangeAllocatorMultithreadAllocate(t *testing.T) {
 	defer cancel()
 
 	err := pa.syncAll()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	wg := sync.WaitGroup{}
 

@@ -223,7 +223,7 @@ func (h *Handler) processAllocation(ctx context.Context, req *allocationpb.Alloc
 			msg = grpcStatus.Message()
 		}
 		return allocationResult{
-			error: &rpcstatus.Status{Code: int32(code), Message: msg},
+			error: &rpcstatus.Status{Code: int32(code), Message: msg}, //nolint:gosec // G115: gRPC codes are 0-16.
 		}
 	}
 
@@ -235,7 +235,7 @@ func (h *Handler) processAllocation(ctx context.Context, req *allocationpb.Alloc
 	if s, ok := resultObj.(*metav1.Status); ok {
 		return allocationResult{
 			error: &rpcstatus.Status{
-				Code:    int32(GRPCCodeFromHTTPStatus(int(s.Code))),
+				Code:    int32(GRPCCodeFromHTTPStatus(int(s.Code))), //nolint:gosec // G115: gRPC codes are 0-16.
 				Message: s.Message,
 			},
 		}

@@ -26,7 +26,7 @@ spec:
     spec:
       containers:
         - name: unity-simple-server
-          image: us-docker.pkg.dev/agones-images/examples/unity-simple-server:0.3
+          image: us-docker.pkg.dev/agones-images/examples/unity-simple-server:0.4
       resources:
         requests:
           memory: 128Mi

@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -113,13 +114,13 @@ func TestWebHookAddHandler(t *testing.T) {
 
 			buf := &bytes.Buffer{}
 			err := json.NewEncoder(buf).Encode(fixture)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			r, err := http.NewRequest(http.MethodGet, url, buf)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			resp, err := client.Do(r)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			defer resp.Body.Close() //nolint:errcheck
 			assert.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -164,7 +165,7 @@ func TestWebHookFleetValidationHandler(t *testing.T) {
 							"template": {
 								"spec": {
 									"containers": [{
-										"image": "us-docker.pkg.dev/agones-images/examples/simple-game-server:0.44",
+										"image": "us-docker.pkg.dev/agones-images/examples/simple-game-server:0.45",
 										"name": false
 									}]
 								}
@@ -209,17 +210,17 @@ func TestWebHookFleetValidationHandler(t *testing.T) {
 
 			buf := &bytes.Buffer{}
 			err := json.NewEncoder(buf).Encode(fixture)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			r, err := http.NewRequest(http.MethodGet, url, buf)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			resp, err := client.Do(r)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			defer resp.Body.Close() //nolint:errcheck
 			assert.Equal(t, http.StatusOK, resp.StatusCode)
 			body, err := io.ReadAll(resp.Body)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			expected := "cannot unmarshal bool into Go struct field Container.spec.template.spec.template.spec.containers.name of type string"
 			assert.Contains(t, string(body), expected)

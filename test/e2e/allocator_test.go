@@ -116,7 +116,7 @@ func TestAllocatorWithSelectors(t *testing.T) {
 	var err error
 
 	flt, err = helper.CreateFleet(ctx, framework.Namespace, framework)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer framework.AgonesClient.AgonesV1().Fleets(framework.Namespace).Delete(ctx, flt.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
@@ -229,9 +229,7 @@ func TestRestAllocatorWithDeprecatedRequired(t *testing.T) {
 	tlsCA := helper.RefreshAllocatorTLSCerts(ctx, t, ip, framework)
 
 	flt, err := helper.CreateFleet(ctx, framework.Namespace, framework)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
 	defer framework.AgonesClient.AgonesV1().Fleets(framework.Namespace).Delete(ctx, flt.Name, metav1.DeleteOptions{}) //nolint:errcheck
 
@@ -243,23 +241,16 @@ func TestRestAllocatorWithDeprecatedRequired(t *testing.T) {
 		Metadata:                     &pb.MetaPatch{Labels: map[string]string{"gslabel": "allocatedbytest"}},
 	}
 	tlsCfg, err := helper.GetTLSConfig(ctx, allocatorClientSecretNamespace, allocatorClientSecretName, tlsCA, framework)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 	client := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 		},
 	}
 	jsonRes, err := json.Marshal(request)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 	req, err := http.NewRequest(http.MethodPost, "https://"+requestURL+"/gameserverallocation", bytes.NewBuffer(jsonRes))
-	if !assert.NoError(t, err) {
-		logrus.WithError(err).Info("failed to create rest request")
-		return
-	}
+	require.NoError(t, err, "failed to create rest request")
 
 	// wait for the allocation system to come online
 	err = wait.PollUntilContextTimeout(context.Background(), 2*time.Second, 5*time.Minute, true, func(_ context.Context) (bool, error) {
@@ -312,7 +303,7 @@ func TestAllocatorWithCountersAndLists(t *testing.T) {
 			},
 		}
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer framework.AgonesClient.AgonesV1().Fleets(framework.Namespace).Delete(ctx, flt.Name, metav1.DeleteOptions{}) //nolint:errcheck
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
 
@@ -392,7 +383,7 @@ func TestRestAllocatorWithCountersAndLists(t *testing.T) {
 			},
 		}
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer framework.AgonesClient.AgonesV1().Fleets(framework.Namespace).Delete(ctx, flt.Name, metav1.DeleteOptions{}) //nolint:errcheck
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
 
@@ -426,22 +417,16 @@ func TestRestAllocatorWithCountersAndLists(t *testing.T) {
 	}
 	err = wait.PollUntilContextTimeout(context.Background(), 2*time.Second, 5*time.Minute, true, func(ctx context.Context) (bool, error) {
 		tlsCfg, err := helper.GetTLSConfig(ctx, allocatorClientSecretNamespace, allocatorClientSecretName, tlsCA, framework)
-		if !assert.NoError(t, err) {
-			return false, err
-		}
+		require.NoError(t, err)
 		client := &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: tlsCfg,
 			},
 		}
 		jsonRes, err := protojson.Marshal(request)
-		if !assert.NoError(t, err) {
-			return false, nil
-		}
+		require.NoError(t, err)
 		req, err := http.NewRequest(http.MethodPost, "https://"+requestURL+"/gameserverallocation", bytes.NewBuffer(jsonRes))
-		if !assert.NoError(t, err) {
-			return false, nil
-		}
+		require.NoError(t, err)
 		resp, err := client.Do(req)
 		if err != nil {
 			return false, nil
@@ -491,23 +476,16 @@ func TestRestAllocatorWithSelectors(t *testing.T) {
 		Metadata:            &pb.MetaPatch{Labels: map[string]string{"gslabel": "allocatedbytest", "blue-frog.fred_thing": "test.dog_fred-blue"}},
 	}
 	tlsCfg, err := helper.GetTLSConfig(ctx, allocatorClientSecretNamespace, allocatorClientSecretName, tlsCA, framework)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 	client := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 		},
 	}
 	jsonRes, err := json.Marshal(request)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 	req, err := http.NewRequest(http.MethodPost, "https://"+requestURL+"/gameserverallocation", bytes.NewBuffer(jsonRes))
-	if !assert.NoError(t, err) {
-		logrus.WithError(err).Info("failed to create rest request")
-		return
-	}
+	require.NoError(t, err, "failed to create rest request")
 
 	// wait for the allocation system to come online
 	var response pb.AllocationResponse
@@ -556,9 +534,7 @@ func TestAllocatorCrossNamespace(t *testing.T) {
 
 	namespaceB := fmt.Sprintf("allocator-b-%s", uuid.NewUUID())
 	err := framework.CreateNamespace(namespaceB)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 	defer func() {
 		if derr := framework.DeleteNamespace(namespaceB); derr != nil {
 			t.Error(derr)
@@ -586,9 +562,7 @@ func TestAllocatorCrossNamespace(t *testing.T) {
 
 	// Create a fleet in namespace B. Allocation should not happen in A according to policy
 	flt, err := helper.CreateFleet(ctx, namespaceB, framework)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 	framework.AssertFleetCondition(t, flt, e2e.FleetReadyCount(flt.Spec.Replicas))
 	defer framework.AgonesClient.AgonesV1().Fleets(namespaceB).Delete(ctx, flt.Name, metav1.DeleteOptions{}) //nolint:errcheck
 

@@ -15,10 +15,10 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 func main() {
@@ -37,9 +37,9 @@ func main() {
 	default:
 		log.Fatal("usage: govanityurls [CONFIG]")
 	}
-	log.Printf("loading: %s", configPath)
+	log.Printf("loading: %s", configPath) //nolint:gosec // configPath is the operator-supplied command line argument
 
-	vanity, err := os.ReadFile(configPath)
+	vanity, err := os.ReadFile(configPath) //nolint:gosec // as above
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -48,7 +48,11 @@ func main() {
 		log.Fatal(err)
 	}
 	http.Handle("/", h)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
+	srv := &http.Server{
+		Addr:              ":" + port,
+		ReadHeaderTimeout: 60 * time.Second,
+	}
+	log.Fatal(srv.ListenAndServe())
 }
 
 func defaultHost(r *http.Request) string {
