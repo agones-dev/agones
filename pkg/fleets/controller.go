@@ -735,8 +735,6 @@ func (c *Controller) updateFleetStatus(ctx context.Context, fleet *agonesv1.Flee
 
 	fCopy.Status.Counters = make(map[string]agonesv1.AggregatedCounterStatus)
 	fCopy.Status.Lists = make(map[string]agonesv1.AggregatedListStatus)
-	// clear any player status left over from when PlayerTracking aggregation was enabled
-	fCopy.Status.Players = nil
 
 	for _, gsSet := range list {
 		fCopy.Status.Replicas += gsSet.Status.Replicas

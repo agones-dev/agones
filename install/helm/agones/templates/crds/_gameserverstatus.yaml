@@ -63,19 +63,6 @@ status:
       type: string
       nullable: true
       format: date-time
-    players:
-      type: object
-      nullable: true
-      properties:
-        count:
-          type: integer
-        capacity:
-          type: integer
-        ids:
-          type: array
-          nullable: true
-          items:
-            type: string
     counters:
       type: object
       title: Map of player, room, session, etc. counters

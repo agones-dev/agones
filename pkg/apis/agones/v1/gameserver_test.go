@@ -155,19 +155,18 @@ func TestGameServerApplyDefaults(t *testing.T) {
 		return gs
 	}
 	type expected struct {
-		container           string
-		protocol            corev1.Protocol
-		state               GameServerState
-		policy              PortPolicy
-		portRange           string
-		health              Health
-		scheduling          apis.SchedulingStrategy
-		sdkServer           SdkServer
-		alphaPlayerCapacity *int64
-		counterSpec         map[string]CounterStatus
-		listSpec            map[string]ListStatus
-		evictionSafeSpec    EvictionSafe
-		evictionSafeStatus  EvictionSafe
+		container          string
+		protocol           corev1.Protocol
+		state              GameServerState
+		policy             PortPolicy
+		portRange          string
+		health             Health
+		scheduling         apis.SchedulingStrategy
+		sdkServer          SdkServer
+		counterSpec        map[string]CounterStatus
+		listSpec           map[string]ListStatus
+		evictionSafeSpec   EvictionSafe
+		evictionSafeStatus EvictionSafe
 	}
 	wantDefaultAnd := func(f func(e *expected)) expected {
 		e := expected{
@@ -417,12 +416,6 @@ func TestGameServerApplyDefaults(t *testing.T) {
 			assert.Equal(t, test.expected.scheduling, test.gameServer.Spec.Scheduling)
 			assert.Equal(t, test.expected.health, test.gameServer.Spec.Health)
 			assert.Equal(t, test.expected.sdkServer, test.gameServer.Spec.SdkServer)
-			if test.expected.alphaPlayerCapacity != nil {
-				assert.Equal(t, *test.expected.alphaPlayerCapacity, test.gameServer.Status.Players.Capacity)
-			} else {
-				assert.Nil(t, test.gameServer.Spec.Players)
-				assert.Nil(t, test.gameServer.Status.Players)
-			}
 			if len(test.expected.evictionSafeSpec) > 0 {
 				assert.Equal(t, test.expected.evictionSafeSpec, spec.Eviction.Safe)
 			} else {
