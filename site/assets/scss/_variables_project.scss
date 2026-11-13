@@ -159,3 +159,9 @@ p.display-2 {
     font-weight: 100;
     line-height: 1.2;
 }
+
+// Annual Agones Survey banner, fixed above the navbar on md+ viewports. Docsy offsets page
+// content, sidebars and anchor scrolling by $td-navbar-min-height, so it includes the banner.
+$agones-navbar-height: 4rem;
+$survey-banner-height: 2.5rem;
+$td-navbar-min-height: $agones-navbar-height + $survey-banner-height;
