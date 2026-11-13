@@ -353,7 +353,7 @@ class AGONES_EXPORT  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED RemoveListValueReques
   [[nodiscard]] static const RemoveListValueRequest& default_instance() {
     return *::google::protobuf::internal::MessageGlobalsBase::ToDefaultInstance<RemoveListValueRequest>(&RemoveListValueRequest_globals_);
   }
-  static constexpr int kIndexInFileMessages = 25;
+  static constexpr int kIndexInFileMessages = 24;
   friend void swap(RemoveListValueRequest& a, RemoveListValueRequest& b) { a.Swap(&b); }
   inline void Swap(RemoveListValueRequest* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -576,7 +576,7 @@ class AGONES_EXPORT  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED List final : public :
   [[nodiscard]] static const List& default_instance() {
     return *::google::protobuf::internal::MessageGlobalsBase::ToDefaultInstance<List>(&List_globals_);
   }
-  static constexpr int kIndexInFileMessages = 21;
+  static constexpr int kIndexInFileMessages = 20;
   friend void swap(List& a, List& b) { a.Swap(&b); }
   inline void Swap(List* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -1046,7 +1046,7 @@ class AGONES_EXPORT  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED GetListRequest final 
   [[nodiscard]] static const GetListRequest& default_instance() {
     return *::google::protobuf::internal::MessageGlobalsBase::ToDefaultInstance<GetListRequest>(&GetListRequest_globals_);
   }
-  static constexpr int kIndexInFileMessages = 22;
+  static constexpr int kIndexInFileMessages = 21;
   friend void swap(GetListRequest& a, GetListRequest& b) { a.Swap(&b); }
   inline void Swap(GetListRequest* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -1252,7 +1252,7 @@ class AGONES_EXPORT  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED GetCounterRequest fin
   [[nodiscard]] static const GetCounterRequest& default_instance() {
     return *::google::protobuf::internal::MessageGlobalsBase::ToDefaultInstance<GetCounterRequest>(&GetCounterRequest_globals_);
   }
-  static constexpr int kIndexInFileMessages = 19;
+  static constexpr int kIndexInFileMessages = 18;
   friend void swap(GetCounterRequest& a, GetCounterRequest& b) { a.Swap(&b); }
   inline void Swap(GetCounterRequest* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -3016,7 +3016,7 @@ class AGONES_EXPORT  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED Counter final : publi
   [[nodiscard]] static const Counter& default_instance() {
     return *::google::protobuf::internal::MessageGlobalsBase::ToDefaultInstance<Counter>(&Counter_globals_);
   }
-  static constexpr int kIndexInFileMessages = 17;
+  static constexpr int kIndexInFileMessages = 16;
   friend void swap(Counter& a, Counter& b) { a.Swap(&b); }
   inline void Swap(Counter* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -3246,7 +3246,7 @@ class AGONES_EXPORT  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED AddListValueRequest f
   [[nodiscard]] static const AddListValueRequest& default_instance() {
     return *::google::protobuf::internal::MessageGlobalsBase::ToDefaultInstance<AddListValueRequest>(&AddListValueRequest_globals_);
   }
-  static constexpr int kIndexInFileMessages = 24;
+  static constexpr int kIndexInFileMessages = 23;
   friend void swap(AddListValueRequest& a, AddListValueRequest& b) { a.Swap(&b); }
   inline void Swap(AddListValueRequest* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -3469,7 +3469,7 @@ class AGONES_EXPORT  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED UpdateListRequest fin
   [[nodiscard]] static const UpdateListRequest& default_instance() {
     return *::google::protobuf::internal::MessageGlobalsBase::ToDefaultInstance<UpdateListRequest>(&UpdateListRequest_globals_);
   }
-  static constexpr int kIndexInFileMessages = 23;
+  static constexpr int kIndexInFileMessages = 22;
   friend void swap(UpdateListRequest& a, UpdateListRequest& b) { a.Swap(&b); }
   inline void Swap(UpdateListRequest* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -4329,7 +4329,7 @@ class AGONES_EXPORT  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED CounterUpdateRequest 
   [[nodiscard]] static const CounterUpdateRequest& default_instance() {
     return *::google::protobuf::internal::MessageGlobalsBase::ToDefaultInstance<CounterUpdateRequest>(&CounterUpdateRequest_globals_);
   }
-  static constexpr int kIndexInFileMessages = 18;
+  static constexpr int kIndexInFileMessages = 17;
   friend void swap(CounterUpdateRequest& a, CounterUpdateRequest& b) { a.Swap(&b); }
   inline void Swap(CounterUpdateRequest* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -4583,7 +4583,7 @@ class AGONES_EXPORT  PROTOBUF_FUTURE_ADD_EARLY_WARN_UNUSED UpdateCounterRequest 
   [[nodiscard]] static const UpdateCounterRequest& default_instance() {
     return *::google::protobuf::internal::MessageGlobalsBase::ToDefaultInstance<UpdateCounterRequest>(&UpdateCounterRequest_globals_);
   }
-  static constexpr int kIndexInFileMessages = 20;
+  static constexpr int kIndexInFileMessages = 19;
   friend void swap(UpdateCounterRequest& a, UpdateCounterRequest& b) { a.Swap(&b); }
   inline void Swap(UpdateCounterRequest* PROTOBUF_NONNULL other) {
     if (other == this) return;
