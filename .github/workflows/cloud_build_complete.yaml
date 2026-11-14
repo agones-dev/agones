@@ -1,0 +1,50 @@
+---
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Runs when the Cloud Build PR build (agones-dev-pull-request-build) finishes. Each job runs a
+# subcommand of build/scripts/cloud-build-complete, which works from the check run event and the
+# public build log, so it needs no Google Cloud credentials.
+# check_run workflows only run from the default branch, and no job here checks out PR code.
+name: Cloud Build complete
+on:
+  check_run:
+    types: [completed]
+permissions: {}
+jobs:
+  # If the website preview was deployed, record it as a GitHub Deployment on the PR's head commit.
+  website-preview:
+    if: >-
+      github.event.check_run.app.slug == 'google-cloud-build' &&
+      startsWith(github.event.check_run.name, 'agones-dev-pull-request-build') &&
+      github.event.check_run.conclusion != 'action_required'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      # check_run workflows run on the default branch, so this checks out main, never PR code.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: build/scripts/cloud-build-complete
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e  # v7.0.0
+        with:
+          go-version-file: build/scripts/cloud-build-complete/go.mod
+          cache-dependency-path: build/scripts/cloud-build-complete/go.sum
+      - name: Create a deployment for the website preview
+        working-directory: build/scripts/cloud-build-complete
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: go run . website-preview
