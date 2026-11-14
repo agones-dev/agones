@@ -116,10 +116,10 @@ func ConvertGSAToAllocationRequest(in *allocationv1.GameServerAllocation) *pb.Al
 	l := len(out.GetGameServerSelectors())
 	if l > 0 {
 		// Sets all but the last GameServerSelector as PreferredGameServerSelectors
-		//nolint:staticcheck // SA1019: double written for clusters that predate gameServerSelectors
+		// Deprecated field, double written for clusters that predate gameServerSelectors.
 		out.PreferredGameServerSelectors = out.GetGameServerSelectors()[:l-1]
 		// Sets the last GameServerSelector as RequiredGameServerSelector
-		//nolint:staticcheck // SA1019: double written for clusters that predate gameServerSelectors
+		// Deprecated field, double written for clusters that predate gameServerSelectors.
 		out.RequiredGameServerSelector = out.GetGameServerSelectors()[l-1]
 	}
 
