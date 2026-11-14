@@ -82,6 +82,9 @@ const (
 	// FeatureProcessorAllocator is a feature flag to enable/disable the processor allocator feature.
 	FeatureProcessorAllocator = "ProcessorAllocator"
 
+	// FeatureWasmAllocation is a feature flag to enable/disable Wasm plugins that run as part of allocation.
+	FeatureWasmAllocation Feature = "WasmAllocation"
+
 	////////////////
 	// Example feature
 
@@ -166,6 +169,7 @@ var (
 
 		// Dev features
 		FeatureProcessorAllocator: false,
+		FeatureWasmAllocation:     false,
 
 		// Example feature
 		FeatureExample: false,
