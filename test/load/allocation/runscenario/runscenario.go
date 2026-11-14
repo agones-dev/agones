@@ -23,8 +23,11 @@ import (
 	"crypto/x509"
 	"errors"
 	"flag"
+	"fmt"
 	"log"
+	"math"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -84,6 +87,24 @@ type scenario struct {
 	intervalMillisecond int
 }
 
+type result struct {
+	end     time.Time
+	latency time.Duration
+	code    allocErrorCode
+}
+
+// summary aggregates the results of one or more scenarios.
+type summary struct {
+	sent              uint64
+	succeeded         uint64
+	failed            uint64
+	succeededInWindow uint64
+	window            time.Duration
+	elapsed           time.Duration
+	latencies         []time.Duration
+	errors            map[allocErrorCode]uint64
+}
+
 func main() {
 	flag.Parse()
 
@@ -94,80 +115,127 @@ func main() {
 	}
 
 	scenarios := readScenarios(*scenariosFile)
-	var totalAllocCnt uint64
-	var totalFailureCnt uint64
-	var totalDuration float64
-
-	totalFailureDtls := allocErrorCodeCntMap()
+	total := summary{errors: allocErrorCodeCntMap()}
 	for i, sc := range *scenarios {
 		logger.Printf("\n\n%v :Running Scenario %v with %v clients submitting requests every %vms for %v\n===================\n", time.Now(), i+1, sc.numOfClients, sc.intervalMillisecond, sc.duration)
 
-		var wg sync.WaitGroup
-		failureCnts := make([]uint64, sc.numOfClients)
-		allocCnts := make([]uint64, sc.numOfClients)
-		failureDtls := make([]map[allocErrorCode]uint64, sc.numOfClients)
-		for k := 0; k < sc.numOfClients; k++ {
-			wg.Add(1)
-			go func(clientID int) {
-				defer wg.Done()
-				failureDtls[clientID] = allocErrorCodeCntMap()
-				durCtx, cancel := context.WithTimeout(context.Background(), sc.duration)
-				defer cancel()
-				conn, err := grpc.NewClient(endpoint, dialOpts)
-				if err != nil {
-					logger.Printf("Failed to dial for client %v: %v", clientID, err)
-					return
-				}
-				client := pb.NewAllocationServiceClient(conn)
-				var wgc sync.WaitGroup
-				for durCtx.Err() == nil {
-					wgc.Go(func() {
-						if err := allocate(client); err != noerror {
-							tmpVar := failureDtls[clientID][err]
-							atomic.AddUint64(&tmpVar, 1)
-							atomic.AddUint64(&failureCnts[clientID], 1)
-							failureDtls[clientID][err] = tmpVar
-						}
-					})
-					atomic.AddUint64(&allocCnts[clientID], 1)
-					time.Sleep(time.Duration(sc.intervalMillisecond) * time.Millisecond)
-				}
-				wgc.Wait()
-				_ = conn.Close() // Ignore error handling because the connection will be closed when the main func exits anyway.
-			}(k)
-		}
-		wg.Wait()
+		s := runScenario(endpoint, dialOpts, sc)
 		logger.Printf("\nFinished Scenario %v\n", i+1)
-
-		var scnFailureCnt uint64
-		var scnAllocCnt uint64
-		scnErrDtls := allocErrorCodeCntMap()
-		for j := 0; j < sc.numOfClients; j++ {
-			scnAllocCnt += atomic.LoadUint64(&allocCnts[j])
-			scnFailureCnt += atomic.LoadUint64(&failureCnts[j])
-			for k, v := range failureDtls[j] {
-				totalFailureDtls[k] += v
-				scnErrDtls[k] += v
-			}
-		}
-		totalAllocCnt += scnAllocCnt
-		totalFailureCnt += scnFailureCnt
-		totalDuration += sc.duration.Seconds()
-		for k, v := range scnErrDtls {
-			if k != noerror {
-				logger.Printf("Count: %v\t\tError: %v", v, k)
-			}
-		}
-		logger.Printf("\n\n%v\nScenario Failure Count: %v, Allocation Count: %v, Failure rate: %v, allocation rate: %v", time.Now(), scnFailureCnt, scnAllocCnt, float64(scnFailureCnt)/float64(scnAllocCnt), float64(scnAllocCnt-scnFailureCnt)/sc.duration.Seconds())
+		s.print(fmt.Sprintf("Scenario %v", i+1))
+		total.add(s)
 	}
 
-	logger.Print("\nFinal Error Totals\n")
-	for k, v := range totalFailureDtls {
+	logger.Print("\nFinal Totals\n")
+	total.print("Final Total")
+}
+
+func runScenario(endpoint string, dialOpts grpc.DialOption, sc scenario) summary {
+	var (
+		mu      sync.Mutex
+		results []result
+		sent    atomic.Uint64
+		wg      sync.WaitGroup
+	)
+	start := time.Now()
+	windowEnd := start.Add(sc.duration)
+	durCtx, cancel := context.WithDeadline(context.Background(), windowEnd)
+	defer cancel()
+
+	for k := 0; k < sc.numOfClients; k++ {
+		wg.Go(func() {
+			conn, err := grpc.NewClient(endpoint, dialOpts)
+			if err != nil {
+				logger.Printf("Failed to dial for client %v: %v", k, err)
+				return
+			}
+			defer func() { _ = conn.Close() }() // Ignore error handling because the connection will be closed when the main func exits anyway.
+			client := pb.NewAllocationServiceClient(conn)
+			ticker := time.NewTicker(time.Duration(sc.intervalMillisecond) * time.Millisecond)
+			defer ticker.Stop()
+
+			var wgc sync.WaitGroup
+			defer wgc.Wait()
+			for durCtx.Err() == nil {
+				sent.Add(1)
+				wgc.Go(func() {
+					reqStart := time.Now()
+					code := allocate(client)
+					end := time.Now()
+					mu.Lock()
+					results = append(results, result{end: end, latency: end.Sub(reqStart), code: code})
+					mu.Unlock()
+				})
+				select {
+				case <-durCtx.Done():
+				case <-ticker.C:
+				}
+			}
+		})
+	}
+	wg.Wait()
+
+	s := summary{sent: sent.Load(), window: sc.duration, errors: allocErrorCodeCntMap()}
+	lastEnd := windowEnd
+	for _, r := range results {
+		if r.end.After(lastEnd) {
+			lastEnd = r.end
+		}
+		if r.code != noerror {
+			s.failed++
+			s.errors[r.code]++
+			continue
+		}
+		s.succeeded++
+		s.latencies = append(s.latencies, r.latency)
+		if !r.end.After(windowEnd) {
+			s.succeededInWindow++
+		}
+	}
+	s.elapsed = lastEnd.Sub(start)
+	return s
+}
+
+func (s *summary) add(o summary) {
+	s.sent += o.sent
+	s.succeeded += o.succeeded
+	s.failed += o.failed
+	s.succeededInWindow += o.succeededInWindow
+	s.window += o.window
+	s.elapsed += o.elapsed
+	s.latencies = append(s.latencies, o.latencies...)
+	for k, v := range o.errors {
+		s.errors[k] += v
+	}
+}
+
+func (s *summary) print(label string) {
+	for k, v := range s.errors {
 		if k != noerror {
 			logger.Printf("Count: %v\t\tError: %v", v, k)
 		}
 	}
-	logger.Printf("\n\n%v\nFinal Total Failure Count: %v, Total Allocation Count: %v, Failure rate: %v, allocation rate: %v", time.Now(), totalFailureCnt, totalAllocCnt, float64(totalFailureCnt)/float64(totalAllocCnt), float64(totalAllocCnt-totalFailureCnt)/totalDuration)
+	completed := s.succeeded + s.failed
+	logger.Printf("\n\n%v\n%v Requests Sent: %v, Offered rate: %.1f/s", time.Now(), label, s.sent, rate(s.sent, s.window))
+	logger.Printf("%v Allocation Count: %v, Failure Count: %v, Failure rate: %.4f", label, s.succeeded, s.failed, float64(s.failed)/float64(completed))
+	logger.Printf("%v Throughput: %.1f allocations/s (%v allocations in %v, from first request to last response)", label, rate(s.succeeded, s.elapsed), s.succeeded, s.elapsed.Round(time.Millisecond))
+	logger.Printf("%v Throughput within window: %.1f allocations/s (%v allocations completed within %v)", label, rate(s.succeededInWindow, s.window), s.succeededInWindow, s.window)
+	if len(s.latencies) == 0 {
+		return
+	}
+	slices.Sort(s.latencies)
+	logger.Printf("%v Allocation latency: min %v, p50 %v, p90 %v, p95 %v, p99 %v, max %v", label,
+		s.latencies[0].Round(time.Millisecond), percentile(s.latencies, 50), percentile(s.latencies, 90),
+		percentile(s.latencies, 95), percentile(s.latencies, 99), s.latencies[len(s.latencies)-1].Round(time.Millisecond))
+}
+
+func rate(count uint64, d time.Duration) float64 {
+	return float64(count) / d.Seconds()
+}
+
+// percentile returns the nearest-rank percentile p of the sorted durations.
+func percentile(sorted []time.Duration, p float64) time.Duration {
+	idx := int(math.Ceil(p/100*float64(len(sorted)))) - 1
+	return sorted[max(idx, 0)].Round(time.Millisecond)
 }
 
 func dialOptions(certFile, keyFile, cacertFile string) (grpc.DialOption, error) {

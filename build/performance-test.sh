@@ -55,11 +55,18 @@ sed -i 's/DURATION_REPLACEMENT/'$DURATION'/g' performance-test-variable.txt
 sed -i 's/CLIENTS_REPLACEMENT/'$CLIENTS'/g' performance-test-variable.txt
 sed -i 's/INTERVAL_REPLACEMENT/'$INTERVAL'/g' performance-test-variable.txt
 
+cleanup() {
+    kubectl delete --ignore-not-found -f performance-test-fleet.yaml
+    kubectl delete --ignore-not-found -f performance-test-autoscaler.yaml
+    rm -f performance-test-fleet.yaml performance-test-autoscaler.yaml performance-test-variable.txt
+}
+trap cleanup EXIT
+
 kubectl apply -f performance-test-fleet.yaml
 kubectl apply -f performance-test-autoscaler.yaml
 
 # wait for the fleet to be ready
-while [ $(kubectl get -f performance-test-fleet.yaml -o=jsonpath='{.spec.replicas}') != $(kubectl get -f performance-test-fleet.yaml -o=jsonpath='{.status.readyReplicas}') ]
+while [ "$(kubectl get -f performance-test-fleet.yaml -o=jsonpath='{.spec.replicas}')" != "$(kubectl get -f performance-test-fleet.yaml -o=jsonpath='{.status.readyReplicas}')" ]
 do
     sleep 1
 done
@@ -71,8 +78,4 @@ cat performance-test-variable.txt
 printf "\nStart testing."
 ./runScenario.sh performance-test-variable.txt
 
-kubectl delete -f performance-test-fleet.yaml
-kubectl delete -f performance-test-autoscaler.yaml
 printf "\nFinish testing."
-
-rm performance-test-fleet.yaml performance-test-autoscaler.yaml performance-test-variable.txt
