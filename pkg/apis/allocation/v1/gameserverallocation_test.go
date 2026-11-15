@@ -1072,6 +1072,8 @@ func TestValidateCounterActions(t *testing.T) {
 	fieldPath := field.NewPath("spec.Counters")
 	decrement := agonesv1.GameServerPriorityDecrement
 	increment := agonesv1.GameServerPriorityIncrement
+	list := agonesv1.GameServerPriorityList
+	invalid := "invalid"
 
 	testScenarios := map[string]struct {
 		counterActions map[string]CounterAction
@@ -1123,6 +1125,24 @@ func TestValidateCounterActions(t *testing.T) {
 			counterActions: map[string]CounterAction{
 				"foo": {
 					Action: &decrement,
+				},
+			},
+			wantErr: true,
+		},
+		"Invalid Action": {
+			counterActions: map[string]CounterAction{
+				"foo": {
+					Action: &invalid,
+					Amount: int64Pointer(10),
+				},
+			},
+			wantErr: true,
+		},
+		"List Action used for a Counter": {
+			counterActions: map[string]CounterAction{
+				"foo": {
+					Action: &list,
+					Amount: int64Pointer(10),
 				},
 			},
 			wantErr: true,
@@ -1227,6 +1247,26 @@ func TestGameServerAllocationValidate(t *testing.T) {
 
 	assert.Equal(t, field.ErrorTypeInvalid, allErrs[0].Type)
 	assert.Equal(t, "spec.metadata.labels", allErrs[0].Field)
+
+	// invalid counter action
+	invalidAction := "invalid"
+	gsa = &GameServerAllocation{
+		Spec: GameServerAllocationSpec{
+			Counters: map[string]CounterAction{
+				"foo": {
+					Action: &invalidAction,
+					Amount: int64Pointer(10),
+				},
+			},
+		},
+	}
+	gsa.ApplyDefaults()
+
+	allErrs = gsa.Validate()
+	assert.Len(t, allErrs, 1)
+
+	assert.Equal(t, field.ErrorTypeNotSupported, allErrs[0].Type)
+	assert.Equal(t, "spec.counters[foo].action", allErrs[0].Field)
 }
 
 func TestSortKey(t *testing.T) {

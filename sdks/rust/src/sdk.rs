@@ -22,7 +22,7 @@ mod api {
 use api::sdk_client::SdkClient;
 pub use api::{
     game_server::{
-        status::{PlayerStatus, Port},
+        status::Port,
         ObjectMeta, Spec, Status,
     },
     GameServer,

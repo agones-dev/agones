@@ -23,8 +23,9 @@
  */
 package swagger
 
-type StatusPlayerStatus struct {
+// A representation of a Counter.
+type SdkCounter struct {
+	Name string `json:"name,omitempty"`
 	Count string `json:"count,omitempty"`
 	Capacity string `json:"capacity,omitempty"`
-	Ids []string `json:"ids,omitempty"`
 }
