@@ -25,6 +25,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -47,6 +48,9 @@ var (
 	buildIDRegexp = regexp.MustCompile(`[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`)
 	// Printed by `gcloud app deploy` in the deploy-site-static step of cloudbuild.yaml.
 	previewRegexp = regexp.MustCompile(`(?m)^Step #\d+ - "deploy-site-static": Deployed service \[preview\] to \[(https://[^\]]+)\]`)
+	// Cloud Build ends the log with a bare DONE or ERROR line. Steps still running in parallel can
+	// print after the ERROR line, so it is not always the last line.
+	logEndRegexp = regexp.MustCompile(`(?m)^(DONE|ERROR)\r?$`)
 )
 
 func main() {
@@ -126,15 +130,56 @@ func (w *websitePreview) run(ctx context.Context, event *github.CheckRunEvent) e
 				"did not deploy the website preview, so no deployment was created.\n", buildID, checkRun.GetDetailsURL(), sha[:min(7, len(sha))], owner, repo, sha))
 	}
 
-	existing, _, err := w.gh.Repositories.ListDeployments(ctx, owner, repo, &github.DeploymentsListOptions{SHA: sha, Environment: previewEnvironment})
-	if err != nil {
-		return fmt.Errorf("could not list deployments: %w", err)
+	deploymentID, done, err := w.existingDeployment(ctx, owner, repo, sha)
+	if err != nil || done {
+		return err
 	}
-	if len(existing) > 0 {
-		log.Printf("A %s deployment already exists for %s", previewEnvironment, sha)
-		return nil
+	if deploymentID == 0 {
+		if deploymentID, err = w.createDeployment(ctx, owner, repo, sha); err != nil {
+			return err
+		}
 	}
 
+	if _, _, err := w.gh.Repositories.CreateDeploymentStatus(ctx, owner, repo, deploymentID, &github.DeploymentStatusRequest{
+		State:          github.Ptr("success"),
+		EnvironmentURL: github.Ptr(url),
+		LogURL:         github.Ptr(checkRun.GetDetailsURL()),
+		AutoInactive:   github.Ptr(false),
+	}); err != nil {
+		return fmt.Errorf("could not create deployment status: %w", err)
+	}
+
+	log.Printf("Deployment %d for %s: %s", deploymentID, sha, url)
+	return nil
+}
+
+// existingDeployment returns the ID of the preview deployment for sha, or 0 if there isn't one yet.
+// done is true if that deployment already has a success status. Without one, for example because
+// creating the status failed on a previous run, the caller adds it.
+func (w *websitePreview) existingDeployment(ctx context.Context, owner, repo, sha string) (id int64, done bool, err error) {
+	existing, _, err := w.gh.Repositories.ListDeployments(ctx, owner, repo, &github.DeploymentsListOptions{SHA: sha, Environment: previewEnvironment})
+	if err != nil {
+		return 0, false, fmt.Errorf("could not list deployments: %w", err)
+	}
+	if len(existing) == 0 {
+		return 0, false, nil
+	}
+	id = existing[0].GetID()
+	statuses, _, err := w.gh.Repositories.ListDeploymentStatuses(ctx, owner, repo, id, nil)
+	if err != nil {
+		return 0, false, fmt.Errorf("could not list statuses for deployment %d: %w", id, err)
+	}
+	for _, status := range statuses {
+		if status.GetState() == "success" {
+			log.Printf("Deployment %d for %s already has a success status", id, sha)
+			return id, true, nil
+		}
+	}
+	log.Printf("Deployment %d for %s has no success status, adding one", id, sha)
+	return id, false, nil
+}
+
+func (w *websitePreview) createDeployment(ctx context.Context, owner, repo, sha string) (int64, error) {
 	deployment, _, err := w.gh.Repositories.CreateDeployment(ctx, owner, repo, &github.DeploymentRequest{
 		Ref:         github.Ptr(sha),
 		Environment: github.Ptr(previewEnvironment),
@@ -148,20 +193,9 @@ func (w *websitePreview) run(ctx context.Context, event *github.CheckRunEvent) e
 		ProductionEnvironment: github.Ptr(false),
 	})
 	if err != nil {
-		return fmt.Errorf("could not create deployment: %w", err)
+		return 0, fmt.Errorf("could not create deployment: %w", err)
 	}
-
-	if _, _, err := w.gh.Repositories.CreateDeploymentStatus(ctx, owner, repo, deployment.GetID(), &github.DeploymentStatusRequest{
-		State:          github.Ptr("success"),
-		EnvironmentURL: github.Ptr(url),
-		LogURL:         github.Ptr(checkRun.GetDetailsURL()),
-		AutoInactive:   github.Ptr(false),
-	}); err != nil {
-		return fmt.Errorf("could not create deployment status: %w", err)
-	}
-
-	log.Printf("Created deployment %d for %s: %s", deployment.GetID(), sha, url)
-	return nil
+	return deployment.GetID(), nil
 }
 
 // notice shows message as a notice annotation on the workflow run's summary page, and appends
@@ -185,9 +219,12 @@ func (w *websitePreview) notice(title, message, markdown string) error {
 	return f.Close()
 }
 
-// fetchLog downloads the public build log, retrying in case it is not fully available yet.
+// fetchLog downloads the public build log, retrying while it is unavailable or still being
+// written. If it never looks complete, for example for a cancelled build, it returns the last
+// download.
 func (w *websitePreview) fetchLog(ctx context.Context, url string) ([]byte, error) {
 	const attempts = 5
+	var last []byte
 	var err error
 	for i := range attempts {
 		if i > 0 {
@@ -195,11 +232,25 @@ func (w *websitePreview) fetchLog(ctx context.Context, url string) ([]byte, erro
 			time.Sleep(w.retryDelay)
 		}
 		var body []byte
-		if body, err = w.get(ctx, url); err == nil {
+		if body, err = w.get(ctx, url); err != nil {
+			continue
+		}
+		if logComplete(body) {
 			return body, nil
 		}
+		last = body
+		err = errors.New("build log is incomplete")
+	}
+	if last != nil {
+		log.Printf("Build log still looks incomplete after %d attempts, using it as is", attempts)
+		return last, nil
 	}
 	return nil, fmt.Errorf("could not fetch build log after %d attempts: %w", attempts, err)
+}
+
+// logComplete is whether the build log has been fully written, or already shows the preview.
+func logComplete(buildLog []byte) bool {
+	return logEndRegexp.Match(buildLog) || previewRegexp.Match(buildLog)
 }
 
 func (w *websitePreview) get(ctx context.Context, url string) ([]byte, error) {

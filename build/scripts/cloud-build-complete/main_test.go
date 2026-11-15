@@ -15,6 +15,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -81,10 +82,16 @@ func TestWebsitePreviewRun(t *testing.T) {
 	testCases := []struct {
 		name string
 		// logResponses are the status codes the log server returns, in order; the last one repeats.
-		logResponses       []int
-		logFile            string
-		summary            string
-		existing           int
+		logResponses []int
+		logFile      string
+		// partialLogs is how many successful log responses serve only the start of logFile, as if
+		// it were still being written.
+		partialLogs int
+		summary     string
+		// existingStatuses, if not nil, are the states of an existing deployment for the commit.
+		existingStatuses []string
+		// statusCode is the response code for creating the deployment status, default 201.
+		statusCode         int
 		wantErr            bool
 		wantLogRequests    int
 		wantDeployment     map[string]any
@@ -127,6 +134,27 @@ func TestWebsitePreviewRun(t *testing.T) {
 			wantGitHubRequests: 3,
 		},
 		{
+			name:               "retries a partly written log",
+			logResponses:       []int{http.StatusOK},
+			logFile:            "testdata/success.log",
+			partialLogs:        2,
+			summary:            "Build " + testBuildID + " successful",
+			wantLogRequests:    3,
+			wantDeployment:     map[string]any{"ref": testSHA},
+			wantStatus:         map[string]any{"environment_url": testPreviewURL},
+			wantGitHubRequests: 3,
+		},
+		{
+			name:               "uses a log that never looks complete",
+			logResponses:       []int{http.StatusOK},
+			logFile:            "testdata/success.log",
+			partialLogs:        5,
+			summary:            "Build " + testBuildID + " cancelled",
+			wantLogRequests:    5,
+			wantGitHubRequests: 0,
+			wantNotice:         true,
+		},
+		{
 			name:               "skips a build that did not deploy the preview",
 			logResponses:       []int{http.StatusOK},
 			logFile:            "testdata/failure.log",
@@ -136,13 +164,35 @@ func TestWebsitePreviewRun(t *testing.T) {
 			wantNotice:         true,
 		},
 		{
-			name:               "skips a commit that already has a preview deployment",
+			name:               "skips a commit whose preview deployment has a success status",
 			logResponses:       []int{http.StatusOK},
 			logFile:            "testdata/success.log",
 			summary:            "Build " + testBuildID + " successful",
-			existing:           1,
+			existingStatuses:   []string{"success"},
 			wantLogRequests:    1,
-			wantGitHubRequests: 1,
+			wantGitHubRequests: 2,
+		},
+		{
+			name:               "adds the status to a preview deployment that has none",
+			logResponses:       []int{http.StatusOK},
+			logFile:            "testdata/success.log",
+			summary:            "Build " + testBuildID + " successful",
+			existingStatuses:   []string{},
+			wantLogRequests:    1,
+			wantStatus:         map[string]any{"state": "success", "environment_url": testPreviewURL},
+			wantGitHubRequests: 3,
+		},
+		{
+			name:               "fails when the deployment status can't be created",
+			logResponses:       []int{http.StatusOK},
+			logFile:            "testdata/success.log",
+			summary:            "Build " + testBuildID + " successful",
+			statusCode:         http.StatusInternalServerError,
+			wantErr:            true,
+			wantLogRequests:    1,
+			wantDeployment:     map[string]any{"ref": testSHA},
+			wantStatus:         map[string]any{"environment_url": testPreviewURL},
+			wantGitHubRequests: 3,
 		},
 		{
 			name:               "skips a summary with no build id",
@@ -174,6 +224,7 @@ func TestWebsitePreviewRun(t *testing.T) {
 				mu.Lock()
 				code := tc.logResponses[min(logRequests, len(tc.logResponses)-1)]
 				logRequests++
+				okResponses := logRequests - (len(tc.logResponses) - 1)
 				mu.Unlock()
 				if got, want := r.PathValue("file"), "log-"+testBuildID+".txt"; got != want {
 					t.Errorf("log requested = %q; want %q", got, want)
@@ -182,16 +233,33 @@ func TestWebsitePreviewRun(t *testing.T) {
 					w.WriteHeader(code)
 					return
 				}
-				_, _ = w.Write(readFile(t, tc.logFile))
+				body := readFile(t, tc.logFile)
+				if okResponses <= tc.partialLogs {
+					// Cut the log off before the deploy-site-static step and the end of the build.
+					before, _, found := bytes.Cut(body, []byte(`Starting Step #23 - "deploy-site-static"`))
+					if !found {
+						t.Errorf("%s has no deploy-site-static step to cut the log at", tc.logFile)
+					}
+					body = before
+				}
+				_, _ = w.Write(body)
 			})
 			mux.HandleFunc("GET /repos/agones-dev/agones/deployments", func(w http.ResponseWriter, r *http.Request) {
 				countRequest(&mu, &githubRequests)
 				if got, want := r.URL.Query(), (url.Values{"sha": {testSHA}, "environment": {previewEnvironment}}); !reflect.DeepEqual(got, want) {
 					t.Errorf("list deployments query = %v; want %v", got, want)
 				}
-				list := make([]map[string]any, tc.existing)
-				for i := range list {
-					list[i] = map[string]any{"id": i + 1}
+				list := []map[string]any{}
+				if tc.existingStatuses != nil {
+					list = append(list, map[string]any{"id": 42})
+				}
+				writeJSON(t, w, list)
+			})
+			mux.HandleFunc("GET /repos/agones-dev/agones/deployments/42/statuses", func(w http.ResponseWriter, _ *http.Request) {
+				countRequest(&mu, &githubRequests)
+				list := []map[string]any{}
+				for i, state := range tc.existingStatuses {
+					list = append(list, map[string]any{"id": i + 1, "state": state})
 				}
 				writeJSON(t, w, list)
 			})
@@ -204,6 +272,10 @@ func TestWebsitePreviewRun(t *testing.T) {
 			mux.HandleFunc("POST /repos/agones-dev/agones/deployments/42/statuses", func(w http.ResponseWriter, r *http.Request) {
 				countRequest(&mu, &githubRequests)
 				status = decodeJSON(t, r.Body)
+				if tc.statusCode != 0 {
+					w.WriteHeader(tc.statusCode)
+					return
+				}
 				w.WriteHeader(http.StatusCreated)
 				writeJSON(t, w, map[string]any{"id": 1})
 			})

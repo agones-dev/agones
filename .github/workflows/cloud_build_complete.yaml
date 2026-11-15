@@ -29,6 +29,10 @@ jobs:
       github.event.check_run.app.slug == 'google-cloud-build' &&
       startsWith(github.event.check_run.name, 'agones-dev-pull-request-build') &&
       github.event.check_run.conclusion != 'action_required'
+    # Runs for the same commit wait for each other, so the second sees the first's deployment.
+    concurrency:
+      group: website-preview-${{ github.event.check_run.head_sha }}
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     permissions:
       contents: read
