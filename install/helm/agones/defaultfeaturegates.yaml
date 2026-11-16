@@ -37,6 +37,7 @@ WasmAutoscaler: false
 
 # Dev features
 ProcessorAllocator: false
+WasmAllocation: false
 
 # Example feature
 Example: false
