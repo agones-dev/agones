@@ -221,6 +221,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: agones-extensions-pdb
+  namespace: {{ .Release.Namespace }}
 spec:
 {{- if .Values.agones.extensions.pdb.minAvailable }}
 {{- if .Values.agones.extensions.pdb.maxUnavailable }}

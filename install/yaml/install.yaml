@@ -13,6 +13,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: agones-controller-pdb
+  namespace: agones-system
 spec:
   minAvailable: 1
   selector:
@@ -27,6 +28,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: agones-extensions-pdb
+  namespace: agones-system
 spec:
   minAvailable: 1
   selector:
