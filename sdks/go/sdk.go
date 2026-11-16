@@ -366,7 +366,7 @@ func (s *SDK) GetListValues(key string) ([]string, error) {
 func (s *SDK) AppendListValue(key, value string) error {
 	_, err := s.client.AddListValue(s.ctx, &sdk.AddListValueRequest{Name: key, Value: value})
 	if err != nil {
-		return s.errs.Wrapf(err, "could not append value %s to List %s", value, key)
+		return s.errs.Wrapf(err, "could not get List %s", key)
 	}
 	return nil
 }
@@ -377,7 +377,7 @@ func (s *SDK) AppendListValue(key, value string) error {
 func (s *SDK) DeleteListValue(key, value string) error {
 	_, err := s.client.RemoveListValue(s.ctx, &sdk.RemoveListValueRequest{Name: key, Value: value})
 	if err != nil {
-		return s.errs.Wrapf(err, "could not delete value %s from List %s", value, key)
+		return s.errs.Wrapf(err, "could not get List %s", key)
 	}
 	return nil
 }
