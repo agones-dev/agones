@@ -74,6 +74,13 @@ creating your own `GameServer` management layer, you can explicitly choose what 
 If a `GameServer` is part of a `Fleet`, the `Fleet` management system will _delete_ any `Unhealthy` `GameServers` and
 immediately replace them with a brand new `GameServer` to ensure it has the configured number of Replicas.
 
+{{% feature publishVersion="1.63.0" %}}
+With the `SidecarContainers` feature gate enabled, a `GameServer` that becomes `Unhealthy` before first calling
+`Ready()` is replaced after a backoff delay. There is no delay for the first failure, or for failures in the 10
+seconds after it. After that the delay starts at 10 seconds and doubles up to 5 minutes. The delay resets when a
+`GameServer` in the same `GameServerSet` becomes `Ready`, or after 10 minutes without a failure.
+{{% /feature %}}
+
 ## Configuration Reference
 ```yaml
   # Health checking for the running game server

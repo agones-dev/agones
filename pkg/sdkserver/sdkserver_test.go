@@ -423,6 +423,58 @@ func TestSidecarUpdateState(t *testing.T) {
 	}
 }
 
+func TestSidecarUpdateStateUnhealthyBeforeReady(t *testing.T) {
+	agruntime.FeatureTestMutex.Lock()
+	defer agruntime.FeatureTestMutex.Unlock()
+	require.NoError(t, agruntime.ParseFeatures(string(agruntime.FeatureSidecarContainers)+"=true"))
+
+	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	fixtures := map[agonesv1.GameServerState]bool{
+		agonesv1.GameServerStateScheduled:    true,
+		agonesv1.GameServerStateRequestReady: false,
+		agonesv1.GameServerStateReady:        false,
+	}
+
+	for state, annotated := range fixtures {
+		t.Run(string(state), func(t *testing.T) {
+			m := agtesting.NewMocks()
+			sc, err := defaultSidecar(m)
+			require.NoError(t, err)
+			sc.clock = testclocks.NewFakeClock(now)
+			sc.gsState = agonesv1.GameServerStateUnhealthy
+
+			gs := agonesv1.GameServer{
+				ObjectMeta: metav1.ObjectMeta{Name: sc.gameServerName, Namespace: sc.namespace, ResourceVersion: "0"},
+				Status:     agonesv1.GameServerStatus{State: state},
+			}
+			updated := false
+
+			m.AgonesClient.AddReactor("list", "gameservers", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+				return true, &agonesv1.GameServerList{Items: []agonesv1.GameServer{*gs.DeepCopy()}}, nil
+			})
+			m.AgonesClient.AddReactor("patch", "gameservers", func(action k8stesting.Action) (bool, runtime.Object, error) {
+				updated = true
+				gsCopy := patchGameServer(t, action, &gs)
+				assert.Equal(t, agonesv1.GameServerStateUnhealthy, gsCopy.Status.State)
+				if annotated {
+					assert.Equal(t, now.Format(time.RFC3339), gsCopy.ObjectMeta.Annotations[agonesv1.GameServerUnhealthyBeforeReadyAtAnnotation])
+				} else {
+					assert.NotContains(t, gsCopy.ObjectMeta.Annotations, agonesv1.GameServerUnhealthyBeforeReadyAtAnnotation)
+				}
+				return true, gsCopy, nil
+			})
+
+			ctx := t.Context()
+			sc.informerFactory.Start(ctx.Done())
+			assert.True(t, cache.WaitForCacheSync(ctx.Done(), sc.gameServerSynced))
+			sc.gsWaitForSync.Done()
+
+			require.NoError(t, sc.updateState(ctx))
+			assert.True(t, updated)
+		})
+	}
+}
+
 func TestSidecarHealthLastUpdated(t *testing.T) {
 	t.Parallel()
 	now := time.Now().UTC()

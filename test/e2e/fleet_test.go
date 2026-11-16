@@ -1620,6 +1620,54 @@ func TestFleetRecreateGameServers(t *testing.T) {
 	}
 }
 
+// TestFleetUnhealthyBeforeReadyBackoff checks that a GameServer that keeps crashing before Ready
+// is kept for a while before it is replaced.
+func TestFleetUnhealthyBeforeReadyBackoff(t *testing.T) {
+	if !runtime.FeatureEnabled(runtime.FeatureSidecarContainers) {
+		t.SkipNow()
+	}
+
+	t.Parallel()
+	ctx := t.Context()
+
+	gs := framework.DefaultGameServer(framework.Namespace)
+	gs.Spec.Template.Spec.Containers[0].Image = "alpine:latest"
+	gs.Spec.Template.Spec.Containers[0].Command = []string{"/bin/sh", "-c", "sleep 2; exit 23"}
+	flt := fleetWithGameServerSpecAndReplicas(&gs.Spec, framework.Namespace, 1)
+
+	fleets := framework.AgonesClient.AgonesV1().Fleets(framework.Namespace)
+	flt, err := fleets.Create(ctx, flt, metav1.CreateOptions{})
+	require.NoError(t, err)
+	defer fleets.Delete(ctx, flt.ObjectMeta.Name, metav1.DeleteOptions{}) //nolint:errcheck
+
+	// Without the backoff, an Unhealthy GameServer is gone within a sync.
+	firstSeen := map[string]time.Time{}
+	require.Eventually(t, func() bool {
+		list, err := framework.ListGameServersFromFleet(flt)
+		if err != nil {
+			return false
+		}
+		for i := range list {
+			failed := &list[i]
+			if failed.Status.State != agonesv1.GameServerStateUnhealthy || !failed.ObjectMeta.DeletionTimestamp.IsZero() {
+				continue
+			}
+			if _, ok := failed.ObjectMeta.Annotations[agonesv1.GameServerUnhealthyBeforeReadyAtAnnotation]; !ok {
+				continue
+			}
+			seen, ok := firstSeen[failed.ObjectMeta.Name]
+			if !ok {
+				firstSeen[failed.ObjectMeta.Name] = time.Now()
+				continue
+			}
+			if time.Since(seen) >= 5*time.Second {
+				return true
+			}
+		}
+		return false
+	}, 3*time.Minute, time.Second)
+}
+
 // TestFleetResourceValidation - check that we are not able to use
 // invalid PodTemplate for GameServer Spec with wrong Resource Requests and Limits
 func TestFleetResourceValidation(t *testing.T) {
