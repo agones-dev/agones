@@ -20,6 +20,7 @@ package v1
 
 import (
 	autoscalingv1 "agones.dev/agones/pkg/apis/autoscaling/v1"
+	pluginsv1 "agones.dev/agones/pkg/apis/plugins/v1"
 )
 
 // FleetAutoscalerPolicyApplyConfiguration represents a declarative configuration of the FleetAutoscalerPolicy type for use
@@ -32,7 +33,7 @@ type FleetAutoscalerPolicyApplyConfiguration struct {
 	// Buffer policy config params. Present only if FleetAutoscalerPolicyType = Buffer.
 	Buffer *BufferPolicyApplyConfiguration `json:"buffer,omitempty"`
 	// Webhook policy config params. Present only if FleetAutoscalerPolicyType = Webhook.
-	Webhook *URLConfigurationApplyConfiguration `json:"webhook,omitempty"`
+	Webhook *pluginsv1.URLConfiguration `json:"webhook,omitempty"`
 	// [Stage:Beta]
 	// [FeatureFlag:CountsAndLists]
 	// Counter policy config params. Present only if FleetAutoscalerPolicyType = Counter.
@@ -49,8 +50,10 @@ type FleetAutoscalerPolicyApplyConfiguration struct {
 	// [FeatureFlag:ScheduledAutoscaler]
 	// Chain policy config params. Present only if FleetAutoscalerPolicyType = Chain.
 	Chain *autoscalingv1.ChainPolicy `json:"chain,omitempty"`
+	// [Stage:Alpha]
+	// [FeatureFlag:WasmAutoscaler]
 	// Wasm policy config params. Present only if FleetAutoscalerPolicyType = Wasm.
-	Wasm *WasmPolicyApplyConfiguration `json:"wasm,omitempty"`
+	Wasm *pluginsv1.WasmPolicy `json:"wasm,omitempty"`
 }
 
 // FleetAutoscalerPolicyApplyConfiguration constructs a declarative configuration of the FleetAutoscalerPolicy type for use with
@@ -78,8 +81,8 @@ func (b *FleetAutoscalerPolicyApplyConfiguration) WithBuffer(value *BufferPolicy
 // WithWebhook sets the Webhook field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the Webhook field is set to the value of the last call.
-func (b *FleetAutoscalerPolicyApplyConfiguration) WithWebhook(value *URLConfigurationApplyConfiguration) *FleetAutoscalerPolicyApplyConfiguration {
-	b.Webhook = value
+func (b *FleetAutoscalerPolicyApplyConfiguration) WithWebhook(value pluginsv1.URLConfiguration) *FleetAutoscalerPolicyApplyConfiguration {
+	b.Webhook = &value
 	return b
 }
 
@@ -118,7 +121,7 @@ func (b *FleetAutoscalerPolicyApplyConfiguration) WithChain(value autoscalingv1.
 // WithWasm sets the Wasm field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the Wasm field is set to the value of the last call.
-func (b *FleetAutoscalerPolicyApplyConfiguration) WithWasm(value *WasmPolicyApplyConfiguration) *FleetAutoscalerPolicyApplyConfiguration {
-	b.Wasm = value
+func (b *FleetAutoscalerPolicyApplyConfiguration) WithWasm(value pluginsv1.WasmPolicy) *FleetAutoscalerPolicyApplyConfiguration {
+	b.Wasm = &value
 	return b
 }

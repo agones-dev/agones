@@ -18,8 +18,6 @@ package fleetautoscalers
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
 	stderrors "errors"
 	"fmt"
@@ -39,6 +37,7 @@ import (
 
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
 	autoscalingv1 "agones.dev/agones/pkg/apis/autoscaling/v1"
+	pluginsv1 "agones.dev/agones/pkg/apis/plugins/v1"
 	listeragonesv1 "agones.dev/agones/pkg/client/listers/agones/v1"
 	"agones.dev/agones/pkg/fleets"
 	"agones.dev/agones/pkg/gameservers"
@@ -98,7 +97,7 @@ func computeDesiredFleetSize(ctx context.Context, state *fasState, pol autoscali
 	return replicas, limited, err
 }
 
-func applyWasmPolicy(ctx context.Context, state *fasState, wp *autoscalingv1.WasmPolicy, f *agonesv1.Fleet, log *FasLogger) (int32, bool, error) {
+func applyWasmPolicy(ctx context.Context, state *fasState, wp *pluginsv1.WasmPolicy, f *agonesv1.Fleet, log *FasLogger) (int32, bool, error) {
 	if !runtime.FeatureEnabled(runtime.FeatureWasmAutoscaler) {
 		return 0, false, errs.Errorf("cannot apply WasmPolicy unless feature flag %s is enabled", runtime.FeatureWasmAutoscaler)
 	}
@@ -207,85 +206,23 @@ func applyWasmPolicy(ctx context.Context, state *fasState, wp *autoscalingv1.Was
 }
 
 // buildURLFromConfiguration - build URL for Webhook and set CARoot for client Transport
-func buildURLFromConfiguration(state *fasState, w *autoscalingv1.URLConfiguration) (u *url.URL, err error) {
+func buildURLFromConfiguration(state *fasState, w *pluginsv1.URLConfiguration) (u *url.URL, err error) {
 	if w.URL != nil && w.Service != nil {
 		return nil, errs.New("service and URL cannot be used simultaneously")
 	}
 
 	// if we haven't created the http state yet, let's create the http client, with appropriate tls configuration.
 	if state.httpClient == nil {
-		config := &tls.Config{}
-		state.httpClient = &http.Client{
-			Timeout: 15 * time.Second,
-			Transport: &http.Transport{
-				TLSClientConfig: config,
-			},
-		}
-
-		if w.CABundle != nil {
-			if err := setCABundle(config, w.CABundle); err != nil {
-				return nil, err
-			}
+		state.httpClient, err = w.HTTPClient(15 * time.Second)
+		if err != nil {
+			return nil, err
 		}
 	}
 
-	scheme := "http"
-	if w.CABundle != nil {
-		scheme = "https"
-	}
-
-	if w.URL != nil {
-		if *w.URL == "" {
-			return nil, errs.New("URL was not provided")
-		}
-
-		return url.ParseRequestURI(*w.URL)
-	}
-
-	if w.Service == nil {
-		return nil, errs.New("service was not provided, either URL or Service must be provided")
-	}
-
-	if w.Service.Name == "" {
-		return nil, errs.New("service name was not provided")
-	}
-
-	if w.Service.Path == nil {
-		empty := ""
-		w.Service.Path = &empty
-	}
-
-	if w.Service.Namespace == "" {
-		w.Service.Namespace = "default"
-	}
-
-	return createURL(scheme, w.Service.Name, w.Service.Namespace, *w.Service.Path, w.Service.Port), nil
+	return w.BuildURL()
 }
 
-// moved to a separate method to cover it with unit tests and check that URL corresponds to a proper pattern
-func createURL(scheme, name, namespace, path string, port *int32) *url.URL {
-	var hostPort int32 = 8000
-	if port != nil {
-		hostPort = *port
-	}
-
-	return &url.URL{
-		Scheme: scheme,
-		Host:   fmt.Sprintf("%s.%s.svc:%d", name, namespace, hostPort),
-		Path:   path,
-	}
-}
-
-func setCABundle(tlsConfig *tls.Config, caBundle []byte) error {
-	rootCAs := x509.NewCertPool()
-	if ok := rootCAs.AppendCertsFromPEM(caBundle); !ok {
-		return errs.New("no certs were appended from caBundle")
-	}
-	tlsConfig.RootCAs = rootCAs
-	return nil
-}
-
-func applyWebhookPolicy(ctx context.Context, state *fasState, w *autoscalingv1.URLConfiguration, f *agonesv1.Fleet, fasLog *FasLogger) (replicas int32, limited bool, err error) {
+func applyWebhookPolicy(ctx context.Context, state *fasState, w *pluginsv1.URLConfiguration, f *agonesv1.Fleet, fasLog *FasLogger) (replicas int32, limited bool, err error) {
 	if w == nil {
 		return 0, false, errs.New("webhookPolicy parameter must not be nil")
 	}

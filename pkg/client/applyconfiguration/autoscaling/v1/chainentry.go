@@ -20,6 +20,7 @@ package v1
 
 import (
 	autoscalingv1 "agones.dev/agones/pkg/apis/autoscaling/v1"
+	pluginsv1 "agones.dev/agones/pkg/apis/plugins/v1"
 )
 
 // ChainEntryApplyConfiguration represents a declarative configuration of the ChainEntry type for use
@@ -66,8 +67,8 @@ func (b *ChainEntryApplyConfiguration) WithBuffer(value *BufferPolicyApplyConfig
 // WithWebhook sets the Webhook field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the Webhook field is set to the value of the last call.
-func (b *ChainEntryApplyConfiguration) WithWebhook(value *URLConfigurationApplyConfiguration) *ChainEntryApplyConfiguration {
-	b.FleetAutoscalerPolicyApplyConfiguration.Webhook = value
+func (b *ChainEntryApplyConfiguration) WithWebhook(value pluginsv1.URLConfiguration) *ChainEntryApplyConfiguration {
+	b.FleetAutoscalerPolicyApplyConfiguration.Webhook = &value
 	return b
 }
 
@@ -106,7 +107,7 @@ func (b *ChainEntryApplyConfiguration) WithChain(value autoscalingv1.ChainPolicy
 // WithWasm sets the Wasm field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the Wasm field is set to the value of the last call.
-func (b *ChainEntryApplyConfiguration) WithWasm(value *WasmPolicyApplyConfiguration) *ChainEntryApplyConfiguration {
-	b.FleetAutoscalerPolicyApplyConfiguration.Wasm = value
+func (b *ChainEntryApplyConfiguration) WithWasm(value pluginsv1.WasmPolicy) *ChainEntryApplyConfiguration {
+	b.FleetAutoscalerPolicyApplyConfiguration.Wasm = &value
 	return b
 }

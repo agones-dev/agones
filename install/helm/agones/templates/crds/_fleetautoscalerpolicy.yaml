@@ -13,31 +13,6 @@
 # limitations under the License.
 
 ---
-{{/* schema for a URL configuration for webhooks and wasm */}}
-{{- define "url.configuration" }}
-type: object
-nullable: true
-properties:
-  url:
-    type: string
-  service:
-    type: object
-    required:
-      - namespace
-      - name
-    properties:
-      namespace:
-        type: string
-      name:
-        type: string
-      path:
-        type: string
-      port:
-        type: integer
-  caBundle:
-    type: string
-    format: byte
-{{- end }}
 
 {{/* schema for a fleet autoscaler policy */}}
 {{- define "fleetautoscaler.policy" }}
@@ -164,27 +139,5 @@ policy:
             type: string
           {{- include "fleetautoscaler.policy" (dict "includeChainPolicy" false "includeSchedulePolicy" true "includePolicy" false) | indent 6 }} # Defines which policy to apply during the active period. Required.
     {{- end }}
-    wasm:
-      type: object
-      nullable: true
-      required:
-        - from
-      properties:
-        function: # The exported function to call in the wasm module, defaults to 'scale'
-          type: string
-          default: "scale"
-        config: # Config values to pass to the wasm program on startup
-          type: object
-          additionalProperties:
-            type: string
-        from:
-          type: object
-          required:
-            - url
-          properties:
-            url:
-          {{- include "url.configuration" . | indent 14 }}
-        hash: # optional sha256 hash to match against wasm file (it's optional, but recommended)
-          type: string
-          pattern: "^[a-fA-F0-9]{64}$"
+    {{- include "plugin.wasm" (dict "defaultFunction" "scale") | nindent 4 }}
 {{- end }}
