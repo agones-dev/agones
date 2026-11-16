@@ -69,19 +69,16 @@ func (c *clientStream) receiveBatch() (*allocationpb.BatchRequest, error) {
 		// Check if the message contains a batch request payload
 		payload := msg.GetPayload()
 		if payload == nil {
-			c.logger.Warn("Received message with nil payload")
+			// No payload in this message, skip it
 			continue
 		}
 
-		// Assert that the payload is of type BatchRequest
-		batchPayload, ok := payload.(*allocationpb.ProcessorMessage_BatchRequest)
-		if !ok {
-			c.logger.Warn("Received non-batch request payload")
+		batch := msg.GetBatchRequest()
+		if batch == nil {
+			// No batch request in this message, skip it
 			continue
 		}
 
-		// Extract the batch request from the payload
-		batch := batchPayload.BatchRequest
 		c.logger.WithFields(logrus.Fields{
 			logFieldBatchID:      batch.GetBatchId(),
 			logFieldRequestCount: len(batch.GetRequests()),
