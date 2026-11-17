@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# ForceUpdate 12 -- change here if you need to force a rebuild
+# ForceUpdate 13 -- change here if you need to force a rebuild
 
 FROM debian:trixie
 
@@ -142,8 +142,6 @@ RUN ARCH=$(dpkg --print-architecture) && \
     unzip ./terraform.zip && mv terraform /usr/local/bin/
 
 # code generation scripts
-# The image tag is a hash of this Dockerfile only, so change this file when the scripts change
-# (last: gen-crd-code.sh generates apply configurations for pkg/apis/plugins).
 COPY *.sh /root/
 RUN chmod +x /root/*.sh
 
