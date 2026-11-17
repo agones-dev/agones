@@ -1115,3 +1115,17 @@ func newFakeAllocator() (*Allocator, agtesting.Mocks) {
 
 	return a, m
 }
+
+func TestAllocatorAllocateStopsWaitingOnFullQueue(t *testing.T) {
+	t.Parallel()
+
+	// a full queue that nothing reads from, as when allocation is stalled
+	allocator := &Allocator{pendingRequests: make(chan request, 1)}
+	allocator.pendingRequests <- request{}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 50*time.Millisecond)
+	defer cancel()
+
+	_, err := allocator.allocate(ctx, &allocationv1.GameServerAllocation{})
+	assert.ErrorIs(t, err, ErrTotalTimeoutExceeded)
+}

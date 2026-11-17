@@ -17,12 +17,14 @@ package processor
 import (
 	"context"
 	"errors"
+	"io"
 	"testing"
 	"time"
 
 	allocationpb "agones.dev/agones/pkg/allocation/go"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/metadata"
 )
@@ -226,4 +228,43 @@ func TestProcessorClient_Allocate(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestProcessorClient_HandleStreamStopsPullHandler(t *testing.T) {
+	logger := logrus.New()
+	logger.SetOutput(io.Discard)
+	p, ok := NewClient(Config{ClientID: "test-client", AllocationTimeout: time.Minute}, logger).(*client)
+	require.True(t, ok)
+	stream := &mockStream{
+		recvChan: make(chan *allocationpb.ProcessorMessage),
+		sendChan: make(chan *allocationpb.ProcessorMessage),
+	}
+	pendingRequests := func() int {
+		p.batchMutex.RLock()
+		defer p.batchMutex.RUnlock()
+		return len(p.pendingRequests)
+	}
+
+	// queue a request, as the pull handler only sends non-empty batches
+	go func() { _, _ = p.Allocate(t.Context(), &allocationpb.AllocationRequest{}) }()
+	require.Eventually(t, func() bool { return pendingRequests() == 1 }, 5*time.Second, time.Millisecond)
+
+	// the context outlives the stream, as on a reconnect, so only the stream ending can stop the pull handler
+	done := make(chan error, 1)
+	go func() { done <- p.handleStream(t.Context(), stream) }()
+
+	// the pull handler takes the batch, and is held sending it as nothing reads the stream
+	stream.recvChan <- &allocationpb.ProcessorMessage{
+		Payload: &allocationpb.ProcessorMessage_Pull{Pull: &allocationpb.PullRequest{}},
+	}
+	require.Eventually(t, func() bool { return pendingRequests() == 0 }, 5*time.Second, time.Millisecond)
+
+	// the stream ends while the batch is being sent
+	close(stream.recvChan)
+	assert.Never(t, func() bool { return len(done) > 0 }, 50*time.Millisecond, 5*time.Millisecond,
+		"handleStream must not return before its pull handler")
+
+	// once the batch is read, the pull handler stops with its stream and handleStream returns
+	assert.NotNil(t, receive(t, stream.sendChan).GetBatchRequest())
+	assert.Error(t, receive(t, done))
 }
