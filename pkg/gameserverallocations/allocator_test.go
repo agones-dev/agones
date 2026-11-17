@@ -1293,7 +1293,7 @@ func TestAllocatorListenAndBatchAllocateCountsAndLists(t *testing.T) {
 				// Check if the allocation resulted in an error as expected
 				if w.err != nil {
 					assert.Nil(t, res[i].gs)
-					assert.ErrorIs(t, res[i].err, w.err)
+					require.ErrorIs(t, res[i].err, w.err)
 					continue
 				}
 				require.NoError(t, res[i].err)
@@ -1405,17 +1405,20 @@ func TestAllocatorAllocateNoQuickNoGameServerError(t *testing.T) {
 	// Two concurrent allocations must both land on the only GameServer, even though it is
 	// already taken by the first one in the same batch.
 	var wg sync.WaitGroup
-	for range 2 {
+	results := make([]k8sruntime.Object, 2)
+	errs := make([]error, 2)
+	for i := range 2 {
 		wg.Go(func() {
-			result, err := a.Allocate(ctx, gsa.DeepCopy())
-			assert.NoError(t, err)
-			out, ok := result.(*allocationv1.GameServerAllocation)
-			if !assert.True(t, ok) {
-				return
-			}
-			assert.Equal(t, allocationv1.GameServerAllocationAllocated, out.Status.State)
-			assert.Equal(t, gs1.Name, out.Status.GameServerName)
+			results[i], errs[i] = a.Allocate(ctx, gsa.DeepCopy())
 		})
 	}
 	wg.Wait()
+
+	for i := range 2 {
+		require.NoError(t, errs[i])
+		out, ok := results[i].(*allocationv1.GameServerAllocation)
+		require.True(t, ok)
+		assert.Equal(t, allocationv1.GameServerAllocationAllocated, out.Status.State)
+		assert.Equal(t, gs1.Name, out.Status.GameServerName)
+	}
 }
