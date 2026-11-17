@@ -22,10 +22,12 @@ import (
 	v1 "agones.dev/agones/pkg/apis/agones/v1"
 	autoscalingv1 "agones.dev/agones/pkg/apis/autoscaling/v1"
 	multiclusterv1 "agones.dev/agones/pkg/apis/multicluster/v1"
+	pluginsv1 "agones.dev/agones/pkg/apis/plugins/v1"
 	agonesv1 "agones.dev/agones/pkg/client/applyconfiguration/agones/v1"
 	applyconfigurationautoscalingv1 "agones.dev/agones/pkg/client/applyconfiguration/autoscaling/v1"
 	internal "agones.dev/agones/pkg/client/applyconfiguration/internal"
 	applyconfigurationmulticlusterv1 "agones.dev/agones/pkg/client/applyconfiguration/multicluster/v1"
+	applyconfigurationpluginsv1 "agones.dev/agones/pkg/client/applyconfiguration/plugins/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	managedfields "k8s.io/apimachinery/pkg/util/managedfields"
@@ -114,6 +116,14 @@ func ForKind(kind schema.GroupVersionKind) interface{} {
 		return &applyconfigurationmulticlusterv1.GameServerAllocationPolicyApplyConfiguration{}
 	case multiclusterv1.SchemeGroupVersion.WithKind("GameServerAllocationPolicySpec"):
 		return &applyconfigurationmulticlusterv1.GameServerAllocationPolicySpecApplyConfiguration{}
+
+		// Group=plugins.agones.dev, Version=v1
+	case pluginsv1.SchemeGroupVersion.WithKind("URLConfiguration"):
+		return &applyconfigurationpluginsv1.URLConfigurationApplyConfiguration{}
+	case pluginsv1.SchemeGroupVersion.WithKind("WasmFrom"):
+		return &applyconfigurationpluginsv1.WasmFromApplyConfiguration{}
+	case pluginsv1.SchemeGroupVersion.WithKind("WasmPolicy"):
+		return &applyconfigurationpluginsv1.WasmPolicyApplyConfiguration{}
 
 	}
 	return nil
