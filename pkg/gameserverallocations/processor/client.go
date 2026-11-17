@@ -223,8 +223,14 @@ func (p *client) handleStream(ctx context.Context, stream allocationpb.Processor
 
 	pullRequestChan := make(chan struct{}, 1)
 
+	// Scope the pull handler to this stream, so it does not keep running after a reconnect
+	handlerCtx, stopPullHandler := context.WithCancel(ctx)
+	var pullHandler sync.WaitGroup
+	defer pullHandler.Wait()
+	defer stopPullHandler()
+
 	// Start goroutine to handle pull requests without blocking
-	go p.pullRequestHandler(ctx, stream, pullRequestChan)
+	pullHandler.Go(func() { p.pullRequestHandler(handlerCtx, stream, pullRequestChan) })
 
 	for {
 		msg, err := stream.Recv()
