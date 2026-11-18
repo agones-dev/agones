@@ -49,6 +49,15 @@ func gsWithState(st agonesv1.GameServerState) *agonesv1.GameServer {
 	return &agonesv1.GameServer{Status: agonesv1.GameServerStatus{State: st}}
 }
 
+// gsCreatedAgoWithState is a GameServer created the given duration ago, which is what decides
+// whether an Unhealthy one is replaced immediately or after the backoff window.
+func gsCreatedAgoWithState(st agonesv1.GameServerState, ago time.Duration) *agonesv1.GameServer {
+	return &agonesv1.GameServer{
+		ObjectMeta: metav1.ObjectMeta{CreationTimestamp: metav1.Time{Time: time.Now().Add(-ago)}},
+		Status:     agonesv1.GameServerStatus{State: st},
+	}
+}
+
 func gsPendingDeletionWithState(st agonesv1.GameServerState) *agonesv1.GameServer {
 	return &agonesv1.GameServer{
 		ObjectMeta: metav1.ObjectMeta{
@@ -188,6 +197,29 @@ func TestComputeReconciliationAction(t *testing.T) {
 			targetReplicaCount:     3,
 			wantNumServersToAdd:    2,
 			wantNumServersToDelete: 2,
+		},
+		{
+			// A GameServer that dies before Ready is replaced straight away today, so a crash
+			// loop recreates without pause. Inside the backoff window it counts as up instead,
+			// which stops the replacement and leaves the existing one alone.
+			desc: "AnUnhealthyGameServerInsideTheBackoffWindowIsNotReplacedYet",
+			list: []*agonesv1.GameServer{
+				gsWithState(agonesv1.GameServerStateReady),
+				gsCreatedAgoWithState(agonesv1.GameServerStateUnhealthy, 0),
+			},
+			targetReplicaCount:     2,
+			wantNumServersToAdd:    0,
+			wantNumServersToDelete: 0,
+		},
+		{
+			desc: "AnUnhealthyGameServerPastTheBackoffWindowIsReplaced",
+			list: []*agonesv1.GameServer{
+				gsWithState(agonesv1.GameServerStateReady),
+				gsCreatedAgoWithState(agonesv1.GameServerStateUnhealthy, time.Minute),
+			},
+			targetReplicaCount:     2,
+			wantNumServersToAdd:    1,
+			wantNumServersToDelete: 1,
 		},
 		{
 			desc: "DeletingErrorGameServers",

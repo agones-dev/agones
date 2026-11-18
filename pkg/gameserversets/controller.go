@@ -62,6 +62,12 @@ const (
 	// gameServerErrorDeletionDelay is the minimum amount of time to delay the deletion
 	// of a GameServer in Error state.
 	gameServerErrorDeletionDelay = 30 * time.Second
+
+	// gameServerUnhealthyReplacementDelay is how long a GameServer that goes Unhealthy
+	// shortly after it was created keeps its place. Without it, a GameServer that dies
+	// before Ready is deleted and recreated as fast as the controller can reconcile,
+	// which a crash loop turns into a steady stream of writes to the API server.
+	gameServerUnhealthyReplacementDelay = 30 * time.Second
 )
 
 // Extensions struct contains what is needed to bind webhook handlers
@@ -460,7 +466,16 @@ func computeReconciliationAction(strategy apis.SchedulingStrategy, list []*agone
 			}
 
 		case agonesv1.GameServerStateUnhealthy:
-			scheduleDeletion(gs)
+			if !isPastUnhealthyReplacementDelay(gs) {
+				// Replacing it now would recreate a GameServer that dies before Ready as
+				// fast as it is removed. Count it as up instead so the crash loop settles:
+				// a GameServer that recovers keeps its place, and one that is genuinely
+				// gone is replaced once the window passes.
+				podPendingCount++
+				handleGameServerUp(gs)
+			} else {
+				scheduleDeletion(gs)
+			}
 		default:
 			// unrecognized state, assume it's up.
 			handleGameServerUp(gs)
@@ -498,6 +513,18 @@ func computeReconciliationAction(strategy apis.SchedulingStrategy, list []*agone
 	}
 
 	return numServersToAdd, toDelete, partialReconciliation
+}
+
+// isPastUnhealthyReplacementDelay reports whether a GameServer that went Unhealthy has been
+// around long enough to replace. A GameServer that dies before Ready goes Unhealthy while it
+// is still new, so its creation time is what separates a crash loop from a one-off failure.
+func isPastUnhealthyReplacementDelay(gs *agonesv1.GameServer) bool {
+	createdAt := gs.ObjectMeta.CreationTimestamp.Time
+	if createdAt.IsZero() {
+		// No timestamp recorded: this is not a GameServer we can hold back.
+		return true
+	}
+	return time.Since(createdAt) >= gameServerUnhealthyReplacementDelay
 }
 
 func shouldDeleteErroredGameServer(gs *agonesv1.GameServer) bool {
