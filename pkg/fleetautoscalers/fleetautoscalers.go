@@ -904,5 +904,5 @@ func emitChainPolicyEvent(fasLog *FasLogger, chainID string, chainType string) {
 	}
 
 	// Emit the event
-	fasLog.recorder.Eventf(fasLog.fas, eventType, "ChainPolicy", eventMessage)
+	fasLog.recorder.Event(fasLog.fas, eventType, "ChainPolicy", eventMessage)
 }
