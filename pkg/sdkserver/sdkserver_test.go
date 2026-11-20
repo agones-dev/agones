@@ -29,7 +29,6 @@ import (
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
 	"agones.dev/agones/pkg/gameserverallocations"
 	"agones.dev/agones/pkg/sdk"
-	"agones.dev/agones/pkg/sdk/beta"
 	agtesting "agones.dev/agones/pkg/testing"
 	agruntime "agones.dev/agones/pkg/util/runtime"
 	jsonpatch "github.com/evanphx/json-patch"
@@ -1131,15 +1130,15 @@ func TestSDKServerUpdateCounter(t *testing.T) {
 
 	fixtures := map[string]struct {
 		counterName string
-		requests    []*beta.UpdateCounterRequest
+		requests    []*sdk.UpdateCounterRequest
 		want        agonesv1.CounterStatus
 		updateErrs  []bool
 		updated     bool
 	}{
 		"increment": {
 			counterName: "widgets",
-			requests: []*beta.UpdateCounterRequest{{
-				CounterUpdateRequest: &beta.CounterUpdateRequest{
+			requests: []*sdk.UpdateCounterRequest{{
+				CounterUpdateRequest: &sdk.CounterUpdateRequest{
 					Name:      "widgets",
 					CountDiff: 9,
 				}}},
@@ -1149,8 +1148,8 @@ func TestSDKServerUpdateCounter(t *testing.T) {
 		},
 		"increment illegal": {
 			counterName: "foo",
-			requests: []*beta.UpdateCounterRequest{{
-				CounterUpdateRequest: &beta.CounterUpdateRequest{
+			requests: []*sdk.UpdateCounterRequest{{
+				CounterUpdateRequest: &sdk.CounterUpdateRequest{
 					Name:      "foo",
 					CountDiff: 100,
 				}}},
@@ -1160,8 +1159,8 @@ func TestSDKServerUpdateCounter(t *testing.T) {
 		},
 		"decrement": {
 			counterName: "bar",
-			requests: []*beta.UpdateCounterRequest{{
-				CounterUpdateRequest: &beta.CounterUpdateRequest{
+			requests: []*sdk.UpdateCounterRequest{{
+				CounterUpdateRequest: &sdk.CounterUpdateRequest{
 					Name:      "bar",
 					CountDiff: -1,
 				}}},
@@ -1171,8 +1170,8 @@ func TestSDKServerUpdateCounter(t *testing.T) {
 		},
 		"decrement illegal": {
 			counterName: "baz",
-			requests: []*beta.UpdateCounterRequest{{
-				CounterUpdateRequest: &beta.CounterUpdateRequest{
+			requests: []*sdk.UpdateCounterRequest{{
+				CounterUpdateRequest: &sdk.CounterUpdateRequest{
 					Name:      "baz",
 					CountDiff: -11,
 				}}},
@@ -1182,8 +1181,8 @@ func TestSDKServerUpdateCounter(t *testing.T) {
 		},
 		"set capacity": {
 			counterName: "bazel",
-			requests: []*beta.UpdateCounterRequest{{
-				CounterUpdateRequest: &beta.CounterUpdateRequest{
+			requests: []*sdk.UpdateCounterRequest{{
+				CounterUpdateRequest: &sdk.CounterUpdateRequest{
 					Name:     "bazel",
 					Capacity: wrapperspb.Int64(0),
 				}}},
@@ -1193,8 +1192,8 @@ func TestSDKServerUpdateCounter(t *testing.T) {
 		},
 		"set capacity illegal": {
 			counterName: "fish",
-			requests: []*beta.UpdateCounterRequest{{
-				CounterUpdateRequest: &beta.CounterUpdateRequest{
+			requests: []*sdk.UpdateCounterRequest{{
+				CounterUpdateRequest: &sdk.CounterUpdateRequest{
 					Name:     "fish",
 					Capacity: wrapperspb.Int64(-1),
 				}}},
@@ -1204,8 +1203,8 @@ func TestSDKServerUpdateCounter(t *testing.T) {
 		},
 		"set count": {
 			counterName: "onefish",
-			requests: []*beta.UpdateCounterRequest{{
-				CounterUpdateRequest: &beta.CounterUpdateRequest{
+			requests: []*sdk.UpdateCounterRequest{{
+				CounterUpdateRequest: &sdk.CounterUpdateRequest{
 					Name:  "onefish",
 					Count: wrapperspb.Int64(42),
 				}}},
@@ -1215,8 +1214,8 @@ func TestSDKServerUpdateCounter(t *testing.T) {
 		},
 		"set count illegal": {
 			counterName: "twofish",
-			requests: []*beta.UpdateCounterRequest{{
-				CounterUpdateRequest: &beta.CounterUpdateRequest{
+			requests: []*sdk.UpdateCounterRequest{{
+				CounterUpdateRequest: &sdk.CounterUpdateRequest{
 					Name:  "twofish",
 					Count: wrapperspb.Int64(101),
 				}}},
@@ -1226,12 +1225,12 @@ func TestSDKServerUpdateCounter(t *testing.T) {
 		},
 		"increment past set capacity illegal": {
 			counterName: "redfish",
-			requests: []*beta.UpdateCounterRequest{{
-				CounterUpdateRequest: &beta.CounterUpdateRequest{
+			requests: []*sdk.UpdateCounterRequest{{
+				CounterUpdateRequest: &sdk.CounterUpdateRequest{
 					Name:     "redfish",
 					Capacity: wrapperspb.Int64(0),
 				}},
-				{CounterUpdateRequest: &beta.CounterUpdateRequest{
+				{CounterUpdateRequest: &sdk.CounterUpdateRequest{
 					Name:      "redfish",
 					CountDiff: 1,
 				}}},
@@ -1241,12 +1240,12 @@ func TestSDKServerUpdateCounter(t *testing.T) {
 		},
 		"decrement past set capacity illegal": {
 			counterName: "bluefish",
-			requests: []*beta.UpdateCounterRequest{{
-				CounterUpdateRequest: &beta.CounterUpdateRequest{
+			requests: []*sdk.UpdateCounterRequest{{
+				CounterUpdateRequest: &sdk.CounterUpdateRequest{
 					Name:     "bluefish",
 					Capacity: wrapperspb.Int64(0),
 				}},
-				{CounterUpdateRequest: &beta.CounterUpdateRequest{
+				{CounterUpdateRequest: &sdk.CounterUpdateRequest{
 					Name:      "bluefish",
 					CountDiff: -1,
 				}}},
@@ -1256,8 +1255,8 @@ func TestSDKServerUpdateCounter(t *testing.T) {
 		},
 		"setcapacity, setcount, and diffcount": {
 			counterName: "fivefish",
-			requests: []*beta.UpdateCounterRequest{{
-				CounterUpdateRequest: &beta.CounterUpdateRequest{
+			requests: []*sdk.UpdateCounterRequest{{
+				CounterUpdateRequest: &sdk.CounterUpdateRequest{
 					Name:      "fivefish",
 					Capacity:  wrapperspb.Int64(25),
 					Count:     wrapperspb.Int64(0),
@@ -1269,8 +1268,8 @@ func TestSDKServerUpdateCounter(t *testing.T) {
 		},
 		"projected state returned": {
 			counterName: "starfish",
-			requests: []*beta.UpdateCounterRequest{
-				{CounterUpdateRequest: &beta.CounterUpdateRequest{
+			requests: []*sdk.UpdateCounterRequest{
+				{CounterUpdateRequest: &sdk.CounterUpdateRequest{
 					Name:      "starfish",
 					CountDiff: 7,
 				}},
@@ -1329,7 +1328,7 @@ func TestSDKServerUpdateCounter(t *testing.T) {
 
 			// check initial value comes through
 			require.Eventually(t, func() bool {
-				counter, err := sc.GetCounter(context.Background(), &beta.GetCounterRequest{Name: testCase.counterName})
+				counter, err := sc.GetCounter(context.Background(), &sdk.GetCounterRequest{Name: testCase.counterName})
 				return counter.GetCount() == 10 && counter.GetCapacity() == 100 && err == nil
 			}, 10*time.Second, time.Second)
 
@@ -1346,7 +1345,7 @@ func TestSDKServerUpdateCounter(t *testing.T) {
 				}
 			}
 
-			got, err := sc.GetCounter(context.Background(), &beta.GetCounterRequest{Name: testCase.counterName})
+			got, err := sc.GetCounter(context.Background(), &sdk.GetCounterRequest{Name: testCase.counterName})
 			require.NoError(t, err)
 			assert.Equal(t, testCase.want.Count, got.GetCount())
 			assert.Equal(t, testCase.want.Capacity, got.GetCapacity())
@@ -1380,7 +1379,7 @@ func TestSDKServerAddListValue(t *testing.T) {
 
 	fixtures := map[string]struct {
 		listName                string
-		requests                []*beta.AddListValueRequest
+		requests                []*sdk.AddListValueRequest
 		want                    agonesv1.ListStatus
 		updateErrs              []bool
 		updated                 bool
@@ -1388,7 +1387,7 @@ func TestSDKServerAddListValue(t *testing.T) {
 	}{
 		"Add value": {
 			listName:                "foo",
-			requests:                []*beta.AddListValueRequest{{Name: "foo", Value: "five"}},
+			requests:                []*sdk.AddListValueRequest{{Name: "foo", Value: "five"}},
 			want:                    agonesv1.ListStatus{Values: []string{"one", "two", "three", "four", "five"}, Capacity: int64(10)},
 			updateErrs:              []bool{false},
 			updated:                 true,
@@ -1396,7 +1395,7 @@ func TestSDKServerAddListValue(t *testing.T) {
 		},
 		"Add multiple values including duplicates": {
 			listName: "bar",
-			requests: []*beta.AddListValueRequest{
+			requests: []*sdk.AddListValueRequest{
 				{Name: "bar", Value: "five"},
 				{Name: "bar", Value: "one"},
 				{Name: "bar", Value: "five"},
@@ -1409,7 +1408,7 @@ func TestSDKServerAddListValue(t *testing.T) {
 		},
 		"Add multiple values past capacity": {
 			listName: "baz",
-			requests: []*beta.AddListValueRequest{
+			requests: []*sdk.AddListValueRequest{
 				{Name: "baz", Value: "five"},
 				{Name: "baz", Value: "six"},
 				{Name: "baz", Value: "seven"},
@@ -1471,7 +1470,7 @@ func TestSDKServerAddListValue(t *testing.T) {
 
 			// check initial value comes through
 			require.Eventually(t, func() bool {
-				list, err := sc.GetList(context.Background(), &beta.GetListRequest{Name: testCase.listName})
+				list, err := sc.GetList(context.Background(), &sdk.GetListRequest{Name: testCase.listName})
 				return cmp.Equal(list.GetValues(), []string{"one", "two", "three", "four"}) && list.GetCapacity() == 10 && err == nil
 			}, 10*time.Second, time.Second)
 
@@ -1485,7 +1484,7 @@ func TestSDKServerAddListValue(t *testing.T) {
 				}
 			}
 
-			got, err := sc.GetList(context.Background(), &beta.GetListRequest{Name: testCase.listName})
+			got, err := sc.GetList(context.Background(), &sdk.GetListRequest{Name: testCase.listName})
 			require.NoError(t, err)
 			assert.Equal(t, testCase.want.Values, got.GetValues())
 			assert.Equal(t, testCase.want.Capacity, got.GetCapacity())
@@ -1530,7 +1529,7 @@ func TestSDKServerRemoveListValue(t *testing.T) {
 
 	fixtures := map[string]struct {
 		listName                string
-		requests                []*beta.RemoveListValueRequest
+		requests                []*sdk.RemoveListValueRequest
 		want                    agonesv1.ListStatus
 		updateErrs              []bool
 		updated                 bool
@@ -1538,7 +1537,7 @@ func TestSDKServerRemoveListValue(t *testing.T) {
 	}{
 		"Remove value": {
 			listName:                "foo",
-			requests:                []*beta.RemoveListValueRequest{{Name: "foo", Value: "two"}},
+			requests:                []*sdk.RemoveListValueRequest{{Name: "foo", Value: "two"}},
 			want:                    agonesv1.ListStatus{Values: []string{"one", "three", "four"}, Capacity: int64(100)},
 			updateErrs:              []bool{false},
 			updated:                 true,
@@ -1546,7 +1545,7 @@ func TestSDKServerRemoveListValue(t *testing.T) {
 		},
 		"Remove multiple values including duplicates": {
 			listName: "bar",
-			requests: []*beta.RemoveListValueRequest{
+			requests: []*sdk.RemoveListValueRequest{
 				{Name: "bar", Value: "two"},
 				{Name: "bar", Value: "three"},
 				{Name: "bar", Value: "two"},
@@ -1558,7 +1557,7 @@ func TestSDKServerRemoveListValue(t *testing.T) {
 		},
 		"Remove all values": {
 			listName: "baz",
-			requests: []*beta.RemoveListValueRequest{
+			requests: []*sdk.RemoveListValueRequest{
 				{Name: "baz", Value: "three"},
 				{Name: "baz", Value: "two"},
 				{Name: "baz", Value: "four"},
@@ -1614,7 +1613,7 @@ func TestSDKServerRemoveListValue(t *testing.T) {
 
 			// check initial value comes through
 			require.Eventually(t, func() bool {
-				list, err := sc.GetList(context.Background(), &beta.GetListRequest{Name: testCase.listName})
+				list, err := sc.GetList(context.Background(), &sdk.GetListRequest{Name: testCase.listName})
 				return cmp.Equal(list.GetValues(), []string{"one", "two", "three", "four"}) && list.GetCapacity() == 100 && err == nil
 			}, 10*time.Second, time.Second)
 
@@ -1628,7 +1627,7 @@ func TestSDKServerRemoveListValue(t *testing.T) {
 				}
 			}
 
-			got, err := sc.GetList(context.Background(), &beta.GetListRequest{Name: testCase.listName})
+			got, err := sc.GetList(context.Background(), &sdk.GetListRequest{Name: testCase.listName})
 			require.NoError(t, err)
 			assert.Equal(t, testCase.want.Values, got.GetValues())
 			assert.Equal(t, testCase.want.Capacity, got.GetCapacity())
@@ -1675,7 +1674,7 @@ func TestSDKServerUpdateList(t *testing.T) {
 
 	fixtures := map[string]struct {
 		listName                string
-		request                 *beta.UpdateListRequest
+		request                 *sdk.UpdateListRequest
 		want                    agonesv1.ListStatus
 		updateErr               bool
 		updated                 bool
@@ -1683,8 +1682,8 @@ func TestSDKServerUpdateList(t *testing.T) {
 	}{
 		"set capacity to max": {
 			listName: "foo",
-			request: &beta.UpdateListRequest{
-				List: &beta.List{
+			request: &sdk.UpdateListRequest{
+				List: &sdk.List{
 					Name:     "foo",
 					Capacity: int64(1000),
 				},
@@ -1697,8 +1696,8 @@ func TestSDKServerUpdateList(t *testing.T) {
 		},
 		"set capacity to min values are truncated": {
 			listName: "bar",
-			request: &beta.UpdateListRequest{
-				List: &beta.List{
+			request: &sdk.UpdateListRequest{
+				List: &sdk.List{
 					Name:     "bar",
 					Capacity: int64(0),
 				},
@@ -1711,8 +1710,8 @@ func TestSDKServerUpdateList(t *testing.T) {
 		},
 		"set capacity past max": {
 			listName: "baz",
-			request: &beta.UpdateListRequest{
-				List: &beta.List{
+			request: &sdk.UpdateListRequest{
+				List: &sdk.List{
 					Name:     "baz",
 					Capacity: int64(1001),
 				},
@@ -1726,8 +1725,8 @@ func TestSDKServerUpdateList(t *testing.T) {
 		// New test cases to test updating values
 		"update values below capacity": {
 			listName: "qux",
-			request: &beta.UpdateListRequest{
-				List: &beta.List{
+			request: &sdk.UpdateListRequest{
+				List: &sdk.List{
 					Name:     "qux",
 					Capacity: int64(100),
 					Values:   []string{"one", "two", "three", "four", "five", "six"},
@@ -1741,8 +1740,8 @@ func TestSDKServerUpdateList(t *testing.T) {
 		},
 		"update values above capacity": {
 			listName: "quux",
-			request: &beta.UpdateListRequest{
-				List: &beta.List{
+			request: &sdk.UpdateListRequest{
+				List: &sdk.List{
 					Name:     "quux",
 					Capacity: int64(4),
 					Values:   []string{"one", "two", "three", "four", "five", "six"},
@@ -1756,8 +1755,8 @@ func TestSDKServerUpdateList(t *testing.T) {
 		},
 		"update list not found (potential panic)": {
 			listName: "nonexistent",
-			request: &beta.UpdateListRequest{
-				List: &beta.List{
+			request: &sdk.UpdateListRequest{
+				List: &sdk.List{
 					Name:     "nonexistent",
 					Capacity: int64(100),
 				},
@@ -1817,7 +1816,7 @@ func TestSDKServerUpdateList(t *testing.T) {
 
 			// check initial value comes through
 			require.Eventually(t, func() bool {
-				list, err := sc.GetList(context.Background(), &beta.GetListRequest{Name: testCase.listName})
+				list, err := sc.GetList(context.Background(), &sdk.GetListRequest{Name: testCase.listName})
 				if testCase.listName == "nonexistent" {
 					return list == nil && err != nil
 				}
@@ -1834,7 +1833,7 @@ func TestSDKServerUpdateList(t *testing.T) {
 			}
 			require.NoError(t, err)
 
-			got, err := sc.GetList(context.Background(), &beta.GetListRequest{Name: testCase.listName})
+			got, err := sc.GetList(context.Background(), &sdk.GetListRequest{Name: testCase.listName})
 			require.NoError(t, err)
 			assert.Equal(t, testCase.want.Values, got.GetValues())
 			assert.Equal(t, testCase.want.Capacity, got.GetCapacity())
@@ -2201,8 +2200,8 @@ func TestSDKServerUpdateListMaxCapacity(t *testing.T) {
 			require.True(t, cache.WaitForCacheSync(ctx.Done(), sc.gameServerSynced))
 			sc.gsWaitForSync.Done()
 
-			_, err = sc.UpdateList(ctx, &beta.UpdateListRequest{
-				List:       &beta.List{Name: "rooms", Capacity: testCase.capacity},
+			_, err = sc.UpdateList(ctx, &sdk.UpdateListRequest{
+				List:       &sdk.List{Name: "rooms", Capacity: testCase.capacity},
 				UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"capacity"}},
 			})
 
