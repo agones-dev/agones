@@ -38,6 +38,7 @@ import (
 
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
 	autoscalingv1 "agones.dev/agones/pkg/apis/autoscaling/v1"
+	pluginsv1 "agones.dev/agones/pkg/apis/plugins/v1"
 	"agones.dev/agones/pkg/gameservers"
 	agtesting "agones.dev/agones/pkg/testing"
 	utilruntime "agones.dev/agones/pkg/util/runtime"
@@ -404,7 +405,7 @@ func TestApplyWebhookPolicy(t *testing.T) {
 
 	var testCases = []struct {
 		description             string
-		webhookPolicy           *autoscalingv1.URLConfiguration
+		webhookPolicy           *pluginsv1.URLConfiguration
 		specReplicas            int32
 		statusReplicas          int32
 		statusAllocatedReplicas int32
@@ -413,7 +414,7 @@ func TestApplyWebhookPolicy(t *testing.T) {
 	}{
 		{
 			description: "Allocated replicas per cent < 70%, no scaling",
-			webhookPolicy: &autoscalingv1.URLConfiguration{
+			webhookPolicy: &pluginsv1.URLConfiguration{
 				Service: nil,
 				URL:     &(server.URL),
 			},
@@ -429,7 +430,7 @@ func TestApplyWebhookPolicy(t *testing.T) {
 		},
 		{
 			description: "Scale down in progress, no scaling",
-			webhookPolicy: &autoscalingv1.URLConfiguration{
+			webhookPolicy: &pluginsv1.URLConfiguration{
 				Service: nil,
 				URL:     &(server.URL),
 			},
@@ -445,7 +446,7 @@ func TestApplyWebhookPolicy(t *testing.T) {
 		},
 		{
 			description: "Allocated replicas per cent == 70%, no scaling",
-			webhookPolicy: &autoscalingv1.URLConfiguration{
+			webhookPolicy: &pluginsv1.URLConfiguration{
 				Service: nil,
 				URL:     &(server.URL),
 			},
@@ -461,7 +462,7 @@ func TestApplyWebhookPolicy(t *testing.T) {
 		},
 		{
 			description: "Allocated replicas per cent 80% > 70%, scale up",
-			webhookPolicy: &autoscalingv1.URLConfiguration{
+			webhookPolicy: &pluginsv1.URLConfiguration{
 				Service: nil,
 				URL:     &(server.URL),
 			},
@@ -486,7 +487,7 @@ func TestApplyWebhookPolicy(t *testing.T) {
 		},
 		{
 			description: "URL and Service are not nil",
-			webhookPolicy: &autoscalingv1.URLConfiguration{
+			webhookPolicy: &pluginsv1.URLConfiguration{
 				Service: &admregv1.ServiceReference{
 					Name:      "service1",
 					Namespace: "default",
@@ -502,7 +503,7 @@ func TestApplyWebhookPolicy(t *testing.T) {
 		},
 		{
 			description: "URL not nil but empty",
-			webhookPolicy: &autoscalingv1.URLConfiguration{
+			webhookPolicy: &pluginsv1.URLConfiguration{
 				Service: nil,
 				URL:     &emptyString,
 			},
@@ -514,7 +515,7 @@ func TestApplyWebhookPolicy(t *testing.T) {
 		},
 		{
 			description: "Invalid URL",
-			webhookPolicy: &autoscalingv1.URLConfiguration{
+			webhookPolicy: &pluginsv1.URLConfiguration{
 				Service: nil,
 				URL:     &invalidURL,
 			},
@@ -526,7 +527,7 @@ func TestApplyWebhookPolicy(t *testing.T) {
 		},
 		{
 			description: "Service name is empty",
-			webhookPolicy: &autoscalingv1.URLConfiguration{
+			webhookPolicy: &pluginsv1.URLConfiguration{
 				Service: &admregv1.ServiceReference{
 					Name:      "",
 					Namespace: "default",
@@ -541,7 +542,7 @@ func TestApplyWebhookPolicy(t *testing.T) {
 		},
 		{
 			description: "No certs",
-			webhookPolicy: &autoscalingv1.URLConfiguration{
+			webhookPolicy: &pluginsv1.URLConfiguration{
 				Service: &admregv1.ServiceReference{
 					Name:      "service1",
 					Namespace: "default",
@@ -557,7 +558,7 @@ func TestApplyWebhookPolicy(t *testing.T) {
 		},
 		{
 			description: "Wrong server URL",
-			webhookPolicy: &autoscalingv1.URLConfiguration{
+			webhookPolicy: &pluginsv1.URLConfiguration{
 				Service: nil,
 				URL:     &wrongServerURL,
 			},
@@ -569,7 +570,7 @@ func TestApplyWebhookPolicy(t *testing.T) {
 		},
 		{
 			description: "Handle server error",
-			webhookPolicy: &autoscalingv1.URLConfiguration{
+			webhookPolicy: &pluginsv1.URLConfiguration{
 				Service: nil,
 				URL:     &(server.URL),
 			},
@@ -586,7 +587,7 @@ func TestApplyWebhookPolicy(t *testing.T) {
 		},
 		{
 			description: "Handle invalid response from the server",
-			webhookPolicy: &autoscalingv1.URLConfiguration{
+			webhookPolicy: &pluginsv1.URLConfiguration{
 				Service: nil,
 				URL:     &(server.URL),
 			},
@@ -602,7 +603,7 @@ func TestApplyWebhookPolicy(t *testing.T) {
 		},
 		{
 			description: "Service and URL are nil",
-			webhookPolicy: &autoscalingv1.URLConfiguration{
+			webhookPolicy: &pluginsv1.URLConfiguration{
 				Service: nil,
 				URL:     nil,
 			},
@@ -616,7 +617,7 @@ func TestApplyWebhookPolicy(t *testing.T) {
 			// Replicates issue #4555: webhook returns valid JSON that omits the 'response' field,
 			// leaving faResp.Response nil. Without the nil check this causes a panic.
 			description: "Webhook response omits 'response' field, nil Response should error not panic",
-			webhookPolicy: &autoscalingv1.URLConfiguration{
+			webhookPolicy: &pluginsv1.URLConfiguration{
 				Service: nil,
 				URL:     &(server.URL),
 			},
@@ -677,7 +678,7 @@ func TestApplyWebhookPolicyWithMetadata(t *testing.T) {
 		"fixedReplicas": strconv.Itoa(int(fixedReplicas)),
 	}
 
-	webhookPolicy := &autoscalingv1.URLConfiguration{
+	webhookPolicy := &pluginsv1.URLConfiguration{
 		Service: nil,
 		URL:     &(server.URL),
 	}
@@ -700,7 +701,7 @@ func TestApplyWebhookPolicyNilFleet(t *testing.T) {
 	t.Parallel()
 
 	url := webhookURL
-	w := &autoscalingv1.URLConfiguration{
+	w := &pluginsv1.URLConfiguration{
 		Service: &admregv1.ServiceReference{
 			Name:      "service1",
 			Namespace: "default",
@@ -726,65 +727,6 @@ func TestApplyWebhookPolicyNilFleet(t *testing.T) {
 	assert.Zero(t, replicas)
 }
 
-func TestCreateURL(t *testing.T) {
-	t.Parallel()
-	var nonStandardPort int32 = 8888
-
-	var testCases = []struct {
-		description string
-		scheme      string
-		name        string
-		namespace   string
-		path        string
-		port        *int32
-		expected    string
-	}{
-		{
-			description: "OK, path not empty",
-			scheme:      "http",
-			name:        "service1",
-			namespace:   "default",
-			path:        "scale",
-			expected:    "http://service1.default.svc:8000/scale",
-		},
-		{
-			description: "OK, path not empty with slash",
-			scheme:      "http",
-			name:        "service1",
-			namespace:   "default",
-			path:        "/scale",
-			expected:    "http://service1.default.svc:8000/scale",
-		},
-		{
-			description: "OK, path is empty",
-			scheme:      "http",
-			name:        "service1",
-			namespace:   "default",
-			path:        "",
-			expected:    "http://service1.default.svc:8000",
-		},
-		{
-			description: "OK, port specified",
-			scheme:      "http",
-			name:        "service1",
-			namespace:   "default",
-			path:        "scale",
-			port:        &nonStandardPort,
-			expected:    "http://service1.default.svc:8888/scale",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.description, func(t *testing.T) {
-			res := createURL(tc.scheme, tc.name, tc.namespace, tc.path, tc.port)
-
-			if assert.NotNil(t, res) {
-				assert.Equal(t, tc.expected, res.String())
-			}
-		})
-	}
-}
-
 func TestBuildURLFromConfiguration(t *testing.T) {
 	t.Parallel()
 
@@ -804,14 +746,14 @@ func TestBuildURLFromConfiguration(t *testing.T) {
 	testCases := []struct {
 		description string
 		state       *fasState
-		config      *autoscalingv1.URLConfiguration
+		config      *pluginsv1.URLConfiguration
 		expected    expected
 	}{
 		// Error cases
 		{
 			description: "Error: Both URL and Service provided",
 			state:       &fasState{},
-			config: &autoscalingv1.URLConfiguration{
+			config: &pluginsv1.URLConfiguration{
 				URL: &validURL,
 				Service: &admregv1.ServiceReference{
 					Name:      "service1",
@@ -825,7 +767,7 @@ func TestBuildURLFromConfiguration(t *testing.T) {
 		{
 			description: "Error: Empty URL string",
 			state:       &fasState{},
-			config: &autoscalingv1.URLConfiguration{
+			config: &pluginsv1.URLConfiguration{
 				URL: &emptyURL,
 			},
 			expected: expected{
@@ -835,7 +777,7 @@ func TestBuildURLFromConfiguration(t *testing.T) {
 		{
 			description: "Error: Neither URL nor Service provided",
 			state:       &fasState{},
-			config: &autoscalingv1.URLConfiguration{
+			config: &pluginsv1.URLConfiguration{
 				URL:     nil,
 				Service: nil,
 			},
@@ -846,7 +788,7 @@ func TestBuildURLFromConfiguration(t *testing.T) {
 		{
 			description: "Error: Service name empty",
 			state:       &fasState{},
-			config: &autoscalingv1.URLConfiguration{
+			config: &pluginsv1.URLConfiguration{
 				Service: &admregv1.ServiceReference{
 					Name:      "",
 					Namespace: "default",
@@ -859,7 +801,7 @@ func TestBuildURLFromConfiguration(t *testing.T) {
 		{
 			description: "Error: Invalid URL format",
 			state:       &fasState{},
-			config: &autoscalingv1.URLConfiguration{
+			config: &pluginsv1.URLConfiguration{
 				URL: &invalidURL,
 			},
 			expected: expected{
@@ -870,7 +812,7 @@ func TestBuildURLFromConfiguration(t *testing.T) {
 		{
 			description: "Valid URL without CABundle",
 			state:       &fasState{},
-			config: &autoscalingv1.URLConfiguration{
+			config: &pluginsv1.URLConfiguration{
 				URL: &validURL,
 			},
 			expected: expected{
@@ -881,7 +823,7 @@ func TestBuildURLFromConfiguration(t *testing.T) {
 		{
 			description: "Error: Invalid CABundle",
 			state:       &fasState{},
-			config: &autoscalingv1.URLConfiguration{
+			config: &pluginsv1.URLConfiguration{
 				URL:      &validURL,
 				CABundle: invalidCABundle,
 			},
@@ -893,7 +835,7 @@ func TestBuildURLFromConfiguration(t *testing.T) {
 		{
 			description: "Service: No namespace provided, default should be used",
 			state:       &fasState{},
-			config: &autoscalingv1.URLConfiguration{
+			config: &pluginsv1.URLConfiguration{
 				Service: &admregv1.ServiceReference{
 					Name:      "service1",
 					Namespace: "",
@@ -908,7 +850,7 @@ func TestBuildURLFromConfiguration(t *testing.T) {
 		{
 			description: "Service: No path provided, empty string should be used",
 			state:       &fasState{},
-			config: &autoscalingv1.URLConfiguration{
+			config: &pluginsv1.URLConfiguration{
 				Service: &admregv1.ServiceReference{
 					Name:      "service1",
 					Namespace: "test",
@@ -923,7 +865,7 @@ func TestBuildURLFromConfiguration(t *testing.T) {
 		{
 			description: "Service: Custom port specified",
 			state:       &fasState{},
-			config: &autoscalingv1.URLConfiguration{
+			config: &pluginsv1.URLConfiguration{
 				Service: &admregv1.ServiceReference{
 					Name:      "service1",
 					Namespace: "custom",
@@ -941,7 +883,7 @@ func TestBuildURLFromConfiguration(t *testing.T) {
 			state: &fasState{
 				httpClient: &http.Client{},
 			},
-			config: &autoscalingv1.URLConfiguration{
+			config: &pluginsv1.URLConfiguration{
 				Service: &admregv1.ServiceReference{
 					Name:      "service1",
 					Namespace: "default",
@@ -2827,7 +2769,7 @@ func TestApplyChainPolicy(t *testing.T) {
 		ID: "webhook policy",
 		FleetAutoscalerPolicy: autoscalingv1.FleetAutoscalerPolicy{
 			Type: autoscalingv1.WebhookPolicyType,
-			Webhook: &autoscalingv1.URLConfiguration{
+			Webhook: &pluginsv1.URLConfiguration{
 				Service: &admregv1.ServiceReference{
 					Name:      "service1",
 					Namespace: "default",

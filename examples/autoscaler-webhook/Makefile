@@ -25,6 +25,8 @@
 
 REPOSITORY ?=
 PROD_REPO ?= us-docker.pkg.dev/agones-images/examples
+MINIKUBE ?= minikube
+MINIKUBE_PROFILE ?= agones
 
 mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
 project_path := $(dir $(mkfile_path))
@@ -50,6 +52,14 @@ build:
 # Push the docker image
 push: build
 	docker push $(autoscaler_webhook_tag)
+
+# Pushes the image (built via `make build`) into the "agones" minikube instance, and re-tags it
+# with the production tag (i.e. $(PROD_REPO)/autoscaler-webhook:$(version)), so that it can be used
+# by the e2e tests without modification. The example yaml files set `imagePullPolicy: Always`, so
+# they need `imagePullPolicy: IfNotPresent` to use this image.
+minikube-push:
+	$(MINIKUBE) image load $(autoscaler_webhook_tag) -p $(MINIKUBE_PROFILE)
+	$(MINIKUBE) image tag $(autoscaler_webhook_tag) $(PROD_REPO)/autoscaler-webhook:$(version) -p $(MINIKUBE_PROFILE)
 
 # check if hosted on Google Artifact Registry
 gar-check:
