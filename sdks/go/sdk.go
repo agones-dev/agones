@@ -237,6 +237,13 @@ func (s *SDK) IncrementCounter(key string, amount int64) error {
 	if amount < 0 {
 		return s.errs.Errorf("amount must be a positive int64, found %d", amount)
 	}
+	if amount == 0 {
+		// The SDK server rejects an update with no changes, so only check the Counter exists.
+		if _, err := s.client.GetCounter(s.ctx, &sdk.GetCounterRequest{Name: key}); err != nil {
+			return s.errs.Wrapf(err, "could not increment Counter %s by amount %d", key, amount)
+		}
+		return nil
+	}
 	_, err := s.client.UpdateCounter(s.ctx, &sdk.UpdateCounterRequest{
 		CounterUpdateRequest: &sdk.CounterUpdateRequest{
 			Name:      key,
@@ -254,6 +261,13 @@ func (s *SDK) IncrementCounter(key string, amount int64) error {
 func (s *SDK) DecrementCounter(key string, amount int64) error {
 	if amount < 0 {
 		return s.errs.Errorf("amount must be a positive int64, found %d", amount)
+	}
+	if amount == 0 {
+		// The SDK server rejects an update with no changes, so only check the Counter exists.
+		if _, err := s.client.GetCounter(s.ctx, &sdk.GetCounterRequest{Name: key}); err != nil {
+			return s.errs.Wrapf(err, "could not decrement Counter %s by amount %d", key, amount)
+		}
+		return nil
 	}
 	_, err := s.client.UpdateCounter(s.ctx, &sdk.UpdateCounterRequest{
 		CounterUpdateRequest: &sdk.CounterUpdateRequest{

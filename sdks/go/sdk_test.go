@@ -571,6 +571,21 @@ func TestSDKGetAndUpdateCounter(t *testing.T) {
 		assert.Equal(t, int64(500), count)
 	})
 
+	t.Run("Increment and Decrement Counter by zero", func(t *testing.T) {
+		count, err := s.GetCounterCount("gamers")
+		require.NoError(t, err)
+
+		require.NoError(t, s.IncrementCounter("gamers", 0))
+		require.NoError(t, s.DecrementCounter("gamers", 0))
+
+		got, err := s.GetCounterCount("gamers")
+		require.NoError(t, err)
+		assert.Equal(t, count, got)
+
+		require.ErrorContains(t, s.IncrementCounter("missing", 0), "could not increment Counter missing by amount 0")
+		require.ErrorContains(t, s.DecrementCounter("missing", 0), "could not decrement Counter missing by amount 0")
+	})
+
 }
 
 func TestSDKGetAndUpdateList(t *testing.T) {
