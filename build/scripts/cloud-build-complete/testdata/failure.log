@@ -1,0 +1,37 @@
+starting build "5c449326-3cab-47ff-9aaa-cdfa4ea1fdb5" using release legacy
+
+FETCHSOURCE
+From https://github.com/agones-dev/agones
+ * branch            0a1ef6702b83b45b36e246cbb9896656bee04e7b -> FETCH_HEAD
+HEAD is now at 0a1ef67 Remove stable Counter and List implementation from SDK server
+GitCommit:
+0a1ef6702b83b45b36e246cbb9896656bee04e7b
+SETUPBUILD
+BUILD
+Starting Step #0 - "cancelot"
+Starting Step #2 - "htmltest-restore-cache"
+Step #19 - "build-push-e2e-example-images": simple-game-server: 9486261b5a13: Layer already exists
+Step #19 - "build-push-e2e-example-images": simple-game-server: b5764396d8d3: Layer already exists
+Step #19 - "build-push-e2e-example-images": simple-game-server: 621c35e751a5: Layer already exists
+Step #19 - "build-push-e2e-example-images": simple-game-server: 70942848c7af: Pushed
+Step #19 - "build-push-e2e-example-images": simple-game-server: src-a2da60529997-amd64: digest: sha256:a3928109732991022bbb641a5c2334f5a9fd277087ba3beea4fb778e6d8a2d93 size: 3233
+Step #19 - "build-push-e2e-example-images": simple-game-server: docker buildx imagetools create --tag us-docker.pkg.dev/agones-images/ci/simple-game-server:src-a2da60529997 \
+Step #19 - "build-push-e2e-example-images": simple-game-server:     	us-docker.pkg.dev/agones-images/ci/simple-game-server:src-a2da60529997-amd64
+Step #19 - "build-push-e2e-example-images": simple-game-server: #1 [internal] pushing us-docker.pkg.dev/agones-images/ci/simple-game-server:src-a2da60529997
+Step #19 - "build-push-e2e-example-images": simple-game-server: #1 0.000 pushing sha256:b0fd8da4eedcc335163e2ae49cff3b042a48aa72d7705a3ac7fe2efa9abf62a0 to us-docker.pkg.dev/agones-images/ci/simple-game-server:src-a2da60529997
+Step #19 - "build-push-e2e-example-images": simple-game-server: #1 DONE 0.7s
+Step #19 - "build-push-e2e-example-images": simple-game-server: make: Leaving directory '/workspace/examples/simple-game-server'
+Step #19 - "build-push-e2e-example-images": simple-game-server: #1 [internal] pushing us-docker.pkg.dev/agones-images/ci/simple-game-server:0a1ef6702b83b45b36e246cbb9896656bee04e7b
+Step #19 - "build-push-e2e-example-images": simple-game-server: #1 0.000 pushing sha256:b0fd8da4eedcc335163e2ae49cff3b042a48aa72d7705a3ac7fe2efa9abf62a0 to us-docker.pkg.dev/agones-images/ci/simple-game-server:0a1ef6702b83b45b36e246cbb9896656bee04e7b
+Step #19 - "build-push-e2e-example-images": simple-game-server: #1 DONE 0.6s
+Step #13 - "lint": [33mWARN[0m [runner/exclusion_rules] Skipped 0 issues by rules: [Path: "(.+)_test\\.go|^test/", Linters: "depguard"] 
+Step #13 - "lint": [33mWARN[0m [runner/exclusion_rules] Skipped 0 issues by rules: [Path: "test/sdk/restapi", Linters: "goimports"] 
+Step #13 - "lint": [1mpkg/sdkserver/stable.go:50[22m:22: [31mfieldalignment: struct of size 24 could be 16[0m (govet)
+Step #13 - "lint": type stableSDKServer struct {
+Step #13 - "lint":                      [33m^[0m
+Step #13 - "lint": 1 issues:
+Step #13 - "lint": * govet: 1
+Step #13 - "lint": make: *** [Makefile:554: lint] Error 1
+Finished Step #13 - "lint"
+ERROR
+ERROR: build step 13 "make-docker" failed: step exited with non-zero status: 2
