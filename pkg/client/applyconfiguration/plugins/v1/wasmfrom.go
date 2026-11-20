@@ -23,7 +23,7 @@ package v1
 //
 // WasmFrom defines the source of the Wasm module
 type WasmFromApplyConfiguration struct {
-	// URL is the URL of the Wasm module to use for autoscaling.
+	// URL is the URL of the Wasm module.
 	URL *URLConfigurationApplyConfiguration `json:"url,omitempty"`
 }
 
