@@ -42,7 +42,11 @@ cd ../../build
 make shell
 ```
 
-This will drop you into a shell with the required extism CLI and Go version available in the PATH.
+This will drop you into a shell, at the root of the repository, with the required extism CLI and Go version available in the PATH. Change to this example's directory before running the commands below:
+
+```bash
+cd examples/allocation-wasm
+```
 
 ## Files
 
