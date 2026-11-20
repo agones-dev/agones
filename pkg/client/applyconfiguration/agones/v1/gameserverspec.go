@@ -41,8 +41,6 @@ type GameServerSpecApplyConfiguration struct {
 	SdkServer *SdkServerApplyConfiguration `json:"sdkServer,omitempty"`
 	// Template describes the Pod that will be created for the GameServer
 	Template *corev1.PodTemplateSpec `json:"template,omitempty"`
-	// (Alpha, PlayerTracking feature flag) Players provides the configuration for player tracking features.
-	Players *PlayersSpecApplyConfiguration `json:"players,omitempty"`
 	// (Beta, CountsAndLists feature flag) Counters provides the configuration for tracking of int64 values against a GameServer.
 	// Keys must be declared at GameServer creation time.
 	Counters map[string]CounterStatusApplyConfiguration `json:"counters,omitempty"`
@@ -110,14 +108,6 @@ func (b *GameServerSpecApplyConfiguration) WithSdkServer(value *SdkServerApplyCo
 // If called multiple times, the Template field is set to the value of the last call.
 func (b *GameServerSpecApplyConfiguration) WithTemplate(value corev1.PodTemplateSpec) *GameServerSpecApplyConfiguration {
 	b.Template = &value
-	return b
-}
-
-// WithPlayers sets the Players field in the declarative configuration to the given value
-// and returns the receiver, so that objects can be built by chaining "With" function invocations.
-// If called multiple times, the Players field is set to the value of the last call.
-func (b *GameServerSpecApplyConfiguration) WithPlayers(value *PlayersSpecApplyConfiguration) *GameServerSpecApplyConfiguration {
-	b.Players = value
 	return b
 }
 

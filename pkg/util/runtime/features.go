@@ -69,9 +69,6 @@ const (
 	////////////////
 	// Alpha features
 
-	// FeaturePlayerTracking is a feature flag to enable/disable player tracking features.
-	FeaturePlayerTracking Feature = "PlayerTracking"
-
 	// FeatureRollingUpdateSurge is a feature flag to apply maxSurge on top of the Fleet replicas during a
 	// rolling update, even when the inactive GameServerSets hold Allocated GameServers.
 	FeatureRollingUpdateSurge Feature = "RollingUpdateSurge"
@@ -84,6 +81,9 @@ const (
 
 	// FeatureProcessorAllocator is a feature flag to enable/disable the processor allocator feature.
 	FeatureProcessorAllocator = "ProcessorAllocator"
+
+	// FeatureWasmAllocation is a feature flag to enable/disable Wasm plugins that run as part of allocation.
+	FeatureWasmAllocation Feature = "WasmAllocation"
 
 	////////////////
 	// Example feature
@@ -164,12 +164,12 @@ var (
 		FeatureSidecarContainers:                true,
 
 		// Alpha features
-		FeaturePlayerTracking:     false,
 		FeatureRollingUpdateSurge: false,
 		FeatureWasmAutoscaler:     false,
 
 		// Dev features
 		FeatureProcessorAllocator: false,
+		FeatureWasmAllocation:     false,
 
 		// Example feature
 		FeatureExample: false,

@@ -36,6 +36,7 @@ func TestGameServerCreationAfterDeletingOneExtensionsPod(t *testing.T) {
 	require.NoError(t, waitForAgonesExtensionsRunning(ctx))
 
 	list, err := getAgonesExtensionsPods(ctx)
+	require.NoError(t, err, "Could not get list of Extension pods")
 	logger.Infof("Length of pod list is %v", len(list.Items))
 	if len(list.Items) > 2 {
 		logger.WithField("podCount", len(list.Items)).Info("Logging events for the Deployment due to pod count > 2 before deleting extensions pod")
@@ -51,11 +52,10 @@ func TestGameServerCreationAfterDeletingOneExtensionsPod(t *testing.T) {
 			logger.Infof("Pod IPs %v", list.Items[i].Status.PodIPs)
 		}
 	}
-	require.NoError(t, err, "Could not get list of Extension pods")
 	require.Greater(t, len(list.Items), 1, "Cluster has no Extensions pod or has only 1 extensions pod")
 
 	logger.Infof("Removing one of the Extensions Pods: %v", list.Items[1].ObjectMeta.Name)
-	deleteAgonesExtensionsPod(ctx, t, true)
+	deleteAgonesExtensionsPod(ctx, t, list.Items[1].ObjectMeta.Name, true)
 
 	require.NoError(t, waitForAgonesExtensionsRunning(ctx))
 
@@ -75,14 +75,15 @@ func TestGameServerCreationRightAfterDeletingOneExtensionsPod(t *testing.T) {
 	require.NoError(t, waitForAgonesExtensionsRunning(ctx))
 
 	list, err := getAgonesExtensionsPods(ctx)
+	require.NoError(t, err, "Could not get list of Extension pods")
 	logger.Infof("Length of pod list is %v", len(list.Items))
 	for i := range list.Items {
 		logger.Infof("Name of extensions pod %v: %v", i, list.Items[i].ObjectMeta.Name)
 	}
-	require.NoError(t, err, "Could not get list of Extension pods")
+	require.Greater(t, len(list.Items), 1, "Cluster has no Extensions pod or has only 1 extensions pod")
 
 	logger.Infof("Removing one of the Extensions Pods: %v", list.Items[1].ObjectMeta.Name)
-	deleteAgonesExtensionsPod(ctx, t, false)
+	deleteAgonesExtensionsPod(ctx, t, list.Items[1].ObjectMeta.Name, false)
 
 	endTime := time.Now().Add(30 * time.Second)
 	for time.Now().Before(endTime) {
@@ -94,21 +95,17 @@ func TestGameServerCreationRightAfterDeletingOneExtensionsPod(t *testing.T) {
 	}
 }
 
-// deleteAgonesExtensionsPod deletes one of the extensions pod for the Agones extensions,
+// deleteAgonesExtensionsPod deletes the named extensions pod for the Agones extensions,
 // faking a extensions pod crash.
-func deleteAgonesExtensionsPod(ctx context.Context, t *testing.T, waitForExtensions bool) {
+func deleteAgonesExtensionsPod(ctx context.Context, t *testing.T, podName string, waitForExtensions bool) {
 	t.Helper()
-	list, err := getAgonesExtensionsPods(ctx)
-	require.NoError(t, err, "Could not get list of Extension pods")
-
 	policy := metav1.DeletePropagationBackground
-	podToDelete := list.Items[1]
-	err = framework.KubeClient.CoreV1().Pods("agones-system").Delete(ctx, podToDelete.ObjectMeta.Name,
+	err := framework.KubeClient.CoreV1().Pods("agones-system").Delete(ctx, podName,
 		metav1.DeleteOptions{PropagationPolicy: &policy})
 	require.NoError(t, err, "Could not delete the Extension pods")
 	if waitForExtensions {
 		require.Eventually(t, func() bool {
-			_, err := framework.KubeClient.CoreV1().Pods("agones-system").Get(ctx, podToDelete.ObjectMeta.Name, metav1.GetOptions{})
+			_, err := framework.KubeClient.CoreV1().Pods("agones-system").Get(ctx, podName, metav1.GetOptions{})
 			return err != nil
 		}, 5*time.Minute, time.Second)
 	}

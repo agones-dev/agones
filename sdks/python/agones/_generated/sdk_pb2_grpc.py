@@ -96,6 +96,36 @@ class SDKStub(object):
                 request_serializer=sdk__pb2.Duration.SerializeToString,
                 response_deserializer=sdk__pb2.Empty.FromString,
                 _registered_method=True)
+        self.GetCounter = channel.unary_unary(
+                '/agones.dev.sdk.SDK/GetCounter',
+                request_serializer=sdk__pb2.GetCounterRequest.SerializeToString,
+                response_deserializer=sdk__pb2.Counter.FromString,
+                _registered_method=True)
+        self.UpdateCounter = channel.unary_unary(
+                '/agones.dev.sdk.SDK/UpdateCounter',
+                request_serializer=sdk__pb2.UpdateCounterRequest.SerializeToString,
+                response_deserializer=sdk__pb2.Counter.FromString,
+                _registered_method=True)
+        self.GetList = channel.unary_unary(
+                '/agones.dev.sdk.SDK/GetList',
+                request_serializer=sdk__pb2.GetListRequest.SerializeToString,
+                response_deserializer=sdk__pb2.List.FromString,
+                _registered_method=True)
+        self.UpdateList = channel.unary_unary(
+                '/agones.dev.sdk.SDK/UpdateList',
+                request_serializer=sdk__pb2.UpdateListRequest.SerializeToString,
+                response_deserializer=sdk__pb2.List.FromString,
+                _registered_method=True)
+        self.AddListValue = channel.unary_unary(
+                '/agones.dev.sdk.SDK/AddListValue',
+                request_serializer=sdk__pb2.AddListValueRequest.SerializeToString,
+                response_deserializer=sdk__pb2.List.FromString,
+                _registered_method=True)
+        self.RemoveListValue = channel.unary_unary(
+                '/agones.dev.sdk.SDK/RemoveListValue',
+                request_serializer=sdk__pb2.RemoveListValueRequest.SerializeToString,
+                response_deserializer=sdk__pb2.List.FromString,
+                _registered_method=True)
 
 
 class SDKServicer(object):
@@ -165,6 +195,57 @@ class SDKServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetCounter(self, request, context):
+        """Gets a Counter. Returns NOT_FOUND if the Counter does not exist.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def UpdateCounter(self, request, context):
+        """UpdateCounter returns the updated Counter. Returns NOT_FOUND if the Counter does not exist (name cannot be updated).
+        Returns OUT_OF_RANGE if the Count is out of range [0,Capacity].
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetList(self, request, context):
+        """Gets a List. Returns NOT_FOUND if the List does not exist.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def UpdateList(self, request, context):
+        """UpdateList returns the updated List. Returns NOT_FOUND if the List does not exist (name cannot be updated).
+        **THIS WILL OVERWRITE ALL EXISTING LIST.VALUES WITH ANY REQUEST LIST.VALUES**
+        Use AddListValue() or RemoveListValue() for modifying the List.Values field.
+        Returns INVALID_ARGUMENT if the field mask path(s) are not field(s) of the List.
+        If a field mask path(s) is specified, but the value is not set in the request List object,
+        then the default value for the variable will be set (i.e. 0 for "capacity", empty list for "values").
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def AddListValue(self, request, context):
+        """Adds a value to a List and returns updated List. Returns NOT_FOUND if the List does not exist.
+        Returns ALREADY_EXISTS if the value is already in the List.
+        Returns OUT_OF_RANGE if the List is already at Capacity.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RemoveListValue(self, request, context):
+        """Removes a value from a List and returns updated List. Returns NOT_FOUND if the List does not exist.
+        Returns NOT_FOUND if the value is not in the List.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_SDKServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -212,6 +293,36 @@ def add_SDKServicer_to_server(servicer, server):
                     servicer.Reserve,
                     request_deserializer=sdk__pb2.Duration.FromString,
                     response_serializer=sdk__pb2.Empty.SerializeToString,
+            ),
+            'GetCounter': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetCounter,
+                    request_deserializer=sdk__pb2.GetCounterRequest.FromString,
+                    response_serializer=sdk__pb2.Counter.SerializeToString,
+            ),
+            'UpdateCounter': grpc.unary_unary_rpc_method_handler(
+                    servicer.UpdateCounter,
+                    request_deserializer=sdk__pb2.UpdateCounterRequest.FromString,
+                    response_serializer=sdk__pb2.Counter.SerializeToString,
+            ),
+            'GetList': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetList,
+                    request_deserializer=sdk__pb2.GetListRequest.FromString,
+                    response_serializer=sdk__pb2.List.SerializeToString,
+            ),
+            'UpdateList': grpc.unary_unary_rpc_method_handler(
+                    servicer.UpdateList,
+                    request_deserializer=sdk__pb2.UpdateListRequest.FromString,
+                    response_serializer=sdk__pb2.List.SerializeToString,
+            ),
+            'AddListValue': grpc.unary_unary_rpc_method_handler(
+                    servicer.AddListValue,
+                    request_deserializer=sdk__pb2.AddListValueRequest.FromString,
+                    response_serializer=sdk__pb2.List.SerializeToString,
+            ),
+            'RemoveListValue': grpc.unary_unary_rpc_method_handler(
+                    servicer.RemoveListValue,
+                    request_deserializer=sdk__pb2.RemoveListValueRequest.FromString,
+                    response_serializer=sdk__pb2.List.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -458,6 +569,168 @@ class SDK(object):
             '/agones.dev.sdk.SDK/Reserve',
             sdk__pb2.Duration.SerializeToString,
             sdk__pb2.Empty.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetCounter(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/agones.dev.sdk.SDK/GetCounter',
+            sdk__pb2.GetCounterRequest.SerializeToString,
+            sdk__pb2.Counter.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def UpdateCounter(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/agones.dev.sdk.SDK/UpdateCounter',
+            sdk__pb2.UpdateCounterRequest.SerializeToString,
+            sdk__pb2.Counter.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetList(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/agones.dev.sdk.SDK/GetList',
+            sdk__pb2.GetListRequest.SerializeToString,
+            sdk__pb2.List.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def UpdateList(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/agones.dev.sdk.SDK/UpdateList',
+            sdk__pb2.UpdateListRequest.SerializeToString,
+            sdk__pb2.List.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def AddListValue(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/agones.dev.sdk.SDK/AddListValue',
+            sdk__pb2.AddListValueRequest.SerializeToString,
+            sdk__pb2.List.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RemoveListValue(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/agones.dev.sdk.SDK/RemoveListValue',
+            sdk__pb2.RemoveListValueRequest.SerializeToString,
+            sdk__pb2.List.FromString,
             options,
             channel_credentials,
             insecure,

@@ -459,6 +459,9 @@ func validateCounterActions(counters map[string]CounterAction, fldPath *field.Pa
 		if counterAction.Capacity != nil && *counterAction.Capacity < 0 {
 			allErrs = append(allErrs, field.Invalid(keyPath.Child("capacity"), counterAction.Capacity, apivalidation.IsNegativeErrorMsg))
 		}
+		if counterAction.Action != nil && *counterAction.Action != agonesv1.GameServerPriorityIncrement && *counterAction.Action != agonesv1.GameServerPriorityDecrement {
+			allErrs = append(allErrs, field.NotSupported(keyPath.Child("action"), *counterAction.Action, []string{agonesv1.GameServerPriorityIncrement, agonesv1.GameServerPriorityDecrement}))
+		}
 		if counterAction.Amount != nil && counterAction.Action == nil {
 			allErrs = append(allErrs, field.Invalid(keyPath, counterAction.Action, "action must be \"Increment\" or \"Decrement\" if the amount is not nil"))
 		}
