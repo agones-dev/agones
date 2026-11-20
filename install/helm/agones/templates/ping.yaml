@@ -126,6 +126,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: agones-ping-pdb
+  namespace: {{ .Release.Namespace }}
 spec:
 {{- if .Values.agones.ping.pdb.minAvailable }}
 {{- if .Values.agones.ping.pdb.maxUnavailable }}
