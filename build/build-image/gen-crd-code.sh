@@ -37,6 +37,23 @@ kube::codegen::gen_client \
   --boilerplate /go/src/agones.dev/agones/build/boilerplate.go.txt \
   /go/src/agones.dev/agones/pkg/apis
 
+# gen_client only generates apply configurations for packages with +genclient resources, so it skips
+# pkg/apis/plugins, whose types are only embedded in other resources. Regenerate the apply configurations
+# with it included, so the builders that embed those types take apply configurations rather than the
+# API types, and can omit the fields they do not manage.
+echo "Generating apply configurations, including pkg/apis/plugins..."
+APPLYCONFIG_PKGS=()
+while read -r dir; do
+  APPLYCONFIG_PKGS+=("agones.dev/agones/${dir#/go/src/agones.dev/agones/}")
+done < <(grep -rl --include '*.go' -E '^\s*//\s*\+genclient' /go/src/agones.dev/agones/pkg/apis | xargs -n1 dirname | LC_ALL=C sort -u)
+
+"${GOBIN}/applyconfiguration-gen" \
+  --go-header-file /go/src/agones.dev/agones/build/boilerplate.go.txt \
+  --output-dir "${OUTPUT_DIR}/applyconfiguration" \
+  --output-pkg "${OUTPUT_PKG}/applyconfiguration" \
+  "${APPLYCONFIG_PKGS[@]}" \
+  agones.dev/agones/pkg/apis/plugins/v1
+
 echo "CRD client code generation complete."
 
 echo "Generating CRD conversions, deepcopy, and defaults code..."

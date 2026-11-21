@@ -253,6 +253,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: agones-controller-pdb
+  namespace: {{ .Release.Namespace }}
 spec:
 {{- if .Values.agones.controller.pdb.minAvailable }}
 {{- if .Values.agones.controller.pdb.maxUnavailable }}
