@@ -717,10 +717,9 @@ func TestAllocationCacheReorderGameServerAfterAllocation(t *testing.T) {
 				strategy = testScenario.packingStrategy
 			}
 
-			cache.ReorderGameServerAfterAllocation(
-				testScenario.list,
-				testScenario.gsToReorderIndex, testScenario.gsToReorder,
-				testScenario.priorities, strategy)
+			candidates := &allocationCandidates{sorted: testScenario.list, nodeCounts: cache.counter.Counts()}
+			gsa := &allocationv1.GameServerAllocation{Spec: allocationv1.GameServerAllocationSpec{Priorities: testScenario.priorities, Scheduling: strategy}}
+			candidates.reorderAfterAllocation(testScenario.gsToReorderIndex, testScenario.gsToReorder, gsa)
 
 			if !assert.Equal(t, testScenario.want, testScenario.list, "reordered list should match expected") {
 				for _, gs := range testScenario.list {
@@ -740,16 +739,16 @@ func TestAllocationCacheGetGameServer(t *testing.T) {
 		Status:     agonesv1.GameServerStatus{State: agonesv1.GameServerStateReady},
 	}
 
-	_, ok := a.allocationCache.GetGameServer("default/gs1")
+	_, ok := a.allocationCache.getGameServer("default/gs1")
 	assert.False(t, ok)
 
 	a.allocationCache.AddGameServer(gs)
 
-	got, ok := a.allocationCache.GetGameServer("default/gs1")
+	got, ok := a.allocationCache.getGameServer("default/gs1")
 	require.True(t, ok)
 	assert.Equal(t, gs, got)
 
-	_, ok = a.allocationCache.GetGameServer("default/gs2")
+	_, ok = a.allocationCache.getGameServer("default/gs2")
 	assert.False(t, ok)
 }
 
@@ -807,7 +806,7 @@ func TestAllocationCacheRefreshGameServer(t *testing.T) {
 
 			a.allocationCache.refreshGameServer(tc.live)
 
-			got, ok := a.allocationCache.GetGameServer(key)
+			got, ok := a.allocationCache.getGameServer(key)
 			if tc.wantInRV == "" {
 				assert.False(t, ok)
 				return

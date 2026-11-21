@@ -15,6 +15,7 @@
 package gameserverallocations
 
 import (
+	"context"
 	"testing"
 
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
@@ -26,66 +27,65 @@ import (
 func TestPendingAllocations(t *testing.T) {
 	t.Parallel()
 
-	newGs := func(resourceVersion string) *agonesv1.GameServer {
-		return &agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "gs1", Namespace: defaultNs, ResourceVersion: resourceVersion}}
-	}
+	gs := &agonesv1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "gs1", Namespace: defaultNs, ResourceVersion: "1"}}
 	key := defaultNs + "/gs1"
+	newRequest := func() request {
+		return request{ctx: context.Background(), response: make(chan response, 1)}
+	}
+	// toApply returns the requests to apply on the cached GameServer
+	toApply := func(p *pendingAllocations) []request {
+		_, reqs := p.listCachedWithRequestsToApply(func() []*agonesv1.GameServer { return []*agonesv1.GameServer{gs} })
+		return reqs[0]
+	}
 
-	t.Run("take returns the requests in planning order and keeps the last projection", func(t *testing.T) {
+	t.Run("startUpdate returns the requests in planning order and keeps them to apply", func(t *testing.T) {
 		t.Parallel()
 		p := newPendingAllocations()
-		r1 := request{response: make(chan response, 1)}
-		r2 := request{response: make(chan response, 1)}
+		r1, r2 := newRequest(), newRequest()
 
-		p.add(key, r1, newGs("1"))
-		p.add(key, r2, newGs("2"))
+		p.add(key, r1)
+		p.add(key, r2)
 
-		projections := p.projections()
-		require.Len(t, projections, 1)
-		assert.Equal(t, "2", projections[0].ObjectMeta.ResourceVersion)
-
-		reqs := p.take(key)
+		reqs := p.startUpdate(key, gs)
 		require.Len(t, reqs, 2)
 		assert.Equal(t, r1.response, reqs[0].response)
 		assert.Equal(t, r2.response, reqs[1].response)
-		assert.Empty(t, p.take(key))
+		assert.Empty(t, p.startUpdate(key, gs))
 
-		// the projection stays visible to the planner while the update is in progress
-		assert.Len(t, p.projections(), 1)
+		// the requests stay visible to the planner while the update is in progress
+		assert.Len(t, toApply(p), 2)
 	})
 
-	t.Run("finish drops the projection once nothing is pending", func(t *testing.T) {
+	t.Run("finishUpdate drops the requests once nothing is pending", func(t *testing.T) {
 		t.Parallel()
 		p := newPendingAllocations()
-		p.add(key, request{}, newGs("1"))
+		p.add(key, newRequest())
 
-		p.take(key)
-		p.finish(key)
+		p.startUpdate(key, gs)
+		p.finishUpdate(key)
 
-		assert.Empty(t, p.projections())
+		assert.Empty(t, toApply(p))
 	})
 
-	t.Run("finish keeps the projection of requests planned during the update", func(t *testing.T) {
+	t.Run("finishUpdate keeps the requests planned during the update", func(t *testing.T) {
 		t.Parallel()
 		p := newPendingAllocations()
-		p.add(key, request{}, newGs("1"))
+		p.add(key, newRequest())
 
-		p.take(key)
-		p.add(key, request{}, newGs("2"))
-		p.finish(key)
+		p.startUpdate(key, gs)
+		p.add(key, newRequest())
+		p.finishUpdate(key)
 
-		projections := p.projections()
-		require.Len(t, projections, 1)
-		assert.Equal(t, "2", projections[0].ObjectMeta.ResourceVersion)
-		assert.Len(t, p.take(key), 1)
+		assert.Len(t, toApply(p), 1)
+		assert.Len(t, p.startUpdate(key, gs), 1)
 	})
 
-	t.Run("take of an unknown key returns nothing", func(t *testing.T) {
+	t.Run("startUpdate of an unknown key returns nothing", func(t *testing.T) {
 		t.Parallel()
 		p := newPendingAllocations()
 
-		assert.Empty(t, p.take(key))
-		p.finish(key)
-		assert.Empty(t, p.projections())
+		assert.Empty(t, p.startUpdate(key, gs))
+		p.finishUpdate(key)
+		assert.Empty(t, toApply(p))
 	})
 }
