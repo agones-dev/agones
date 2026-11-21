@@ -15,77 +15,86 @@
 package gameserverallocations
 
 import (
+	"slices"
 	"sync"
 
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
+	"k8s.io/client-go/tools/cache"
 )
 
-// pendingAllocations is keyed by GameServer. The workqueue only carries the keys, and each worker gets the
-// requests of its key from here. A key is handed to one worker at a time
-//
-//	key    reqs(key)   projected(key)        workqueue
-//	gs-1   r1 r2 r3    gs-1 after r1 r2 r3   gs-1 -> worker A: take(gs-1) -> r1 r2 r3
-//	gs-2   r4          gs-2 after r4         gs-2 -> worker B: take(gs-2) -> r4
-//
-// add(key, req, projected) appends to reqs[key] and replaces projected[key]
-// take(key) returns reqs[key] and clears it
-// finish(key) drops projected[key], unless add() was called again since take()
-// projections() returns every projected[key] for all GameServers with pending or in progress allocations
-
-// pendingAllocations manages the requests and projected GameServer states for the batch allocator
+// pendingAllocations keeps track of allocation requests for each GameServer
 type pendingAllocations struct {
-	reqs      map[string][]request            // pending requests for each GameServer key
-	projected map[string]*agonesv1.GameServer // projected GameServer state for each GameServer key
-	mu        sync.Mutex
+	// waiting holds the requests that are waiting to be processed for each GameServer key
+	waiting map[string][]request
+	// inFlight holds the requests a worker took for each GameServer key, while it writes them with one Update
+	inFlight map[string][]request
+	// inFlightVersion is the resourceVersion of the cached GameServer that the update in progress writes on
+	inFlightVersion map[string]string
+	mu              sync.Mutex
 }
 
-// newPendingAllocations creates and returns a new instance of pendingAllocations
 func newPendingAllocations() *pendingAllocations {
 	return &pendingAllocations{
-		reqs:      make(map[string][]request),
-		projected: make(map[string]*agonesv1.GameServer),
+		waiting:         make(map[string][]request),
+		inFlight:        make(map[string][]request),
+		inFlightVersion: make(map[string]string),
 	}
 }
 
-// add records a request planned onto the GameServer, and its projected version
-func (p *pendingAllocations) add(key string, req request, projected *agonesv1.GameServer) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+// add stores a request in the waiting list for the given GameServer key
+func (pa *pendingAllocations) add(key string, req request) {
+	pa.mu.Lock()
+	defer pa.mu.Unlock()
 
-	p.reqs[key] = append(p.reqs[key], req)
-	p.projected[key] = projected
+	pa.waiting[key] = append(pa.waiting[key], req)
 }
 
-// take returns and clears the requests pending on the GameServer
-func (p *pendingAllocations) take(key string) []request {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+// startUpdate moves the requests for the given GameServer key from waiting to inFlight, if there is a cached GameServer
+func (pa *pendingAllocations) startUpdate(key string, cached *agonesv1.GameServer) []request {
+	pa.mu.Lock()
+	defer pa.mu.Unlock()
 
-	reqs := p.reqs[key]
-	delete(p.reqs, key)
+	reqs := pa.waiting[key]
+	delete(pa.waiting, key)
+	// bring the requests into inFlight only if there is a cached GameServer
+	if len(reqs) > 0 && cached != nil {
+		pa.inFlight[key] = reqs
+		pa.inFlightVersion[key] = cached.ObjectMeta.ResourceVersion
+	}
 
 	return reqs
 }
 
-// finish drops the projected version of the GameServer once it is updated, unless requests were planned onto it in the meantime
-func (p *pendingAllocations) finish(key string) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+// finishUpdate removes the requests for the given GameServer key from inFlight
+func (pa *pendingAllocations) finishUpdate(key string) {
+	pa.mu.Lock()
+	defer pa.mu.Unlock()
 
-	if len(p.reqs[key]) == 0 {
-		delete(p.projected, key)
-	}
+	delete(pa.inFlight, key)
+	delete(pa.inFlightVersion, key)
 }
 
-// projections returns a list of the projected GameServer states for all GameServers with pending or in progress allocations
-func (p *pendingAllocations) projections() []*agonesv1.GameServer {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+// listCachedWithRequestsToApply lists the cached GameServers, with the requests to apply on each one, by its index
+func (pa *pendingAllocations) listCachedWithRequestsToApply(listCached func() []*agonesv1.GameServer) ([]*agonesv1.GameServer, map[int][]request) {
+	pa.mu.Lock()
+	defer pa.mu.Unlock()
 
-	list := make([]*agonesv1.GameServer, 0, len(p.projected))
-	for _, gs := range p.projected {
-		list = append(list, gs)
+	// list the cached GameServers and prepare the map of requests to apply on each one
+	gameServers := listCached()
+	toApply := make(map[int][]request, len(pa.inFlight)+len(pa.waiting))
+	for index, gs := range gameServers {
+		key, _ := cache.MetaNamespaceKeyFunc(gs)
+		// include in-flight requests only if they match the current resource version of the cached GameServer
+		if reqs, ok := pa.inFlight[key]; ok && pa.inFlightVersion[key] == gs.ObjectMeta.ResourceVersion {
+			toApply[index] = slices.Clone(reqs)
+		}
+		// include waiting requests whose context is still active
+		for _, req := range pa.waiting[key] {
+			if req.ctx.Err() == nil {
+				toApply[index] = append(toApply[index], req)
+			}
+		}
 	}
 
-	return list
+	return gameServers, toApply
 }

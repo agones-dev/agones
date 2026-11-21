@@ -282,38 +282,35 @@ func (c *Allocator) allocateFromLocalCluster(ctx context.Context, gsa *allocatio
 		return err
 	})
 
-	switch {
-	case err == nil:
-		// success - fall through to fill allocation result below
-	case goErrors.Is(err, ErrNoGameServer):
-		gsa.Status.State = allocationv1.GameServerAllocationUnAllocated
-		return gsa, nil
-	case goErrors.Is(err, ErrConflictInGameServerSelection):
-		gsa.Status.State = allocationv1.GameServerAllocationContention
-		return gsa, nil
-	case goErrors.Is(err, ErrGameServerUpdateConflict):
-		c.allocationCache.Resync()
-		gsa.Status.State = allocationv1.GameServerAllocationUnAllocated
-		return gsa, nil
-	default:
+	// If there was an error that is not due to no available GameServer or a conflict in selection, resync the cache.
+	if err != nil && !goErrors.Is(err, ErrNoGameServer) && !goErrors.Is(err, ErrConflictInGameServerSelection) {
 		c.allocationCache.Resync()
 		return nil, err
 	}
 
-	gsa.ObjectMeta.Name = gs.ObjectMeta.Name
-	gsa.Status.State = allocationv1.GameServerAllocationAllocated
-	gsa.Status.GameServerName = gs.ObjectMeta.Name
-	gsa.Status.Ports = gs.Status.Ports
-	gsa.Status.Address = gs.Status.Address
-	gsa.Status.Addresses = append(gsa.Status.Addresses, gs.Status.Addresses...)
-	gsa.Status.NodeName = gs.Status.NodeName
-	gsa.Status.Source = localAllocationSource
-	gsa.Status.Metadata = &allocationv1.GameServerMetadata{
-		Labels:      gs.ObjectMeta.Labels,
-		Annotations: gs.ObjectMeta.Annotations,
+	switch {
+	case goErrors.Is(err, ErrNoGameServer), goErrors.Is(err, ErrGameServerUpdateConflict):
+		gsa.Status.State = allocationv1.GameServerAllocationUnAllocated
+	case goErrors.Is(err, ErrConflictInGameServerSelection):
+		gsa.Status.State = allocationv1.GameServerAllocationContention
+	default:
+		gsa.ObjectMeta.Name = gs.ObjectMeta.Name
+		gsa.Status.State = allocationv1.GameServerAllocationAllocated
+		gsa.Status.GameServerName = gs.ObjectMeta.Name
+		gsa.Status.Ports = gs.Status.Ports
+		gsa.Status.Address = gs.Status.Address
+		gsa.Status.Addresses = append(gsa.Status.Addresses, gs.Status.Addresses...)
+		gsa.Status.NodeName = gs.Status.NodeName
+		gsa.Status.Source = localAllocationSource
+		gsa.Status.Metadata = &allocationv1.GameServerMetadata{
+			Labels:      gs.ObjectMeta.Labels,
+			Annotations: gs.ObjectMeta.Annotations,
+		}
+
+		gsa.Status.Counters = gs.Status.Counters
+		gsa.Status.Lists = gs.Status.Lists
+
 	}
-	gsa.Status.Counters = gs.Status.Counters
-	gsa.Status.Lists = gs.Status.Lists
 
 	c.loggerForGameServerAllocation(gsa).Debug("Game server allocation")
 	return gsa, nil
@@ -633,7 +630,7 @@ func (c *Allocator) allocationUpdateWorkers(ctx context.Context, workerCount int
 							// we should wait for it to get updated with fresh info.
 							c.allocationCache.AddGameServer(gs)
 						}
-						res.err = goErrors.Join(ErrGameServerUpdateConflict, err)
+						res.err = ErrGameServerUpdateConflict
 					} else {
 						// put the GameServer back into the cache, so it's immediately around for re-allocation
 						c.allocationCache.AddGameServer(gs)
@@ -733,7 +730,7 @@ func Retry(backoff wait.Backoff, fn func() error) error {
 		switch {
 		case err == nil:
 			return true, nil
-		case goErrors.Is(err, ErrTotalTimeoutExceeded):
+		case goErrors.Is(err, ErrNoGameServer), goErrors.Is(err, ErrTotalTimeoutExceeded):
 			return true, err
 		default:
 			lastConflictErr = err

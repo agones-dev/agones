@@ -103,3 +103,9 @@ func findGameServerForAllocation(gsa *allocationv1.GameServerAllocation, list []
 
 	return nil, 0, ErrNoGameServer
 }
+
+// matchesAllocation reports whether the GameServerAllocation selects the GameServer
+func matchesAllocation(gs *agonesv1.GameServer, gsa *allocationv1.GameServerAllocation) bool {
+	_, _, err := findGameServerForAllocation(gsa, []*agonesv1.GameServer{gs})
+	return err == nil
+}
