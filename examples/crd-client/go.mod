@@ -1,6 +1,6 @@
 module crd-client
 
-go 1.26
+go 1.26.11
 
 require (
 	agones.dev/agones v1.58.0

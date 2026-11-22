@@ -1,6 +1,6 @@
 module agones.dev/agones
 
-go 1.26.0
+go 1.26.11
 
 // Hotfix to address websocket connection issues with github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.2 and above.
 // See: https://github.com/grpc-ecosystem/grpc-gateway/issues/5326, https://github.com/agones-dev/agones/issues/4248
@@ -116,8 +116,8 @@ require (
 	github.com/tetratelabs/wazero v1.9.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.70.0 // indirect
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.70.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.72.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.72.0 // indirect
 	go.opentelemetry.io/otel v1.47.0 // indirect
 	go.opentelemetry.io/otel/log v1.47.0 // indirect
 	go.opentelemetry.io/otel/metric v1.47.0 // indirect

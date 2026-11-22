@@ -14,7 +14,7 @@
 
 module github-bot
 
-go 1.26
+go 1.26.11
 
 require (
 	cloud.google.com/go/cloudbuild v1.25.0

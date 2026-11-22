@@ -1,6 +1,6 @@
 module github.com/agones/agones/site
 
-go 1.26
+go 1.26.11
 
 require (
 	github.com/google/docsy/theme v0.16.0
