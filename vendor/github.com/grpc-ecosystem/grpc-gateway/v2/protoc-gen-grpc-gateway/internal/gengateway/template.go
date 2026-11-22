@@ -285,6 +285,7 @@ import (
 var (
 	_ codes.Code
 	_ io.Reader
+	_ json.Token
 	_ status.Status
 	_ = errors.New
 	_ = runtime.String
@@ -365,7 +366,16 @@ func request_{{ .Method.Service.GetName }}_{{ .Method.GetName }}_{{ .Index }}(ct
 			return p.OpaqueSetterExpr(msgExpr)
 		},
 		"toHTTPMethod": func(method string) string {
-			return httpMethods[method]
+			if m, ok := httpMethods[method]; ok {
+				return m
+			}
+			// Custom methods such as "LOCK" have no net/http constant.
+			return fmt.Sprintf("%q", method)
+		},
+		// An embedded field is named after its type without the package
+		// qualifier, e.g. *examplepb.Outer_Inner embeds a field Outer_Inner.
+		"embeddedFieldName": func(goType string) string {
+			return goType[strings.LastIndex(goType, ".")+1:]
 		},
 	}
 
@@ -396,52 +406,39 @@ var filter_{{ .Method.Service.GetName }}_{{ .Method.GetName }}_{{ .Index }} = {{
 	if berr != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
 	}
+	dec := marshaler.NewDecoder(newReader())
+	{{- else }}
+	dec := marshaler.NewDecoder(req.Body)
 	{{- end }}
 	{{- $protoReq := .Body.AssignableExprPrep "protoReq" .Method.Service.File.GoPkg.Path -}}
 	{{- if ne "" $protoReq }}
 	{{printf "%s" $protoReq }}
 	{{- end }}
-	{{- if not $isFieldMask }}
 	{{- if $UseOpaqueAPI }}
 	{{- if eq "*" .GetBodyFieldPath }}
 	var bodyData {{.Method.RequestType.GoType .Method.Service.File.GoPkg.Path}}
-	if err := marshaler.NewDecoder(req.Body).Decode(&bodyData); err != nil && !errors.Is(err, io.EOF) {
+	if err := dec.Decode(&bodyData); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	proto.Merge(&protoReq, &bodyData)
 	{{- else }}
 	bodyData := &{{ .GetBodyFieldType }}{}
-	if err := marshaler.NewDecoder(req.Body).Decode(bodyData); err != nil && !errors.Is(err, io.EOF) {
+	if err := dec.Decode(bodyData); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	protoReq.Set{{ .GetBodyFieldStructName }}(bodyData)
 	{{- end }}
 	{{- else }}
-	if err := marshaler.NewDecoder(req.Body).Decode(&{{.Body.AssignableExpr "protoReq" .Method.Service.File.GoPkg.Path}}); err != nil && !errors.Is(err, io.EOF) {
+	if err := dec.Decode(&{{.Body.AssignableExpr "protoReq" .Method.Service.File.GoPkg.Path}}); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	{{- end }}
-	{{- end }}
+	if td, ok := dec.(interface{ Token() (json.Token, error) }); ok {
+		if _, err := td.Token(); !errors.Is(err, io.EOF) {
+			return nil, metadata, status.Error(codes.InvalidArgument, "unexpected data after request body")
+		}
+	}
 	{{- if $isFieldMask }}
-	{{- if $UseOpaqueAPI }}
-	{{- if eq "*" .GetBodyFieldPath }}
-	var bodyData {{.Method.RequestType.GoType .Method.Service.File.GoPkg.Path}}
-	if err := marshaler.NewDecoder(newReader()).Decode(&bodyData); err != nil && !errors.Is(err, io.EOF) {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	proto.Merge(&protoReq, &bodyData)
-	{{- else }}
-	bodyData := &{{ .GetBodyFieldType }}{}
-	if err := marshaler.NewDecoder(newReader()).Decode(bodyData); err != nil && !errors.Is(err, io.EOF) {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	protoReq.Set{{ .GetBodyFieldStructName }}(bodyData)
-	{{- end }}
-	{{- else }}
-	if err := marshaler.NewDecoder(newReader()).Decode(&{{ .Body.AssignableExpr "protoReq" .Method.Service.File.GoPkg.Path }}); err != nil && !errors.Is(err, io.EOF) {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	{{- end }}
 	{{- if $UseOpaqueAPI }}
 	if !protoReq.Has{{ .FieldMaskField }}() || len(protoReq.Get{{ .FieldMaskField }}().GetPaths()) == 0 {
 			if fieldMask, err := runtime.FieldMaskFromRequestBody(newReader(), protoReq.Get{{ .GetBodyFieldStructName }}()); err != nil {
@@ -514,7 +511,7 @@ var filter_{{ .Method.Service.GetName }}_{{ .Method.GetName }}_{{ .Index }} = {{
 	{{- if $UseOpaqueAPI }}
 	{{ opaqueSetter $param.FieldPath "protoReq" }}({{ $enum.GoType $param.Method.Service.File.GoPkg.Path | camelIdentifier }}(e))
 	{{- else }}
-	{{ $param.AssignableExpr "protoReq" $binding.Method.Service.File.GoPkg.Path }} = {{ $enum.GoType $param.Method.Service.File.GoPkg.Path | camelIdentifier }}(e)
+	{{ $param.AssignableExpr "protoReq" $binding.Method.Service.File.GoPkg.Path }} = {{ $enum.GoType $param.Method.Service.File.GoPkg.Path | camelIdentifier }}(e){{ if or $param.IsProto2 $param.IsOptionalProto3 }}.Enum(){{ end }}
 	{{- end }}
 {{- end}}
 {{- end }}
@@ -632,52 +629,39 @@ func local_request_{{ .Method.Service.GetName }}_{{ .Method.GetName }}_{{ .Index
 	if berr != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
 	}
+	dec := marshaler.NewDecoder(newReader())
+	{{- else }}
+	dec := marshaler.NewDecoder(req.Body)
 	{{- end }}
 	{{- $protoReq := .Body.AssignableExprPrep "protoReq" .Method.Service.File.GoPkg.Path -}}
 	{{- if ne "" $protoReq }}
 	{{ printf "%s" $protoReq }}
 	{{- end }}
-	{{- if not $isFieldMask }}
 	{{- if $UseOpaqueAPI }}
 	{{- if eq "*" .GetBodyFieldPath }}
 	var bodyData {{.Method.RequestType.GoType .Method.Service.File.GoPkg.Path}}
-	if err := marshaler.NewDecoder(req.Body).Decode(&bodyData); err != nil && !errors.Is(err, io.EOF) {
+	if err := dec.Decode(&bodyData); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	proto.Merge(&protoReq, &bodyData)
 	{{- else }}
 	bodyData := &{{ .GetBodyFieldType }}{}
-	if err := marshaler.NewDecoder(req.Body).Decode(bodyData); err != nil && !errors.Is(err, io.EOF) {
+	if err := dec.Decode(bodyData); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	protoReq.Set{{ .GetBodyFieldStructName }}(bodyData)
 	{{- end }}
 	{{- else }}
-	if err := marshaler.NewDecoder(req.Body).Decode(&{{ .Body.AssignableExpr "protoReq" .Method.Service.File.GoPkg.Path }}); err != nil && !errors.Is(err, io.EOF)  {
+	if err := dec.Decode(&{{ .Body.AssignableExpr "protoReq" .Method.Service.File.GoPkg.Path }}); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	{{- end }}
-	{{- end }}
+	if td, ok := dec.(interface{ Token() (json.Token, error) }); ok {
+		if _, err := td.Token(); !errors.Is(err, io.EOF) {
+			return nil, metadata, status.Error(codes.InvalidArgument, "unexpected data after request body")
+		}
+	}
 	{{- if $isFieldMask }}
-	{{- if $UseOpaqueAPI }}
-	{{- if eq "*" .GetBodyFieldPath }}
-	var bodyData {{.Method.RequestType.GoType .Method.Service.File.GoPkg.Path}}
-	if err := marshaler.NewDecoder(newReader()).Decode(&bodyData); err != nil && !errors.Is(err, io.EOF) {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	proto.Merge(&protoReq, &bodyData)
-	{{- else }}
-	bodyData := &{{ .GetBodyFieldType }}{}
-	if err := marshaler.NewDecoder(newReader()).Decode(bodyData); err != nil && !errors.Is(err, io.EOF) {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	protoReq.Set{{ .GetBodyFieldStructName }}(bodyData)
-	{{- end }}
-	{{- else }}
-	if err := marshaler.NewDecoder(newReader()).Decode(&{{ .Body.AssignableExpr "protoReq" .Method.Service.File.GoPkg.Path }}); err != nil && !errors.Is(err, io.EOF)  {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	{{- end }}
 	{{- if $UseOpaqueAPI }}
 	if !protoReq.Has{{ .FieldMaskField }}() || len(protoReq.Get{{ .FieldMaskField }}().GetPaths()) == 0 {
 			if fieldMask, err := runtime.FieldMaskFromRequestBody(newReader(), protoReq.Get{{ .GetBodyFieldStructName }}()); err != nil {
@@ -750,7 +734,7 @@ func local_request_{{ .Method.Service.GetName }}_{{ .Method.GetName }}_{{ .Index
 	{{- if $UseOpaqueAPI }}
 	{{ opaqueSetter $param.FieldPath "protoReq" }}({{ $enum.GoType $param.Method.Service.File.GoPkg.Path | camelIdentifier }}(e))
 	{{- else }}
-	{{ $param.AssignableExpr "protoReq" $binding.Method.Service.File.GoPkg.Path }} = {{ $enum.GoType $param.Method.Service.File.GoPkg.Path | camelIdentifier }}(e)
+	{{ $param.AssignableExpr "protoReq" $binding.Method.Service.File.GoPkg.Path }} = {{ $enum.GoType $param.Method.Service.File.GoPkg.Path | camelIdentifier }}(e){{ if or $param.IsProto2 $param.IsOptionalProto3 }}.Enum(){{ end }}
 	{{- end }}
 {{- end }}
 {{- end }}
@@ -802,9 +786,9 @@ func Register{{ $svc.GetName }}{{ $.RegisterFuncSuffix }}Server(ctx context.Cont
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		{{- if $b.PathTmpl }}
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/{{ $svc.File.GetPackage }}.{{ $svc.GetName }}/{{ $m.GetName }}", runtime.WithHTTPPathPattern("{{ $b.PathTmpl.Template }}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/{{ with $svc.File.GetPackage }}{{ . }}.{{ end }}{{ $svc.GetName }}/{{ $m.GetName }}", runtime.WithHTTPPathPattern("{{ $b.PathTmpl.Template }}"))
 		{{- else -}}
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/{{ $svc.File.GetPackage }}.{{ $svc.GetName }}/{{ $m.GetName }}")
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/{{ with $svc.File.GetPackage }}{{ . }}.{{ end }}{{ $svc.GetName }}/{{ $m.GetName }}")
 		{{- end }}
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
@@ -881,9 +865,9 @@ func Register{{ $svc.GetName }}{{ $.RegisterFuncSuffix }}Client(ctx context.Cont
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		{{- if $b.PathTmpl }}
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/{{ $svc.File.GetPackage }}.{{ $svc.GetName }}/{{ $m.GetName }}", runtime.WithHTTPPathPattern("{{ $b.PathTmpl.Template}}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/{{ with $svc.File.GetPackage }}{{ . }}.{{ end }}{{ $svc.GetName }}/{{ $m.GetName }}", runtime.WithHTTPPathPattern("{{ $b.PathTmpl.Template}}"))
 		{{- else -}}
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/{{ $svc.File.GetPackage }}.{{ $svc.GetName }}/{{ $m.GetName }}")
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/{{ with $svc.File.GetPackage }}{{ . }}.{{ end }}{{ $svc.GetName }}/{{ $m.GetName }}")
 		{{- end }}
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
@@ -925,7 +909,7 @@ type response_{{ $svc.GetName }}_{{ $m.GetName }}_{{ $b.Index }} struct {
 }
 
 func (m response_{{ $svc.GetName }}_{{ $m.GetName }}_{{ $b.Index }}) XXX_ResponseBody() interface{} {
-	response := m.{{ $m.ResponseType.GetName }}
+	response := m.{{ $m.ResponseType.GoType $m.Service.File.GoPkg.Path | embeddedFieldName }}
 	{{- if $UseOpaqueAPI }}
 	{{- if eq "*" $b.ResponseBody.FieldPath.String }}
 	return response
