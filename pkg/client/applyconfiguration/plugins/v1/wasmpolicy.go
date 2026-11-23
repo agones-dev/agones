@@ -21,10 +21,9 @@ package v1
 // WasmPolicyApplyConfiguration represents a declarative configuration of the WasmPolicy type for use
 // with apply.
 //
-// WasmPolicy controls the desired behavior of the Wasm policy.
-// It contains the configuration for the WebAssembly module used for autoscaling.
+// WasmPolicy contains the configuration for a WebAssembly module that runs as a plugin to Agones.
 type WasmPolicyApplyConfiguration struct {
-	// Function is the exported function to call in the wasm module, defaults to 'scale'
+	// Function is the exported function to call in the wasm module. The default depends on where the plugin is used.
 	Function *string `json:"function,omitempty"`
 	// Config values to pass to the wasm program on startup
 	Config map[string]string `json:"config,omitempty"`

@@ -1,0 +1,79 @@
+starting build "afde3318-6650-4eaf-b0c4-0e990e00962a" using release legacy
+
+FETCHSOURCE
+From https://github.com/agones-dev/agones
+ * branch            a9a989f23ef3fd1cfa526555d048cab5e2deb233 -> FETCH_HEAD
+HEAD is now at a9a989f Merge branch 'main' into cleanup/player-tracking-api
+GitCommit:
+a9a989f23ef3fd1cfa526555d048cab5e2deb233
+SETUPBUILD
+BUILD
+Starting Step #0 - "cancelot"
+Starting Step #2 - "htmltest-restore-cache"
+Starting Step #32 - "htmltest-save-cache"
+Step #33: Pulling image: gcr.io/cloud-builders/gsutil
+Step #22 - "site-static": Already have image: make-docker
+Starting Step #23 - "deploy-site-static"
+Step #23 - "deploy-site-static": Already have image (with digest): gcr.io/cloud-builders/gcloud
+Step #23 - "deploy-site-static": WARNING: You might be using automatic scaling for a standard environment deployment, without providing a value for automatic_scaling.max_instances. Starting from March, 2025, App Engine sets the automatic scaling maximum instances default for standard environment deployments to 20. This change doesn't impact existing apps. To override the default, specify the new max_instances value in your app.yaml file, and deploy a new version or redeploy over an existing version. For details on max_instances, see https://cloud.google.com/appengine/docs/standard/reference/app-yaml.md#scaling_elements. 
+Step #23 - "deploy-site-static": 
+Step #23 - "deploy-site-static": Services to deploy:
+Step #23 - "deploy-site-static": 
+Step #23 - "deploy-site-static": descriptor:                  [/workspace/site/.app.yaml]
+Step #23 - "deploy-site-static": source:                      [/workspace/site]
+Step #23 - "deploy-site-static": target project:              [agones-images]
+Step #23 - "deploy-site-static": target service:              [preview]
+Step #23 - "deploy-site-static": target version:              [a9a989f]
+Step #23 - "deploy-site-static": target url:                  [https://a9a989f-dot-preview-dot-agones-images.uc.r.appspot.com]
+Step #23 - "deploy-site-static": target service account:      [agones-images@appspot.gserviceaccount.com]
+Step #23 - "deploy-site-static": 
+Step #23 - "deploy-site-static": 
+Step #23 - "deploy-site-static":      (add --promote if you also want to make this service available from
+Step #23 - "deploy-site-static":      [https://preview-dot-agones-images.uc.r.appspot.com])
+Step #23 - "deploy-site-static": 
+Step #23 - "deploy-site-static": Do you want to continue (Y/n)?  
+Step #23 - "deploy-site-static": Beginning deployment of service [preview]...
+Step #23 - "deploy-site-static": ╔════════════════════════════════════════════════════════════╗
+Step #23 - "deploy-site-static": ╠═ Uploading 237 files to Google Cloud Storage              ═╣
+Step #23 - "deploy-site-static": ╚════════════════════════════════════════════════════════════╝
+Step #23 - "deploy-site-static": File upload done.
+Step #23 - "deploy-site-static": Waiting for operation [apps/agones-images/operations/operation-1794542179638-660206926deb0-71cbeeba-77e25895] to complete...
+Step #23 - "deploy-site-static": .......................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................done.
+Step #23 - "deploy-site-static": Deployed service [preview] to [https://a9a989f-dot-preview-dot-agones-images.uc.r.appspot.com]
+Step #23 - "deploy-site-static": 
+Step #23 - "deploy-site-static": You can stream logs from the command line by running:
+Step #23 - "deploy-site-static":   $ gcloud app logs tail -s preview
+Step #23 - "deploy-site-static": 
+Step #23 - "deploy-site-static": To view your application in the web browser run:
+Step #23 - "deploy-site-static":   $ gcloud app browse -s preview --project=agones-images
+Finished Step #23 - "deploy-site-static"
+4d049f83d9cf: Preparing
+275a30dd8ce9: Preparing
+b5764396d8d3: Preparing
+b64fe4bb89ff: Preparing
+621c35e751a5: Preparing
+9486261b5a13: Preparing
+b64fe4bb89ff: Waiting
+621c35e751a5: Waiting
+9486261b5a13: Waiting
+275a30dd8ce9: Waiting
+4d049f83d9cf: Waiting
+b5764396d8d3: Waiting
+a0fea0369e78: Layer already exists
+4cde6b0bb6f5: Layer already exists
+bd3cdfae1d3f: Layer already exists
+6f1cdceb6a31: Layer already exists
+a437238456f1: Layer already exists
+ad51d0769d16: Layer already exists
+0762a1f6557d: Layer already exists
+af5aa97ebe6c: Layer already exists
+f62e3941d8c0: Layer already exists
+f0e426085738: Layer already exists
+4d049f83d9cf: Layer already exists
+b64fe4bb89ff: Layer already exists
+275a30dd8ce9: Layer already exists
+b5764396d8d3: Layer already exists
+9486261b5a13: Layer already exists
+621c35e751a5: Layer already exists
+1.63.0-dev-a9a989f-amd64: digest: sha256:84aeaab1da317182ef5f26f6e4264ab9a3ac689d1e71189c5ef31a6368aa41f7 size: 3652
+DONE

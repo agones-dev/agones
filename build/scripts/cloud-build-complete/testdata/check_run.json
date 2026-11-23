@@ -1,0 +1,27 @@
+{
+  "action": "completed",
+  "check_run": {
+    "id": 131673108108,
+    "name": "agones-dev-pull-request-build (agones-images)",
+    "head_sha": "a9a989f23ef3fd1cfa526555d048cab5e2deb233",
+    "status": "completed",
+    "conclusion": "success",
+    "details_url": "https://console.cloud.google.com/cloud-build/builds/afde3318-6650-4eaf-b0c4-0e990e00962a?project=258182270954",
+    "output": {
+      "title": "Summary",
+      "summary": "Build afde3318-6650-4eaf-b0c4-0e990e00962a successful",
+      "text": null
+    },
+    "app": {
+      "slug": "google-cloud-build"
+    },
+    "pull_requests": []
+  },
+  "repository": {
+    "name": "agones",
+    "full_name": "agones-dev/agones",
+    "owner": {
+      "login": "agones-dev"
+    }
+  }
+}

@@ -28,6 +28,7 @@ import (
 	"agones.dev/agones/pkg/apis"
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
 	autoscalingv1 "agones.dev/agones/pkg/apis/autoscaling/v1"
+	pluginsv1 "agones.dev/agones/pkg/apis/plugins/v1"
 	"agones.dev/agones/pkg/gameservers"
 	agtesting "agones.dev/agones/pkg/testing"
 	"agones.dev/agones/pkg/util/webhooks"
@@ -1246,7 +1247,7 @@ func defaultWebhookFixtures() (*autoscalingv1.FleetAutoscaler, *agonesv1.Fleet) 
 	fas.Spec.Policy.Type = autoscalingv1.WebhookPolicyType
 	fas.Spec.Policy.Buffer = nil
 	url := "/autoscaler"
-	fas.Spec.Policy.Webhook = &autoscalingv1.URLConfiguration{
+	fas.Spec.Policy.Webhook = &pluginsv1.URLConfiguration{
 		Service: &admregv1.ServiceReference{
 			Name: "fleetautoscaler-service",
 			Path: &url,

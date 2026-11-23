@@ -13,6 +13,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: agones-controller-pdb
+  namespace: agones-system
 spec:
   minAvailable: 1
   selector:
@@ -27,6 +28,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: agones-extensions-pdb
+  namespace: agones-system
 spec:
   minAvailable: 1
   selector:
@@ -6934,7 +6936,7 @@ spec:
                               required:
                                 - from
                               properties:
-                                function: # The exported function to call in the wasm module, defaults to 'scale'
+                                function: # The exported function to call in the wasm module
                                   type: string
                                   default: "scale"
                                 config: # Config values to pass to the wasm program on startup
@@ -6946,7 +6948,7 @@ spec:
                                   required:
                                     - url
                                   properties:
-                                    url:              
+                                    url:          
                                       type: object
                                       nullable: true
                                       properties:
@@ -7199,7 +7201,7 @@ spec:
                                     required:
                                       - from
                                     properties:
-                                      function: # The exported function to call in the wasm module, defaults to 'scale'
+                                      function: # The exported function to call in the wasm module
                                         type: string
                                         default: "scale"
                                       config: # Config values to pass to the wasm program on startup
@@ -7211,7 +7213,7 @@ spec:
                                         required:
                                           - url
                                         properties:
-                                          url:              
+                                          url:          
                                             type: object
                                             nullable: true
                                             properties:
@@ -7243,7 +7245,7 @@ spec:
                             required:
                               - from
                             properties:
-                              function: # The exported function to call in the wasm module, defaults to 'scale'
+                              function: # The exported function to call in the wasm module
                                 type: string
                                 default: "scale"
                               config: # Config values to pass to the wasm program on startup
@@ -7255,7 +7257,7 @@ spec:
                                 required:
                                   - url
                                 properties:
-                                  url:              
+                                  url:          
                                     type: object
                                     nullable: true
                                     properties:
@@ -7287,7 +7289,7 @@ spec:
                       required:
                         - from
                       properties:
-                        function: # The exported function to call in the wasm module, defaults to 'scale'
+                        function: # The exported function to call in the wasm module
                           type: string
                           default: "scale"
                         config: # Config values to pass to the wasm program on startup
@@ -7299,7 +7301,7 @@ spec:
                           required:
                             - url
                           properties:
-                            url:              
+                            url:          
                               type: object
                               nullable: true
                               properties:
