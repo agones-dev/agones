@@ -556,7 +556,7 @@ build-extensions-debug-binary: build-extensions-binary-linux-amd64
 # Modules that should not be linted.
 NESTED_LINT_EXCLUDE =
 # Modules that only build for wasm, linted with GOOS/GOARCH set.
-NESTED_LINT_WASM_MODULES = examples/autoscaler-wasm
+NESTED_LINT_WASM_MODULES = examples/allocation-wasm examples/autoscaler-wasm
 
 # The root config's exclusion rules are written for the root module, so in a
 # nested module most of them match nothing and warn-unused reports each one.
