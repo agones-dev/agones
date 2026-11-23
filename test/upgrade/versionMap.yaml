@@ -148,7 +148,7 @@ data:
           "betaGates": ["CountsAndLists", "GKEAutopilotExtendedDurationPods", "ScheduledAutoscaler",  "FleetAutoscaleRequestMetaData", "SidecarContainers"]
         },
         "Dev": {
-          "alphaGates": ["RollingUpdateSurge", "WasmAutoscaler"],
+          "alphaGates": ["ExtensionsAPIServerAuth", "RollingUpdateSurge", "WasmAutoscaler"],
           "betaGates": ["CountsAndLists", "GKEAutopilotExtendedDurationPods", "ScheduledAutoscaler",  "FleetAutoscaleRequestMetaData", "SidecarContainers"]
         }
       }

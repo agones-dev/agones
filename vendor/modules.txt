@@ -112,6 +112,9 @@ github.com/aws/aws-sdk-go/service/sts/stsiface
 # github.com/beorn7/perks v1.0.1
 ## explicit; go 1.11
 github.com/beorn7/perks/quantile
+# github.com/blang/semver/v4 v4.0.0
+## explicit; go 1.14
+github.com/blang/semver/v4
 # github.com/cespare/xxhash/v2 v2.3.0
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
@@ -908,6 +911,7 @@ k8s.io/apimachinery/pkg/api/validate
 k8s.io/apimachinery/pkg/api/validate/constraints
 k8s.io/apimachinery/pkg/api/validate/content
 k8s.io/apimachinery/pkg/api/validation
+k8s.io/apimachinery/pkg/apis/asn1
 k8s.io/apimachinery/pkg/apis/meta/fuzzer
 k8s.io/apimachinery/pkg/apis/meta/internalversion
 k8s.io/apimachinery/pkg/apis/meta/internalversion/validation
@@ -957,6 +961,13 @@ k8s.io/apimachinery/pkg/version
 k8s.io/apimachinery/pkg/watch
 k8s.io/apimachinery/third_party/forked/golang/json
 k8s.io/apimachinery/third_party/forked/golang/reflect
+# k8s.io/apiserver v0.36.5
+## explicit; go 1.26.0
+k8s.io/apiserver/pkg/authentication/authenticator
+k8s.io/apiserver/pkg/authentication/request/x509
+k8s.io/apiserver/pkg/authentication/user
+k8s.io/apiserver/pkg/features
+k8s.io/apiserver/pkg/util/feature
 # k8s.io/client-go v0.36.5
 ## explicit; go 1.26.0
 k8s.io/client-go/applyconfigurations
@@ -1281,6 +1292,17 @@ k8s.io/client-go/util/keyutil
 k8s.io/client-go/util/retry
 k8s.io/client-go/util/watchlist
 k8s.io/client-go/util/workqueue
+# k8s.io/component-base v0.36.5
+## explicit; go 1.26.0
+k8s.io/component-base/featuregate
+k8s.io/component-base/metrics
+k8s.io/component-base/metrics/api/v1
+k8s.io/component-base/metrics/internal
+k8s.io/component-base/metrics/legacyregistry
+k8s.io/component-base/metrics/prometheus/feature
+k8s.io/component-base/metrics/prometheusextension
+k8s.io/component-base/version
+k8s.io/component-base/zpages/features
 # k8s.io/gengo v0.0.0-20260408192533-25e2208e0dc3
 ## explicit; go 1.13
 k8s.io/gengo/parser

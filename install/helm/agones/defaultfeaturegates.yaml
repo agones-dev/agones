@@ -32,6 +32,7 @@ SidecarContainers: true
 FleetAutoscaleRequestMetaData: true
 
 # Alpha features
+ExtensionsAPIServerAuth: false
 RollingUpdateSurge: false
 WasmAutoscaler: false
 
