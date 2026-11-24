@@ -198,9 +198,11 @@ endif
 run-sdk-conformance-test-csharp:
 	# run with Beta feature flags enabled
 	$(MAKE) run-sdk-conformance-test SDK_FOLDER=csharp GRPC_PORT=9005 HTTP_PORT=9105 FEATURE_GATES=$(BETA_FEATURE_GATES) TESTS=$(DEFAULT_CONFORMANCE_TESTS),$(COUNTS_AND_LISTS_TESTS)
+	# run against the deprecated Beta SDK interface. Remove along with the Beta SDK.
+	DOCKER_RUN_ARGS="$(DOCKER_RUN_ARGS) -e CSHARP_SDK_BETA=true" $(MAKE) run-sdk-conformance-test SDK_FOLDER=csharp GRPC_PORT=9005 HTTP_PORT=9105 FEATURE_GATES=$(BETA_FEATURE_GATES) TESTS=$(DEFAULT_CONFORMANCE_TESTS),$(COUNTS_AND_LISTS_TESTS)
 ifneq ($(strip $(ALPHA_CONFORMANCE_TESTS)),)
 	# run with Alpha feature flags enabled
-	$(MAKE) run-sdk-conformance-test SDK_FOLDER=csharp GRPC_PORT=9005 HTTP_PORT=9105 FEATURE_GATES=$(ALPHA_FEATURE_GATES) TESTS=$(DEFAULT_CONFORMANCE_TESTS),$(ALPHA_CONFORMANCE_TESTS)
+	$(MAKE) run-sdk-conformance-test SDK_FOLDER=csharp GRPC_PORT=9005 HTTP_PORT=9105 FEATURE_GATES=$(ALPHA_FEATURE_GATES) TESTS=$(DEFAULT_CONFORMANCE_TESTS),$(ALPHA_CONFORMANCE_TESTS),$(COUNTS_AND_LISTS_TESTS)
 endif
 
 run-sdk-conformance-test-rest:
