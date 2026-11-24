@@ -229,6 +229,7 @@ func TestBetaGetAndUpdateList(t *testing.T) {
 		assert.Equal(t, wantCapacity, capacity)
 	})
 
+	//nolint:dupl // the deprecated Beta SDK tests mirror the Stable SDK tests, until the Beta SDK is removed.
 	t.Run("Get List Length, Get List Values, ListContains, and Append List Value", func(t *testing.T) {
 		length, err := b.GetListLength("bar")
 		require.NoError(t, err)
@@ -343,6 +344,8 @@ func (b *betaMock) GetList(_ context.Context, in *beta.GetListRequest, _ ...grpc
 
 // Note: unlike the SDK Server, UpdateList does not batch changes and instead updates the list
 // directly.
+//
+//nolint:dupl // the deprecated Beta SDK tests mirror the Stable SDK tests, until the Beta SDK is removed.
 func (b *betaMock) UpdateList(_ context.Context, in *beta.UpdateListRequest, _ ...grpc.CallOption) (*beta.List, error) {
 	if in == nil {
 		return nil, stderrors.New("UpdateListRequest cannot be nil")

@@ -53,7 +53,6 @@ import (
 	"agones.dev/agones/pkg/gameserverallocations"
 	"agones.dev/agones/pkg/sdk"
 	"agones.dev/agones/pkg/sdk/alpha"
-	"agones.dev/agones/pkg/sdk/beta"
 	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/logfields"
 	"agones.dev/agones/pkg/util/runtime"
@@ -77,7 +76,7 @@ const readHeaderTimeout = 60 * time.Second
 
 var (
 	_ alpha.SDKServer = &SDKServer{}
-	_ beta.SDKServer  = &SDKServer{}
+	_ sdk.SDKServer   = &SDKServer{}
 )
 
 type counterUpdateRequest struct {
@@ -700,7 +699,7 @@ func (s *SDKServer) stopReserveTimer() {
 // GetCounter returns a Counter. Returns error if the counter does not exist.
 // [Stage:Beta]
 // [FeatureFlag:CountsAndLists]
-func (s *SDKServer) GetCounter(_ context.Context, in *beta.GetCounterRequest) (*beta.Counter, error) {
+func (s *SDKServer) GetCounter(_ context.Context, in *sdk.GetCounterRequest) (*sdk.Counter, error) {
 	s.logger.WithField("name", in.GetName()).Debug("Getting Counter")
 
 	gs, err := s.gameServer()
@@ -716,7 +715,7 @@ func (s *SDKServer) GetCounter(_ context.Context, in *beta.GetCounterRequest) (*
 		return nil, s.errs.Errorf("counter not found: %s", in.GetName())
 	}
 	s.logger.WithField("Get Counter", counter).Debugf("Got Counter %s", in.GetName())
-	protoCounter := &beta.Counter{Name: in.GetName(), Count: counter.Count, Capacity: counter.Capacity}
+	protoCounter := &sdk.Counter{Name: in.GetName(), Count: counter.Count, Capacity: counter.Capacity}
 	// If there are batched changes that have not yet been applied, apply them to the Counter.
 	// This does NOT validate batched the changes.
 	if counterUpdate, ok := s.gsCounterUpdates[in.GetName()]; ok {
@@ -747,7 +746,7 @@ func (s *SDKServer) GetCounter(_ context.Context, in *beta.GetCounterRequest) (*
 // Returns error if the Count is out of range [0,Capacity].
 // [Stage:Beta]
 // [FeatureFlag:CountsAndLists]
-func (s *SDKServer) UpdateCounter(_ context.Context, in *beta.UpdateCounterRequest) (*beta.Counter, error) {
+func (s *SDKServer) UpdateCounter(_ context.Context, in *sdk.UpdateCounterRequest) (*sdk.Counter, error) {
 	if in.GetCounterUpdateRequest() == nil {
 		return nil, s.errs.Errorf("invalid argument. CounterUpdateRequest: %v cannot be nil", in.GetCounterUpdateRequest())
 	}
@@ -829,7 +828,7 @@ func (s *SDKServer) UpdateCounter(_ context.Context, in *beta.UpdateCounterReque
 }
 
 // projectCounterState calculates the final expected Counter state after applying batched updates.
-func projectCounterState(name string, batchCounter counterUpdateRequest) *beta.Counter {
+func projectCounterState(name string, batchCounter counterUpdateRequest) *sdk.Counter {
 	currentCapacity := batchCounter.counter.Capacity
 	if batchCounter.capacitySet != nil {
 		currentCapacity = *batchCounter.capacitySet
@@ -845,7 +844,7 @@ func projectCounterState(name string, batchCounter counterUpdateRequest) *beta.C
 	if currentCount > currentCapacity {
 		currentCount = currentCapacity
 	}
-	return &beta.Counter{
+	return &sdk.Counter{
 		Name:     name,
 		Count:    currentCount,
 		Capacity: currentCapacity,
@@ -917,7 +916,7 @@ func (s *SDKServer) updateCounter(ctx context.Context) error {
 // GetList returns a List. Returns not found if the List does not exist.
 // [Stage:Beta]
 // [FeatureFlag:CountsAndLists]
-func (s *SDKServer) GetList(_ context.Context, in *beta.GetListRequest) (*beta.List, error) {
+func (s *SDKServer) GetList(_ context.Context, in *sdk.GetListRequest) (*sdk.List, error) {
 	if in == nil {
 		return nil, s.errs.Errorf("GetListRequest cannot be nil")
 	}
@@ -937,7 +936,7 @@ func (s *SDKServer) GetList(_ context.Context, in *beta.GetListRequest) (*beta.L
 	}
 
 	s.logger.WithField("Get List", list).Debugf("Got List %s", in.GetName())
-	protoList := beta.List{Name: in.GetName(), Values: list.Values, Capacity: list.Capacity}
+	protoList := sdk.List{Name: in.GetName(), Values: list.Values, Capacity: list.Capacity}
 	// If there are batched changes that have not yet been applied, apply them to the List.
 	// This does NOT validate batched the changes, and does NOT modify the List.
 	if listUpdate, ok := s.gsListUpdates[in.GetName()]; ok {
@@ -966,7 +965,7 @@ func (s *SDKServer) GetList(_ context.Context, in *beta.GetListRequest) (*beta.L
 // Returns error if the List update capacity is out of range [0,listMaxCapacity].
 // [Stage:Beta]
 // [FeatureFlag:CountsAndLists]
-func (s *SDKServer) UpdateList(ctx context.Context, in *beta.UpdateListRequest) (*beta.List, error) {
+func (s *SDKServer) UpdateList(ctx context.Context, in *sdk.UpdateListRequest) (*sdk.List, error) {
 	if in == nil {
 		return nil, s.errs.Errorf("UpdateListRequest cannot be nil")
 	}
@@ -981,7 +980,7 @@ func (s *SDKServer) UpdateList(ctx context.Context, in *beta.UpdateListRequest) 
 		return nil, s.errs.Errorf("out of range. Capacity must be within range [0,%d]. Found Capacity: %d", s.listMaxCapacity, in.GetList().GetCapacity())
 	}
 
-	list, err := s.GetList(ctx, &beta.GetListRequest{Name: in.GetList().GetName()})
+	list, err := s.GetList(ctx, &sdk.GetListRequest{Name: in.GetList().GetName()})
 	if err != nil {
 
 		return nil, s.errs.Errorf("not found. %s List not found", in.GetList().GetName())
@@ -1041,7 +1040,7 @@ func (s *SDKServer) UpdateList(ctx context.Context, in *beta.UpdateListRequest) 
 	// Queue up the Update for later batch processing by updateLists.
 	s.gsListUpdates[list.GetName()] = batchList
 	s.workerqueue.Enqueue(cache.ExplicitKey(updateLists))
-	return &beta.List{}, nil
+	return &sdk.List{}, nil
 
 }
 
@@ -1051,13 +1050,13 @@ func (s *SDKServer) UpdateList(ctx context.Context, in *beta.UpdateListRequest) 
 // Returns out of range if the List is already at Capacity.
 // [Stage:Beta]
 // [FeatureFlag:CountsAndLists]
-func (s *SDKServer) AddListValue(ctx context.Context, in *beta.AddListValueRequest) (*beta.List, error) {
+func (s *SDKServer) AddListValue(ctx context.Context, in *sdk.AddListValueRequest) (*sdk.List, error) {
 	if in == nil {
 		return nil, s.errs.Errorf("AddListValueRequest cannot be nil")
 	}
 	s.logger.WithField("name", in.GetName()).Debug("Add List Value")
 
-	list, err := s.GetList(ctx, &beta.GetListRequest{Name: in.GetName()})
+	list, err := s.GetList(ctx, &sdk.GetListRequest{Name: in.GetName()})
 	if err != nil {
 		return nil, err
 	}
@@ -1087,13 +1086,13 @@ func (s *SDKServer) AddListValue(ctx context.Context, in *beta.AddListValueReque
 // Returns not found if the value is not in the List.
 // [Stage:Beta]
 // [FeatureFlag:CountsAndLists]
-func (s *SDKServer) RemoveListValue(ctx context.Context, in *beta.RemoveListValueRequest) (*beta.List, error) {
+func (s *SDKServer) RemoveListValue(ctx context.Context, in *sdk.RemoveListValueRequest) (*sdk.List, error) {
 	if in == nil {
 		return nil, s.errs.Errorf("RemoveListValueRequest cannot be nil")
 	}
 	s.logger.WithField("name", in.GetName()).WithField("value", in.GetValue()).Debug("Remove List Value")
 
-	list, err := s.GetList(ctx, &beta.GetListRequest{Name: in.GetName()})
+	list, err := s.GetList(ctx, &sdk.GetListRequest{Name: in.GetName()})
 	if err != nil {
 		return nil, err
 	}

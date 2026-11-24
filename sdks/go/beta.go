@@ -27,6 +27,9 @@ import (
 )
 
 // Beta is the struct for Beta SDK functionality.
+//
+// The Counters and Lists methods on Beta are deprecated, as Counters and Lists are now Stable.
+// Use the equivalent methods on [SDK] instead.
 type Beta struct {
 	client beta.SDKClient
 	errs   *errors.Errors
@@ -41,6 +44,9 @@ func newBeta(conn *grpc.ClientConn) *Beta {
 
 // GetCounterCount returns the Count for a Counter, given the Counter's key (name).
 // Will error if the key was not predefined in the GameServer resource on creation.
+//
+// Deprecated: Use [SDK.GetCounterCount] instead. Counters and Lists are now Stable, and this Beta
+// method will be removed in a future release.
 func (b *Beta) GetCounterCount(key string) (int64, error) {
 	counter, err := b.client.GetCounter(context.Background(), &beta.GetCounterRequest{Name: key})
 	if err != nil {
@@ -58,6 +64,9 @@ func (b *Beta) GetCounterCount(key string) (int64, error) {
 // Note: A potential race condition here is that if count values are set from both the SDK and
 // through the K8s API (Allocation or otherwise), since the SDK append operation back to the CRD
 // value is batched asynchronous any value incremented past the capacity will be silently truncated.
+//
+// Deprecated: Use [SDK.IncrementCounter] instead. Counters and Lists are now Stable, and this Beta
+// method will be removed in a future release.
 func (b *Beta) IncrementCounter(key string, amount int64) error {
 	if amount < 0 {
 		return b.errs.Errorf("amount must be a positive int64, found %d", amount)
@@ -76,6 +85,9 @@ func (b *Beta) IncrementCounter(key string, amount int64) error {
 // DecrementCounter decreases the current count by the given nonnegative integer amount.
 // The Counter Will not go below 0. Will execute the decrement operation against the current CRD value.
 // Will error if the count is at 0 (to the latest knowledge of the SDK), and no decrement will occur.
+//
+// Deprecated: Use [SDK.DecrementCounter] instead. Counters and Lists are now Stable, and this Beta
+// method will be removed in a future release.
 func (b *Beta) DecrementCounter(key string, amount int64) error {
 	if amount < 0 {
 		return b.errs.Errorf("amount must be a positive int64, found %d", amount)
@@ -93,6 +105,9 @@ func (b *Beta) DecrementCounter(key string, amount int64) error {
 
 // SetCounterCount sets a count to the given value. Use with care, as this will overwrite any previous
 // invocations’ value. Cannot be greater than Capacity.
+//
+// Deprecated: Use [SDK.SetCounterCount] instead. Counters and Lists are now Stable, and this Beta
+// method will be removed in a future release.
 func (b *Beta) SetCounterCount(key string, amount int64) error {
 	_, err := b.client.UpdateCounter(context.Background(), &beta.UpdateCounterRequest{
 		CounterUpdateRequest: &beta.CounterUpdateRequest{
@@ -107,6 +122,9 @@ func (b *Beta) SetCounterCount(key string, amount int64) error {
 
 // GetCounterCapacity returns the Capacity for a Counter, given the Counter's key (name).
 // Will error if the key was not predefined in the GameServer resource on creation.
+//
+// Deprecated: Use [SDK.GetCounterCapacity] instead. Counters and Lists are now Stable, and this Beta
+// method will be removed in a future release.
 func (b *Beta) GetCounterCapacity(key string) (int64, error) {
 	counter, err := b.client.GetCounter(context.Background(), &beta.GetCounterRequest{Name: key})
 	if err != nil {
@@ -116,6 +134,9 @@ func (b *Beta) GetCounterCapacity(key string) (int64, error) {
 }
 
 // SetCounterCapacity sets the capacity for the given Counter. A capacity of 0 is no capacity.
+//
+// Deprecated: Use [SDK.SetCounterCapacity] instead. Counters and Lists are now Stable, and this Beta
+// method will be removed in a future release.
 func (b *Beta) SetCounterCapacity(key string, amount int64) error {
 	_, err := b.client.UpdateCounter(context.Background(), &beta.UpdateCounterRequest{
 		CounterUpdateRequest: &beta.CounterUpdateRequest{
@@ -130,6 +151,9 @@ func (b *Beta) SetCounterCapacity(key string, amount int64) error {
 
 // GetListCapacity returns the Capacity for a List, given the List's key (name).
 // Will error if the key was not predefined in the GameServer resource on creation.
+//
+// Deprecated: Use [SDK.GetListCapacity] instead. Counters and Lists are now Stable, and this Beta
+// method will be removed in a future release.
 func (b *Beta) GetListCapacity(key string) (int64, error) {
 	list, err := b.client.GetList(context.Background(), &beta.GetListRequest{Name: key})
 	if err != nil {
@@ -140,6 +164,9 @@ func (b *Beta) GetListCapacity(key string) (int64, error) {
 
 // SetListCapacity sets the capacity for a given list. Capacity must be between 0 and 1000.
 // Will error if the key was not predefined in the GameServer resource on creation.
+//
+// Deprecated: Use [SDK.SetListCapacity] instead. Counters and Lists are now Stable, and this Beta
+// method will be removed in a future release.
 func (b *Beta) SetListCapacity(key string, amount int64) error {
 	_, err := b.client.UpdateList(context.Background(), &beta.UpdateListRequest{
 		List: &beta.List{
@@ -157,6 +184,9 @@ func (b *Beta) SetListCapacity(key string, amount int64) error {
 // ListContains returns if a string exists in a List's values list, given the List's key (name)
 // and the string value. Search is case-sensitive.
 // Will error if the key was not predefined in the GameServer resource on creation.
+//
+// Deprecated: Use [SDK.ListContains] instead. Counters and Lists are now Stable, and this Beta
+// method will be removed in a future release.
 func (b *Beta) ListContains(key, value string) (bool, error) {
 	list, err := b.client.GetList(context.Background(), &beta.GetListRequest{Name: key})
 	if err != nil {
@@ -170,6 +200,9 @@ func (b *Beta) ListContains(key, value string) (bool, error) {
 
 // GetListLength returns the length of the Values list for a List, given the List's key (name).
 // Will error if the key was not predefined in the GameServer resource on creation.
+//
+// Deprecated: Use [SDK.GetListLength] instead. Counters and Lists are now Stable, and this Beta
+// method will be removed in a future release.
 func (b *Beta) GetListLength(key string) (int, error) {
 	list, err := b.client.GetList(context.Background(), &beta.GetListRequest{Name: key})
 	if err != nil {
@@ -180,6 +213,9 @@ func (b *Beta) GetListLength(key string) (int, error) {
 
 // GetListValues returns the Values for a List, given the List's key (name).
 // Will error if the key was not predefined in the GameServer resource on creation.
+//
+// Deprecated: Use [SDK.GetListValues] instead. Counters and Lists are now Stable, and this Beta
+// method will be removed in a future release.
 func (b *Beta) GetListValues(key string) ([]string, error) {
 	list, err := b.client.GetList(context.Background(), &beta.GetListRequest{Name: key})
 	if err != nil {
@@ -191,6 +227,9 @@ func (b *Beta) GetListValues(key string) ([]string, error) {
 // AppendListValue appends a string to a List's values list, given the List's key (name)
 // and the string value. Will error if the string already exists in the list.
 // Will error if the key was not predefined in the GameServer resource on creation.
+//
+// Deprecated: Use [SDK.AppendListValue] instead. Counters and Lists are now Stable, and this Beta
+// method will be removed in a future release.
 func (b *Beta) AppendListValue(key, value string) error {
 	_, err := b.client.AddListValue(context.Background(), &beta.AddListValueRequest{Name: key, Value: value})
 	if err != nil {
@@ -202,6 +241,9 @@ func (b *Beta) AppendListValue(key, value string) error {
 // DeleteListValue removes a string from a List's values list, given the List's key (name)
 // and the string value. Will error if the string does not exist in the list.
 // Will error if the key was not predefined in the GameServer resource on creation.
+//
+// Deprecated: Use [SDK.DeleteListValue] instead. Counters and Lists are now Stable, and this Beta
+// method will be removed in a future release.
 func (b *Beta) DeleteListValue(key, value string) error {
 	_, err := b.client.RemoveListValue(context.Background(), &beta.RemoveListValueRequest{Name: key, Value: value})
 	if err != nil {
