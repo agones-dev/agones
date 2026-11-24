@@ -196,6 +196,14 @@ linters:
         linters: [gosec]
         text: '^G70[46]:'
 
+      # Agones's own deprecated allocation fields (MetaPatch, Required, Preferred,
+      # RequiredGameServerSelector, PreferredGameServerSelectors) stay in the API
+      # for backwards compatibility: the converters double-write them so mixed-version
+      # multi-cluster allocation keeps working, and tests cover the old paths.
+      # staticcheck 0.8.2 (golangci-lint v2.15.0) started reporting these in-module uses.
+      - linters: [staticcheck]
+        text: 'SA1019: \(agones\.dev/agones/pkg/(allocation/go\.AllocationRequest|apis/allocation/v1\.GameServerAllocationSpec)\)\.'
+
     # which file paths to exclude: issues from them won't be reported
     paths:
       - test/sdk/restapi

@@ -77,7 +77,7 @@ func RegisterStackdriverExporter(projectID string, defaultLabels string) (*stack
 		ProjectID: projectID,
 		// MetricPrefix helps uniquely identify your metrics.
 		MetricPrefix:            "agones",
-		Resource:                monitoredRes,
+		Resource:                monitoredRes, //nolint:staticcheck // SA1019: moving to MonitoredResource changes how the resource is resolved; kept for a follow-up.
 		DefaultMonitoringLabels: labels,
 	})
 	if err != nil {

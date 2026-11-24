@@ -197,7 +197,7 @@ func getConnection(ctx context.Context, clusterInfo *ClusterInfo) (*grpc.ClientC
 		clustersConnections[clusterInfo.Name] = clusterConnection
 		mClustersConnections.Unlock()
 	}
-	perm := rand.Perm(numOfConnections)
+	perm := rand.Perm(numOfConnections) //nolint:gosec // G404: picks a random pooled connection, not security-sensitive.
 	for _, randIndex := range perm {
 		currentConn, createdTime, _ := clusterConnection.Get(randIndex)
 		if currentConn == nil || time.Since(createdTime) > connectionPoolTimeout {
