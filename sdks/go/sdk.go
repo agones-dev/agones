@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"time"
 
 	"agones.dev/agones/pkg/sdk"
@@ -29,6 +30,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 // GameServerCallback is a function definition to be called
@@ -208,5 +211,187 @@ func (s *SDK) WatchGameServer(f GameServerCallback) error {
 			f(gs)
 		}
 	}()
+	return nil
+}
+
+// GetCounterCount returns the Count for a Counter, given the Counter's key (name).
+// Will error if the key was not predefined in the GameServer resource on creation.
+func (s *SDK) GetCounterCount(key string) (int64, error) {
+	counter, err := s.client.GetCounter(s.ctx, &sdk.GetCounterRequest{Name: key})
+	if err != nil {
+		return -1, s.errs.Wrapf(err, "could not get Counter %s count", key)
+	}
+	return counter.GetCount(), nil
+}
+
+// IncrementCounter increases a counter by the given nonnegative integer amount.
+// Will execute the increment operation against the current CRD value. Will max at max(int64).
+// Will error if the key was not predefined in the GameServer resource on creation.
+// Returns error if the count is at the current capacity (to the latest knowledge of the SDK),
+// and no increment will occur.
+//
+// Note: A potential race condition here is that if count values are set from both the SDK and
+// through the K8s API (Allocation or otherwise), since the SDK append operation back to the CRD
+// value is batched asynchronous any value incremented past the capacity will be silently truncated.
+func (s *SDK) IncrementCounter(key string, amount int64) error {
+	if amount < 0 {
+		return s.errs.Errorf("amount must be a positive int64, found %d", amount)
+	}
+	if amount == 0 {
+		// The SDK server rejects an update with no changes, so only check the Counter exists.
+		if _, err := s.client.GetCounter(s.ctx, &sdk.GetCounterRequest{Name: key}); err != nil {
+			return s.errs.Wrapf(err, "could not increment Counter %s by amount %d", key, amount)
+		}
+		return nil
+	}
+	_, err := s.client.UpdateCounter(s.ctx, &sdk.UpdateCounterRequest{
+		CounterUpdateRequest: &sdk.CounterUpdateRequest{
+			Name:      key,
+			CountDiff: amount,
+		}})
+	if err != nil {
+		return s.errs.Wrapf(err, "could not increment Counter %s by amount %d", key, amount)
+	}
+	return nil
+}
+
+// DecrementCounter decreases the current count by the given nonnegative integer amount.
+// The Counter Will not go below 0. Will execute the decrement operation against the current CRD value.
+// Will error if the count is at 0 (to the latest knowledge of the SDK), and no decrement will occur.
+func (s *SDK) DecrementCounter(key string, amount int64) error {
+	if amount < 0 {
+		return s.errs.Errorf("amount must be a positive int64, found %d", amount)
+	}
+	if amount == 0 {
+		// The SDK server rejects an update with no changes, so only check the Counter exists.
+		if _, err := s.client.GetCounter(s.ctx, &sdk.GetCounterRequest{Name: key}); err != nil {
+			return s.errs.Wrapf(err, "could not decrement Counter %s by amount %d", key, amount)
+		}
+		return nil
+	}
+	_, err := s.client.UpdateCounter(s.ctx, &sdk.UpdateCounterRequest{
+		CounterUpdateRequest: &sdk.CounterUpdateRequest{
+			Name:      key,
+			CountDiff: amount * -1,
+		}})
+	if err != nil {
+		return s.errs.Wrapf(err, "could not decrement Counter %s by amount %d", key, amount)
+	}
+	return nil
+}
+
+// SetCounterCount sets a count to the given value. Use with care, as this will overwrite any previous
+// invocations’ value. Cannot be greater than Capacity.
+func (s *SDK) SetCounterCount(key string, amount int64) error {
+	_, err := s.client.UpdateCounter(s.ctx, &sdk.UpdateCounterRequest{
+		CounterUpdateRequest: &sdk.CounterUpdateRequest{
+			Name:  key,
+			Count: wrapperspb.Int64(amount),
+		}})
+	if err != nil {
+		return s.errs.Wrapf(err, "could not set Counter %s count to amount %d", key, amount)
+	}
+	return nil
+}
+
+// GetCounterCapacity returns the Capacity for a Counter, given the Counter's key (name).
+// Will error if the key was not predefined in the GameServer resource on creation.
+func (s *SDK) GetCounterCapacity(key string) (int64, error) {
+	counter, err := s.client.GetCounter(s.ctx, &sdk.GetCounterRequest{Name: key})
+	if err != nil {
+		return -1, s.errs.Wrapf(err, "could not get Counter %s capacity", key)
+	}
+	return counter.GetCapacity(), nil
+}
+
+// SetCounterCapacity sets the capacity for the given Counter. A capacity of 0 is no capacity.
+func (s *SDK) SetCounterCapacity(key string, amount int64) error {
+	_, err := s.client.UpdateCounter(s.ctx, &sdk.UpdateCounterRequest{
+		CounterUpdateRequest: &sdk.CounterUpdateRequest{
+			Name:     key,
+			Capacity: wrapperspb.Int64(amount),
+		}})
+	if err != nil {
+		return s.errs.Wrapf(err, "could not set Counter %s capacity to amount %d", key, amount)
+	}
+	return nil
+}
+
+// GetListCapacity returns the Capacity for a List, given the List's key (name).
+// Will error if the key was not predefined in the GameServer resource on creation.
+func (s *SDK) GetListCapacity(key string) (int64, error) {
+	list, err := s.client.GetList(s.ctx, &sdk.GetListRequest{Name: key})
+	if err != nil {
+		return -1, s.errs.Wrapf(err, "could not get List %s", key)
+	}
+	return list.GetCapacity(), nil
+}
+
+// SetListCapacity sets the capacity for a given list. Capacity must be between 0 and 1000.
+// Will error if the key was not predefined in the GameServer resource on creation.
+func (s *SDK) SetListCapacity(key string, amount int64) error {
+	_, err := s.client.UpdateList(s.ctx, &sdk.UpdateListRequest{
+		List: &sdk.List{
+			Name:     key,
+			Capacity: amount,
+		},
+		UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"capacity"}},
+	})
+	if err != nil {
+		return s.errs.Wrapf(err, "could not set List %s capacity to amount %d", key, amount)
+	}
+	return nil
+}
+
+// ListContains returns if a string exists in a List's values list, given the List's key (name)
+// and the string value. Search is case-sensitive.
+// Will error if the key was not predefined in the GameServer resource on creation.
+func (s *SDK) ListContains(key, value string) (bool, error) {
+	list, err := s.client.GetList(s.ctx, &sdk.GetListRequest{Name: key})
+	if err != nil {
+		return false, s.errs.Wrapf(err, "could not get List %s", key)
+	}
+	return slices.Contains(list.GetValues(), value), nil
+}
+
+// GetListLength returns the length of the Values list for a List, given the List's key (name).
+// Will error if the key was not predefined in the GameServer resource on creation.
+func (s *SDK) GetListLength(key string) (int, error) {
+	list, err := s.client.GetList(s.ctx, &sdk.GetListRequest{Name: key})
+	if err != nil {
+		return -1, s.errs.Wrapf(err, "could not get List %s", key)
+	}
+	return len(list.GetValues()), nil
+}
+
+// GetListValues returns the Values for a List, given the List's key (name).
+// Will error if the key was not predefined in the GameServer resource on creation.
+func (s *SDK) GetListValues(key string) ([]string, error) {
+	list, err := s.client.GetList(s.ctx, &sdk.GetListRequest{Name: key})
+	if err != nil {
+		return nil, s.errs.Wrapf(err, "could not get List %s", key)
+	}
+	return list.GetValues(), nil
+}
+
+// AppendListValue appends a string to a List's values list, given the List's key (name)
+// and the string value. Will error if the string already exists in the list.
+// Will error if the key was not predefined in the GameServer resource on creation.
+func (s *SDK) AppendListValue(key, value string) error {
+	_, err := s.client.AddListValue(s.ctx, &sdk.AddListValueRequest{Name: key, Value: value})
+	if err != nil {
+		return s.errs.Wrapf(err, "could not get List %s", key)
+	}
+	return nil
+}
+
+// DeleteListValue removes a string from a List's values list, given the List's key (name)
+// and the string value. Will error if the string does not exist in the list.
+// Will error if the key was not predefined in the GameServer resource on creation.
+func (s *SDK) DeleteListValue(key, value string) error {
+	_, err := s.client.RemoveListValue(s.ctx, &sdk.RemoveListValueRequest{Name: key, Value: value})
+	if err != nil {
+		return s.errs.Wrapf(err, "could not get List %s", key)
+	}
 	return nil
 }

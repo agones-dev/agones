@@ -36,7 +36,6 @@ import (
 
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
 	"agones.dev/agones/pkg/sdk"
-	"agones.dev/agones/pkg/sdk/beta"
 )
 
 func TestLocal(t *testing.T) {
@@ -352,12 +351,12 @@ func TestLocalSDKServerGetCounter(t *testing.T) {
 
 	testScenarios := map[string]struct {
 		name    string
-		want    *beta.Counter
+		want    *sdk.Counter
 		wantErr error
 	}{
 		"Counter exists": {
 			name: "sessions",
-			want: &beta.Counter{Name: "sessions", Count: int64(1), Capacity: int64(100)},
+			want: &sdk.Counter{Name: "sessions", Count: int64(1), Capacity: int64(100)},
 		},
 		"Counter does not exist": {
 			name:    "noName",
@@ -367,7 +366,7 @@ func TestLocalSDKServerGetCounter(t *testing.T) {
 
 	for testName, testScenario := range testScenarios {
 		t.Run(testName, func(t *testing.T) {
-			got, err := l.GetCounter(context.Background(), &beta.GetCounterRequest{Name: testScenario.name})
+			got, err := l.GetCounter(context.Background(), &sdk.GetCounterRequest{Name: testScenario.name})
 			// Check tests expecting non-errors
 			if testScenario.want != nil {
 				require.NoError(t, err)
@@ -423,89 +422,89 @@ func TestLocalSDKServerUpdateCounter(t *testing.T) {
 	require.NoError(t, err)
 
 	testScenarios := map[string]struct {
-		updateRequest *beta.UpdateCounterRequest
-		want          *beta.Counter
+		updateRequest *sdk.UpdateCounterRequest
+		want          *sdk.Counter
 		wantErr       error
 	}{
 		"Set Counter Capacity": {
-			updateRequest: &beta.UpdateCounterRequest{
-				CounterUpdateRequest: &beta.CounterUpdateRequest{
+			updateRequest: &sdk.UpdateCounterRequest{
+				CounterUpdateRequest: &sdk.CounterUpdateRequest{
 					Name:     "lobbies",
 					Capacity: wrapperspb.Int64(10),
 				}},
-			want: &beta.Counter{
+			want: &sdk.Counter{
 				Name: "lobbies", Count: 0, Capacity: 10,
 			},
 		},
 		"Set Counter Count": {
-			updateRequest: &beta.UpdateCounterRequest{
-				CounterUpdateRequest: &beta.CounterUpdateRequest{
+			updateRequest: &sdk.UpdateCounterRequest{
+				CounterUpdateRequest: &sdk.CounterUpdateRequest{
 					Name:  "npcs",
 					Count: wrapperspb.Int64(10),
 				}},
-			want: &beta.Counter{
+			want: &sdk.Counter{
 				Name: "npcs", Count: 10, Capacity: 10,
 			},
 		},
 		"Decrement Counter Count": {
-			updateRequest: &beta.UpdateCounterRequest{
-				CounterUpdateRequest: &beta.CounterUpdateRequest{
+			updateRequest: &sdk.UpdateCounterRequest{
+				CounterUpdateRequest: &sdk.CounterUpdateRequest{
 					Name:      "games",
 					CountDiff: -5,
 				}},
-			want: &beta.Counter{
+			want: &sdk.Counter{
 				Name: "games", Count: 0, Capacity: 10,
 			},
 		},
 		"Cannot Decrement Counter": {
-			updateRequest: &beta.UpdateCounterRequest{
-				CounterUpdateRequest: &beta.CounterUpdateRequest{
+			updateRequest: &sdk.UpdateCounterRequest{
+				CounterUpdateRequest: &sdk.CounterUpdateRequest{
 					Name:      "sessions",
 					CountDiff: -2,
 				}},
 			wantErr: fmt.Errorf("out of range. Count must be within range [0,Capacity]. Found Count: %d, Capacity: %d", -1, 100),
 		},
 		"Cannot Increment Counter": {
-			updateRequest: &beta.UpdateCounterRequest{
-				CounterUpdateRequest: &beta.CounterUpdateRequest{
+			updateRequest: &sdk.UpdateCounterRequest{
+				CounterUpdateRequest: &sdk.CounterUpdateRequest{
 					Name:      "players",
 					CountDiff: 1,
 				}},
 			wantErr: fmt.Errorf("out of range. Count must be within range [0,Capacity]. Found Count: %d, Capacity: %d", 101, 100),
 		},
 		"Counter does not exist": {
-			updateRequest: &beta.UpdateCounterRequest{
-				CounterUpdateRequest: &beta.CounterUpdateRequest{
+			updateRequest: &sdk.UpdateCounterRequest{
+				CounterUpdateRequest: &sdk.CounterUpdateRequest{
 					Name:      "dragons",
 					CountDiff: 1,
 				}},
 			wantErr: fmt.Errorf("not found. %s Counter not found", "dragons"),
 		},
 		"request Counter is nil": {
-			updateRequest: &beta.UpdateCounterRequest{
+			updateRequest: &sdk.UpdateCounterRequest{
 				CounterUpdateRequest: nil,
 			},
 			wantErr: stderrors.New("invalid argument. CounterUpdateRequest cannot be nil"),
 		},
 		"capacity is less than zero": {
-			updateRequest: &beta.UpdateCounterRequest{
-				CounterUpdateRequest: &beta.CounterUpdateRequest{
+			updateRequest: &sdk.UpdateCounterRequest{
+				CounterUpdateRequest: &sdk.CounterUpdateRequest{
 					Name:     "lobbies",
 					Capacity: wrapperspb.Int64(-1),
 				}},
 			wantErr: fmt.Errorf("out of range. Capacity must be greater than or equal to 0. Found Capacity: %d", -1),
 		},
 		"count is less than zero": {
-			updateRequest: &beta.UpdateCounterRequest{
-				CounterUpdateRequest: &beta.CounterUpdateRequest{
+			updateRequest: &sdk.UpdateCounterRequest{
+				CounterUpdateRequest: &sdk.CounterUpdateRequest{
 					Name:  "players",
 					Count: wrapperspb.Int64(-1),
 				}},
 			wantErr: fmt.Errorf("out of range. Count must be within range [0,Capacity]. Found Count: %d, Capacity: %d", -1, 100),
 		},
 		"count is greater than capacity": {
-			updateRequest: &beta.UpdateCounterRequest{
-				CounterUpdateRequest: &beta.CounterUpdateRequest{
+			updateRequest: &sdk.UpdateCounterRequest{
+				CounterUpdateRequest: &sdk.CounterUpdateRequest{
 					Name:  "players",
 					Count: wrapperspb.Int64(101),
 				}},
@@ -568,12 +567,12 @@ func TestLocalSDKServerGetList(t *testing.T) {
 
 	testScenarios := map[string]struct {
 		name    string
-		want    *beta.List
+		want    *sdk.List
 		wantErr error
 	}{
 		"List exists": {
 			name: "games",
-			want: &beta.List{Name: "games", Capacity: int64(100), Values: []string{"game1", "game2"}},
+			want: &sdk.List{Name: "games", Capacity: int64(100), Values: []string{"game1", "game2"}},
 		},
 		"List does not exist": {
 			name:    "noName",
@@ -583,7 +582,7 @@ func TestLocalSDKServerGetList(t *testing.T) {
 
 	for testName, testScenario := range testScenarios {
 		t.Run(testName, func(t *testing.T) {
-			got, err := l.GetList(context.Background(), &beta.GetListRequest{Name: testScenario.name})
+			got, err := l.GetList(context.Background(), &sdk.GetListRequest{Name: testScenario.name})
 			// Check tests expecting non-errors
 			if testScenario.want != nil {
 				require.NoError(t, err)
@@ -640,69 +639,69 @@ func TestLocalSDKServerUpdateList(t *testing.T) {
 	require.NoError(t, err)
 
 	testScenarios := map[string]struct {
-		updateRequest *beta.UpdateListRequest
-		want          *beta.List
+		updateRequest *sdk.UpdateListRequest
+		want          *sdk.List
 		wantErr       error
 	}{
 		"only updates fields in the FieldMask": {
-			updateRequest: &beta.UpdateListRequest{
-				List: &beta.List{
+			updateRequest: &sdk.UpdateListRequest{
+				List: &sdk.List{
 					Name:     "games",
 					Capacity: int64(999),
 					Values:   []string{"game3"},
 				},
 				UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"capacity"}},
 			},
-			want: &beta.List{
+			want: &sdk.List{
 				Name:     "games",
 				Capacity: int64(999),
 				Values:   []string{"game1", "game2"},
 			},
 		},
 		"updates both fields in the FieldMask": {
-			updateRequest: &beta.UpdateListRequest{
-				List: &beta.List{
+			updateRequest: &sdk.UpdateListRequest{
+				List: &sdk.List{
 					Name:     "unicorns",
 					Capacity: int64(42),
 					Values:   []string{"unicorn0"},
 				},
 				UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"values", "capacity"}},
 			},
-			want: &beta.List{
+			want: &sdk.List{
 				Name:     "unicorns",
 				Capacity: int64(42),
 				Values:   []string{"unicorn0"},
 			},
 		},
 		"default value for Capacity applied": {
-			updateRequest: &beta.UpdateListRequest{
-				List: &beta.List{
+			updateRequest: &sdk.UpdateListRequest{
+				List: &sdk.List{
 					Name: "clients",
 				},
 				UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"capacity"}},
 			},
-			want: &beta.List{
+			want: &sdk.List{
 				Name:     "clients",
 				Capacity: int64(0),
 				Values:   []string{},
 			},
 		},
 		"default value for Values applied": {
-			updateRequest: &beta.UpdateListRequest{
-				List: &beta.List{
+			updateRequest: &sdk.UpdateListRequest{
+				List: &sdk.List{
 					Name: "assets",
 				},
 				UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"values"}},
 			},
-			want: &beta.List{
+			want: &sdk.List{
 				Name:     "assets",
 				Capacity: int64(1),
 				Values:   []string{},
 			},
 		},
 		"List does not exist": {
-			updateRequest: &beta.UpdateListRequest{
-				List: &beta.List{
+			updateRequest: &sdk.UpdateListRequest{
+				List: &sdk.List{
 					Name: "dragons",
 				},
 				UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"capacity"}},
@@ -710,22 +709,22 @@ func TestLocalSDKServerUpdateList(t *testing.T) {
 			wantErr: fmt.Errorf("not found. %s List not found", "dragons"),
 		},
 		"request List is nil": {
-			updateRequest: &beta.UpdateListRequest{
+			updateRequest: &sdk.UpdateListRequest{
 				List:       nil,
 				UpdateMask: &fieldmaskpb.FieldMask{},
 			},
 			wantErr: fmt.Errorf("invalid argument. List: %v and UpdateMask %v cannot be nil", nil, &fieldmaskpb.FieldMask{}),
 		},
 		"request UpdateMask is nil": {
-			updateRequest: &beta.UpdateListRequest{
-				List:       &beta.List{},
+			updateRequest: &sdk.UpdateListRequest{
+				List:       &sdk.List{},
 				UpdateMask: nil,
 			},
-			wantErr: fmt.Errorf("invalid argument. List: %v and UpdateMask %v cannot be nil", &beta.List{}, nil),
+			wantErr: fmt.Errorf("invalid argument. List: %v and UpdateMask %v cannot be nil", &sdk.List{}, nil),
 		},
 		"updateMask contains invalid path": {
-			updateRequest: &beta.UpdateListRequest{
-				List: &beta.List{
+			updateRequest: &sdk.UpdateListRequest{
+				List: &sdk.List{
 					Name: "assets",
 				},
 				UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"foo"}},
@@ -733,8 +732,8 @@ func TestLocalSDKServerUpdateList(t *testing.T) {
 			wantErr: stderrors.New("invalid argument. Field Mask Path(s): [foo] are invalid for List. Use valid field name(s): "),
 		},
 		"updateMask is empty": {
-			updateRequest: &beta.UpdateListRequest{
-				List: &beta.List{
+			updateRequest: &sdk.UpdateListRequest{
+				List: &sdk.List{
 					Name: "unicorns",
 				},
 				UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{""}},
@@ -742,8 +741,8 @@ func TestLocalSDKServerUpdateList(t *testing.T) {
 			wantErr: stderrors.New("invalid argument. Field Mask Path(s): [] are invalid for List. Use valid field name(s): "),
 		},
 		"capacity is less than zero": {
-			updateRequest: &beta.UpdateListRequest{
-				List: &beta.List{
+			updateRequest: &sdk.UpdateListRequest{
+				List: &sdk.List{
 					Name:     "clients",
 					Capacity: -1,
 				},
@@ -752,8 +751,8 @@ func TestLocalSDKServerUpdateList(t *testing.T) {
 			wantErr: fmt.Errorf("out of range. Capacity must be within range [0,1000]. Found Capacity: %d", -1),
 		},
 		"capacity greater than max capacity (1000)": {
-			updateRequest: &beta.UpdateListRequest{
-				List: &beta.List{
+			updateRequest: &sdk.UpdateListRequest{
+				List: &sdk.List{
 					Name:     "clients",
 					Capacity: 1001,
 				},
@@ -762,14 +761,14 @@ func TestLocalSDKServerUpdateList(t *testing.T) {
 			wantErr: fmt.Errorf("out of range. Capacity must be within range [0,1000]. Found Capacity: %d", 1001),
 		},
 		"capacity is less than List length": {
-			updateRequest: &beta.UpdateListRequest{
-				List: &beta.List{
+			updateRequest: &sdk.UpdateListRequest{
+				List: &sdk.List{
 					Name:     "models",
 					Capacity: 1,
 				},
 				UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"capacity"}},
 			},
-			want: &beta.List{
+			want: &sdk.List{
 				Name:     "models",
 				Capacity: int64(1),
 				Values:   []string{"model1"},
@@ -832,32 +831,32 @@ func TestLocalSDKServerAddListValue(t *testing.T) {
 	require.NoError(t, err)
 
 	testScenarios := map[string]struct {
-		addRequest *beta.AddListValueRequest
-		want       *beta.List
+		addRequest *sdk.AddListValueRequest
+		want       *sdk.List
 		wantErr    error
 	}{
 		"add List value": {
-			addRequest: &beta.AddListValueRequest{
+			addRequest: &sdk.AddListValueRequest{
 				Name:  "lemmings",
 				Value: "lemming3",
 			},
-			want: &beta.List{Name: "lemmings", Capacity: int64(100), Values: []string{"lemming1", "lemming2", "lemming3"}},
+			want: &sdk.List{Name: "lemmings", Capacity: int64(100), Values: []string{"lemming1", "lemming2", "lemming3"}},
 		},
 		"List does not exist": {
-			addRequest: &beta.AddListValueRequest{
+			addRequest: &sdk.AddListValueRequest{
 				Name: "dragons",
 			},
 			wantErr: fmt.Errorf("not found. %s List not found", "dragons"),
 		},
 		"add more values than capacity": {
-			addRequest: &beta.AddListValueRequest{
+			addRequest: &sdk.AddListValueRequest{
 				Name:  "hacks",
 				Value: "hack3",
 			},
 			wantErr: fmt.Errorf("out of range. No available capacity. Current Capacity: %d, List Size: %d", int64(2), int64(2)),
 		},
 		"add existing value": {
-			addRequest: &beta.AddListValueRequest{
+			addRequest: &sdk.AddListValueRequest{
 				Name:  "lemmings",
 				Value: "lemming1",
 			},
@@ -920,25 +919,25 @@ func TestLocalSDKServerRemoveListValue(t *testing.T) {
 	require.NoError(t, err)
 
 	testScenarios := map[string]struct {
-		removeRequest *beta.RemoveListValueRequest
-		want          *beta.List
+		removeRequest *sdk.RemoveListValueRequest
+		want          *sdk.List
 		wantErr       error
 	}{
 		"remove List value": {
-			removeRequest: &beta.RemoveListValueRequest{
+			removeRequest: &sdk.RemoveListValueRequest{
 				Name:  "players",
 				Value: "player1",
 			},
-			want: &beta.List{Name: "players", Capacity: int64(100), Values: []string{"player2"}},
+			want: &sdk.List{Name: "players", Capacity: int64(100), Values: []string{"player2"}},
 		},
 		"List does not exist": {
-			removeRequest: &beta.RemoveListValueRequest{
+			removeRequest: &sdk.RemoveListValueRequest{
 				Name: "dragons",
 			},
 			wantErr: fmt.Errorf("not found. %s List not found", "dragons"),
 		},
 		"value does not exist": {
-			removeRequest: &beta.RemoveListValueRequest{
+			removeRequest: &sdk.RemoveListValueRequest{
 				Name:  "items",
 				Value: "item3",
 			},
@@ -1114,8 +1113,8 @@ func TestLocalSDKServerUpdateListMaxCapacity(t *testing.T) {
 
 	for test, testScenario := range testScenarios {
 		t.Run(test, func(t *testing.T) {
-			_, err := l.UpdateList(context.Background(), &beta.UpdateListRequest{
-				List:       &beta.List{Name: "rooms", Capacity: testScenario.capacity},
+			_, err := l.UpdateList(context.Background(), &sdk.UpdateListRequest{
+				List:       &sdk.List{Name: "rooms", Capacity: testScenario.capacity},
 				UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"capacity"}},
 			})
 			if testScenario.wantErr {

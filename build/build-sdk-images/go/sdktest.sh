@@ -17,4 +17,9 @@
 set -ex
 GO111MODULE=off
 cd /go/src/agones.dev/agones/test/sdk/go
+# GO_SDK_BETA=true runs the conformance test against the deprecated Beta SDK interface.
+# Remove it along with the Beta SDK.
+if [ "${GO_SDK_BETA:-}" = "true" ]; then
+    cd beta
+fi
 go run sdk-client-test.go
