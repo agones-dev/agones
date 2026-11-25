@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// The Beta Counters and Lists methods are deprecated, but still tested until they are removed.
+#pragma warning disable CS0618
+
 using Agones.Dev.Sdk.Beta;
 using Grpc.Core;
 using System.Collections.Generic;

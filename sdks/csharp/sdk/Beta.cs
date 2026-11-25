@@ -25,6 +25,10 @@ using gProto = Google.Protobuf.WellKnownTypes;
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Agones.Test")]
 namespace Agones
 {
+    /// <summary>
+    /// The Counters and Lists methods on Beta are deprecated, as Counters and Lists are now Stable.
+    /// Use the equivalent methods on <see cref="AgonesSDK"/> instead.
+    /// </summary>
     public sealed class Beta : IAgonesBetaSDK
     {
 
@@ -71,6 +75,7 @@ namespace Agones
         /// Throws error if the key was not predefined in the GameServer resource on creation.
         /// </summary>
         /// <returns>The Counter's Count</returns>
+        [Obsolete("Counters and Lists are now Stable. Use IAgonesSDK.GetCounterCountAsync instead. This Beta method will be removed in a future release.")]
         public async Task<long> GetCounterCountAsync(string key)
         {
           try
@@ -101,6 +106,7 @@ namespace Agones
         /// through the K8s API (Allocation or otherwise), since the SDK append operation back to the CRD
         /// value is batched asynchronous any value incremented past the capacity will be silently truncated.
         /// </summary>
+        [Obsolete("Counters and Lists are now Stable. Use IAgonesSDK.IncrementCounterAsync instead. This Beta method will be removed in a future release.")]
         public async Task IncrementCounterAsync(string key, long amount)
         {
             if (amount < 0)
@@ -134,6 +140,7 @@ namespace Agones
         /// The Counter will not go below 0. Will execute the decrement operation against the current CRD value.
         /// Throws error if the count is at 0 (to the latest knowledge of the SDK), and no decrement will occur.
         /// </summary>
+        [Obsolete("Counters and Lists are now Stable. Use IAgonesSDK.DecrementCounterAsync instead. This Beta method will be removed in a future release.")]
         public async Task DecrementCounterAsync(string key, long amount)
         {
             if (amount < 0)
@@ -165,6 +172,7 @@ namespace Agones
         /// SetCounterCountAsync sets a count to the given value. Use with care, as this will
         /// overwrite any previous invocations’ value. Cannot be greater than Capacity.
         /// </summary>
+        [Obsolete("Counters and Lists are now Stable. Use IAgonesSDK.SetCounterCountAsync instead. This Beta method will be removed in a future release.")]
         public async Task SetCounterCountAsync(string key, long amount)
         {
             try
@@ -193,6 +201,7 @@ namespace Agones
         /// Throws error if the key was not predefined in the GameServer resource on creation.
         /// </summary>
         /// <returns>The Counter's capacity</returns>
+        [Obsolete("Counters and Lists are now Stable. Use IAgonesSDK.GetCounterCapacityAsync instead. This Beta method will be removed in a future release.")]
         public async Task<long> GetCounterCapacityAsync(string key)
         {
             try
@@ -216,6 +225,7 @@ namespace Agones
         /// SetCounterCapacityAsync sets the capacity for the given Counter.
         /// A capacity of 0 is no capacity.
         /// </summary>
+        [Obsolete("Counters and Lists are now Stable. Use IAgonesSDK.SetCounterCapacityAsync instead. This Beta method will be removed in a future release.")]
         public async Task SetCounterCapacityAsync(string key, long amount)
         {
             try
@@ -244,6 +254,7 @@ namespace Agones
         /// Throws error if the key was not predefined in the GameServer resource on creation.
         /// </summary>
         /// <returns>The List's capacity</returns>
+        [Obsolete("Counters and Lists are now Stable. Use IAgonesSDK.GetListCapacityAsync instead. This Beta method will be removed in a future release.")]
         public async Task<long> GetListCapacityAsync(string key)
         {
             try
@@ -267,6 +278,7 @@ namespace Agones
         /// SetListCapacityAsync sets the capacity for a given list. Capacity must be between 0 and 1000.
         /// Throws error if the key was not predefined in the GameServer resource on creation.
         /// </summary>
+        [Obsolete("Counters and Lists are now Stable. Use IAgonesSDK.SetListCapacityAsync instead. This Beta method will be removed in a future release.")]
         public async Task SetListCapacityAsync(string key, long amount)
         {
             try
@@ -302,6 +314,7 @@ namespace Agones
         /// Throws error if the key was not predefined in the GameServer resource on creation.
         /// </summary>
         /// <returns>True if the value is found in the List</returns>
+        [Obsolete("Counters and Lists are now Stable. Use IAgonesSDK.ListContainsAsync instead. This Beta method will be removed in a future release.")]
         public async Task<bool> ListContainsAsync(string key, string value)
         {
             try
@@ -330,6 +343,7 @@ namespace Agones
         /// Throws error if the key was not predefined in the GameServer resource on creation.
         /// </summary>
         /// <returns>The length of List's values array</returns>
+        [Obsolete("Counters and Lists are now Stable. Use IAgonesSDK.GetListLengthAsync instead. This Beta method will be removed in a future release.")]
         public async Task<int> GetListLengthAsync(string key)
         {
             try
@@ -354,6 +368,7 @@ namespace Agones
         /// Throws error if the key was not predefined in the GameServer resource on creation.
         /// </summary>
         /// <returns>The List's values array</returns>
+        [Obsolete("Counters and Lists are now Stable. Use IAgonesSDK.GetListValuesAsync instead. This Beta method will be removed in a future release.")]
         public async Task<IList<string>> GetListValuesAsync(string key)
         {
             try
@@ -378,6 +393,7 @@ namespace Agones
         /// and the string value. Throws error if the string already exists in the list.
         /// Throws error if the key was not predefined in the GameServer resource on creation.
         /// </summary>
+        [Obsolete("Counters and Lists are now Stable. Use IAgonesSDK.AppendListValueAsync instead. This Beta method will be removed in a future release.")]
         public async Task AppendListValueAsync(string key, string value)
         {
             try
@@ -402,6 +418,7 @@ namespace Agones
         /// and the string value. Throws error if the string does not exist in the list.
         /// Throws error if the key was not predefined in the GameServer resource on creation.
         /// </summary>
+        [Obsolete("Counters and Lists are now Stable. Use IAgonesSDK.DeleteListValueAsync instead. This Beta method will be removed in a future release.")]
         public async Task DeleteListValueAsync(string key, string value)
         {
             try
