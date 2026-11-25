@@ -36,7 +36,8 @@ import (
 const (
 	// fetchTimeout is how long to wait when downloading a Wasm module.
 	fetchTimeout = 15 * time.Second
-	// callTimeoutMilliseconds is how long a single call to a Wasm function can run for.
+	// callTimeoutMilliseconds is how long a single call to a Wasm function can run for, including
+	// creating the instance that it runs on.
 	callTimeoutMilliseconds = 5000
 )
 
@@ -113,12 +114,20 @@ func (c *Cache) Len() int {
 
 // call calls the Function on a new instance of the module. Returns true if the module has been closed.
 func (c *Cache) call(ctx context.Context, m *module, wp *pluginsv1.WasmPolicy, input []byte) ([]byte, bool, error) {
-	m.mu.RLock()
+	// close is the only writer, so if the lock is held or waited on, the module has been evicted. Don't
+	// wait for close, as it waits for the calls in progress to finish.
+	if !m.mu.TryRLock() {
+		return nil, true, nil
+	}
 	defer m.mu.RUnlock()
 
 	if m.closed {
 		return nil, true, nil
 	}
+
+	// creating an instance runs the module's start section, so the timeout has to cover it, as well as the call.
+	ctx, cancel := context.WithTimeout(ctx, callTimeoutMilliseconds*time.Millisecond)
+	defer cancel()
 
 	// instances are not thread safe, so each call gets its own.
 	instance, err := m.compiled.Instance(ctx, extism.PluginInstanceConfig{})
@@ -147,7 +156,8 @@ func (c *Cache) load(ctx context.Context, wp *pluginsv1.WasmPolicy) (*module, er
 	if err != nil {
 		return nil, err
 	}
-	key := fmt.Sprintf("%s|%s|%x", u.String(), wp.Hash, sha256.Sum256(wp.From.URL.CABundle))
+	// quoted, so that a separator in the URL or hash can't make two policies share a key.
+	key := fmt.Sprintf("%q|%q|%x", u.String(), wp.Hash, sha256.Sum256(wp.From.URL.CABundle))
 
 	if m, ok := c.modules.Get(key); ok {
 		return m.(*module), nil

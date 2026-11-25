@@ -190,6 +190,14 @@ func TestCacheCallErrors(t *testing.T) {
 	_, err = c.Call(ctx, wasmPolicy(url, "missing"), []byte(gameServerJSON))
 	require.ErrorContains(t, err, `wasm function "missing" does not exist`)
 
+	// a separator in the URL or hash does not make the policies share a module, so the bad hash fails.
+	_, err = c.Call(ctx, wasmPolicy(url+"?x=a|", "allocate"), []byte(gameServerJSON))
+	require.NoError(t, err)
+	wp = wasmPolicy(url+"?x=a", "allocate")
+	wp.Hash = "|"
+	_, err = c.Call(ctx, wp, []byte(gameServerJSON))
+	require.ErrorContains(t, err, "failed to compile wasm module")
+
 	// the plugin returns an error, as the list is not there.
 	wp = wasmPolicy(url, "allocate")
 	wp.Config["list"] = "missing"
@@ -349,4 +357,36 @@ func TestCacheCallContextDone(t *testing.T) {
 	require.ErrorIs(t, err, context.Canceled)
 	require.ErrorContains(t, err, "stopped calling wasm module")
 	assert.Equal(t, int32(1), requests.Load())
+}
+
+func TestCacheCallTimeoutCoversStartSection(t *testing.T) {
+	t.Parallel()
+
+	// a module whose start section loops forever.
+	loop := []byte{
+		0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, // magic and version
+		0x01, 0x04, 0x01, 0x60, 0x00, 0x00, // type section: func() -> ()
+		0x03, 0x02, 0x01, 0x00, // function section: one function of type 0
+		0x08, 0x01, 0x00, // start section: function 0
+		0x0a, 0x09, 0x01, 0x07, 0x00, 0x03, 0x40, 0x0c, 0x00, 0x0b, 0x0b, // code section: loop { br 0 }
+	}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write(loop)
+	}))
+	t.Cleanup(srv.Close)
+
+	c := newCache(t, 10)
+
+	done := make(chan error, 1)
+	go func() {
+		_, err := c.Call(context.Background(), wasmPolicy(srv.URL+"/loop.wasm", "allocate"), []byte(gameServerJSON))
+		done <- err
+	}()
+
+	select {
+	case err := <-done:
+		require.ErrorContains(t, err, "could not create instance of wasm module")
+	case <-time.After(time.Minute):
+		require.Fail(t, "creating an instance of the module did not time out")
+	}
 }
