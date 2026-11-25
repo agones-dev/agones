@@ -102,6 +102,17 @@ func gatedWasmServer(t *testing.T) (srv *httptest.Server, requests *atomic.Int32
 	return srv, requests, signal, release
 }
 
+// moduleServer serves b as a Wasm module, and returns its URL.
+func moduleServer(t *testing.T, b []byte) string {
+	t.Helper()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write(b)
+	}))
+	t.Cleanup(srv.Close)
+	return srv.URL + "/module.wasm"
+}
+
 func wasmPolicy(url, function string) *pluginsv1.WasmPolicy {
 	return &pluginsv1.WasmPolicy{
 		Function: function,
@@ -197,6 +208,23 @@ func TestCacheCallErrors(t *testing.T) {
 	wp.Hash = "|"
 	_, err = c.Call(ctx, wp, []byte(gameServerJSON))
 	require.ErrorContains(t, err, "failed to compile wasm module")
+
+	// an empty CA bundle is not the same as none, so it fails, rather than using the cached module.
+	wp = wasmPolicy(url, "allocate")
+	wp.From.URL.CABundle = []byte{}
+	_, err = c.Call(ctx, wp, []byte(gameServerJSON))
+	require.ErrorContains(t, err, "no certs were appended from caBundle")
+
+	// a function that returns a non zero exit code, without setting an error message.
+	fail := []byte{
+		0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, // magic and version
+		0x01, 0x05, 0x01, 0x60, 0x00, 0x01, 0x7f, // type section: func() -> i32
+		0x03, 0x02, 0x01, 0x00, // function section: one function of type 0
+		0x07, 0x08, 0x01, 0x04, 'f', 'a', 'i', 'l', 0x00, 0x00, // export section: function 0 as "fail"
+		0x0a, 0x06, 0x01, 0x04, 0x00, 0x41, 0x01, 0x0b, // code section: return 1
+	}
+	_, err = c.Call(ctx, wasmPolicy(moduleServer(t, fail), "fail"), []byte(gameServerJSON))
+	require.ErrorContains(t, err, `wasm function "fail" returned exit code 1`)
 
 	// the plugin returns an error, as the list is not there.
 	wp = wasmPolicy(url, "allocate")
@@ -370,16 +398,13 @@ func TestCacheCallTimeoutCoversStartSection(t *testing.T) {
 		0x08, 0x01, 0x00, // start section: function 0
 		0x0a, 0x09, 0x01, 0x07, 0x00, 0x03, 0x40, 0x0c, 0x00, 0x0b, 0x0b, // code section: loop { br 0 }
 	}
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write(loop)
-	}))
-	t.Cleanup(srv.Close)
+	url := moduleServer(t, loop)
 
 	c := newCache(t, 10)
 
 	done := make(chan error, 1)
 	go func() {
-		_, err := c.Call(context.Background(), wasmPolicy(srv.URL+"/loop.wasm", "allocate"), []byte(gameServerJSON))
+		_, err := c.Call(context.Background(), wasmPolicy(url, "allocate"), []byte(gameServerJSON))
 		done <- err
 	}()
 

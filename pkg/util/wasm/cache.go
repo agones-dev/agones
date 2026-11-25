@@ -141,9 +141,13 @@ func (c *Cache) call(ctx context.Context, m *module, wp *pluginsv1.WasmPolicy, i
 		return nil, false, c.errs.Errorf("wasm function %q does not exist", wp.Function)
 	}
 
-	_, output, err := instance.CallWithContext(ctx, wp.Function, input)
+	rc, output, err := instance.CallWithContext(ctx, wp.Function, input)
 	if err != nil {
 		return nil, false, c.errs.Wrapf(err, "failed to call wasm function %q", wp.Function)
+	}
+	// a function can fail without setting an error message.
+	if rc != 0 {
+		return nil, false, c.errs.Errorf("wasm function %q returned exit code %d", wp.Function, rc)
 	}
 
 	return output, false, nil
@@ -156,15 +160,18 @@ func (c *Cache) load(ctx context.Context, wp *pluginsv1.WasmPolicy) (*module, er
 	if err != nil {
 		return nil, err
 	}
-	// quoted, so that a separator in the URL or hash can't make two policies share a key.
-	key := fmt.Sprintf("%q|%q|%x", u.String(), wp.Hash, sha256.Sum256(wp.From.URL.CABundle))
+	// quoted, so that a separator in the URL or hash can't make two policies share a key. A nil and an
+	// empty CA bundle are different keys, as the HTTP client treats them differently.
+	key := fmt.Sprintf("%q|%q|%t|%x", u.String(), wp.Hash, wp.From.URL.CABundle != nil, sha256.Sum256(wp.From.URL.CABundle))
 
 	if m, ok := c.modules.Get(key); ok {
 		return m.(*module), nil
 	}
 
-	// the load is shared by every call for this module, so it is not cancelled when this call is.
+	// the load is shared by every call for this module, so it is not cancelled when this call is, and
+	// works on its own copy of the policy, as it can outlive this call.
 	loadCtx := context.WithoutCancel(ctx)
+	wp = wp.DeepCopy()
 	ch := c.loading.DoChan(key, func() (any, error) {
 		// check again, in case it finished loading after the check above.
 		if m, ok := c.modules.Get(key); ok {
