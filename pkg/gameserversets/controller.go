@@ -17,6 +17,7 @@ package gameserversets
 import (
 	"context"
 	"encoding/json"
+	"sort"
 	"sync"
 	"time"
 
@@ -50,6 +51,7 @@ import (
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/clock"
 )
 
 var (
@@ -89,6 +91,8 @@ type Controller struct {
 	workerqueue                    *workerqueue.WorkerQueue
 	recorder                       record.EventRecorder
 	stateCache                     *gameServerStateCache
+	unhealthyBackoff               *unhealthyBackoff
+	clock                          clock.PassiveClock
 	allocationController           *AllocationOverflowController
 	errs                           *errors.Errors
 	maxCreationParallelism         int
@@ -132,6 +136,8 @@ func NewController(
 		maxGameServerDeletionsPerBatch: maxGameServerDeletionsPerBatch,
 		maxPodPendingCount:             maxPodPendingCount,
 		stateCache:                     &gameServerStateCache{},
+		unhealthyBackoff:               newUnhealthyBackoff(unhealthyBackoffMax),
+		clock:                          clock.RealClock{},
 	}
 
 	c.baseLogger = runtime.NewLoggerWithType(c)
@@ -155,8 +161,10 @@ func NewController(
 				c.workerqueue.Enqueue(newGss)
 			}
 		},
-		DeleteFunc: func(gsSet any) {
-			c.stateCache.deleteGameServerSet(gsSet.(*agonesv1.GameServerSet))
+		DeleteFunc: func(obj any) {
+			gsSet := obj.(*agonesv1.GameServerSet)
+			c.stateCache.deleteGameServerSet(gsSet)
+			c.unhealthyBackoff.deleteGameServerSet(gsSet)
 		},
 	})
 
@@ -320,8 +328,15 @@ func (c *Controller) syncGameServerSet(ctx context.Context, key string) error {
 
 	list = c.stateCache.forGameServerSet(gsSet).reconcileWithUpdatedServerList(list)
 
+	now := c.clock.Now()
+	unhealthyDelay := c.unhealthyBackoff.observe(gsSet, list, now)
+	if next, ok := nextUnhealthyDelayEnd(list, unhealthyDelay, now); ok {
+		// Nothing else triggers a sync when a kept GameServer is due to be replaced.
+		c.workerqueue.EnqueueAfter(gsSet, next)
+	}
+
 	numServersToAdd, toDelete, isPartial := computeReconciliationAction(gsSet.Spec.Scheduling, list, c.counter.Counts(),
-		int(gsSet.Spec.Replicas), c.maxGameServerCreationsPerBatch, c.maxGameServerDeletionsPerBatch, c.maxPodPendingCount, gsSet.Spec.Priorities)
+		int(gsSet.Spec.Replicas), c.maxGameServerCreationsPerBatch, c.maxGameServerDeletionsPerBatch, c.maxPodPendingCount, gsSet.Spec.Priorities, unhealthyDelay, now)
 
 	// GameserverSet is marked for deletion then don't add gameservers.
 	if !gsSet.DeletionTimestamp.IsZero() {
@@ -379,7 +394,7 @@ func (c *Controller) syncGameServerSet(ctx context.Context, key string) error {
 // the list of game servers that were found and target replica count.
 func computeReconciliationAction(strategy apis.SchedulingStrategy, list []*agonesv1.GameServer,
 	counts map[string]gameservers.NodeCount, targetReplicaCount int, maxCreations int, maxDeletions int,
-	maxPending int, priorities []agonesv1.Priority) (int, []*agonesv1.GameServer, bool) {
+	maxPending int, priorities []agonesv1.Priority, unhealthyDelay time.Duration, now time.Time) (int, []*agonesv1.GameServer, bool) {
 	var upCount int     // up == Ready or will become ready
 	var deleteCount int // number of gameservers to delete
 
@@ -460,7 +475,12 @@ func computeReconciliationAction(strategy apis.SchedulingStrategy, list []*agone
 			}
 
 		case agonesv1.GameServerStateUnhealthy:
-			scheduleDeletion(gs)
+			if unhealthyDelayRemaining(gs, unhealthyDelay, now) > 0 {
+				// Count it as up until the backoff delay has passed, so it is not recreated in a tight loop.
+				handleGameServerUp(gs)
+			} else {
+				scheduleDeletion(gs)
+			}
 		default:
 			// unrecognized state, assume it's up.
 			handleGameServerUp(gs)
@@ -489,6 +509,11 @@ func computeReconciliationAction(strategy apis.SchedulingStrategy, list []*agone
 
 	if deleteCount > 0 {
 		potentialDeletions = SortGameServersByStrategy(strategy, potentialDeletions, counts, priorities)
+		// Kept Unhealthy GameServers go before any that are up.
+		sort.SliceStable(potentialDeletions, func(i, j int) bool {
+			return potentialDeletions[i].Status.State == agonesv1.GameServerStateUnhealthy &&
+				potentialDeletions[j].Status.State != agonesv1.GameServerStateUnhealthy
+		})
 		toDelete = append(toDelete, potentialDeletions[0:deleteCount]...)
 	}
 

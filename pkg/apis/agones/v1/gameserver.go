@@ -20,6 +20,7 @@ import (
 	"net"
 	"slices"
 	"strings"
+	"time"
 
 	"agones.dev/agones/pkg"
 	"agones.dev/agones/pkg/apis"
@@ -151,6 +152,9 @@ const (
 	// GameServerErroredAtAnnotation is an annotation that records the timestamp the GameServer entered the
 	// error state. The timestamp is encoded in RFC3339 format.
 	GameServerErroredAtAnnotation = agones.GroupName + "/errored-at"
+	// GameServerUnhealthyBeforeReadyAtAnnotation is an annotation that records the timestamp the GameServer
+	// became Unhealthy, when it did so before requesting Ready. The timestamp is encoded in RFC3339 format.
+	GameServerUnhealthyBeforeReadyAtAnnotation = agones.GroupName + "/unhealthy-before-ready-at"
 	// FinalizerName is the domain name and finalizer path used to manage garbage collection of the GameServer.
 	FinalizerName = agones.GroupName + "/controller"
 
@@ -644,6 +648,18 @@ func (gs *GameServer) IsBeforeReady() bool {
 	}
 
 	return false
+}
+
+// MarkUnhealthy moves the GameServer to Unhealthy. With SidecarContainers, it also sets
+// GameServerUnhealthyBeforeReadyAtAnnotation to now if Ready has not been requested yet.
+func (gs *GameServer) MarkUnhealthy(now time.Time) {
+	if runtime.FeatureEnabled(runtime.FeatureSidecarContainers) && gs.IsBeforeReady() && gs.Status.State != GameServerStateRequestReady {
+		if gs.ObjectMeta.Annotations == nil {
+			gs.ObjectMeta.Annotations = map[string]string{}
+		}
+		gs.ObjectMeta.Annotations[GameServerUnhealthyBeforeReadyAtAnnotation] = now.Format(time.RFC3339)
+	}
+	gs.Status.State = GameServerStateUnhealthy
 }
 
 // IsActive returns true if the GameServer status is Ready, Reserved, or Allocated state.

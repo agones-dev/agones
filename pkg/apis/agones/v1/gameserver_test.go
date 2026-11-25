@@ -1908,6 +1908,45 @@ func TestGameServerIsBeforeReady(t *testing.T) {
 	}
 }
 
+func TestGameServerMarkUnhealthy(t *testing.T) {
+	runtime.FeatureTestMutex.Lock()
+	defer runtime.FeatureTestMutex.Unlock()
+	defer func() { require.NoError(t, runtime.ParseFeatures("")) }()
+
+	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	fixtures := []struct {
+		state     GameServerState
+		features  string
+		annotated bool
+	}{
+		{GameServerStatePortAllocation, "SidecarContainers=true", true},
+		{GameServerStateCreating, "SidecarContainers=true", true},
+		{GameServerStateStarting, "SidecarContainers=true", true},
+		{GameServerStateScheduled, "SidecarContainers=true", true},
+		{GameServerStateRequestReady, "SidecarContainers=true", false},
+		{GameServerStateReady, "SidecarContainers=true", false},
+		{GameServerStateReserved, "SidecarContainers=true", false},
+		{GameServerStateAllocated, "SidecarContainers=true", false},
+		{GameServerStateStarting, "SidecarContainers=false", false},
+	}
+
+	for _, test := range fixtures {
+		t.Run(string(test.state)+" "+test.features, func(t *testing.T) {
+			require.NoError(t, runtime.ParseFeatures(test.features))
+
+			gs := &GameServer{Status: GameServerStatus{State: test.state}}
+			gs.MarkUnhealthy(now)
+
+			assert.Equal(t, GameServerStateUnhealthy, gs.Status.State)
+			if test.annotated {
+				assert.Equal(t, now.Format(time.RFC3339), gs.ObjectMeta.Annotations[GameServerUnhealthyBeforeReadyAtAnnotation])
+			} else {
+				assert.NotContains(t, gs.ObjectMeta.Annotations, GameServerUnhealthyBeforeReadyAtAnnotation)
+			}
+		})
+	}
+}
+
 func TestGameServerApplyToPodContainer(t *testing.T) {
 	t.Parallel()
 	type expected struct {

@@ -22,6 +22,7 @@ import (
 
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
 	agtesting "agones.dev/agones/pkg/testing"
+	agruntime "agones.dev/agones/pkg/util/runtime"
 	"github.com/heptiolabs/healthcheck"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -62,6 +63,22 @@ func TestMissingPodControllerSyncGameServer(t *testing.T) {
 				updated: true,
 				updateTests: func(t *testing.T, gs *agonesv1.GameServer) {
 					assert.Equal(t, agonesv1.GameServerStateUnhealthy, gs.Status.State)
+				},
+				postTests: func(t *testing.T, m agtesting.Mocks) {
+					agtesting.AssertEventContains(t, m.FakeRecorder.Events, "Warning Unhealthy Pod is missing")
+				},
+			},
+		},
+		"pod doesn't exist: game server is before Ready": {
+			setup: func(gs *agonesv1.GameServer, _ *corev1.Pod) (*agonesv1.GameServer, *corev1.Pod) {
+				gs.Status.State = agonesv1.GameServerStateScheduled
+				return gs, nil
+			},
+			expected: expected{
+				updated: true,
+				updateTests: func(t *testing.T, gs *agonesv1.GameServer) {
+					assert.Equal(t, agonesv1.GameServerStateUnhealthy, gs.Status.State)
+					assert.Contains(t, gs.ObjectMeta.Annotations, agonesv1.GameServerUnhealthyBeforeReadyAtAnnotation)
 				},
 				postTests: func(t *testing.T, m agtesting.Mocks) {
 					agtesting.AssertEventContains(t, m.FakeRecorder.Events, "Warning Unhealthy Pod is missing")
@@ -131,6 +148,10 @@ func TestMissingPodControllerSyncGameServer(t *testing.T) {
 			},
 		},
 	}
+
+	agruntime.FeatureTestMutex.Lock()
+	defer agruntime.FeatureTestMutex.Unlock()
+	require.NoError(t, agruntime.ParseFeatures(string(agruntime.FeatureSidecarContainers)+"=true"))
 
 	for k, v := range fixtures {
 		t.Run(k, func(t *testing.T) {

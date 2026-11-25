@@ -321,7 +321,8 @@ func TestHealthControllerSyncGameServer(t *testing.T) {
 	t.Parallel()
 
 	type expected struct {
-		updated bool
+		updated   bool
+		annotated bool
 	}
 	fixtures := map[string]struct {
 		state           agonesv1.GameServerState
@@ -375,7 +376,7 @@ func TestHealthControllerSyncGameServer(t *testing.T) {
 				{Name: "container", State: corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{ExitCode: 23}}},
 				{Name: "other-container", State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{}}},
 			}},
-			expected: expected{updated: true},
+			expected: expected{updated: true, annotated: true},
 		},
 		"container failed after ready": {
 			state:   agonesv1.GameServerStateAllocated,
@@ -451,6 +452,10 @@ func TestHealthControllerSyncGameServer(t *testing.T) {
 				ua := action.(k8stesting.UpdateAction)
 				gsObj := ua.GetObject().(*agonesv1.GameServer)
 				assert.Equal(t, agonesv1.GameServerStateUnhealthy, gsObj.Status.State)
+				if len(test.feature) > 0 {
+					_, annotated := gsObj.ObjectMeta.Annotations[agonesv1.GameServerUnhealthyBeforeReadyAtAnnotation]
+					assert.Equal(t, test.expected.annotated, annotated)
+				}
 				return true, gsObj, nil
 			})
 
