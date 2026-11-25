@@ -244,7 +244,7 @@ func handleGetCounterCount(s *sdk.SDK, parts []string, _ ...context.CancelFunc) 
 		return
 	}
 	log.Printf("Retrieving Counter %s Count", parts[1])
-	count, err := s.Beta().GetCounterCount(parts[1])
+	count, err := s.GetCounterCount(parts[1])
 	if err != nil {
 		log.Printf("Error getting Counter %s Count: %s", parts[1], err)
 		response, responseError = strconv.FormatInt(count, 10), err
@@ -268,7 +268,7 @@ func handleIncrementCounter(s *sdk.SDK, parts []string, _ ...context.CancelFunc)
 		return
 	}
 	log.Printf("Incrementing Counter %s Count by amount %d", parts[1], amountInt)
-	err = s.Beta().IncrementCounter(parts[1], amountInt)
+	err = s.IncrementCounter(parts[1], amountInt)
 	if err != nil {
 		log.Printf("Error incrementing Counter %s Count by amount %d: %s", parts[1], amountInt, err)
 		response, responseError = err.Error(), err
@@ -291,7 +291,7 @@ func handleDecrementCounter(s *sdk.SDK, parts []string, _ ...context.CancelFunc)
 		return
 	}
 	log.Printf("Decrementing Counter %s Count by amount %d", parts[1], amountInt)
-	err = s.Beta().DecrementCounter(parts[1], amountInt)
+	err = s.DecrementCounter(parts[1], amountInt)
 	if err != nil {
 		log.Printf("Error decrementing Counter %s Count by amount %d: %s", parts[1], amountInt, err)
 		response, responseError = err.Error(), err
@@ -314,7 +314,7 @@ func handleSetCounterCount(s *sdk.SDK, parts []string, _ ...context.CancelFunc) 
 		return
 	}
 	log.Printf("Setting Counter %s Count to amount %d", parts[1], amountInt)
-	err = s.Beta().SetCounterCount(parts[1], amountInt)
+	err = s.SetCounterCount(parts[1], amountInt)
 	if err != nil {
 		log.Printf("Error setting Counter %s Count by amount %d: %s", parts[1], amountInt, err)
 		response, responseError = err.Error(), err
@@ -332,7 +332,7 @@ func handleGetCounterCapacity(s *sdk.SDK, parts []string, _ ...context.CancelFun
 		return
 	}
 	log.Printf("Retrieving Counter %s Capacity", parts[1])
-	count, err := s.Beta().GetCounterCapacity(parts[1])
+	count, err := s.GetCounterCapacity(parts[1])
 	if err != nil {
 		log.Printf("Error getting Counter %s Capacity: %s", parts[1], err)
 		response, responseError = strconv.FormatInt(count, 10), err
@@ -355,7 +355,7 @@ func handleSetCounterCapacity(s *sdk.SDK, parts []string, _ ...context.CancelFun
 		return
 	}
 	log.Printf("Setting Counter %s Capacity to amount %d", parts[1], amountInt)
-	err = s.Beta().SetCounterCapacity(parts[1], amountInt)
+	err = s.SetCounterCapacity(parts[1], amountInt)
 	if err != nil {
 		log.Printf("Error setting Counter %s Capacity to amount %d: %s", parts[1], amountInt, err)
 		response, responseError = err.Error(), err
@@ -373,7 +373,7 @@ func handleGetListCapacity(s *sdk.SDK, parts []string, _ ...context.CancelFunc) 
 		return
 	}
 	log.Printf("Retrieving List %s Capacity", parts[1])
-	capacity, err := s.Beta().GetListCapacity(parts[1])
+	capacity, err := s.GetListCapacity(parts[1])
 	if err != nil {
 		log.Printf("Error getting List %s Capacity: %s", parts[1], err)
 		response, responseError = strconv.FormatInt(capacity, 10), err
@@ -396,7 +396,7 @@ func handleSetListCapacity(s *sdk.SDK, parts []string, _ ...context.CancelFunc) 
 		return
 	}
 	log.Printf("Setting List %s Capacity to amount %d", parts[1], amountInt)
-	err = s.Beta().SetListCapacity(parts[1], amountInt)
+	err = s.SetListCapacity(parts[1], amountInt)
 	if err != nil {
 		log.Printf("Error setting List %s Capacity to amount %d: %s", parts[1], amountInt, err)
 		response, responseError = err.Error(), err
@@ -414,7 +414,7 @@ func handleListContains(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (re
 		return
 	}
 	log.Printf("Getting List %s contains value %s", parts[1], parts[2])
-	ok, err := s.Beta().ListContains(parts[1], parts[2])
+	ok, err := s.ListContains(parts[1], parts[2])
 	if err != nil {
 		log.Printf("Error getting List %s contains value %s: %s", parts[1], parts[2], err)
 		response, responseError = strconv.FormatBool(ok), err
@@ -432,7 +432,7 @@ func handleGetListLength(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (r
 		return
 	}
 	log.Printf("Getting List %s length", parts[1])
-	length, err := s.Beta().GetListLength(parts[1])
+	length, err := s.GetListLength(parts[1])
 	if err != nil {
 		log.Printf("Error getting List %s length: %s", parts[1], err)
 		response, responseError = strconv.Itoa(length), err
@@ -450,7 +450,7 @@ func handleGetListValues(s *sdk.SDK, parts []string, _ ...context.CancelFunc) (r
 		return
 	}
 	log.Printf("Getting List %s values", parts[1])
-	values, err := s.Beta().GetListValues(parts[1])
+	values, err := s.GetListValues(parts[1])
 	if err != nil {
 		log.Printf("Error getting List %s values: %s", parts[1], err)
 		response, responseError = "INVALID LIST NAME", err
@@ -472,7 +472,7 @@ func handleAppendListValue(s *sdk.SDK, parts []string, _ ...context.CancelFunc) 
 		return
 	}
 	log.Printf("Appending Value %s to List %s", parts[2], parts[1])
-	err := s.Beta().AppendListValue(parts[1], parts[2])
+	err := s.AppendListValue(parts[1], parts[2])
 	if err != nil {
 		log.Printf("Error appending Value %s to List %s: %s", parts[2], parts[1], err)
 		response, responseError = err.Error(), err
@@ -490,7 +490,7 @@ func handleDeleteListValue(s *sdk.SDK, parts []string, _ ...context.CancelFunc) 
 		return
 	}
 	log.Printf("Deleting Value %s from List %s", parts[2], parts[1])
-	err := s.Beta().DeleteListValue(parts[1], parts[2])
+	err := s.DeleteListValue(parts[1], parts[2])
 	if err != nil {
 		log.Printf("Error deleting Value %s to List %s: %s", parts[2], parts[1], err)
 		response, responseError = err.Error(), err

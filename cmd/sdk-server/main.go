@@ -185,9 +185,9 @@ func main() {
 				logger.WithError(err).Fatalf("Could not run sidecar")
 			}
 		}()
-		sdk.RegisterSDKServer(grpcServer, sdkserver.NewStableSDKServer(s))
+		sdk.RegisterSDKServer(grpcServer, s)
 		sdkalpha.RegisterSDKServer(grpcServer, s)
-		sdkbeta.RegisterSDKServer(grpcServer, s)
+		sdkbeta.RegisterSDKServer(grpcServer, sdkserver.NewBetaSDKServer(s))
 	}
 
 	grpcEndpoint := fmt.Sprintf("%s:%d", ctlConf.Address, ctlConf.GRPCPort)
@@ -219,9 +219,9 @@ func registerLocal(grpcServer *grpc.Server, ctlConf config) (func(), error) {
 		return nil, err
 	}
 
-	sdk.RegisterSDKServer(grpcServer, sdkserver.NewStableSDKServer(s))
+	sdk.RegisterSDKServer(grpcServer, s)
 	sdkalpha.RegisterSDKServer(grpcServer, s)
-	sdkbeta.RegisterSDKServer(grpcServer, s)
+	sdkbeta.RegisterSDKServer(grpcServer, sdkserver.NewBetaSDKServer(s))
 
 	return func() {
 		s.Close()
@@ -242,9 +242,9 @@ func registerTestSdkServer(grpcServer *grpc.Server, ctlConf config) (func(), err
 	s.SetExpectedSequence(expectedFuncs)
 	s.SetSdkName(ctlConf.TestSdkName)
 
-	sdk.RegisterSDKServer(grpcServer, sdkserver.NewStableSDKServer(s))
+	sdk.RegisterSDKServer(grpcServer, s)
 	sdkalpha.RegisterSDKServer(grpcServer, s)
-	sdkbeta.RegisterSDKServer(grpcServer, s)
+	sdkbeta.RegisterSDKServer(grpcServer, sdkserver.NewBetaSDKServer(s))
 	return func() {
 		s.Close()
 	}, err

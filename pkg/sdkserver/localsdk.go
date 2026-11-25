@@ -35,14 +35,13 @@ import (
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
 	"agones.dev/agones/pkg/sdk"
 	"agones.dev/agones/pkg/sdk/alpha"
-	"agones.dev/agones/pkg/sdk/beta"
 	"agones.dev/agones/pkg/util/errors"
 	"agones.dev/agones/pkg/util/runtime"
 )
 
 var (
 	_ alpha.SDKServer = &LocalSDKServer{}
-	_ beta.SDKServer  = &LocalSDKServer{}
+	_ sdk.SDKServer   = &LocalSDKServer{}
 )
 
 // defaultNamespace is the namespace given to the GameServer the local SDK server serves.
@@ -417,7 +416,7 @@ func (l *LocalSDKServer) stopReserveTimer() {
 // GetCounter returns a Counter. Returns not found if the counter does not exist.
 // [Stage:Beta]
 // [FeatureFlag:CountsAndLists]
-func (l *LocalSDKServer) GetCounter(_ context.Context, in *beta.GetCounterRequest) (*beta.Counter, error) {
+func (l *LocalSDKServer) GetCounter(_ context.Context, in *sdk.GetCounterRequest) (*sdk.Counter, error) {
 	if in == nil {
 		return nil, l.errs.Errorf("invalid argument. GetCounterRequest cannot be nil")
 	}
@@ -428,7 +427,7 @@ func (l *LocalSDKServer) GetCounter(_ context.Context, in *beta.GetCounterReques
 	defer l.gsMutex.RUnlock()
 
 	if counter, ok := l.gs.GetStatus().GetCounters()[in.GetName()]; ok {
-		return &beta.Counter{Name: in.GetName(), Count: counter.GetCount(), Capacity: counter.GetCapacity()}, nil
+		return &sdk.Counter{Name: in.GetName(), Count: counter.GetCount(), Capacity: counter.GetCapacity()}, nil
 	}
 	return nil, l.errs.Errorf("not found. %s Counter not found", in.GetName())
 }
@@ -439,7 +438,7 @@ func (l *LocalSDKServer) GetCounter(_ context.Context, in *beta.GetCounterReques
 // Returns error if the Count is out of range [0,Capacity].
 // [Stage:Beta]
 // [FeatureFlag:CountsAndLists]
-func (l *LocalSDKServer) UpdateCounter(_ context.Context, in *beta.UpdateCounterRequest) (*beta.Counter, error) {
+func (l *LocalSDKServer) UpdateCounter(_ context.Context, in *sdk.UpdateCounterRequest) (*sdk.Counter, error) {
 	if in.GetCounterUpdateRequest() == nil {
 		return nil, l.errs.Errorf("invalid argument. CounterUpdateRequest cannot be nil")
 	}
@@ -455,7 +454,7 @@ func (l *LocalSDKServer) UpdateCounter(_ context.Context, in *beta.UpdateCounter
 		return nil, l.errs.Errorf("not found. %s Counter not found", name)
 	}
 
-	tmpCounter := beta.Counter{Name: name, Count: counter.GetCount(), Capacity: counter.GetCapacity()}
+	tmpCounter := sdk.Counter{Name: name, Count: counter.GetCount(), Capacity: counter.GetCapacity()}
 	// Set Capacity
 	if in.GetCounterUpdateRequest().GetCapacity() != nil {
 		l.recordRequest("setcapacitycounter")
@@ -494,14 +493,14 @@ func (l *LocalSDKServer) UpdateCounter(_ context.Context, in *beta.UpdateCounter
 // GetList returns a List. Returns not found if the List does not exist.
 // [Stage:Beta]
 // [FeatureFlag:CountsAndLists]
-func (l *LocalSDKServer) GetList(_ context.Context, in *beta.GetListRequest) (*beta.List, error) {
+func (l *LocalSDKServer) GetList(_ context.Context, in *sdk.GetListRequest) (*sdk.List, error) {
 	l.logger.WithField("name", in.GetName()).Info("Getting List")
 	l.recordRequest("getlist")
 	l.gsMutex.RLock()
 	defer l.gsMutex.RUnlock()
 
 	if list, ok := l.gs.GetStatus().GetLists()[in.GetName()]; ok {
-		return &beta.List{Name: in.GetName(), Capacity: list.GetCapacity(), Values: list.GetValues()}, nil
+		return &sdk.List{Name: in.GetName(), Capacity: list.GetCapacity(), Values: list.GetValues()}, nil
 	}
 	return nil, l.errs.Errorf("not found. %s List not found", in.GetName())
 }
@@ -514,7 +513,7 @@ func (l *LocalSDKServer) GetList(_ context.Context, in *beta.GetListRequest) (*b
 // then the default value for the variable will be set (i.e. 0 for "capacity", empty list for "values").
 // [Stage:Beta]
 // [FeatureFlag:CountsAndLists]
-func (l *LocalSDKServer) UpdateList(_ context.Context, in *beta.UpdateListRequest) (*beta.List, error) {
+func (l *LocalSDKServer) UpdateList(_ context.Context, in *sdk.UpdateListRequest) (*sdk.List, error) {
 	if in.GetList() == nil || in.GetUpdateMask() == nil {
 		return nil, l.errs.Errorf("invalid argument. List: %v and UpdateMask %v cannot be nil", in.GetList(), in.GetUpdateMask())
 	}
@@ -536,8 +535,8 @@ func (l *LocalSDKServer) UpdateList(_ context.Context, in *beta.UpdateListReques
 
 	name := in.GetList().GetName()
 	if list, ok := l.gs.GetStatus().GetLists()[name]; ok {
-		// Create *beta.List from *sdk.GameServer_Status_ListStatus for merging.
-		tmpList := &beta.List{Name: name, Capacity: list.GetCapacity(), Values: list.GetValues()}
+		// Create *sdk.List from *sdk.GameServer_Status_ListStatus for merging.
+		tmpList := &sdk.List{Name: name, Capacity: list.GetCapacity(), Values: list.GetValues()}
 		// Removes any fields from the request object that are not included in the FieldMask Paths.
 		fmutils.Filter(in.GetList(), in.GetUpdateMask().GetPaths())
 		// Removes any fields from the existing gameserver object that are included in the FieldMask Paths.
@@ -551,7 +550,7 @@ func (l *LocalSDKServer) UpdateList(_ context.Context, in *beta.UpdateListReques
 		// Write newly updated List to gameserverstatus.
 		l.gs.Status.Lists[name].Capacity = tmpList.GetCapacity()
 		l.gs.Status.Lists[name].Values = tmpList.GetValues()
-		return &beta.List{Name: name, Capacity: l.gs.GetStatus().GetLists()[name].GetCapacity(), Values: l.gs.GetStatus().GetLists()[name].GetValues()}, nil
+		return &sdk.List{Name: name, Capacity: l.gs.GetStatus().GetLists()[name].GetCapacity(), Values: l.gs.GetStatus().GetLists()[name].GetValues()}, nil
 	}
 	return nil, l.errs.Errorf("not found. %s List not found", name)
 }
@@ -562,7 +561,7 @@ func (l *LocalSDKServer) UpdateList(_ context.Context, in *beta.UpdateListReques
 // Returns out of range if the List is already at Capacity.
 // [Stage:Beta]
 // [FeatureFlag:CountsAndLists]
-func (l *LocalSDKServer) AddListValue(_ context.Context, in *beta.AddListValueRequest) (*beta.List, error) {
+func (l *LocalSDKServer) AddListValue(_ context.Context, in *sdk.AddListValueRequest) (*sdk.List, error) {
 	l.logger.WithField("name", in.GetName()).Info("Adding Value to List")
 	l.recordRequest("addlistvalue")
 	l.gsMutex.Lock()
@@ -579,7 +578,7 @@ func (l *LocalSDKServer) AddListValue(_ context.Context, in *beta.AddListValueRe
 		}
 		// Add new value to gameserverstatus.
 		l.gs.Status.Lists[in.GetName()].Values = append(l.gs.Status.Lists[in.GetName()].Values, in.GetValue())
-		return &beta.List{Name: in.GetName(), Capacity: l.gs.GetStatus().GetLists()[in.GetName()].GetCapacity(), Values: l.gs.GetStatus().GetLists()[in.GetName()].GetValues()}, nil
+		return &sdk.List{Name: in.GetName(), Capacity: l.gs.GetStatus().GetLists()[in.GetName()].GetCapacity(), Values: l.gs.GetStatus().GetLists()[in.GetName()].GetValues()}, nil
 	}
 	return nil, l.errs.Errorf("not found. %s List not found", in.GetName())
 }
@@ -589,7 +588,7 @@ func (l *LocalSDKServer) AddListValue(_ context.Context, in *beta.AddListValueRe
 // Returns not found if the value is not in the List.
 // [Stage:Beta]
 // [FeatureFlag:CountsAndLists]
-func (l *LocalSDKServer) RemoveListValue(_ context.Context, in *beta.RemoveListValueRequest) (*beta.List, error) {
+func (l *LocalSDKServer) RemoveListValue(_ context.Context, in *sdk.RemoveListValueRequest) (*sdk.List, error) {
 	l.logger.WithField("name", in.GetName()).Info("Removing Value from List")
 	l.recordRequest("removelistvalue")
 	l.gsMutex.Lock()
@@ -601,7 +600,7 @@ func (l *LocalSDKServer) RemoveListValue(_ context.Context, in *beta.RemoveListV
 			if in.GetValue() == val {
 				// Remove value (maintains list ordering and modifies underlying gameserverstatus List.Values array).
 				list.Values = append(list.Values[:i], list.GetValues()[i+1:]...)
-				return &beta.List{Name: in.GetName(), Capacity: l.gs.GetStatus().GetLists()[in.GetName()].GetCapacity(), Values: l.gs.GetStatus().GetLists()[in.GetName()].GetValues()}, nil
+				return &sdk.List{Name: in.GetName(), Capacity: l.gs.GetStatus().GetLists()[in.GetName()].GetCapacity(), Values: l.gs.GetStatus().GetLists()[in.GetName()].GetValues()}, nil
 			}
 		}
 		return nil, l.errs.Errorf("not found. Value: %s not found in List: %s", in.GetValue(), in.GetName())
