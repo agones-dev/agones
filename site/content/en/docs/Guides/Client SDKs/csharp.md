@@ -128,6 +128,7 @@ agonesSDK.WatchGameServer((gameServer) => { Console.WriteLine($"Server - Watch {
 ```
 
 
+{{% feature expiryVersion="1.63.0" %}}
 ### Counters And Lists
 
 {{< beta title="Counters And Lists" gate="CountsAndLists" >}}
@@ -280,6 +281,164 @@ was not predefined in the GameServer resource on creation.
 string key = "players";
 List<string> values = await agones.Beta().GetListValuesAsync(key);
 ```
+{{% /feature %}}
+
+{{% feature publishVersion="1.63.0" %}}
+### Counters And Lists
+
+> The Beta Counters and Lists methods, such as `agones.Beta().GetCounterCountAsync(key)`, are deprecated
+> and will be removed in a future release. Use the methods below on the SDK instead.
+
+#### Counters
+
+##### GetCounterCount
+
+Returns the Count for a Counter, given the Counter's key (name). Will error if the key was not
+predefined in the GameServer resource on creation.
+
+```csharp
+string key = "rooms";
+long count = await agones.GetCounterCountAsync(key);
+```
+
+##### SetCounterCount
+
+Sets a count to the given value. Use with care, as this will overwrite any previous invocations’ value.
+Cannot be greater than Capacity.
+
+```csharp
+string key = "rooms";
+long amount = 0;
+await agones.SetCounterCountAsync(key, amount);
+```
+
+##### IncrementCounter
+
+Increases a counter by the given nonnegative integer amount. Will execute the increment operation
+against the current CRD value. Will max at max(int64). Will error if the key was not predefined in
+the GameServer resource on creation. Errors if the count is at the current capacity (to the latest
+knowledge of the SDK), and no increment will occur.
+
+Note: A potential race condition here is that if count values are set from both the SDK and through
+the K8s API (Allocation or otherwise), since the SDK append operation back to the CRD value is
+batched asynchronous any value incremented past the capacity will be silently truncated.
+
+```csharp
+string key = "rooms";
+long amount = 1;
+await agones.IncrementCounterAsync(key, amount);
+```
+
+##### DecrementCounter
+
+Decreases the current count by the given nonnegative integer amount. The Counter Will not go below 0.
+Will execute the decrement operation against the current CRD value. Errors if the count is at 0 (to
+the latest knowledge of the SDK), and no decrement will occur.
+
+```csharp
+string key = "rooms";
+long amount = 2;
+await agones.DecrementCounterAsync(key, amount);
+```
+
+##### SetCounterCapacity
+
+Sets the capacity for the given Counter. A capacity of 0 is no capacity.
+
+```csharp
+string key = "rooms";
+long amount = 0;
+await agones.SetCounterCapacityAsync(key, amount);
+```
+
+##### GetCounterCapacity
+
+Returns the Capacity for a Counter, given the Counter's key (name). Will error if the key was not
+predefined in the GameServer resource on creation.
+
+```csharp
+string key = "rooms";
+long count = await agones.GetCounterCapacityAsync(key);
+```
+#### Lists
+
+##### AppendListValue
+
+Appends a string to a List's values list, given the List's key (name) and the string value. Will
+error if the string already exists in the list. Will error if the key was not predefined in the
+GameServer resource on creation. Will error if the list is already at capacity.
+
+```csharp
+string key = "players";
+string value = "player1";
+await agones.AppendListValueAsync(key, value);
+```
+
+##### DeleteListValue
+
+DeleteListValue removes a string from a List's values list, given the List's key (name) and the
+string value. Will error if the string does not exist in the list. Will error if the key was not
+predefined in the GameServer resource on creation.
+
+```csharp
+string key = "players";
+string value = "player2";
+await agones.DeleteListValueAsync(key, value);
+```
+
+##### SetListCapacity
+
+Sets the capacity for a given list. Capacity must be between 0 and 1000. Will error if the key was
+not predefined in the GameServer resource on creation.
+
+```csharp
+string key = "players";
+long amount = 1000;
+await agones.SetListCapacityAsync(key, amount);
+```
+
+##### GetListCapacity
+
+Returns the Capacity for a List, given the List's key (name). Will error if the key was not
+predefined in the GameServer resource on creation.
+
+```csharp
+string key = "players";
+long amount = await agones.GetListCapacityAsync(key);
+```
+
+##### ListContains
+
+Returns if a string exists in a List's values list, given the List's key (name) and the string value.
+Search is case-sensitive. Will error if the key was not predefined in the GameServer resource on creation.
+
+```csharp
+string key = "players";
+string value = "player3";
+bool contains = await agones.ListContainsAsync(key, value);
+```
+
+##### GetListLength
+
+GetListLength returns the length of the Values list for a List, given the List's key (name). Will
+error if the key was not predefined in the GameServer resource on creation.
+
+```csharp
+string key = "players";
+int listLength = await agones.GetListLengthAsync(key);
+```
+
+##### GetListValues
+
+Returns the <IList<string>> Values for a List, given the List's key (name). Will error if the key
+was not predefined in the GameServer resource on creation.
+
+```csharp
+string key = "players";
+IList<string> values = await agones.GetListValuesAsync(key);
+```
+{{% /feature %}}
+
 ## Remarks
 - All requests will wait for up to 15 seconds before giving up. Time to wait can also be set in the constructor.
 - Default host & port are `localhost:9357`
