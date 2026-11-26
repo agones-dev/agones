@@ -16,6 +16,7 @@ package gameservers
 
 import (
 	"context"
+	"time"
 
 	"agones.dev/agones/pkg/apis/agones"
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
@@ -179,7 +180,7 @@ func (c *MissingPodController) syncGameServer(ctx context.Context, key string) e
 	}
 
 	gsCopy := gs.DeepCopy()
-	gsCopy.Status.State = agonesv1.GameServerStateUnhealthy
+	gsCopy.MarkUnhealthy(time.Now())
 	gs, err = c.gameServerGetter.GameServers(gsCopy.ObjectMeta.Namespace).Update(ctx, gsCopy, metav1.UpdateOptions{})
 	if err != nil {
 		return c.errs.Wrap(err, "error updating GameServer to Unhealthy")
