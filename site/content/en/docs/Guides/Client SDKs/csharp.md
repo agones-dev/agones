@@ -314,10 +314,10 @@ await agones.SetCounterCountAsync(key, amount);
 
 ##### IncrementCounter
 
-Increases a counter by the given nonnegative integer amount. Will execute the increment operation
-against the current CRD value. Will max at max(int64). Will error if the key was not predefined in
-the GameServer resource on creation. Errors if the count is at the current capacity (to the latest
-knowledge of the SDK), and no increment will occur.
+Increases a counter by the given nonnegative integer amount. Errors if the key was not predefined
+in the GameServer resource on creation, or if the resulting count would exceed capacity according
+to the SDK's latest projected state; in that case, no increment occurs. An amount of zero only
+checks that the counter exists.
 
 Note: A potential race condition here is that if count values are set from both the SDK and through
 the K8s API (Allocation or otherwise), since the SDK append operation back to the CRD value is
@@ -331,9 +331,10 @@ await agones.IncrementCounterAsync(key, amount);
 
 ##### DecrementCounter
 
-Decreases the current count by the given nonnegative integer amount. The Counter Will not go below 0.
-Will execute the decrement operation against the current CRD value. Errors if the count is at 0 (to
-the latest knowledge of the SDK), and no decrement will occur.
+Decreases the current count by the given nonnegative integer amount. Errors if the key was not
+predefined in the GameServer resource on creation, or if the resulting count would be below zero
+according to the SDK's latest projected state; in that case, no decrement occurs. An amount of zero
+only checks that the counter exists.
 
 ```csharp
 string key = "rooms";
@@ -388,8 +389,9 @@ await agones.DeleteListValueAsync(key, value);
 
 ##### SetListCapacity
 
-Sets the capacity for a given list. Capacity must be between 0 and 1000. Will error if the key was
-not predefined in the GameServer resource on creation.
+Sets the capacity for a given list. Capacity must be between 0 and the server's configured maximum
+(`gameservers.lists.maxItems` in the Helm values, default 1000). Will error if the key was not
+predefined in the GameServer resource on creation.
 
 ```csharp
 string key = "players";
