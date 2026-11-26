@@ -31,7 +31,7 @@ MINIKUBE_PROFILE ?= agones
 mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
 project_path := $(dir $(mkfile_path))
 root_path := $(realpath $(project_path)/../..)
-version := 0.24
+version := 0.25
 ifeq ($(REPOSITORY),)
 	autoscaler_webhook_tag := autoscaler-webhook:$(version)
 else
