@@ -49,8 +49,7 @@ func init() {
 func imageNamePrefix(imageName string) string {
 	// Exceptions list
 	exceptions := map[string]bool{
-		"simple-genai-game-server": true,
-		"simple-game-server":       true,
+		"simple-game-server": true,
 	}
 
 	// Use the first two words for exceptions, otherwise use the first word

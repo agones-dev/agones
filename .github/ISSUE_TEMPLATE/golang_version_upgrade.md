@@ -44,12 +44,10 @@ Steps to upgrade Golang version and dependencies:
 
 - [ ] Update the example images tag. At `build` directory, run:
 
-  - [ ] `make bump-image IMAGENAME=allocation-endpoint-proxy VERSION=<current-image-version>`
   - [ ] `make bump-image IMAGENAME=autoscaler-webhook VERSION=<current-image-version>`
   - [ ] `make bump-image IMAGENAME=crd-client VERSION=<current-image-version>`
   - [ ] `make bump-image IMAGENAME=custom-controller VERSION=<current-image-version>`
   - [ ] `make bump-image IMAGENAME=simple-game-server VERSION=<current-image-version>`
-  - [ ] `make bump-image IMAGENAME=simple-genai-game-server VERSION=<current-image-version>`
   - [ ] `make bump-image IMAGENAME=supertuxkart-example VERSION=<current-image-version>`
   - [ ] `make bump-image IMAGENAME=xonotic-example VERSION=<current-image-version>`
 
@@ -64,12 +62,10 @@ Steps to upgrade Golang version and dependencies:
 
 - [ ] Run the following to generate and push the new example images:
 
-  - [ ] In `examples/allocation-endpoint`, run: `make cloud-build`
   - [ ] In `examples/autoscaler-webhook`, run: `make cloud-build`
   - [ ] In `examples/crd-client`, run: `make cloud-build`
   - [ ] In `examples/custom-controller`, run: `make cloud-build`
   - [ ] In `examples/simple-game-server`, run: `make cloud-build`
-  - [ ] In `examples/simple-genai-server`, run: `make cloud-build`
   - [ ] In `examples/supertuxkart`, run: `make cloud-build`
   - [ ] In `examples/xonotic`, run: `make cloud-build`
 
