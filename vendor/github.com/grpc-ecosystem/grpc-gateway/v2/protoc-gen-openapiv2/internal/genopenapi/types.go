@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/internal/descriptor"
-	"go.yaml.in/yaml/v3"
+	"go.yaml.in/yaml/v4"
 )
 
 type param struct {
@@ -158,6 +158,7 @@ type openapiParameterObject struct {
 	CollectionFormat string              `json:"collectionFormat,omitempty" yaml:"collectionFormat,omitempty"`
 	Default          interface{}         `json:"default,omitempty" yaml:"default,omitempty"`
 	MinItems         *int                `json:"minItems,omitempty" yaml:"minItems,omitempty"`
+	MaxItems         *int                `json:"maxItems,omitempty" yaml:"maxItems,omitempty"`
 	Pattern          string              `json:"pattern,omitempty" yaml:"pattern,omitempty"`
 	XExample         RawExample          `json:"x-example,omitempty" yaml:"x-example,omitempty"`
 
@@ -315,12 +316,21 @@ func (op openapiSchemaObjectProperties) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// openapiAdditionalProperties is either a boolean or a schema object.
+type openapiAdditionalProperties interface {
+	isOpenapiAdditionalProperties()
+}
+
+type openapiAdditionalPropertiesAllowed bool
+
+func (openapiAdditionalPropertiesAllowed) isOpenapiAdditionalProperties() {}
+
 // http://swagger.io/specification/#schemaObject
 type openapiSchemaObject struct {
 	schemaCore `yaml:",inline"`
 	// Properties can be recursively defined
 	Properties           *openapiSchemaObjectProperties `json:"properties,omitempty" yaml:"properties,omitempty"`
-	AdditionalProperties *openapiSchemaObject           `json:"additionalProperties,omitempty" yaml:"additionalProperties,omitempty"`
+	AdditionalProperties openapiAdditionalProperties    `json:"additionalProperties,omitempty" yaml:"additionalProperties,omitempty"`
 
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
 	Title       string `json:"title,omitempty" yaml:"title,omitempty"`
@@ -329,9 +339,9 @@ type openapiSchemaObject struct {
 
 	ReadOnly         bool     `json:"readOnly,omitempty" yaml:"readOnly,omitempty"`
 	MultipleOf       float64  `json:"multipleOf,omitempty" yaml:"multipleOf,omitempty"`
-	Maximum          float64  `json:"maximum,omitempty" yaml:"maximum,omitempty"`
+	Maximum          *float64 `json:"maximum,omitempty" yaml:"maximum,omitempty"`
 	ExclusiveMaximum bool     `json:"exclusiveMaximum,omitempty" yaml:"exclusiveMaximum,omitempty"`
-	Minimum          float64  `json:"minimum,omitempty" yaml:"minimum,omitempty"`
+	Minimum          *float64 `json:"minimum,omitempty" yaml:"minimum,omitempty"`
 	ExclusiveMinimum bool     `json:"exclusiveMinimum,omitempty" yaml:"exclusiveMinimum,omitempty"`
 	MaxLength        uint64   `json:"maxLength,omitempty" yaml:"maxLength,omitempty"`
 	MinLength        uint64   `json:"minLength,omitempty" yaml:"minLength,omitempty"`
@@ -347,6 +357,8 @@ type openapiSchemaObject struct {
 
 	AllOf []allOfEntry `json:"allOf,omitempty" yaml:"allOf,omitempty"`
 }
+
+func (*openapiSchemaObject) isOpenapiAdditionalProperties() {}
 
 // http://swagger.io/specification/#definitionsObject
 type openapiDefinitionsObject map[string]openapiSchemaObject

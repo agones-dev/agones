@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # Gather dependencies and build the executable
-FROM golang:1.26.5 AS builder
+FROM golang:1.26.11 AS builder
 WORKDIR /go/src
 COPY . agones.dev/agones
 
