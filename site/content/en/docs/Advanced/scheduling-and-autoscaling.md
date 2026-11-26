@@ -200,11 +200,12 @@ to distribute the `GameServer` `Pods` across as many nodes as possible.
 
 #### Fleet Scale Down Strategy
 
-With the "Distributed" strategy, Fleets will remove `Ready` `GameServers` from Nodes with at random, to ensure
-a distributed load is maintained.
+With the "Distributed" strategy, Fleets will remove `Ready` `GameServers` in order of creation, oldest first.
+Creation timestamps have a resolution of one second, so the order between `GameServers` created within the same
+second is not defined.
 
 ##### Counter and List Priorities
 
 {{< beta title="Counters And Lists" gate="CountsAndLists" >}}
 
-When `priorities` are configured on the `Fleet`, instead of random removal, `GameServers` are removed in priority order (with creation timestamp as a tie-breaker, newest first). `Ascending` order (the default) removes `GameServers` with less available `Counter` or `List` capacity first, and `Descending` order removes those with greater available capacity first. See the [Fleet]({{< relref "../Reference/fleet.md" >}}) reference for configuration details.
+When `priorities` are configured on the `Fleet`, `GameServers` are removed in priority order (with creation timestamp as a tie-breaker, oldest first). `Ascending` order (the default) removes `GameServers` with less available `Counter` or `List` capacity first, and `Descending` order removes those with greater available capacity first. See the [Fleet]({{< relref "../Reference/fleet.md" >}}) reference for configuration details.
