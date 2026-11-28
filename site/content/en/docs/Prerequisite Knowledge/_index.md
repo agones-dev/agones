@@ -30,7 +30,7 @@ we recommend you have knowledge in the following areas before getting started wi
 
 The following resources are great for learning these concepts:
 
-* [What is a Container?](https://www.docker.com/resources/what-container/)
+* [Get started with Docker containers](https://docs.docker.com/learn/paths/get-started-with-docker-containers/)
 * [Docker "Quickstart" guide](https://docs.docker.com/get-started/)
 
 ## Kubernetes
