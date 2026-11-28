@@ -161,6 +161,17 @@ func main() {
 	agonesInformerFactory := externalversions.NewSharedInformerFactory(agonesClient, defaultResync)
 	kubeInformerFactory := informers.NewSharedInformerFactory(kubeClient, defaultResync)
 
+	if runtime.FeatureEnabled(runtime.FeatureExtensionsAPIServerAuth) {
+		requestHeaderAuth := apiserver.NewRequestHeaderAuthenticator(logger)
+		if err := requestHeaderAuth.Load(ctx, kubeClient); err != nil {
+			logger.WithError(err).Fatal("Could not load extension-apiserver-authentication ConfigMap for requestheader authentication")
+		}
+		requestHeaderAuth.Watch(ctx, kubeInformerFactory)
+		api.SetRequestHeaderAuthenticator(requestHeaderAuth)
+		httpsServer.RequestClientCert()
+		logger.Info("Requestheader authentication enabled for the extensions apiserver")
+	}
+
 	server := &httpserver.Server{
 		Port:   ctlConf.HTTPPort,
 		Logger: logger,

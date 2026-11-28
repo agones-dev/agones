@@ -69,6 +69,14 @@ const (
 	////////////////
 	// Alpha features
 
+	// FeatureExtensionsAPIServerAuth is a feature flag to enable/disable
+	// requestheader (x509) authentication on the extensions apiserver.
+	// When enabled, requests to the extensions apiserver resources must
+	// present a client certificate signed by the aggregation layer
+	// requestheader CA, verified against the extension-apiserver-authentication
+	// ConfigMap.
+	FeatureExtensionsAPIServerAuth Feature = "ExtensionsAPIServerAuth"
+
 	// FeatureRollingUpdateSurge is a feature flag to apply maxSurge on top of the Fleet replicas during a
 	// rolling update, even when the inactive GameServerSets hold Allocated GameServers.
 	FeatureRollingUpdateSurge Feature = "RollingUpdateSurge"
@@ -164,8 +172,9 @@ var (
 		FeatureSidecarContainers:                true,
 
 		// Alpha features
-		FeatureRollingUpdateSurge: false,
-		FeatureWasmAutoscaler:     false,
+		FeatureExtensionsAPIServerAuth: false,
+		FeatureRollingUpdateSurge:      false,
+		FeatureWasmAutoscaler:          false,
 
 		// Dev features
 		FeatureProcessorAllocator: false,

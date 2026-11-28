@@ -32,6 +32,7 @@ import (
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apiserver/pkg/authentication/authenticator"
 	"k8s.io/kube-openapi/pkg/handler3"
 )
 
@@ -79,6 +80,9 @@ type APIServer struct {
 	openapiv2          *spec.Swagger
 	openapiv3Discovery *handler3.OpenAPIV3Discovery
 	delegates          map[string]CRDHandler
+	// authenticator, when set, authenticates requests to namespaced resources
+	// (see SetRequestHeaderAuthenticator). When nil, no authentication is performed.
+	authenticator authenticator.Request
 }
 
 // NewAPIServer returns a new API Server from the given Mux.
@@ -130,6 +134,12 @@ func NewAPIServer(mux *http.ServeMux) *APIServer {
 	return s
 }
 
+// SetRequestHeaderAuthenticator sets the authenticator used to authenticate
+// requests to namespaced resources. When nil, requests are not authenticated.
+func (as *APIServer) SetRequestHeaderAuthenticator(auth authenticator.Request) {
+	as.authenticator = auth
+}
+
 // AddAPIResource stores the APIResource under the given groupVersion string, and returns it
 // in the appropriate place for the K8s discovery service
 // e.g. http://localhost:8001/apis/scheduling.k8s.io/v1
@@ -164,6 +174,29 @@ func (as *APIServer) AddAPIResource(groupVersion string, resource metav1.APIReso
 // resourceHandler handles namespaced resource calls, and sends them to the appropriate CRDHandler delegate
 func (as *APIServer) resourceHandler(gv string) https.ErrorHandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
+		if as.authenticator != nil {
+			if _, ok, err := as.authenticator.AuthenticateRequest(r); err != nil || !ok {
+				if err != nil {
+					as.logger.WithError(err).Debug("requestheader authentication failed")
+				} else {
+					as.logger.Debug("requestheader authentication failed: no valid client certificate")
+				}
+				w.Header().Set(ContentTypeHeader, k8sruntime.ContentTypeJSON)
+				w.WriteHeader(http.StatusUnauthorized)
+				status := &metav1.Status{
+					TypeMeta: metav1.TypeMeta{Kind: "Status", APIVersion: "v1"},
+					Status:   metav1.StatusFailure,
+					Message:  "Unauthorized: request must present a client certificate signed by the aggregation layer requestheader CA",
+					Reason:   metav1.StatusReasonUnauthorized,
+					Code:     http.StatusUnauthorized,
+				}
+				if err := json.NewEncoder(w).Encode(status); err != nil {
+					as.logger.WithError(err).Error("could not encode unauthorized status")
+				}
+				return nil
+			}
+		}
+
 		namespace, resource, err := splitNameSpaceResource(r.URL.Path)
 		if err != nil {
 			https.FourZeroFour(as.logger.WithError(err), w, r)

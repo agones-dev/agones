@@ -57,6 +57,7 @@ type Server struct {
 	errs       *errors.Errors
 	Mux        *http.ServeMux
 	tls        tls
+	tlsConfig  *cryptotls.Config
 	certFile   string
 	keyFile    string
 	port       string
@@ -81,12 +82,13 @@ func NewServer(certFile, keyFile string, port string) *Server {
 }
 
 func (s *Server) setupServer() {
+	s.tlsConfig = &cryptotls.Config{
+		GetCertificate: s.getCertificate,
+	}
 	s.tls = &http.Server{
-		Addr:    ":" + s.port,
-		Handler: s.Mux,
-		TLSConfig: &cryptotls.Config{
-			GetCertificate: s.getCertificate,
-		},
+		Addr:              ":" + s.port,
+		Handler:           s.Mux,
+		TLSConfig:         s.tlsConfig,
 		ReadHeaderTimeout: readHeaderTimeout,
 	}
 
@@ -99,6 +101,15 @@ func (s *Server) setupServer() {
 	s.certServer.certMu.Lock()
 	defer s.certServer.certMu.Unlock()
 	s.certServer.certs = &tlsCert
+}
+
+// RequestClientCert configures the TLS handshake to request a client
+// certificate from the peer. The certificate is not verified during the
+// handshake, so clients without a certificate are unaffected; verification
+// is done by the request handler (see apiserver.RequestHeaderAuthenticator).
+// Must be called before Run.
+func (s *Server) RequestClientCert() {
+	s.tlsConfig.ClientAuth = cryptotls.RequestClientCert
 }
 
 // getCertificate returns the current TLS certificate
