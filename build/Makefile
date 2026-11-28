@@ -66,7 +66,7 @@ KIND_PROFILE ?= agones
 KIND_CONTAINER_NAME=$(KIND_PROFILE)-control-plane
 
 # Game Server image to use while doing end-to-end tests
-GS_TEST_IMAGE ?= us-docker.pkg.dev/agones-images/examples/simple-game-server:0.46
+GS_TEST_IMAGE ?= us-docker.pkg.dev/agones-images/examples/simple-game-server:0.47
 
 # Registry and tag of the example images used in the examples end-to-end tests.
 # If EXAMPLE_IMAGE_TAG is empty, the published example images are used.

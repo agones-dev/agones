@@ -371,7 +371,11 @@ func (s *SDKServer) updateState(ctx context.Context) error {
 
 	s.gsUpdateMutex.RLock()
 	gsCopy := gs.DeepCopy()
-	gsCopy.Status.State = s.gsState
+	if s.gsState == agonesv1.GameServerStateUnhealthy {
+		gsCopy.MarkUnhealthy(s.clock.Now())
+	} else {
+		gsCopy.Status.State = s.gsState
+	}
 
 	// If we are setting the Reserved status, check for the duration, and set that too.
 	if gsCopy.Status.State == agonesv1.GameServerStateReserved && s.gsReserveDuration != nil {

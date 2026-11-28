@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
         - name: xonotic
-          image: us-docker.pkg.dev/agones-images/examples/xonotic-example:2.9
+          image: us-docker.pkg.dev/agones-images/examples/xonotic-example:2.10
           resources:
             requests:
               memory: 700Mi

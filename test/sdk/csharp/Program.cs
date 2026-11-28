@@ -88,16 +88,20 @@ using var sdk = new AgonesSDK();
     }
 }
 
-var featureGates = Environment.GetEnvironmentVariable("FEATURE_GATES") ?? "";
-if (featureGates.Contains("CountsAndLists"))
+// CSHARP_SDK_BETA=true runs the Counters and Lists tests against the deprecated Beta SDK interface.
+// Remove it along with the Beta SDK.
+var countsAndLists = Environment.GetEnvironmentVariable("CSHARP_SDK_BETA") == "true"
+    ? CountsAndListsClient.From(sdk.Beta())
+    : CountsAndListsClient.From(sdk);
+
 // Tests are expected to run sequentially on the same pre-defined Counter in the localsdk server
 {
-    var beta = sdk.Beta();
+    var client = countsAndLists;
     var key = "rooms";
 
     {
         var wantCount = 1;
-        var task = beta.GetCounterCountAsync(key);
+        var task = client.GetCounterCountAsync(key);
         task.Wait();
         var gotCount = task.Result;
         if (wantCount != gotCount)
@@ -112,7 +116,7 @@ if (featureGates.Contains("CountsAndLists"))
         var increment = 9;
         try
         {
-            var task = beta.IncrementCounterAsync(key, increment);
+            var task = client.IncrementCounterAsync(key, increment);
             task.Wait();
         }
         catch (Exception e)
@@ -121,7 +125,7 @@ if (featureGates.Contains("CountsAndLists"))
             Environment.Exit(1);
         }
 
-        var getTask = beta.GetCounterCountAsync(key);
+        var getTask = client.GetCounterCountAsync(key);
         getTask.Wait();
         var gotCount = getTask.Result;
         if (wantCount != gotCount)
@@ -136,7 +140,7 @@ if (featureGates.Contains("CountsAndLists"))
         var decrement = 5;
         try
         {
-            var task = beta.DecrementCounterAsync(key, decrement);
+            var task = client.DecrementCounterAsync(key, decrement);
             task.Wait();
         }
         catch (Exception e)
@@ -145,7 +149,7 @@ if (featureGates.Contains("CountsAndLists"))
             Environment.Exit(1);
         }
 
-        var getTask = beta.GetCounterCountAsync(key);
+        var getTask = client.GetCounterCountAsync(key);
         getTask.Wait();
         var gotCount = getTask.Result;
         if (wantCount != gotCount)
@@ -159,7 +163,7 @@ if (featureGates.Contains("CountsAndLists"))
         var wantCount = 3;
         try
         {
-            var task = beta.SetCounterCountAsync(key, wantCount);
+            var task = client.SetCounterCountAsync(key, wantCount);
             task.Wait();
         }
         catch (Exception e)
@@ -168,7 +172,7 @@ if (featureGates.Contains("CountsAndLists"))
             Environment.Exit(1);
         }
 
-        var getTask = beta.GetCounterCountAsync(key);
+        var getTask = client.GetCounterCountAsync(key);
         getTask.Wait();
         var gotCount = getTask.Result;
         if (wantCount != gotCount)
@@ -180,7 +184,7 @@ if (featureGates.Contains("CountsAndLists"))
 
     {
         var wantCapacity = 10;
-        var task = beta.GetCounterCapacityAsync(key);
+        var task = client.GetCounterCapacityAsync(key);
         task.Wait();
         var gotCapacity = task.Result;
         if (wantCapacity != gotCapacity)
@@ -195,7 +199,7 @@ if (featureGates.Contains("CountsAndLists"))
         var wantCapacity = 0;
         try
         {
-            var task = beta.SetCounterCapacityAsync(key, wantCapacity);
+            var task = client.SetCounterCapacityAsync(key, wantCapacity);
             task.Wait();
         }
         catch (Exception e)
@@ -204,7 +208,7 @@ if (featureGates.Contains("CountsAndLists"))
             Environment.Exit(1);
         }
 
-        var getTask = beta.GetCounterCapacityAsync(key);
+        var getTask = client.GetCounterCapacityAsync(key);
         getTask.Wait();
         var gotCapacity = getTask.Result;
         if (wantCapacity != gotCapacity)
@@ -215,15 +219,14 @@ if (featureGates.Contains("CountsAndLists"))
     }
 }
 
-if (featureGates.Contains("CountsAndLists"))
 // Tests are expected to run sequentially on the same pre-defined List in the localsdk server
 {
-    var beta = sdk.Beta();
+    var client = countsAndLists;
     var key = "players";
 
     {
         var wantCapacity = 100;
-        var task = beta.GetListCapacityAsync(key);
+        var task = client.GetListCapacityAsync(key);
         task.Wait();
         var gotCapacity = task.Result;
         if (wantCapacity != gotCapacity)
@@ -237,7 +240,7 @@ if (featureGates.Contains("CountsAndLists"))
         var wantCapacity = 10;
         try
         {
-            var task = beta.SetListCapacityAsync(key, wantCapacity);
+            var task = client.SetListCapacityAsync(key, wantCapacity);
             task.Wait();
         }
         catch (Exception e)
@@ -246,7 +249,7 @@ if (featureGates.Contains("CountsAndLists"))
             Environment.Exit(1);
         }
 
-        var getTask = beta.GetListCapacityAsync(key);
+        var getTask = client.GetListCapacityAsync(key);
         getTask.Wait();
         var gotCapacity = getTask.Result;
         if (wantCapacity != gotCapacity)
@@ -259,7 +262,7 @@ if (featureGates.Contains("CountsAndLists"))
     {
         var value = "foo";
         var want = false;
-        var task = beta.ListContainsAsync(key, value);
+        var task = client.ListContainsAsync(key, value);
         task.Wait();
         var got = task.Result;
         if (want != got)
@@ -269,7 +272,7 @@ if (featureGates.Contains("CountsAndLists"))
         }
         value = "test1";
         want = true;
-        task = beta.ListContainsAsync(key, value);
+        task = client.ListContainsAsync(key, value);
         task.Wait();
         got = task.Result;
         if (want != got)
@@ -281,7 +284,7 @@ if (featureGates.Contains("CountsAndLists"))
 
     {
         IList<string> wantValues = new List<string> { "test0", "test1", "test2" };
-        var task = beta.GetListValuesAsync(key);
+        var task = client.GetListValuesAsync(key);
         task.Wait();
         var gotValues = task.Result;
         var equal = Enumerable.SequenceEqual(wantValues, gotValues);
@@ -299,7 +302,7 @@ if (featureGates.Contains("CountsAndLists"))
         IList<string> wantValues = new List<string> { "test0", "test1", "test2", "test3" };
         try
         {
-            var task = beta.AppendListValueAsync(key, addValue);
+            var task = client.AppendListValueAsync(key, addValue);
             task.Wait();
         }
         catch (Exception e)
@@ -308,7 +311,7 @@ if (featureGates.Contains("CountsAndLists"))
             Environment.Exit(1);
         }
 
-        var getTask = beta.GetListValuesAsync(key);
+        var getTask = client.GetListValuesAsync(key);
         getTask.Wait();
         var gotValues = getTask.Result;
         var equal = Enumerable.SequenceEqual(wantValues, gotValues);
@@ -326,7 +329,7 @@ if (featureGates.Contains("CountsAndLists"))
         IList<string> wantValues = new List<string> { "test0", "test1", "test3" };
         try
         {
-            var task = beta.DeleteListValueAsync(key, removeValue);
+            var task = client.DeleteListValueAsync(key, removeValue);
             task.Wait();
         }
         catch (Exception e)
@@ -335,7 +338,7 @@ if (featureGates.Contains("CountsAndLists"))
             Environment.Exit(1);
         }
 
-        var getTask = beta.GetListValuesAsync(key);
+        var getTask = client.GetListValuesAsync(key);
         getTask.Wait();
         var gotValues = getTask.Result;
         var equal = Enumerable.SequenceEqual(wantValues, gotValues);
@@ -358,3 +361,58 @@ if (shutDownStatus.StatusCode != StatusCode.OK)
 }
 
 Console.WriteLine("Finish all tests");
+
+// CountsAndListsClient lets the Counters and Lists tests run against either the Stable SDK or the
+// deprecated Beta SDK, which share the same method signatures.
+sealed class CountsAndListsClient
+{
+    public required Func<string, Task<long>> GetCounterCountAsync { get; init; }
+    public required Func<string, long, Task> IncrementCounterAsync { get; init; }
+    public required Func<string, long, Task> DecrementCounterAsync { get; init; }
+    public required Func<string, long, Task> SetCounterCountAsync { get; init; }
+    public required Func<string, Task<long>> GetCounterCapacityAsync { get; init; }
+    public required Func<string, long, Task> SetCounterCapacityAsync { get; init; }
+    public required Func<string, Task<long>> GetListCapacityAsync { get; init; }
+    public required Func<string, long, Task> SetListCapacityAsync { get; init; }
+    public required Func<string, string, Task<bool>> ListContainsAsync { get; init; }
+    public required Func<string, Task<int>> GetListLengthAsync { get; init; }
+    public required Func<string, Task<IList<string>>> GetListValuesAsync { get; init; }
+    public required Func<string, string, Task> AppendListValueAsync { get; init; }
+    public required Func<string, string, Task> DeleteListValueAsync { get; init; }
+
+    public static CountsAndListsClient From(IAgonesSDK sdk) => new()
+    {
+        GetCounterCountAsync = sdk.GetCounterCountAsync,
+        IncrementCounterAsync = sdk.IncrementCounterAsync,
+        DecrementCounterAsync = sdk.DecrementCounterAsync,
+        SetCounterCountAsync = sdk.SetCounterCountAsync,
+        GetCounterCapacityAsync = sdk.GetCounterCapacityAsync,
+        SetCounterCapacityAsync = sdk.SetCounterCapacityAsync,
+        GetListCapacityAsync = sdk.GetListCapacityAsync,
+        SetListCapacityAsync = sdk.SetListCapacityAsync,
+        ListContainsAsync = sdk.ListContainsAsync,
+        GetListLengthAsync = sdk.GetListLengthAsync,
+        GetListValuesAsync = sdk.GetListValuesAsync,
+        AppendListValueAsync = sdk.AppendListValueAsync,
+        DeleteListValueAsync = sdk.DeleteListValueAsync,
+    };
+
+#pragma warning disable CS0618 // The Beta Counters and Lists methods are deprecated.
+    public static CountsAndListsClient From(IAgonesBetaSDK beta) => new()
+    {
+        GetCounterCountAsync = beta.GetCounterCountAsync,
+        IncrementCounterAsync = beta.IncrementCounterAsync,
+        DecrementCounterAsync = beta.DecrementCounterAsync,
+        SetCounterCountAsync = beta.SetCounterCountAsync,
+        GetCounterCapacityAsync = beta.GetCounterCapacityAsync,
+        SetCounterCapacityAsync = beta.SetCounterCapacityAsync,
+        GetListCapacityAsync = beta.GetListCapacityAsync,
+        SetListCapacityAsync = beta.SetListCapacityAsync,
+        ListContainsAsync = beta.ListContainsAsync,
+        GetListLengthAsync = beta.GetListLengthAsync,
+        GetListValuesAsync = beta.GetListValuesAsync,
+        AppendListValueAsync = beta.AppendListValueAsync,
+        DeleteListValueAsync = beta.DeleteListValueAsync,
+    };
+#pragma warning restore CS0618
+}
