@@ -184,7 +184,11 @@ func (c *Allocator) Run(ctx context.Context) error {
 	}
 
 	// workers and logic for batching allocations
-	go c.ListenAndAllocate(ctx, maxBatchQueue)
+	if runtime.FeatureEnabled(runtime.FeatureProcessorAllocator) {
+		go c.ListenAndBatchAllocate(ctx, maxBatchQueue)
+	} else {
+		go c.ListenAndAllocate(ctx, maxBatchQueue)
+	}
 
 	return nil
 }
@@ -278,6 +282,7 @@ func (c *Allocator) allocateFromLocalCluster(ctx context.Context, gsa *allocatio
 		return err
 	})
 
+	// If there was an error that is not due to no available GameServer or a conflict in selection, resync the cache.
 	if err != nil && !goErrors.Is(err, ErrNoGameServer) && !goErrors.Is(err, ErrConflictInGameServerSelection) {
 		c.allocationCache.Resync()
 		return nil, err
