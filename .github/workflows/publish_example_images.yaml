@@ -1,0 +1,92 @@
+---
+# Copyright Contributors to Agones a Series of LF Projects, LLC.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# This workflow publishes released example images to the GitHub Container Registry.
+# For each example in the matrix, it reads the image tag from the example's Makefile,
+# and builds and pushes the image only if that tag isn't in the registry yet, so
+# published tags are never overwritten. To release a new version of an example,
+# bump `version` in its Makefile and merge to main.
+name: Publish Example Images
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: {}
+permissions: {}
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+jobs:
+  publish:
+    name: Publish ${{ matrix.example }}
+    # Pushes to main only publish from the main repository. Forks can still run the workflow by
+    # hand, which publishes to the fork's own registry (ghcr.io/<owner>/agones/examples).
+    if: github.repository == 'agones-dev/agones' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      # Each example is published on its own, so that one failing build doesn't block the others.
+      fail-fast: false
+      matrix:
+        example:
+          - autoscaler-webhook
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550  # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Check whether the image tag is already published
+        id: check
+        env:
+          EXAMPLE: ${{ matrix.example }}
+        run: |
+          # Registry paths must be lowercase.
+          registry="ghcr.io/${GITHUB_REPOSITORY,,}/examples"
+          echo "registry=$registry" >> "$GITHUB_OUTPUT"
+          tag=$(make --no-print-directory -s -C "examples/${EXAMPLE}" echo-image-tag PROD_REPO="$registry")
+          if [[ $tag != "$registry/"* ]]; then
+            echo "::error::unexpected image tag from echo-image-tag: '$tag'"
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          # Only treat a missing manifest as "not published". Any other error (auth, network)
+          # fails the job, rather than risking a push over an existing tag.
+          if output=$(docker buildx imagetools inspect "$tag" 2>&1); then
+            echo "$tag is already published, skipping"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          elif grep -qiE 'not found|manifest unknown|name unknown' <<< "$output"; then
+            echo "$tag is not published yet"
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::could not check $tag: $output"
+            exit 1
+          fi
+      - name: Build and push the image
+        if: steps.check.outputs.publish == 'true'
+        env:
+          EXAMPLE: ${{ matrix.example }}
+          REGISTRY: ${{ steps.check.outputs.registry }}
+        run: make -C "examples/${EXAMPLE}" push REPOSITORY="${REGISTRY}"
+      - name: Verify the published image
+        if: steps.check.outputs.publish == 'true'
+        env:
+          TAG: ${{ steps.check.outputs.tag }}
+        run: docker buildx imagetools inspect "$TAG"
