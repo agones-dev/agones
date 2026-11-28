@@ -24,7 +24,7 @@ steps:
     entrypoint: docker
     args: [build, -f, Dockerfile.build, -t, make-docker, .]
 
-  # build and push allocation-endpoint image to GCR
+  # build and push autoscaler-webhook image to GCR
   - name: make-docker
     id: push
     dir: /workspace/examples/autoscaler-webhook/

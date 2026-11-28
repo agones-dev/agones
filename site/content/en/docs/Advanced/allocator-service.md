@@ -172,7 +172,14 @@ kubectl get secret allocator-tls-ca -n agones-system -ojsonpath="{.data.tls-ca\.
 
 ### Using gRPC
 
-To start, take a look at the allocation gRPC client examples in {{< ghlink href="examples/allocator-client/main.go" >}}golang{{< /ghlink >}} and {{< ghlink href="examples/allocator-client-csharp/Program.cs" >}}C#{{< /ghlink >}} languages. In the following, the {{< ghlink href="examples/allocator-client/main.go" >}}golang gRPC client example{{< /ghlink >}} is used to allocate a Game Server in the `default` namespace.
+{{% feature expiryVersion="1.63.0" %}}
+To start, take a look at the allocation gRPC client examples in {{< ghlink href="examples/allocator-client/main.go" >}}golang{{< /ghlink >}} and {{< ghlink href="examples/allocator-client-csharp/Program.cs" >}}C#{{< /ghlink >}} languages.
+{{% /feature %}}
+{{% feature publishVersion="1.63.0" %}}
+To start, take a look at the allocation gRPC client example in {{< ghlink href="examples/allocator-client/main.go" >}}golang{{< /ghlink >}}.
+{{% /feature %}}
+
+In the following, the {{< ghlink href="examples/allocator-client/main.go" >}}golang gRPC client example{{< /ghlink >}} is used to allocate a Game Server in the `default` namespace.
 
 ```bash
 #!/bin/bash

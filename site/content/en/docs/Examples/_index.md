@@ -42,10 +42,13 @@ These are all examples of simple game server implementations, that integrate the
   This service provides an example of using the [Agones API](https://pkg.go.dev/agones.dev/agones/pkg/client/clientset/versioned/typed/agones/v1)
   to create a GameServer.
 
+{{% feature expiryVersion="1.63.0" %}}
 ## Game Server Allocation
 
 - {{< ghlink href="examples/allocation-endpoint" >}}Allocation Endpoint Example{{< /ghlink >}} - An Agones clusters 
   aware proxy, built on Google Cloud.
+
+{{% /feature %}}
 
 ## Integrations with other projects
 
