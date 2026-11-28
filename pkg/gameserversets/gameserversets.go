@@ -42,7 +42,7 @@ func loggerForGameServerSet(log *logrus.Entry, gsSet *agonesv1.GameServerSet) *l
 	return loggerForGameServerSetKey(log, gsSetName).WithField("gss", gsSet)
 }
 
-// SortGameServersByStrategy will sort by least full nodes when Packed, and newest first when Distributed
+// SortGameServersByStrategy will sort by least full nodes when Packed, and oldest first when Distributed
 func SortGameServersByStrategy(strategy apis.SchedulingStrategy, list []*agonesv1.GameServer, counts map[string]gameservers.NodeCount, priorities []agonesv1.Priority) []*agonesv1.GameServer {
 	if strategy == apis.Packed {
 		return sortGameServersByPackedStrategy(list, counts, priorities)
@@ -101,8 +101,8 @@ func sortGameServersByPackedStrategy(list []*agonesv1.GameServer, count map[stri
 	return list
 }
 
-// sortGameServersByDistributedStrategy sorts by newest gameservers first.
-// Sorts by Counter and List Priority first, then tie-breaks with newest gameservers.
+// sortGameServersByDistributedStrategy sorts by oldest gameservers first.
+// Sorts by Counter and List Priority first, then tie-breaks with oldest gameservers.
 func sortGameServersByDistributedStrategy(list []*agonesv1.GameServer, priorities []agonesv1.Priority) []*agonesv1.GameServer {
 	sort.Slice(list, func(i, j int) bool {
 		a := list[i]
