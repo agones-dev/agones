@@ -274,7 +274,7 @@ int listLength = await agones.Beta().GetListLengthAsync(key);
 
 ##### Beta: GetListValues
 
-Returns the <IList<string>> Values for a List, given the List's key (name). Will error if the key
+Returns the `IList<string>` Values for a List, given the List's key (name). Will error if the key
 was not predefined in the GameServer resource on creation.
 
 ```csharp
@@ -286,8 +286,9 @@ List<string> values = await agones.Beta().GetListValuesAsync(key);
 {{% feature publishVersion="1.63.0" %}}
 ### Counters And Lists
 
-> The Beta Counters and Lists methods, such as `agones.Beta().GetCounterCountAsync(key)`, are deprecated
-> and will be removed in a future release. Use the methods below on the SDK instead.
+{{% alert title="Deprecation Notice" color="warning" %}}
+The Beta Counters and Lists methods, such as `agones.Beta().GetCounterCountAsync(key)`, are deprecated.
+{{% /alert %}}
 
 #### Counters
 
@@ -432,7 +433,7 @@ int listLength = await agones.GetListLengthAsync(key);
 
 ##### GetListValues
 
-Returns the <IList<string>> Values for a List, given the List's key (name). Will error if the key
+Returns the `IList<string>` Values for a List, given the List's key (name). Will error if the key
 was not predefined in the GameServer resource on creation.
 
 ```csharp
